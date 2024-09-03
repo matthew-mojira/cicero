@@ -2,8 +2,6 @@ module Main where
 
 import Parser
 
-import AST
-import Value
 import Eval
 
 import System.IO
@@ -18,4 +16,6 @@ main = forever $ do
   let result = parse prog
   case result of
     Left msg  -> putStrLn msg
-    Right ast -> print $ eval ast
+    Right ast -> do
+                    -- print $ ast
+                    print $ eval ast

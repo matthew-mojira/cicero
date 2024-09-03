@@ -5,8 +5,16 @@ import Value
 type Prog = Expr
 
 data Expr = ExprLit Value
-          | ExprAdd Expr Expr
+          | ExprBinOp BinOp Expr Expr
+
+data BinOp = Add | Sub | Mult | Div
 
 instance Show Expr where
   show (ExprLit val) = show val
-  show (ExprAdd expr1 expr2) = show expr1 ++ " + " ++ show expr2
+  show (ExprBinOp op expr1 expr2) = "(" ++ show expr1 ++ " " ++ show op ++ " " ++ show expr2 ++ ")"
+
+instance Show BinOp where
+  show Add  = "+"
+  show Sub  = "-"
+  show Mult = "*"
+  show Div  = "/"

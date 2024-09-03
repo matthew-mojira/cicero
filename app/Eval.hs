@@ -9,6 +9,11 @@ eval prog = evalExpr prog
 
 evalExpr :: Expr -> Value
 evalExpr (ExprLit value) = value
-evalExpr (ExprAdd expr1 expr2) = let ValInt val1 = evalExpr expr1
-                                     ValInt val2 = evalExpr expr2
-                                  in ValInt $ val1 + val2
+evalExpr (ExprBinOp op expr1 expr2) = let ValInt val1 = evalExpr expr1
+                                          ValInt val2 = evalExpr expr2
+                                          op' = case op of
+                                                  Add  -> (+)
+                                                  Sub  -> (-)
+                                                  Mult -> (*)
+                                                  Div  -> div
+                                       in ValInt $ op' val1 val2

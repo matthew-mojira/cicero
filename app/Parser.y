@@ -16,15 +16,27 @@ import Value
 %tokentype { TokenPosn }
 
 %left '+' '-'
+%left '*' '/'
+%left NEG
 
 %token
       '+'             { TokenPosn TokPlus _ }
+      '-'             { TokenPosn TokMinus _ }
+      '*'             { TokenPosn TokStar _ }
+      '/'             { TokenPosn TokBackslash _ }
+      '('             { TokenPosn TokLParen _ }
+      ')'             { TokenPosn TokRParen _ }
       int             { TokenPosn (TokInt $$) _ }
 
 %%
 
 expr  : int                     { ExprLit (ValInt $1) }
-      | expr '+' expr           { ExprAdd $1 $3 }
+      | expr '+' expr           { ExprBinOp Add $1 $3 }
+      | expr '-' expr           { ExprBinOp Sub $1 $3 }
+      | expr '*' expr           { ExprBinOp Mult $1 $3 }
+      | expr '/' expr           { ExprBinOp Div $1 $3 }
+      | '(' expr ')'            { $2 }
+      | '-' int %prec NEG       { ExprLit $ (ValInt $ -$2) }
 
 {
 

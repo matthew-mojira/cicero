@@ -13,6 +13,11 @@ tokens :-
   $white+                        ;
   "--".*                         ;
   \+                             { tok TokPlus }
+  \-                             { tok TokMinus }
+  \*                             { tok TokStar }
+  \/                             { tok TokBackslash }
+  \(                             { tok TokLParen }
+  \)                             { tok TokRParen }
   $digit+                        { tok (TokInt undefined) }
 
 {
@@ -21,8 +26,8 @@ alexEOF :: Alex TokenPosn
 alexEOF = return Eof
 
 tok :: Token -> AlexInput -> Int -> Alex TokenPosn
-tok TokPlus (posn, _, _, _) _        = return $ TokenPosn TokPlus posn
 tok (TokInt _) (posn, _, _, str) len = return $ TokenPosn (TokInt (read $ take len str)) posn
+tok token (posn, _, _, _) _          = return $ TokenPosn token posn
 
 data TokenPosn = TokenPosn Token AlexPosn
                | Eof
