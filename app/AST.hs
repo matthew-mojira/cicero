@@ -5,9 +5,19 @@ import Value
 type Prog = Expr
 
 data Expr = ExprLit Value
+          | ExprUnOp UnOp Expr
           | ExprBinOp BinOp Expr Expr
 
-data BinOp = Add | Sub | Mult | Div
+data UnOp = LNot
+
+data BinOp = Add | Sub | Mult | Div | LAnd | LOr
+
+binOpInt :: BinOp -> Bool
+binOpInt Add = True
+binOpInt Sub = True
+binOpInt Mult = True
+binOpInt Div = True
+binOpInt _ = False
 
 instance Show Expr where
   show (ExprLit val) = show val

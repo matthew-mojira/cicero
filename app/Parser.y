@@ -15,9 +15,12 @@ import Value
 %monad     { Alex }
 %tokentype { TokenPosn }
 
-%left '+' '-'
-%left '*' '/'
-%left NEG
+%left  or
+%left  and
+%right not
+%left  '+' '-'
+%left  '*' '/'
+%left  NEG
 
 %token
       '+'             { TokenPosn TokPlus _ }
@@ -29,6 +32,9 @@ import Value
       int             { TokenPosn (TokInt $$) _ }
       true            { TokenPosn TokTrue _ }
       false           { TokenPosn TokFalse _ }
+      and             { TokenPosn TokAnd _ }
+      or              { TokenPosn TokOr _ }
+      not             { TokenPosn TokNot _ }
 
 %%
 
@@ -37,6 +43,9 @@ expr  : int                     { ExprLit (ValInt $1) }
       | expr '-' expr           { ExprBinOp Sub $1 $3 }
       | expr '*' expr           { ExprBinOp Mult $1 $3 }
       | expr '/' expr           { ExprBinOp Div $1 $3 }
+      | expr and expr           { ExprBinOp LAnd $1 $3 }
+      | expr or expr            { ExprBinOp LOr $1 $3 }
+      | not expr                { ExprUnOp LNot $2 }
       | '(' expr ')'            { $2 }
       | '-' int %prec NEG       { ExprLit $ (ValInt $ -$2) }
       | true                    { ExprLit (ValBool True) }

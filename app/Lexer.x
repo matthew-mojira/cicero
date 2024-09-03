@@ -21,6 +21,10 @@ tokens :-
   $digit+                        { tok (TokInt undefined) }
   true                           { tok TokTrue }
   false                          { tok TokFalse }
+  and                            { tok TokAnd }
+  or                             { tok TokOr }
+  (x|e)or                        { tok TokEor }
+  not                            { tok TokNot }
 
 {
 

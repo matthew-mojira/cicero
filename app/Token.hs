@@ -8,5 +8,9 @@ data Token = TokPlus
            | TokRParen
            | TokTrue
            | TokFalse
+           | TokAnd
+           | TokOr
+           | TokEor
+           | TokNot
            | TokInt Integer
            deriving (Eq, Show)
