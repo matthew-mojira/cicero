@@ -15,17 +15,7 @@ main = forever $ do
   hFlush stdout
   prog <- getLine
 
-  let ast = parse prog
-  print $ ast
---  print $ eval ast
-
-{-
-  let prog = "5 + 10"
-  let toks = alexScanTokens prog
-  let ast  = parse toks
-
-  putStrLn $ "Input: " ++ prog
-  putStrLn $ "Parsed: " ++ show ast
-
-  print $ eval ast
--}
+  let result = parse prog
+  case result of
+    Left msg  -> putStrLn msg
+    Right ast -> print $ eval ast
