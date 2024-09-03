@@ -6,6 +6,6 @@ import Eval
 
 main :: IO ()
 main = do
-  let prog = ExprLit $ ValInt 5
+  let prog = ExprAdd (ExprLit $ ValInt 5) (ExprLit $ ValInt 100)
   print $ prog
   print $ eval prog
