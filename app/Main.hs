@@ -1,6 +1,5 @@
 module Main where
 
-import Lexer
 import Parser
 
 import AST
@@ -10,15 +9,15 @@ import Eval
 import System.IO
 import Control.Monad
 
--- repl
 main :: IO ()
 main = forever $ do
   putStr "mpl> "
   hFlush stdout
   prog <- getLine
 
-  let ast = parse $ alexScanTokens prog
-  print $ eval ast
+  let ast = parse prog
+  print $ ast
+--  print $ eval ast
 
 {-
   let prog = "5 + 10"

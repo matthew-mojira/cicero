@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -w #-}
 module Parser where
 
+import Lexer
 import Token
 import AST
 import Value
@@ -12,7 +13,7 @@ import Control.Monad (ap)
 -- parser produced by Happy Version 1.20.1.1
 
 data HappyAbsSyn t4
-	= HappyTerminal (Token)
+	= HappyTerminal (TokenPosn)
 	| HappyErrorToken Prelude.Int
 	| HappyAbsSyn4 t4
 
@@ -23,7 +24,7 @@ happyExpList = Happy_Data_Array.listArray (0,8) ([4128,512,2,0
 {-# NOINLINE happyExpListPerState #-}
 happyExpListPerState st =
     token_strs_expected
-  where token_strs = ["error","%dummy","%start_parse","expr","'+'","int","%eof"]
+  where token_strs = ["error","%dummy","%start_runHappy","expr","'+'","int","%eof"]
         bit_start = st Prelude.* 7
         bit_end = (st Prelude.+ 1) Prelude.* 7
         read_bit = readArrayBit happyExpList
@@ -53,7 +54,7 @@ action_4 _ = happyFail (happyExpListPerState 4)
 action_5 _ = happyReduce_2
 
 happyReduce_1 = happySpecReduce_1  4 happyReduction_1
-happyReduction_1 (HappyTerminal (TokInt happy_var_1))
+happyReduction_1 (HappyTerminal (TokenPosn (TokInt happy_var_1) _))
 	 =  HappyAbsSyn4
 		 (ExprLit (ValInt happy_var_1)
 	)
@@ -68,50 +69,43 @@ happyReduction_2 (HappyAbsSyn4  happy_var_3)
 	)
 happyReduction_2 _ _ _  = notHappyAtAll 
 
-happyNewToken action sts stk [] =
-	action 7 7 notHappyAtAll (HappyState action) sts stk []
-
-happyNewToken action sts stk (tk:tks) =
-	let cont i = action i i tk (HappyState action) sts stk tks in
+happyNewToken action sts stk
+	= lexwrap(\tk -> 
+	let cont i = action i i tk (HappyState action) sts stk in
 	case tk of {
-	TokPlus -> cont 5;
-	TokInt happy_dollar_dollar -> cont 6;
-	_ -> happyError' ((tk:tks), [])
-	}
+	Eof -> action 7 7 tk (HappyState action) sts stk;
+	TokenPosn TokPlus _ -> cont 5;
+	TokenPosn (TokInt happy_dollar_dollar) _ -> cont 6;
+	_ -> happyError' (tk, [])
+	})
 
-happyError_ explist 7 tk tks = happyError' (tks, explist)
-happyError_ explist _ tk tks = happyError' ((tk:tks), explist)
+happyError_ explist 7 tk = happyError' (tk, explist)
+happyError_ explist _ tk = happyError' (tk, explist)
 
-newtype HappyIdentity a = HappyIdentity a
-happyIdentity = HappyIdentity
-happyRunIdentity (HappyIdentity a) = a
-
-instance Prelude.Functor HappyIdentity where
-    fmap f (HappyIdentity a) = HappyIdentity (f a)
-
-instance Applicative HappyIdentity where
-    pure  = HappyIdentity
-    (<*>) = ap
-instance Prelude.Monad HappyIdentity where
-    return = pure
-    (HappyIdentity p) >>= q = q p
-
-happyThen :: () => HappyIdentity a -> (a -> HappyIdentity b) -> HappyIdentity b
+happyThen :: () => Alex a -> (a -> Alex b) -> Alex b
 happyThen = (Prelude.>>=)
-happyReturn :: () => a -> HappyIdentity a
+happyReturn :: () => a -> Alex a
 happyReturn = (Prelude.return)
-happyThen1 m k tks = (Prelude.>>=) m (\a -> k a tks)
-happyReturn1 :: () => a -> b -> HappyIdentity a
-happyReturn1 = \a tks -> (Prelude.return) a
-happyError' :: () => ([(Token)], [Prelude.String]) -> HappyIdentity a
-happyError' = HappyIdentity Prelude.. (\(tokens, _) -> undefined tokens)
-parse tks = happyRunIdentity happySomeParser where
- happySomeParser = happyThen (happyParse action_0 tks) (\x -> case x of {HappyAbsSyn4 z -> happyReturn z; _other -> notHappyAtAll })
+happyThen1 :: () => Alex a -> (a -> Alex b) -> Alex b
+happyThen1 = happyThen
+happyReturn1 :: () => a -> Alex a
+happyReturn1 = happyReturn
+happyError' :: () => ((TokenPosn), [Prelude.String]) -> Alex a
+happyError' tk = (\(tokens, _) -> parseError tokens) tk
+runHappy = happySomeParser where
+ happySomeParser = happyThen (happyParse action_0) (\x -> case x of {HappyAbsSyn4 z -> happyReturn z; _other -> notHappyAtAll })
 
 happySeq = happyDontSeq
 
 
+lexwrap :: (TokenPosn -> Alex a) -> Alex a
+lexwrap = (alexMonadScan >>=)
 
+parseError :: TokenPosn -> Alex a
+parseError (TokenPosn _ (AlexPn _ line col)) = alexError $ "parsing error at line " ++ show line ++ ", column " ++ show col
+
+parse :: String -> Either String Prog
+parse s = runAlex s runHappy
 {-# LINE 1 "templates/GenericTemplate.hs" #-}
 -- $Id: GenericTemplate.hs,v 1.26 2005/01/14 14:47:22 simonmar Exp $
 

@@ -14,7 +14,7 @@ import Data.Array
 #else
 import Array
 #endif
-#define ALEX_BASIC 1
+#define ALEX_MONAD 1
 -- -----------------------------------------------------------------------------
 -- Alex wrapper code.
 --
@@ -2234,8 +2234,8 @@ alex_actions = array (0 :: Int, 2)
   , (0,alex_action_3)
   ]
 
-alex_action_2 = \s -> TokPlus
-alex_action_3 = \s -> TokInt (read s)
+alex_action_2 = tok TokPlus
+alex_action_3 = tok (TokInt undefined)
 
 #define ALEX_NOPRED 1
 -- -----------------------------------------------------------------------------
@@ -2477,3 +2477,14 @@ alexRightContext IBOX(sc) user__ _ _ input__ =
         -- match when checking the right context, just
         -- the first match will do.
 #endif
+{-# LINE 18 "Lexer.x" #-}
+alexEOF :: Alex TokenPosn
+alexEOF = return Eof
+
+tok :: Token -> AlexInput -> Int -> Alex TokenPosn
+tok TokPlus (posn, _, _, _) _        = return $ TokenPosn TokPlus posn
+tok (TokInt _) (posn, _, _, str) len = return $ TokenPosn (TokInt (read $ take len str)) posn
+
+data TokenPosn = TokenPosn Token AlexPosn
+               | Eof
+               deriving Show
