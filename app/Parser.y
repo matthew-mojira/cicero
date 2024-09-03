@@ -27,6 +27,8 @@ import Value
       '('             { TokenPosn TokLParen _ }
       ')'             { TokenPosn TokRParen _ }
       int             { TokenPosn (TokInt $$) _ }
+      true            { TokenPosn TokTrue _ }
+      false           { TokenPosn TokFalse _ }
 
 %%
 
@@ -37,6 +39,8 @@ expr  : int                     { ExprLit (ValInt $1) }
       | expr '/' expr           { ExprBinOp Div $1 $3 }
       | '(' expr ')'            { $2 }
       | '-' int %prec NEG       { ExprLit $ (ValInt $ -$2) }
+      | true                    { ExprLit (ValBool True) }
+      | false                   { ExprLit (ValBool False) }
 
 {
 

@@ -17,5 +17,5 @@ main = forever $ do
   case result of
     Left msg  -> putStrLn msg
     Right ast -> do
-                    -- print $ ast
+--                    print $ ast
                     print $ eval ast

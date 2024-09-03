@@ -19,6 +19,8 @@ tokens :-
   \(                             { tok TokLParen }
   \)                             { tok TokRParen }
   $digit+                        { tok (TokInt undefined) }
+  true                           { tok TokTrue }
+  false                          { tok TokFalse }
 
 {
 

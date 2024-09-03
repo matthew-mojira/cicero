@@ -6,5 +6,7 @@ data Token = TokPlus
            | TokBackslash
            | TokLParen
            | TokRParen
+           | TokTrue
+           | TokFalse
            | TokInt Integer
            deriving (Eq, Show)
