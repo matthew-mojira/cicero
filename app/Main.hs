@@ -1,6 +1,7 @@
 module Main where
 
 import Parser
+import Typechecker
 
 import Eval
 
@@ -13,9 +14,8 @@ main = forever $ do
   hFlush stdout
   prog <- getLine
 
-  let result = parse prog
-  case result of
+  case parse prog of
     Left msg  -> putStrLn msg
-    Right ast -> do
---                    print $ ast
-                    print $ eval ast
+    Right ast -> case typeof ast of
+                   Left msg -> putStrLn msg
+                   Right _  -> print $ eval ast
