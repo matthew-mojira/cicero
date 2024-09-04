@@ -7,12 +7,12 @@ import Value
 eval :: Prog -> Value
 eval prog = evalExpr prog
 
-evalExpr :: Expr -> Value
-evalExpr (ExprLit value) = value
-evalExpr (ExprUnOp LNot expr) =
+evalExpr :: ExprPosn -> Value
+evalExpr ((ExprLit value), _) = value
+evalExpr ((ExprUnOp LNot expr), _) =
   let ValBool bool = evalExpr expr
    in ValBool $ not bool
-evalExpr (ExprBinOp op expr1 expr2)
+evalExpr ((ExprBinOp op expr1 expr2), _)
   | binOpEq op =
     let val1 = evalExpr expr1
         val2 = evalExpr expr2

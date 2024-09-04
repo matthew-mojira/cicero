@@ -1,5 +1,7 @@
 module Typechecker where
 
+import Lexer (AlexPosn(AlexPn))
+
 import AST
 import Type
 import Value
@@ -7,39 +9,39 @@ import Value
 typeof :: Prog -> Either String Type
 typeof = typeofExpr
 
-typeofExpr :: Expr -> Either String Type
-typeofExpr (ExprLit (ValInt _)) = return TypeInt
-typeofExpr (ExprLit (ValBool _)) = return TypeBool
-typeofExpr (ExprUnOp LNot expr) = do
+typeofExpr :: ExprPosn -> Either String Type
+typeofExpr (ExprLit (ValInt _), pos) = return TypeInt
+typeofExpr (ExprLit (ValBool _), pos) = return TypeBool
+typeofExpr (ExprUnOp LNot expr, pos) = do
   type1 <- typeofExpr expr
   if type1 == TypeBool
     then return TypeBool
-    else typeError
-typeofExpr (ExprBinOp op expr1 expr2)
+    else typeError pos
+typeofExpr (ExprBinOp op expr1 expr2, pos)
   | binOpBool op = do
     type1 <- typeofExpr expr1
     type2 <- typeofExpr expr2
     if type1 == TypeBool && type2 == TypeBool
       then return TypeBool
-      else typeError
+      else typeError pos
   | binOpEq op = do
     type1 <- typeofExpr expr1
     type2 <- typeofExpr expr2
     if type1 == type2
       then return TypeBool
-      else typeError
+      else typeError pos
   | binOpComp op = do
     type1 <- typeofExpr expr1
     type2 <- typeofExpr expr2
     if type1 == TypeInt && type2 == TypeInt
       then return TypeBool
-      else typeError
+      else typeError pos
   | binOpInt op = do
     type1 <- typeofExpr expr1
     type2 <- typeofExpr expr2
     if type1 == TypeInt && type2 == TypeInt
       then return TypeInt
-      else typeError
+      else typeError pos
 
-typeError :: Either String a
-typeError = Left "type error"
+typeError :: (AlexPosn, AlexPosn) -> Either String a
+typeError (AlexPn _ line col, _) = Left $ "type error at line " ++ show line ++ ", col " ++ show col

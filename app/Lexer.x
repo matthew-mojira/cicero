@@ -38,10 +38,14 @@ alexEOF :: Alex TokenPosn
 alexEOF = return Eof
 
 tok :: Token -> AlexInput -> Int -> Alex TokenPosn
-tok (TokInt _) (posn, _, _, str) len = return $ TokenPosn (TokInt (read $ take len str)) posn
-tok token (posn, _, _, _) _          = return $ TokenPosn token posn
+tok (TokInt _) (posn, _, _, str) len = return $ TokenPosn (TokInt (read $ take len str)) (posn, stop)
+  where
+    stop = foldl alexMove posn $ take len str
+tok token (posn, _, _, str) len      = return $ TokenPosn token (posn, stop)
+  where
+    stop = foldl alexMove posn $ take len str
 
-data TokenPosn = TokenPosn Token AlexPosn
+data TokenPosn = TokenPosn Token (AlexPosn, AlexPosn) -- (start, end)
                | Eof
                deriving Show
 

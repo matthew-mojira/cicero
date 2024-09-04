@@ -1,13 +1,16 @@
 module AST where
 
 import Value
+import Lexer (AlexPosn)
 
-type Prog = Expr
+type Prog = ExprPosn
+
+type ExprPosn = (Expr, (AlexPosn, AlexPosn))
 
 data Expr
   = ExprLit Value
-  | ExprUnOp UnOp Expr
-  | ExprBinOp BinOp Expr Expr
+  | ExprUnOp UnOp ExprPosn
+  | ExprBinOp BinOp ExprPosn ExprPosn
 
 data UnOp =
   LNot
@@ -54,8 +57,8 @@ binOpBool _    = False
 
 instance Show Expr where
   show (ExprLit val) = show val
-  show (ExprUnOp op expr) = show op ++ " " ++ show expr
-  show (ExprBinOp op expr1 expr2) =
+  show (ExprUnOp op (expr, _)) = show op ++ " " ++ show expr
+  show (ExprBinOp op (expr1, _) (expr2, _)) =
     "(" ++ show expr1 ++ " " ++ show op ++ " " ++ show expr2 ++ ")"
 
 instance Show UnOp where
