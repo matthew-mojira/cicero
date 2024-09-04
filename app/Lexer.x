@@ -13,9 +13,15 @@ tokens :-
   $white+                        ;
   "--".*                         ;
   \+                             { tok TokPlus }
-  \-                             { tok TokMinus }
+  (\-|−)                         { tok TokMinus }
   \*                             { tok TokStar }
   \/                             { tok TokBackslash }
+  (=|==)                         { tok TokEq }
+  (!=|≠)                         { tok TokNeq }
+  \<                             { tok TokLe }
+  (\<=|≤)                        { tok TokLeq }
+  >                              { tok TokGe }
+  (>=|≥)                         { tok TokGeq }
   \(                             { tok TokLParen }
   \)                             { tok TokRParen }
   $digit+                        { tok (TokInt undefined) }

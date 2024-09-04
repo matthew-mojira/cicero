@@ -39,19 +39,38 @@ binOpEq Neq = True
 binOpEq _   = False
 
 binOpComp :: BinOp -> Bool
+binOpComp Eq  = True
+binOpComp Neq = True
 binOpComp Le  = True
 binOpComp Leq = True
 binOpComp Ge  = True
 binOpComp Geq = True
 binOpComp _   = False
 
+binOpBool :: BinOp -> Bool
+binOpBool LAnd = True
+binOpBool LOr  = True
+binOpBool _    = False
+
 instance Show Expr where
   show (ExprLit val) = show val
+  show (ExprUnOp op expr) = show op ++ " " ++ show expr
   show (ExprBinOp op expr1 expr2) =
     "(" ++ show expr1 ++ " " ++ show op ++ " " ++ show expr2 ++ ")"
 
+instance Show UnOp where
+  show LNot = "not"
+
 instance Show BinOp where
-  show Add = "+"
-  show Sub = "-"
+  show Add  = "+"
+  show Sub  = "-"
   show Mult = "*"
-  show Div = "/"
+  show Div  = "/"
+  show LAnd = "and"
+  show LOr  = "or"
+  show Eq   = "="
+  show Neq  = "!="
+  show Le   = "<"
+  show Leq  = "<="
+  show Ge   = ">"
+  show Geq  = ">="

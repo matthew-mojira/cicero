@@ -17,16 +17,24 @@ import Value
 
 %left  or
 %left  and
-%right not
+%left  '=' '!='
+%left  '<' '<=' '>' '>='
 %left  '+' '-'
 %left  '*' '/'
 %left  NEG
+%right not
 
 %token
       '+'             { TokenPosn TokPlus _ }
       '-'             { TokenPosn TokMinus _ }
       '*'             { TokenPosn TokStar _ }
       '/'             { TokenPosn TokBackslash _ }
+      '='             { TokenPosn TokEq _ }
+      '!='            { TokenPosn TokNeq _ }
+      '<'             { TokenPosn TokLe _ }
+      '<='            { TokenPosn TokLeq _ }
+      '>'             { TokenPosn TokGe _ }
+      '>='            { TokenPosn TokGeq _ }
       '('             { TokenPosn TokLParen _ }
       ')'             { TokenPosn TokRParen _ }
       int             { TokenPosn (TokInt $$) _ }
@@ -45,6 +53,12 @@ expr  : int                     { ExprLit (ValInt $1) }
       | expr '/' expr           { ExprBinOp Div $1 $3 }
       | expr and expr           { ExprBinOp LAnd $1 $3 }
       | expr or expr            { ExprBinOp LOr $1 $3 }
+      | expr '=' expr           { ExprBinOp Eq $1 $3 }
+      | expr '!=' expr          { ExprBinOp Neq $1 $3 }
+      | expr '<' expr           { ExprBinOp Le $1 $3 }
+      | expr '<=' expr          { ExprBinOp Leq $1 $3 }
+      | expr '>' expr           { ExprBinOp Ge $1 $3 }
+      | expr '>=' expr          { ExprBinOp Geq $1 $3 }
       | not expr                { ExprUnOp LNot $2 }
       | '(' expr ')'            { $2 }
       | '-' int %prec NEG       { ExprLit $ (ValInt $ -$2) }

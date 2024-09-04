@@ -4,8 +4,12 @@ data Token = TokPlus
            | TokMinus
            | TokStar
            | TokBackslash
-           | TokLParen
-           | TokRParen
+           | TokEq
+           | TokNeq
+           | TokLe
+           | TokLeq
+           | TokGe
+           | TokGeq
            | TokTrue
            | TokFalse
            | TokAnd
@@ -13,4 +17,6 @@ data Token = TokPlus
            | TokEor
            | TokNot
            | TokInt Integer
+           | TokLParen
+           | TokRParen
            deriving (Eq, Show)
