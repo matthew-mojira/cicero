@@ -21,6 +21,7 @@ import Value
 %left  '<' '<=' '>' '>='
 %left  '+' '-'
 %left  '*' '/'
+%right '**'
 %left  NEG
 %right not
 
@@ -28,6 +29,8 @@ import Value
       '+'             { TokenPosn TokPlus (_, _) }
       '-'             { TokenPosn TokMinus (_, _) }
       '*'             { TokenPosn TokStar (_, _) }
+      '**'            { TokenPosn TokDoubleStar (_, _) }
+      '^'             { TokenPosn TokCaret (_, _) }
       '/'             { TokenPosn TokBackslash (_, _) }
       '='             { TokenPosn TokEq (_, _) }
       '!='            { TokenPosn TokNeq (_, _) }
@@ -50,6 +53,8 @@ expr  : int                     { parseInt $1 }
       | expr '+' expr           { (ExprBinOp Add $1 $3, ($1 <|> $3)) }
       | expr '-' expr           { (ExprBinOp Sub $1 $3, ($1 <|> $3)) }
       | expr '*' expr           { (ExprBinOp Mult $1 $3, ($1 <|> $3)) }
+      | expr '**' expr          { (ExprBinOp Exp $1 $3, ($1 <|> $3)) }
+      | expr '^' expr           { (ExprBinOp Exp $1 $3, ($1 <|> $3)) }
       | expr '/' expr           { (ExprBinOp Div $1 $3, ($1 <|> $3)) }
       | expr and expr           { (ExprBinOp LAnd $1 $3, ($1 <|> $3)) }
       | expr or expr            { (ExprBinOp LOr $1 $3, ($1 <|> $3)) }
@@ -90,8 +95,9 @@ lexwrap = (alexMonadScan >>=)
 
 parseError :: TokenPosn -> Alex a
 parseError (TokenPosn _ (AlexPn _ line col, _)) = alexError $ "parsing error at line " ++ show line ++ ", column " ++ show col
+parseError Eof = alexError $ "received empty input"
 
 parse :: String -> Either String Prog
-parse s = runAlex s runHappy
+parse str = runAlex str runHappy
 
 }

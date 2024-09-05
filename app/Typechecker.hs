@@ -1,15 +1,15 @@
 module Typechecker where
 
-import Lexer (AlexPosn(AlexPn))
+import Lexer (runAlex, alexError, Alex, AlexPosn(AlexPn))
 
 import AST
 import Type
 import Value
 
-typeof :: Prog -> Either String Type
-typeof = typeofExpr
+typeCheck :: Prog -> Either String Type
+typeCheck prog = runAlex "" (typeofExpr prog)
 
-typeofExpr :: ExprPosn -> Either String Type
+typeofExpr :: ExprPosn -> Alex Type
 typeofExpr (ExprLit (ValInt _), pos) = return TypeInt
 typeofExpr (ExprLit (ValBool _), pos) = return TypeBool
 typeofExpr (ExprUnOp LNot expr, pos) = do
@@ -43,5 +43,5 @@ typeofExpr (ExprBinOp op expr1 expr2, pos)
       then return TypeInt
       else typeError pos
 
-typeError :: (AlexPosn, AlexPosn) -> Either String a
-typeError (AlexPn _ line col, _) = Left $ "type error at line " ++ show line ++ ", col " ++ show col
+typeError :: (AlexPosn, AlexPosn) -> Alex a
+typeError (AlexPn _ line col, _) = alexError $ "type error at line " ++ show line ++ ", column " ++ show col

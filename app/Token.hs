@@ -3,6 +3,8 @@ module Token where
 data Token = TokPlus
            | TokMinus
            | TokStar
+           | TokDoubleStar
+           | TokCaret
            | TokBackslash
            | TokEq
            | TokNeq

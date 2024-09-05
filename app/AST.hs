@@ -19,6 +19,7 @@ data BinOp
   = Add
   | Sub
   | Mult
+  | Exp
   | Div
   | LAnd
   | LOr
@@ -34,6 +35,7 @@ binOpInt Add  = True
 binOpInt Sub  = True
 binOpInt Mult = True
 binOpInt Div  = True
+binOpInt Exp  = True
 binOpInt _    = False
 
 binOpEq :: BinOp -> Bool

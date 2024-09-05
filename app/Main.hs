@@ -1,8 +1,10 @@
 module Main where
 
+import Lexer (runAlex)
 import Parser
 import Typechecker
 
+import AST
 import Eval
 
 import Control.Monad
@@ -19,16 +21,22 @@ loop = do
   minput <- getInputLine "mpl> "
   case minput of
     Nothing -> return ()
+    Just "" -> return ()
     Just ":quit" -> return ()
-    Just prog -> do
-      execProg prog
+    Just input -> do
+      execProg input
       loop
+
+prepareProg :: String -> Either String Prog
+prepareProg str =
+  runAlex str $ do
+    prog <- runHappy
+    _ <- typeofExpr prog
+    return prog
 
 execProg :: String -> InputT IO ()
 execProg prog =
-  case parse prog of
-    Left msg -> outputStrLn msg
-    Right ast ->
-      case typeof ast of
-        Left msg -> outputStrLn msg
-        Right _ -> outputStrLn $ show $ eval ast
+  case prepareProg prog of
+    Left msg  -> do
+                   outputStrLn msg
+    Right ast -> outputStrLn $ show $ eval ast

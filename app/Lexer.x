@@ -15,6 +15,8 @@ tokens :-
   \+                             { tok TokPlus }
   (\-|−)                         { tok TokMinus }
   \*                             { tok TokStar }
+  \*\*                           { tok TokDoubleStar }
+  \^                             { tok TokCaret }
   \/                             { tok TokBackslash }
   (=|==)                         { tok TokEq }
   (!=|≠)                         { tok TokNeq }

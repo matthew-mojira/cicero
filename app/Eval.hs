@@ -39,6 +39,7 @@ evalExpr ((ExprBinOp op expr1 expr2), _)
             Add -> (+)
             Sub -> (-)
             Mult -> (*)
+            Exp -> (^)
             Div -> div
      in ValInt $ op' int1 int2
   | binOpBool op =
