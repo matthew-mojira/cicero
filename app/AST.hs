@@ -5,6 +5,8 @@ import Lexer (AlexPosn)
 
 type Prog = ExprPosn
 
+type Posn = (AlexPosn, AlexPosn)
+
 type ExprPosn = (Expr, (AlexPosn, AlexPosn))
 
 data Expr

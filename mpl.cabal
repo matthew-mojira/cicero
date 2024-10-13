@@ -70,6 +70,7 @@ executable mpl
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.2.0,
                       array >=0.5.4.0,
+                      mtl,
                       haskeline,
                       transformers
 

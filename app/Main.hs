@@ -8,8 +8,11 @@ import AST
 import Interpreter
 
 import Control.Monad
+import Control.Monad.IO.Class (MonadIO, liftIO)
+
 import System.Console.Haskeline
 import System.Environment
+
 
 main :: IO ()
 main = do
@@ -38,6 +41,8 @@ execProg prog =
   case prepareProg prog of
     Left msg  -> do
                    outputStrLn msg
-    Right ast -> case interp ast of
-                   Left _ -> undefined
-                   Right o -> outputStrLn $ show o
+    Right ast -> do
+                   result <- liftIO $ interp ast
+                   case result of
+                     Left  e -> outputStrLn $ show e
+                     Right o -> outputStrLn $ show o
