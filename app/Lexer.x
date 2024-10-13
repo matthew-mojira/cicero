@@ -51,4 +51,5 @@ data TokenPosn = TokenPosn Token (AlexPosn, AlexPosn) -- (start, end)
                | Eof
                deriving Show
 
+type Posn = (AlexPosn, AlexPosn)
 }

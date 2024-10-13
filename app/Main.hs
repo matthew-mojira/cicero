@@ -1,15 +1,11 @@
 module Main where
 
-import Lexer (runAlex)
+import Lexer (runAlex, AlexPosn(AlexPn))
 import Parser
-import Typechecker
-
-import AST
 import Interpreter
-import Value
 
-import Control.Monad
-import Control.Monad.IO.Class (MonadIO, liftIO)
+import Error
+import Value
 
 import System.Console.Haskeline
 import System.Environment
@@ -18,7 +14,7 @@ import System.IO
 main :: IO ()
 main = do
   args <- getArgs
-  loop
+  repl
 
 loop :: IO ()
 loop = do
@@ -27,7 +23,10 @@ loop = do
     Just str -> do
       res <- eval str
       case res of
-        Left  err -> hPutStrLn stderr err
+        Left  err -> do
+          printErr $ show err
+          printErr str
+          printErr $ errorArrow err
         Right val -> print val
       loop
     Nothing  -> return ()
@@ -41,8 +40,14 @@ read = runInputT defaultSettings $ do
     Just ":quit" -> return Nothing
     Just input   -> return $ Just input
 
-eval :: String -> IO (Either String Value)
+eval :: String -> IO (Either Error Value)
 eval str = do
   case runAlex str runHappy of
-    Left  err  -> return $ Left err
+    Left  err  -> return $ Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err)
     Right prog -> interp prog
+
+repl :: IO ()
+repl = loop
+
+printErr :: String -> IO ()
+printErr = hPutStrLn stderr

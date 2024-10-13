@@ -4,7 +4,7 @@ module Interpreter
   ( interp
   ) where
 
-import Lexer (AlexPosn(AlexPn))
+import Lexer (AlexPosn(AlexPn), Posn)
 
 import Control.Monad
 import Control.Monad.Except
@@ -14,11 +14,11 @@ import Control.Monad.Trans.State
 
 import AST
 import Type
+
+import Error
 import Value
 
 type Env = [(String, Value)]
-
-type Error = String
 
 type Matthew a = StateT Env (ExceptT Error IO) a
 
@@ -86,5 +86,5 @@ evalExpr (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
       (v1, ValBool _) -> typeError TypeBool (typeof v1) pos1
       (v1, _)         -> typeError TypeBool (typeof v1) pos1
 
-typeError :: MonadError String m => Type -> Type -> Posn -> m a
-typeError exp act (AlexPn _ line col, _) = throwError $ "type error at line " ++ show line ++ ", column " ++ show col ++ ": expected a value of type " ++ show exp ++ " but got type " ++ show act
+typeError :: MonadError Error m => Type -> Type -> Posn -> m a
+typeError exp act posn = throwError $ Error posn (TypeError exp act)

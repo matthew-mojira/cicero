@@ -1,13 +1,11 @@
 module AST where
 
 import Value
-import Lexer (AlexPosn)
+import Lexer (AlexPosn, Posn)
 
 type Prog = ExprPosn
 
-type Posn = (AlexPosn, AlexPosn)
-
-type ExprPosn = (Expr, (AlexPosn, AlexPosn))
+type ExprPosn = (Expr, Posn)
 
 data Expr
   = ExprLit Value
