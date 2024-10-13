@@ -34,6 +34,10 @@ tokens :-
   (x|e)or                        { tok TokEor }
   not                            { tok TokNot }
 
+  if                             { tok TokIf }
+  then                           { tok TokThen }
+  else                           { tok TokElse }
+
 {
 
 alexEOF :: Alex TokenPosn

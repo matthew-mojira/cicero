@@ -46,6 +46,9 @@ import Value
       and             { TokenPosn TokAnd (_, _) }
       or              { TokenPosn TokOr (_, _) }
       not             { TokenPosn TokNot (_, _) }
+      if              { TokenPosn TokIf (_, _) }
+      then            { TokenPosn TokThen (_, _) }
+      else            { TokenPosn TokElse (_, _) }
 
 %%
 
@@ -67,6 +70,7 @@ expr  : int                     { parseInt $1 }
       | not expr                { parseLNot $1 $2 }
       | '(' expr ')'            { (fst $2, (tokenPosn $1 <-> tokenPosn $3)) }
       | '-' int %prec NEG       { parseNInt $1 $2 }
+      | if expr then expr else expr { (ExprIfElse $2 $4 $6, (tokenPosn $1 <-> snd $6)) }
       | true                    { (ExprLit (ValBool True), tokenPosn $1) }
       | false                   { (ExprLit (ValBool False), tokenPosn $1) }
 

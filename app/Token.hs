@@ -18,6 +18,11 @@ data Token = TokPlus
            | TokOr
            | TokEor
            | TokNot
+
+           | TokIf
+           | TokThen
+           | TokElse
+
            | TokInt Integer
            | TokLParen
            | TokRParen

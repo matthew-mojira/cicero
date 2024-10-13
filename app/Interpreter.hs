@@ -27,7 +27,7 @@ interp prog = runExceptT $ evalStateT (evalExpr prog) []
 
 evalExpr :: ExprPosn -> Matthew Value
 evalExpr (ExprLit value, _) = return value
-evalExpr (ExprUnOp LNot expr, posn) = do
+evalExpr (ExprUnOp LNot expr@(_, posn), _) = do
   x <- evalExpr expr
   case x of
     ValBool bool -> return $ ValBool $ not bool
@@ -86,6 +86,14 @@ evalExpr (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
       (ValBool _, v2) -> typeError TypeBool (typeof v2) pos2
       (v1, ValBool _) -> typeError TypeBool (typeof v1) pos1
       (v1, _)         -> typeError TypeBool (typeof v1) pos1
+evalExpr (ExprIfElse pred@(_, posn) exprT exprF, _) = do
+  x <- evalExpr pred
+  case x of
+    ValBool bool -> do
+      if bool
+        then evalExpr exprT
+        else evalExpr exprF
+    v            -> typeError TypeBool (typeof v) posn
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)

@@ -11,6 +11,7 @@ data Expr
   = ExprLit Value
   | ExprUnOp UnOp ExprPosn
   | ExprBinOp BinOp ExprPosn ExprPosn
+  | ExprIfElse ExprPosn ExprPosn ExprPosn
 
 data UnOp =
   LNot
@@ -62,6 +63,8 @@ instance Show Expr where
   show (ExprUnOp op (expr, _)) = show op ++ " " ++ show expr
   show (ExprBinOp op (expr1, _) (expr2, _)) =
     "(" ++ show expr1 ++ " " ++ show op ++ " " ++ show expr2 ++ ")"
+  show (ExprIfElse (expr1, _) (expr2, _) (expr3, _)) =
+    show "if " ++ show expr1 ++ " then " ++ show expr2 ++ " else " ++ show expr3
 
 instance Show UnOp where
   show LNot = "not"
