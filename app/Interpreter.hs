@@ -18,12 +18,22 @@ import Type
 import Error
 import Value
 
-type Env = [(String, Value)]
+type Env = [(String, (Bool, Value))]
+
+extendVar :: String -> Value -> Matthew ()
+extendVar id val = do
+  env <- get
+  put $ (id, (True, val)):env
+
+extendConst :: String -> Value -> Matthew ()
+extendConst id val = do
+  env <- get
+  put $ (id, (False, val)):env
 
 type Matthew a = StateT Env (ExceptT Error IO) a
 
-interp :: Prog -> IO (Either Error (Value, Env))
-interp prog = runExceptT $ runStateT (evalExpr prog) []
+interp :: Prog -> Env -> IO (Either Error (Value, Env))
+interp prog env = runExceptT $ runStateT (evalExpr prog) env
 
 evalExpr :: ExprPosn -> Matthew Value
 evalExpr (ExprLit value, _) = return value
@@ -94,6 +104,29 @@ evalExpr (ExprIfElse pred@(_, posn) exprT exprF, _) = do
         then evalExpr exprT
         else evalExpr exprF
     v            -> typeError TypeBool (typeof v) posn
+evalExpr (ExprVar id expr, posn) = do
+  env <- get
+  case lookup id env of
+  -- don't allow redeclaration in the same scope
+    Just _  -> throwError $ Error posn (RedefinitionError id)
+    Nothing -> do
+      val <- evalExpr expr
+      extendVar id val
+      return val
+evalExpr (ExprConst id expr, posn) = do
+  env <- get
+  case lookup id env of
+  -- don't allow redeclaration in the same scope
+    Just _  -> throwError $ Error posn (RedefinitionError id)
+    Nothing -> do
+      val <- evalExpr expr
+      extendConst id val
+      return val
+evalExpr (ExprId id, posn) = do
+  env <- get
+  case lookup id env of
+    Just (_, v) -> return v
+    Nothing     -> throwError $ Error posn (NameError id)
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)

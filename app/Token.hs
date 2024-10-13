@@ -12,6 +12,9 @@ data Token = TokPlus
            | TokLeq
            | TokGe
            | TokGeq
+           | TokLParen
+           | TokRParen
+
            | TokTrue
            | TokFalse
            | TokAnd
@@ -23,7 +26,9 @@ data Token = TokPlus
            | TokThen
            | TokElse
 
+           | TokVar
+           | TokConst
+
            | TokInt Integer
-           | TokLParen
-           | TokRParen
+           | TokId  String
            deriving (Eq, Show)

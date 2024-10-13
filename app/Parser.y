@@ -40,7 +40,10 @@ import Value
       '>='            { TokenPosn TokGeq (_, _) }
       '('             { TokenPosn TokLParen (_, _) }
       ')'             { TokenPosn TokRParen (_, _) }
+
       int             { TokenPosn (TokInt _) (_, _) }
+      id              { TokenPosn (TokId _) (_, _) }
+
       true            { TokenPosn TokTrue (_, _) }
       false           { TokenPosn TokFalse (_, _) }
       and             { TokenPosn TokAnd (_, _) }
@@ -50,6 +53,8 @@ import Value
       then            { TokenPosn TokThen (_, _) }
       else            { TokenPosn TokElse (_, _) }
 
+      var             { TokenPosn TokVar (_, _) }
+      const           { TokenPosn TokConst (_, _) }
 %%
 
 expr  : int                     { parseInt $1 }
@@ -70,20 +75,39 @@ expr  : int                     { parseInt $1 }
       | not expr                { parseLNot $1 $2 }
       | '(' expr ')'            { (fst $2, (tokenPosn $1 <-> tokenPosn $3)) }
       | '-' int %prec NEG       { parseNInt $1 $2 }
-      | if expr then expr else expr { (ExprIfElse $2 $4 $6, (tokenPosn $1 <-> snd $6)) }
+
+      | var id '=' expr         { parseVar $1 $2 $4 }
+      | const id '=' expr       { parseConst $1 $2 $4 }
+      | id                      { parseId $1 }
+      
+      | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
       | true                    { (ExprLit (ValBool True), tokenPosn $1) }
       | false                   { (ExprLit (ValBool False), tokenPosn $1) }
 
 {
 
 parseInt :: TokenPosn -> ExprPosn
-parseInt (TokenPosn (TokInt int) pos) = (ExprLit (ValInt int), pos)
+parseInt (TokenPosn (TokInt int) pos) =
+  (ExprLit (ValInt int), pos)
 
 parseNInt :: TokenPosn -> TokenPosn -> ExprPosn
-parseNInt (TokenPosn _ pos1) (TokenPosn (TokInt int) pos2) = (ExprLit (ValInt $ -int), pos1 <-> pos2)
+parseNInt (TokenPosn _ pos1) (TokenPosn (TokInt int) pos2) =
+  (ExprLit (ValInt $ -int), pos1 <-> pos2)
 
 parseLNot :: TokenPosn -> ExprPosn -> ExprPosn
-parseLNot (TokenPosn _ pos1) expr@(_, pos2) = (ExprUnOp LNot expr, pos1 <-> pos2)
+parseLNot (TokenPosn _ pos1) expr@(_, pos2) =
+  (ExprUnOp LNot expr, pos1 <-> pos2)
+
+parseVar :: TokenPosn -> TokenPosn -> ExprPosn -> ExprPosn
+parseVar (TokenPosn _ pos1) (TokenPosn (TokId id) _) expr@(_, pos2) =
+  (ExprVar id expr, pos1 <-> pos2)
+
+parseConst :: TokenPosn -> TokenPosn -> ExprPosn -> ExprPosn
+parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) expr@(_, pos2) =
+  (ExprConst id expr, pos1 <-> pos2)
+
+parseId :: TokenPosn -> ExprPosn
+parseId (TokenPosn (TokId id) pos) = (ExprId id, pos)
 
 tokenPosn :: TokenPosn -> (AlexPosn, AlexPosn)
 tokenPosn (TokenPosn _ pos) = pos

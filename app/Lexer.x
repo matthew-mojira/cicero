@@ -7,6 +7,7 @@ import Token
 %wrapper "monad"
 
 $digit = 0-9            -- digits
+$alpha = [a-zA-Z]       -- alphabetic characters
 
 tokens :-
 
@@ -26,7 +27,7 @@ tokens :-
   (>=|≥)                         { tok TokGeq }
   \(                             { tok TokLParen }
   \)                             { tok TokRParen }
-  $digit+                        { tok (TokInt undefined) }
+
   true                           { tok TokTrue }
   false                          { tok TokFalse }
   and                            { tok TokAnd }
@@ -38,16 +39,25 @@ tokens :-
   then                           { tok TokThen }
   else                           { tok TokElse }
 
+  var                            { tok TokVar }
+  const                          { tok TokConst }
+
+  $digit+                        { tok (TokInt undefined) }
+  $alpha [$alpha $digit \_]*     { tok (TokId undefined) }
+
 {
 
 alexEOF :: Alex TokenPosn
 alexEOF = return Eof
 
 tok :: Token -> AlexInput -> Int -> Alex TokenPosn
+tok (TokId _) (posn, _, _, str) len = return $ TokenPosn (TokId (take len str)) (posn, stop)
+  where
+    stop = foldl alexMove posn $ take len str
 tok (TokInt _) (posn, _, _, str) len = return $ TokenPosn (TokInt (read $ take len str)) (posn, stop)
   where
     stop = foldl alexMove posn $ take len str
-tok token (posn, _, _, str) len      = return $ TokenPosn token (posn, stop)
+tok token (posn, _, _, str) len = return $ TokenPosn token (posn, stop)
   where
     stop = foldl alexMove posn $ take len str
 

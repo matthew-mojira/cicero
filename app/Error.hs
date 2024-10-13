@@ -11,15 +11,21 @@ instance Show Error where
   show (Error (AlexPn _ line col, _) kind) = concat
     ["<repl>:", show line, ":", show col, ": ", show kind]
 
-data ErrorKind = TypeError { expected :: Type, actual :: Type }
-               | ArithmeticError { msg :: String }
-               | ManualError { msg :: String }
+data ErrorKind = TypeError         { expected :: Type, actual :: Type }
+               | ArithmeticError   { msg :: String }
+               | NameError         { id :: String }
+               | RedefinitionError { id :: String }
+               | ManualError       { msg :: String }
 
 instance Show ErrorKind where
   show (TypeError exp act)   = unwords
     ["type error: expected value of type", show exp, "but got", show act]
   show (ArithmeticError msg) = unwords
     ["arithmetic error:", msg]
+  show (NameError id) = unwords
+    ["name error: identifier", id, "not in scope"]
+  show (RedefinitionError id) = unwords
+    ["redefinition error: identifier", id, "redeclared in the same scope"]
   show (ManualError msg)     = msg
 
 errorArrow :: Error -> String

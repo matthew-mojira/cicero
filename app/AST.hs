@@ -8,10 +8,13 @@ type Prog = ExprPosn
 type ExprPosn = (Expr, Posn)
 
 data Expr
-  = ExprLit Value
-  | ExprUnOp UnOp ExprPosn
-  | ExprBinOp BinOp ExprPosn ExprPosn
+  = ExprLit    Value
+  | ExprUnOp   UnOp ExprPosn
+  | ExprBinOp  BinOp ExprPosn ExprPosn
   | ExprIfElse ExprPosn ExprPosn ExprPosn
+  | ExprVar    String ExprPosn -- omit type
+  | ExprConst  String ExprPosn -- omit type
+  | ExprId     String
 
 data UnOp =
   LNot
