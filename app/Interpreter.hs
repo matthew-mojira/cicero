@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Interpreter
-  ( interp
+  ( interp, Env
   ) where
 
 import Lexer (AlexPosn(AlexPn), Posn)
@@ -22,8 +22,8 @@ type Env = [(String, Value)]
 
 type Matthew a = StateT Env (ExceptT Error IO) a
 
-interp :: Prog -> IO (Either Error Value)
-interp prog = runExceptT $ evalStateT (evalExpr prog) []
+interp :: Prog -> IO (Either Error (Value, Env))
+interp prog = runExceptT $ runStateT (evalExpr prog) []
 
 evalExpr :: ExprPosn -> Matthew Value
 evalExpr (ExprLit value, _) = return value

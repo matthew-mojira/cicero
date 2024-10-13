@@ -30,19 +30,21 @@ main = do
 
   repl
 
-loop :: IO ()
-loop = do
+loop :: Env -> IO ()
+loop env = do
   read <- Main.read
   case read of
     Just str -> do
       res <- eval str
       case res of
-        Left  err -> do
+        Left err -> do
           printErr $ show err
           printErr str
           printErr $ errorArrow err
-        Right val -> print val
-      loop
+          loop env
+        Right (val, env') -> do
+          print val
+          loop env'
     Nothing  -> return ()
 
 read :: IO (Maybe String)
@@ -54,14 +56,14 @@ read = runInputT defaultSettings $ do
     Just ":quit" -> return Nothing
     Just input   -> return $ Just input
 
-eval :: String -> IO (Either Error Value)
+eval :: String -> IO (Either Error (Value, Env))
 eval str = do
   case runAlex str runHappy of
     Left  err  -> return $ Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err)
     Right prog -> interp prog
 
 repl :: IO ()
-repl = loop
+repl = loop []
 
 printErr :: String -> IO ()
 printErr = hPutStrLn stderr
