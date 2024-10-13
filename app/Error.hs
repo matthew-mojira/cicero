@@ -8,15 +8,18 @@ data Error = Error { posn :: Posn
                    }
 
 instance Show Error where
-  show (Error (AlexPn _ line col, _) kind) = "<file>:" ++ show line ++ ":" ++ show col ++ ": " ++ show kind
+  show (Error (AlexPn _ line col, _) kind) = concat
+    ["<repl>:", show line, ":", show col, ": ", show kind]
 
 data ErrorKind = TypeError { expected :: Type, actual :: Type }
                | ArithmeticError { msg :: String }
                | ManualError { msg :: String }
 
 instance Show ErrorKind where
-  show (TypeError exp act)   = "type error: expected value of type " ++ show exp ++ " but got " ++ show act
-  show (ArithmeticError msg) = msg
+  show (TypeError exp act)   = unwords
+    ["type error: expected value of type", show exp, "but got", show act]
+  show (ArithmeticError msg) = unwords
+    ["arithmetic error:", msg]
   show (ManualError msg)     = msg
 
 errorArrow :: Error -> String

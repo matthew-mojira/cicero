@@ -61,13 +61,14 @@ evalExpr (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
     val2 <- evalExpr expr2
     case (val1, val2) of
       (ValInt int1, ValInt int2) -> do
-        let op' =
-              case op of
-                Add  -> (+)
-                Sub  -> (-)
-                Mult -> (*)
-                Exp  -> (^)
-                Div  -> div
+        op' <- case op of
+          Add  -> return (+)
+          Sub  -> return (-)
+          Mult -> return (*)
+          Exp  -> return (^)
+          Div  -> if int2 == 0
+                    then throwError $ Error posn (ArithmeticError "division by zero")
+                    else return div
         return $ ValInt $ op' int1 int2
       (ValInt _, v2) -> typeError TypeInt (typeof v2) pos2
       (v1, ValInt _) -> typeError TypeInt (typeof v1) pos1
