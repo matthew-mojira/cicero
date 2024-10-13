@@ -1,52 +1,66 @@
 module Eval where
 
+import Control.Monad
+import Control.Monad.Trans.State
+
 import AST
 import Value
 
--- type Prog = Expr
-eval :: Prog -> Value
-eval prog = evalExpr prog
+type Env = [(String, Value)]
 
-evalExpr :: ExprPosn -> Value
-evalExpr ((ExprLit value), _) = value
-evalExpr ((ExprUnOp LNot expr), _) =
-  let ValBool bool = evalExpr expr
-   in ValBool $ not bool
+type Error = String
+
+-- type Prog = Expr
+eval :: Prog -> Either Error Value
+eval prog = evalStateT (evalExpr prog) []
+
+evalExpr :: ExprPosn -> StateT Env (Either Error) Value
+evalExpr ((ExprLit value), _) = return value
+evalExpr ((ExprUnOp LNot expr), _) = do
+  x <- evalExpr expr
+  let ValBool bool = x
+  return $ ValBool $ not bool
 evalExpr ((ExprBinOp op expr1 expr2), _)
-  | binOpEq op =
-    let val1 = evalExpr expr1
-        val2 = evalExpr expr2
-        op' =
+  | binOpEq op = do
+    val1 <- evalExpr expr1
+    val2 <- evalExpr expr2
+    let op' =
           case op of
             Eq -> (==)
             Neq -> (/=)
-     in ValBool $ op' val1 val2
-  | binOpComp op =
-    let ValInt int1 = evalExpr expr1
-        ValInt int2 = evalExpr expr2
-        op' =
+    return $ ValBool $ op' val1 val2
+  | binOpComp op = do
+    val1 <- evalExpr expr1
+    val2 <- evalExpr expr2
+    let ValInt int1 = val1
+    let ValInt int2 = val2
+    let op' =
           case op of
             Le -> (<)
             Leq -> (<=)
             Ge -> (>)
             Geq -> (>=)
-     in ValBool $ op' int1 int2
-  | binOpInt op =
-    let ValInt int1 = evalExpr expr1
-        ValInt int2 = evalExpr expr2
-        op' =
+    return $ ValBool $ op' int1 int2
+  | binOpInt op = do
+    val1 <- evalExpr expr1
+    val2 <- evalExpr expr2
+    let ValInt int1 = val1
+    let ValInt int2 = val2
+    let op' =
           case op of
             Add -> (+)
             Sub -> (-)
             Mult -> (*)
             Exp -> (^)
             Div -> div
-     in ValInt $ op' int1 int2
-  | binOpBool op =
-    let ValBool bool1 = evalExpr expr1
-        ValBool bool2 = evalExpr expr2
-        op' =
+    return $ ValInt $ op' int1 int2
+  | binOpBool op = do
+    val1 <- evalExpr expr1
+    val2 <- evalExpr expr2
+    let ValBool bool1 = val1
+    let ValBool bool2 = val2
+    let op' =
           case op of
             LAnd -> (&&)
             LOr -> (||)
-     in ValBool $ op' bool1 bool2
+    return $ ValBool $ op' bool1 bool2

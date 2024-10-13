@@ -1,0 +1,65 @@
+
+
+var x = 5   -- x: var[?] -> var[num]
+var y = x   -- y: var[?] -> var[var[num]]
+
+var z = x + y
+  -- x: var[num]
+  -- y: var[var[num]]
+
+  -- ]x[: num
+  -- ]y[: var[num]
+  -- ]]y[[: num
+  
+  -- z: var[num] = 10
+
+const x = 5   -- x: num
+
+func foo(x: num, y: num) -> num {
+  x + y
+}
+-- foo: func[(num, num), num]
+
+var f = foo      f: var[func[(num, num), num]]
+
+-- dependent types
+
+func map<A, B>(a: array[A], f: func[A, B]) -> array[B] {
+  
+}
+
+Array's dependent type
+
+array[t, n]
+  t: type
+  n: nat
+
+Hierarchy of types
+
+type = any
+     | var[type]
+     | array[type, nat]
+     | range[int, int]   -- always bounded
+     | func[type, type]
+     | cons[type, cons]    -- tuples
+     | real
+     | int
+     | nat
+     | char
+     | str
+     | bool
+     | void
+
+Numeric types
+
+real
+int
+nat
+
+Type of types
+
+func map(a: array[t, n], f: func[t, t']) -> array[t', n] {
+  array[t', n] = func i: range[0, n - 1] -> f(a[i])
+}
+
+|> <||| |><| <|>
