@@ -1,4 +1,6 @@
-module Interpreter where
+module Interpreter
+  ( interp
+  ) where
 
 import Control.Monad
 import Control.Monad.Trans.State
@@ -11,8 +13,8 @@ type Env = [(String, Value)]
 type Error = String
 
 -- type Prog = Expr
-eval :: Prog -> Either Error Value
-eval prog = evalStateT (evalExpr prog) []
+interp :: Prog -> Either Error Value
+interp prog = evalStateT (evalExpr prog) []
 
 evalExpr :: ExprPosn -> StateT Env (Either Error) Value
 evalExpr ((ExprLit value), _) = return value
