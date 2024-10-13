@@ -27,6 +27,7 @@ tokens :-
   (>=|≥)                         { tok TokGeq }
   \(                             { tok TokLParen }
   \)                             { tok TokRParen }
+  \<\-                           { tok TokLArrow }
 
   true                           { tok TokTrue }
   false                          { tok TokFalse }

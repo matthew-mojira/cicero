@@ -25,6 +25,17 @@ extendVar id val = do
   env <- get
   put $ (id, (True, val)):env
 
+setVar :: String -> Value -> Matthew ()
+setVar id val = do
+  env <- get
+  put $ rep env id (True, val)
+  where
+    rep :: Eq a => [(a, b)] -> a -> b -> [(a, b)]
+    rep [] _ _ = []
+    rep ((a, b):xs) x y
+        | a == x    = (x, y) : xs
+        | otherwise = (a, b) : rep xs x y
+
 extendConst :: String -> Value -> Matthew ()
 extendConst id val = do
   env <- get
@@ -33,27 +44,27 @@ extendConst id val = do
 type Matthew a = StateT Env (ExceptT Error IO) a
 
 interp :: Prog -> Env -> IO (Either Error (Value, Env))
-interp prog env = runExceptT $ runStateT (evalExpr prog) env
+interp prog env = runExceptT $ runStateT (eval prog) env
 
-evalExpr :: ExprPosn -> Matthew Value
-evalExpr (ExprLit value, _) = return value
-evalExpr (ExprUnOp LNot expr@(_, posn), _) = do
-  x <- evalExpr expr
+eval :: ExprPosn -> Matthew Value
+eval (ExprLit value, _) = return value
+eval (ExprUnOp LNot expr@(_, posn), _) = do
+  x <- eval expr
   case x of
     ValBool bool -> return $ ValBool $ not bool
     v            -> typeError TypeBool (typeof v) posn
-evalExpr (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
+eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
   | binOpEq op = do
-    val1 <- evalExpr expr1
-    val2 <- evalExpr expr2
+    val1 <- eval expr1
+    val2 <- eval expr2
     let op' =
           case op of
             Eq  -> (==)
             Neq -> (/=)
     return $ ValBool $ op' val1 val2
   | binOpComp op = do
-    val1 <- evalExpr expr1
-    val2 <- evalExpr expr2
+    val1 <- eval expr1
+    val2 <- eval expr2
     case (val1, val2) of
       (ValInt int1, ValInt int2) -> do
         let op' =
@@ -67,8 +78,8 @@ evalExpr (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
       (v1, ValInt _) -> typeError TypeInt (typeof v1) pos1
       (v1, _)        -> typeError TypeInt (typeof v1) pos1
   | binOpInt op = do
-    val1 <- evalExpr expr1
-    val2 <- evalExpr expr2
+    val1 <- eval expr1
+    val2 <- eval expr2
     case (val1, val2) of
       (ValInt int1, ValInt int2) -> do
         op' <- case op of
@@ -84,8 +95,8 @@ evalExpr (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
       (v1, ValInt _) -> typeError TypeInt (typeof v1) pos1
       (v1, _)        -> typeError TypeInt (typeof v1) pos1
   | binOpBool op = do
-    val1 <- evalExpr expr1
-    val2 <- evalExpr expr2
+    val1 <- eval expr1
+    val2 <- eval expr2
     case (val1, val2) of
       (ValBool bool1, ValBool bool2) -> do
         let op' =
@@ -96,36 +107,46 @@ evalExpr (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
       (ValBool _, v2) -> typeError TypeBool (typeof v2) pos2
       (v1, ValBool _) -> typeError TypeBool (typeof v1) pos1
       (v1, _)         -> typeError TypeBool (typeof v1) pos1
-evalExpr (ExprIfElse pred@(_, posn) exprT exprF, _) = do
-  x <- evalExpr pred
+eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
+  x <- eval pred
   case x of
     ValBool bool -> do
       if bool
-        then evalExpr exprT
-        else evalExpr exprF
+        then eval exprT
+        else eval exprF
     v            -> typeError TypeBool (typeof v) posn
-evalExpr (ExprVar id expr, posn) = do
+eval (ExprVar id expr, posn) = do
   env <- get
   case lookup id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
-      val <- evalExpr expr
+      val <- eval expr
       extendVar id val
       return val
-evalExpr (ExprConst id expr, posn) = do
+eval (ExprConst id expr, posn) = do
   env <- get
   case lookup id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
-      val <- evalExpr expr
+      val <- eval expr
       extendConst id val
       return val
-evalExpr (ExprId id, posn) = do
+eval (ExprId id, posn) = do
   env <- get
   case lookup id env of
     Just (_, v) -> return v
+    Nothing     -> throwError $ Error posn (NameError id)
+eval (ExprAssign id expr, posn) = do
+  env <- get
+  case lookup id env of
+    Just (w, v) -> if w
+      then do
+        val <- eval expr
+        setVar id val
+        return val
+      else throwError $ Error posn (AssignmentError id)
     Nothing     -> throwError $ Error posn (NameError id)
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a

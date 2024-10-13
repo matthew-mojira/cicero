@@ -14,6 +14,7 @@ data Token = TokPlus
            | TokGeq
            | TokLParen
            | TokRParen
+           | TokLArrow
 
            | TokTrue
            | TokFalse

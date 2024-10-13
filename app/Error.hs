@@ -15,6 +15,7 @@ data ErrorKind = TypeError         { expected :: Type, actual :: Type }
                | ArithmeticError   { msg :: String }
                | NameError         { id :: String }
                | RedefinitionError { id :: String }
+               | AssignmentError   { id :: String }
                | ManualError       { msg :: String }
 
 instance Show ErrorKind where
@@ -26,6 +27,8 @@ instance Show ErrorKind where
     ["name error: identifier", id, "not in scope"]
   show (RedefinitionError id) = unwords
     ["redefinition error: identifier", id, "redeclared in the same scope"]
+  show (AssignmentError id) = unwords
+    ["assignment error: assigning to constant identifier", id]
   show (ManualError msg)     = msg
 
 errorArrow :: Error -> String
