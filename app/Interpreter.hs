@@ -1,4 +1,4 @@
-module Eval where
+module Interpreter where
 
 import Control.Monad
 import Control.Monad.Trans.State

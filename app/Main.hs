@@ -3,9 +3,9 @@ module Main where
 import Lexer (runAlex)
 import Parser
 import Typechecker
+import Interpreter
 
 import AST
-import Eval
 
 import Control.Monad
 import System.Console.Haskeline
@@ -31,7 +31,7 @@ prepareProg :: String -> Either String Prog
 prepareProg str =
   runAlex str $ do
     prog <- runHappy
-    _ <- typeofExpr prog
+--  _ <- typeofExpr prog
     return prog
 
 execProg :: String -> InputT IO ()
@@ -39,4 +39,6 @@ execProg prog =
   case prepareProg prog of
     Left msg  -> do
                    outputStrLn msg
-    Right ast -> outputStrLn $ show $ eval ast
+    Right ast -> case eval ast of
+                   Left _ -> undefined
+                   Right o -> outputStrLn $ show o
