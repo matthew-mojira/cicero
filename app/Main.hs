@@ -43,7 +43,7 @@ loop env = do
           printErr $ errorArrow err
           loop env
         Right (val, env') -> do
-          print val
+          putStrLn $ concat ["=> ", show val, " : ", show (typeof val)]
           loop env'
     Nothing  -> return ()
 
