@@ -90,7 +90,6 @@ expr  : int                     { parseInt $1 }
       | const id '=' expr       { parseConst $1 $2 $4 }
       | id                      { parseId $1 }
       | id ':=' expr            { parseAssign $1 $3 }
-      | id '<-' expr            { parseAssign $1 $3 }
 
       | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2)}
       
