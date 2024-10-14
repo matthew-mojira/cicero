@@ -4,6 +4,7 @@ import Lexer (runAlex, AlexPosn(AlexPn))
 import Parser
 import Interpreter
 
+import Environment
 import Error
 import Value
 
@@ -34,7 +35,7 @@ loop :: Env -> IO ()
 loop env = do
   read <- Main.read
   case read of
-    Just str -> do
+    Run str -> do
       res <- eval str env
       case res of
         Left err -> do
@@ -43,18 +44,22 @@ loop env = do
           printErr $ errorArrow err
           loop env
         Right (val, env') -> do
-          print val
+          putStrLn $ concat ["=> ", show val, " : ", show (typeof val)]
           loop env'
-    Nothing  -> return ()
+    PrintEnv -> do
+      print env
+      loop env
+    Quit -> return ()
 
-read :: IO (Maybe String)
+read :: IO Command
 read = runInputT defaultSettings $ do
   minput <- getInputLine "mpl> "
   case minput of
-    Nothing      -> return Nothing
-    Just ""      -> return Nothing
-    Just ":quit" -> return Nothing
-    Just input   -> return $ Just input
+    Nothing      -> return Quit
+    Just ""      -> return Quit
+    Just ":quit" -> return Quit
+    Just ":env"  -> return PrintEnv
+    Just input   -> return $ Run input
 
 eval :: String -> Env -> IO (Either Error (Value, Env))
 eval str env = do
@@ -63,7 +68,11 @@ eval str env = do
     Right prog -> interp prog env
 
 repl :: IO ()
-repl = loop []
+repl = loop emptyEnv
 
 printErr :: String -> IO ()
 printErr = hPutStrLn stderr
+
+data Command = Quit
+             | Run String
+             | PrintEnv

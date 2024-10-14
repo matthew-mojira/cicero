@@ -28,7 +28,7 @@ instance Show ErrorKind where
   show (RedefinitionError id) = unwords
     ["redefinition error: identifier", id, "redeclared in the same scope"]
   show (AssignmentError id) = unwords
-    ["assignment error: assigning to constant identifier", id]
+    ["assignment error: assignment to constant", id]
   show (ManualError msg)     = msg
 
 errorArrow :: Error -> String

@@ -16,8 +16,11 @@ data Expr
   | ExprConst  String ExprPosn -- omit type
   | ExprId     String
   | ExprAssign String ExprPosn
+  | ExprSetBox ExprPosn ExprPosn
 
 data UnOp = LNot
+          | Box
+          | Unbox
           | Typeof
 
 data BinOp

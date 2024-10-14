@@ -12,34 +12,15 @@ import Control.Monad.Identity
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 
+import Data.Maybe
+
 import AST
 import Type
 
+import Environment
+
 import Error
 import Value
-
-type Env = [(String, (Bool, Value))]
-
-extendVar :: String -> Value -> Matthew ()
-extendVar id val = do
-  env <- get
-  put $ (id, (True, val)):env
-
-setVar :: String -> Value -> Matthew ()
-setVar id val = do
-  env <- get
-  put $ rep env id (True, val)
-  where
-    rep :: Eq a => [(a, b)] -> a -> b -> [(a, b)]
-    rep [] _ _ = []
-    rep ((a, b):xs) x y
-        | a == x    = (x, y) : xs
-        | otherwise = (a, b) : rep xs x y
-
-extendConst :: String -> Value -> Matthew ()
-extendConst id val = do
-  env <- get
-  put $ (id, (False, val)):env
 
 type Matthew a = StateT Env (ExceptT Error IO) a
 
@@ -120,37 +101,61 @@ eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
     v            -> typeError TypeBool (typeof v) posn
 eval (ExprVar id expr, posn) = do
   env <- get
-  case lookup id env of
+  case lookupEnv id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
       val <- eval expr
-      extendVar id val
+      env <- get
+      put $ extendVar id val env
       return val
 eval (ExprConst id expr, posn) = do
   env <- get
-  case lookup id env of
+  case lookupEnv id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
       val <- eval expr
-      extendConst id val
+      env <- get
+      put $ extendConst id val env
       return val
 eval (ExprId id, posn) = do
   env <- get
-  case lookup id env of
-    Just (_, v) -> return v
-    Nothing     -> throwError $ Error posn (NameError id)
+  case lookupEnv id env of
+    Just (val, _) -> return val
+    Nothing       -> throwError $ Error posn (NameError id)
 eval (ExprAssign id expr, posn) = do
   env <- get
-  case lookup id env of
-    Just (w, v) -> if w
-      then do
-        val <- eval expr
-        setVar id val
-        return val
-      else throwError $ Error posn (AssignmentError id)
+  case lookupEnv id env of
+    Just (_, True) -> do
+      val <- eval expr
+      env <- get
+      put $ setVar id val env
+      return val
+    Just (_, False) -> throwError $ Error posn (AssignmentError id)
     Nothing -> throwError $ Error posn (NameError id)
+eval (ExprUnOp Box expr@(_, posn), _) = do
+  val <- eval expr
+  env <- get
+  let (env', val') = boxValue val env
+  put env'
+  return val'
+eval (ExprUnOp Unbox expr@(_, posn), _) = do
+  val <- eval expr
+  case val of
+    ValBox _ -> do
+      env <- get
+      return $ unboxValue val env
+    _ -> typeError (TypeBox TypeAny) (typeof val) posn
+eval (ExprSetBox exprD@(_, posn) exprS, _) = do
+  valD <- eval exprD
+  case valD of
+    ValBox _ -> do
+      valS <- eval exprS
+      env  <- get
+      put $ setBox valD valS env
+      return valS
+    _ -> typeError (TypeBox TypeAny) (typeof valD) posn
 -- first-class type stuff
 eval (ExprUnOp Typeof expr, _) = do
   val <- eval expr

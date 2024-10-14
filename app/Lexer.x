@@ -28,6 +28,7 @@ tokens :-
   \(                             { tok TokLParen }
   \)                             { tok TokRParen }
   \<\-                           { tok TokLArrow }
+  :=                             { tok TokColEq }
   \?                             { tok TokQuestion }
 
   true                           { tok TokTrue }
@@ -43,6 +44,8 @@ tokens :-
 
   var                            { tok TokVar }
   const                          { tok TokConst }
+  box                            { tok TokBox }
+  unbox                          { tok TokUnbox }
 
   $digit+                        { tok (TokInt undefined) }
   $alpha [$alpha $digit \_]*     { tok (TokId undefined) }
