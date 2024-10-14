@@ -44,7 +44,6 @@ setBox (ValBox idx) val env@Env {vals = vals} =
                       in h ++ x:ts
 
 instance Show Env where
-  show (Env idx vals) = show idx ++ show vals
---  show (Env idx vals) = unlines $ map go es
---    where
---      go (id, val) = unwords [id, ":", show (typeof val), "=", show val]
+  show (Env idxs vals) = unlines $ map go idxs
+    where
+      go (id, (val, _)) = unwords [id, ":", show (typeof val), "=", show val]
