@@ -30,6 +30,8 @@ tokens :-
   \<\-                           { tok TokLArrow }
   :=                             { tok TokColEq }
   \?                             { tok TokQuestion }
+  \{                             { tok TokLBrace }
+  \}                             { tok TokRBrace }
 
   true                           { tok TokTrue }
   false                          { tok TokFalse }

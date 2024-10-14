@@ -43,6 +43,8 @@ import Value
       '<-'            { TokenPosn TokLArrow (_, _) }
       ':='            { TokenPosn TokColEq (_, _) }
       '?'             { TokenPosn TokQuestion (_, _) }
+      '{'             { TokenPosn TokLBrace (_, _) }
+      '}'             { TokenPosn TokRBrace (_, _) }
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
@@ -78,14 +80,16 @@ expr  : int                     { parseInt $1 }
       | expr '>' expr           { (ExprBinOp Ge $1 $3, ($1 <|> $3)) }
       | expr '>=' expr          { (ExprBinOp Geq $1 $3, ($1 <|> $3)) }
       | not expr                { parseUnOp LNot $1 $2 }
-      | '(' expr ')'            { (fst $2, (tokenPosn $1 <-> tokenPosn $3)) }
+
+      | '(' expr ')'            { (fst $2, tokenPosn $1 <-> tokenPosn $3) }
+      | '{' exprs '}'           { (ExprBlock $2, tokenPosn $1 <-> tokenPosn $3)}
+      
       | '-' int %prec NEG       { parseNInt $1 $2 }
 
       | var id '=' expr         { parseVar $1 $2 $4 }
       | const id '=' expr       { parseConst $1 $2 $4 }
       | id                      { parseId $1 }
       | id ':=' expr            { parseAssign $1 $3 }
-      | id '<-' expr            { parseAssign $1 $3 }
 
       | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2)}
       
@@ -96,6 +100,9 @@ expr  : int                     { parseInt $1 }
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
       | true                    { (ExprLit (ValBool True), tokenPosn $1) }
       | false                   { (ExprLit (ValBool False), tokenPosn $1) }
+
+exprs :                         { [] }
+      | expr exprs              { $1 : $2 }
 
 {
 

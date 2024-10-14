@@ -17,6 +17,7 @@ data Expr
   | ExprId     String
   | ExprAssign String ExprPosn
   | ExprSetBox ExprPosn ExprPosn
+  | ExprBlock  [ExprPosn]
 
 data UnOp = LNot
           | Box
@@ -77,6 +78,8 @@ instance Show Expr where
   show (ExprId id) = id
   show (ExprAssign id expr) = unwords [id, ":=", show expr]
   show (ExprSetBox expr1 expr2) = unwords [show expr1, "<-", show expr2]
+  show (ExprBlock exprs) =
+    unlines $ ["{"] ++ map (show . fst) exprs ++ ["}"]
 
 instance Show UnOp where
   show LNot   = "not"
