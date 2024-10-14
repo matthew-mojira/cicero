@@ -11,10 +11,9 @@ emptyEnv = Env [] []
 
 lookupEnv :: String -> Env -> Maybe Value
 lookupEnv id (Env idxs _) = lookup id idxs
---  val <- lookup id idxs
---  case val of
---    ValVar idx -> return $ vals!!(length vals - idx - 1)
---    v          -> return v
+
+lookupIdx :: Int -> Env -> Maybe Value
+lookupIdx idx (Env _ vals) = return $ vals!!(length vals - idx - 1)
 
 --setEnv :: String -> Value -> Env -> Maybe Env
 --setEnv id val env@(Env xs) = do

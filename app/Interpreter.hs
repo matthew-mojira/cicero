@@ -12,6 +12,8 @@ import Control.Monad.Identity
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 
+import Data.Maybe
+
 import AST
 import Type
 
@@ -127,6 +129,13 @@ eval (ExprAssign exprL@(_, posnL) exprR, posn) = do
       put $ setFromIdx idx val env
       return val
     val -> typeError TypeVar (typeof val) posnL
+eval (ExprUnOp Deref expr@(_, posn), _) = do
+  x <- eval expr
+  case x of
+    ValVar idx -> do
+      env <- get
+      return $ fromJust $ lookupIdx idx env
+    v -> typeError TypeVar (typeof v) posn
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)

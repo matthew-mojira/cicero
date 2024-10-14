@@ -81,6 +81,7 @@ expr  : int                     { parseInt $1 }
       | const id '=' expr       { parseConst $1 $2 $4 }
       | id                      { parseId $1 }
       | expr '<-' expr          { (ExprAssign $1 $3, $1 <|> $3) }
+      | '*' expr %prec NEG      { (ExprUnOp Deref $2, tokenPosn $1 <-> snd $2) }
       
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
       | true                    { (ExprLit (ValBool True), tokenPosn $1) }
