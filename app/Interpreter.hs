@@ -101,7 +101,7 @@ eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
     v            -> typeError TypeBool (typeof v) posn
 eval (ExprVar id expr, posn) = do
   env <- get
-  case lookupEnv id env of
+  case lookupEnv' id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
@@ -111,7 +111,7 @@ eval (ExprVar id expr, posn) = do
       return val
 eval (ExprConst id expr, posn) = do
   env <- get
-  case lookupEnv id env of
+  case lookupEnv' id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
@@ -160,6 +160,12 @@ eval (ExprSetBox exprD@(_, posn) exprS, _) = do
 eval (ExprUnOp Typeof expr, _) = do
   val <- eval expr
   return $ ValType $ typeof val
+-- expression combinators
+eval (ExprBlock exprs, _) = do
+  modify pushBlock
+  val <- foldM (const eval) ValVoid exprs
+  modify popBlock
+  return val
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)
