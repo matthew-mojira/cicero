@@ -80,8 +80,7 @@ expr  : int                     { parseInt $1 }
       | var id '=' expr         { parseVar $1 $2 $4 }
       | const id '=' expr       { parseConst $1 $2 $4 }
       | id                      { parseId $1 }
-      | expr '<-' expr          { (ExprAssign $1 $3, $1 <|> $3) }
-      | '*' expr %prec NEG      { (ExprUnOp Deref $2, tokenPosn $1 <-> snd $2) }
+      | id '<-' expr            { parseAssign $1 $3 }
       
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
       | true                    { (ExprLit (ValBool True), tokenPosn $1) }
@@ -111,6 +110,10 @@ parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) expr@(_, pos2) =
 
 parseId :: TokenPosn -> ExprPosn
 parseId (TokenPosn (TokId id) pos) = (ExprId id, pos)
+
+parseAssign :: TokenPosn -> ExprPosn -> ExprPosn
+parseAssign (TokenPosn (TokId id) pos1) expr@(_, pos2) =
+  (ExprAssign id expr, pos1 <-> pos2)
 
 tokenPosn :: TokenPosn -> (AlexPosn, AlexPosn)
 tokenPosn (TokenPosn _ pos) = pos

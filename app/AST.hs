@@ -15,8 +15,7 @@ data Expr
   | ExprVar    String ExprPosn -- omit type
   | ExprConst  String ExprPosn -- omit type
   | ExprId     String
-  | ExprAssign ExprPosn ExprPosn
-  | ExprDeref  ExprPosn
+  | ExprAssign String ExprPosn
 
 data UnOp = LNot
           | Deref

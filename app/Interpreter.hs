@@ -103,9 +103,8 @@ eval (ExprVar id expr, posn) = do
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
       val <- eval expr
-      let (env', val') = extendVar id val env
-      put env'
-      return val'
+      put $ extendVar id val env
+      return val
 eval (ExprConst id expr, posn) = do
   env <- get
   case lookupEnv id env of
@@ -118,24 +117,24 @@ eval (ExprConst id expr, posn) = do
 eval (ExprId id, posn) = do
   env <- get
   case lookupEnv id env of
-    Just v  -> return v
-    Nothing -> throwError $ Error posn (NameError id)
-eval (ExprAssign exprL@(_, posnL) exprR, posn) = do
-  valL <- eval exprL
-  case valL of
-    ValVar idx -> do
-      env <- get
-      val <- eval exprR
-      put $ setFromIdx idx val env
+    Just (val, _) -> return val
+    Nothing       -> throwError $ Error posn (NameError id)
+eval (ExprAssign id expr, posn) = do
+  env <- get
+  case lookupEnv id env of
+    Just (_, True) -> do
+      val <- eval expr
+      put $ setVar id val env
       return val
-    val -> typeError TypeVar (typeof val) posnL
-eval (ExprUnOp Deref expr@(_, posn), _) = do
-  x <- eval expr
-  case x of
-    ValVar idx -> do
-      env <- get
-      return $ fromJust $ lookupIdx idx env
-    v -> typeError TypeVar (typeof v) posn
+    Just (_, False) -> throwError $ Error posn (AssignmentError id)
+    Nothing -> throwError $ Error posn (NameError id)
+--eval (ExprUnOp Deref expr@(_, posn), _) = do
+--  x <- eval expr
+--  case x of
+--    ValVar idx -> do
+--      env <- get
+--      return $ fromJust $ lookupIdx idx env
+--    v -> typeError TypeVar (typeof v) posn
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)
