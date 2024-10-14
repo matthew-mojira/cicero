@@ -72,11 +72,20 @@ instance Show Expr where
   show (ExprBinOp op (expr1, _) (expr2, _)) =
     "(" ++ show expr1 ++ " " ++ show op ++ " " ++ show expr2 ++ ")"
   show (ExprIfElse (expr1, _) (expr2, _) (expr3, _)) =
-    show "if " ++ show expr1 ++ " then " ++ show expr2 ++ " else " ++ show expr3
-  show (ExprBlock exprs) = unlines $ ["{"] ++ map (show . fst) exprs ++ ["}"] -- need to indent
+    unwords ["if", show expr1, "then", show expr2, "else", show expr3]
+  show (ExprVar id (expr, _)) = unwords ["var", id, "=", show expr]
+  show (ExprConst id (expr, _)) = unwords ["const", id, "=", show expr]
+  show (ExprId id) = id
+  show (ExprAssign id expr) = unwords [id, ":=", show expr]
+  show (ExprSetBox expr1 expr2) = unwords [show expr1, "<-", show expr2]
+  show (ExprBlock exprs) =
+    unlines $ ["{"] ++ map (show . fst) exprs ++ ["}"]
 
 instance Show UnOp where
-  show LNot = "not"
+  show LNot   = "not"
+  show Box    = "box"
+  show Unbox  = "unbox"
+  show Typeof = "typeof"
 
 instance Show BinOp where
   show Add  = "+"
