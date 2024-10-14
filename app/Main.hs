@@ -10,26 +10,47 @@ import Value
 
 import System.Console.Haskeline
 import System.Environment
+import System.Exit
 import System.IO
 
 main :: IO ()
 main = do
   args <- getArgs
 
-  putStrLn "   _______________                        |*\\_/*|________"
-  putStrLn "  |  ___________  |     .-.     .-.      ||_/-\\_|______  |"
-  putStrLn "  | |           | |    .****. .****.     | |           | |"
-  putStrLn "  | |   0   0   | |    .*****.*****.     | |   0   0   | |"
-  putStrLn "  | |     -     | |     .*********.      | |     -     | |"
-  putStrLn "  | |   \\___/   | |      .*******.       | |   \\___/   | |"
-  putStrLn "  | |___     ___| |       .*****.        | |___________| |"
-  putStrLn "  |_____|\\_/|_____|        .***.         |_______________|"
-  putStrLn "    _|__|/ \\|_|_.............*.............._|________|_"
-  putStrLn "   / ********** \\                          / ********** \\"
-  putStrLn " /  ************  \\                      /  ************  \\"
-  putStrLn "--------------------                    --------------------"
+  case args of
+    [filename] -> withFile filename ReadMode $ \handle -> do
+      contents <- hGetContents handle
+      res <- eval contents emptyEnv
+      case res of
+        Left err -> do
+          printErr $ show err
+          let (AlexPn _ line _, _) = posn err
+          printErr $ (lines contents)!!(line - 1)
+          printErr $ errorArrow err
+          exitFailure
+        Right (val, env') -> do
+          putStrLn $ concat ["=> ", show val, " : ", show (typeof val)]
+          exitSuccess
+    [] -> do
+      putStrLn "   _______________                        |*\\_/*|________"
+      putStrLn "  |  ___________  |     .-.     .-.      ||_/-\\_|______  |"
+      putStrLn "  | |           | |    .****. .****.     | |           | |"
+      putStrLn "  | |   0   0   | |    .*****.*****.     | |   0   0   | |"
+      putStrLn "  | |     -     | |     .*********.      | |     -     | |"
+      putStrLn "  | |   \\___/   | |      .*******.       | |   \\___/   | |"
+      putStrLn "  | |___     ___| |       .*****.        | |___________| |"
+      putStrLn "  |_____|\\_/|_____|        .***.         |_______________|"
+      putStrLn "    _|__|/ \\|_|_.............*.............._|________|_"
+      putStrLn "   / ********** \\                          / ********** \\"
+      putStrLn " /  ************  \\                      /  ************  \\"
+      putStrLn "--------------------                    --------------------"
 
-  repl
+      repl
+      exitSuccess
+    _ -> do
+      name <- getProgName
+      hPutStrLn stderr $ concat [name, ": unrecognized arguments"]
+      exitFailure
 
 loop :: Env -> IO ()
 loop env = do
