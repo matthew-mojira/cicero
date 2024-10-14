@@ -15,6 +15,7 @@ data Token = TokPlus
            | TokLParen
            | TokRParen
            | TokLArrow
+           | TokColEq
 
            | TokTrue
            | TokFalse
@@ -29,6 +30,8 @@ data Token = TokPlus
 
            | TokVar
            | TokConst
+           | TokBox
+           | TokUnbox
 
            | TokInt Integer
            | TokId  String

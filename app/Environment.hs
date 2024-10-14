@@ -12,9 +12,6 @@ emptyEnv = Env [] []
 lookupEnv :: String -> Env -> Maybe (Value, Bool)
 lookupEnv id (Env idxs _) = lookup id idxs
 
---lookupIdx :: Int -> Env -> Maybe Value
---lookupIdx idx (Env _ vals) = return $ vals!!(length vals - idx - 1)
-
 extendConst :: String -> Value -> Env -> Env
 extendConst id val env@Env {idxs = idxs} = env {idxs = (id, (val, False)):idxs}
 
@@ -30,13 +27,21 @@ setVar id val env@Env {idxs = idxs} = env {idxs = rep idxs id (val, True)}
         | a == x    = (x, y) : xs
         | otherwise = (a, b) : rep xs x y
 
---setFromIdx :: Int -> Value -> Env -> Env
---setFromIdx idx val env@Env {vals = vals} =
---  env {vals = setElem vals (length vals - idx - 1) val}
---  where
---    setElem :: [a] -> Int -> a -> [a]
---    setElem xs i x = let (h, t:ts) = splitAt i xs
---                      in h ++ x:ts
+boxValue :: Value -> Env -> (Env, Value)
+boxValue val env@Env {vals = vals} =
+  let idx = length vals
+   in (env {vals = val:vals}, ValBox idx)
+
+unboxValue :: Value -> Env -> Value
+unboxValue (ValBox idx) env@Env {vals = vals} = vals!!(length vals - idx - 1)
+
+setBox :: Value -> Value -> Env -> Env
+setBox (ValBox idx) val env@Env {vals = vals} =
+  env {vals = setElem vals (length vals - idx - 1) val}
+  where
+    setElem :: [a] -> Int -> a -> [a]
+    setElem xs i x = let (h, t:ts) = splitAt i xs
+                      in h ++ x:ts
 
 instance Show Env where
   show (Env idx vals) = show idx ++ show vals

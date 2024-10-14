@@ -103,6 +103,7 @@ eval (ExprVar id expr, posn) = do
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
       val <- eval expr
+      env <- get
       put $ extendVar id val env
       return val
 eval (ExprConst id expr, posn) = do
@@ -112,6 +113,7 @@ eval (ExprConst id expr, posn) = do
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
       val <- eval expr
+      env <- get
       put $ extendConst id val env
       return val
 eval (ExprId id, posn) = do
@@ -124,17 +126,33 @@ eval (ExprAssign id expr, posn) = do
   case lookupEnv id env of
     Just (_, True) -> do
       val <- eval expr
+      env <- get
       put $ setVar id val env
       return val
     Just (_, False) -> throwError $ Error posn (AssignmentError id)
     Nothing -> throwError $ Error posn (NameError id)
---eval (ExprUnOp Deref expr@(_, posn), _) = do
---  x <- eval expr
---  case x of
---    ValVar idx -> do
---      env <- get
---      return $ fromJust $ lookupIdx idx env
---    v -> typeError TypeVar (typeof v) posn
+eval (ExprUnOp Box expr@(_, posn), _) = do
+  val <- eval expr
+  env <- get
+  let (env', val') = boxValue val env
+  put env'
+  return val'
+eval (ExprUnOp Unbox expr@(_, posn), _) = do
+  val <- eval expr
+  case val of
+    ValBox _ -> do
+      env <- get
+      return $ unboxValue val env
+    _ -> typeError (TypeBox TypeAny) (typeof val) posn
+eval (ExprSetBox exprD@(_, posn) exprS, _) = do
+  valD <- eval exprD
+  case valD of
+    ValBox _ -> do
+      valS <- eval exprS
+      env  <- get
+      put $ setBox valD valS env
+      return valS
+    _ -> typeError (TypeBox TypeAny) (typeof valD) posn
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)

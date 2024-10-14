@@ -41,6 +41,7 @@ import Value
       '('             { TokenPosn TokLParen (_, _) }
       ')'             { TokenPosn TokRParen (_, _) }
       '<-'            { TokenPosn TokLArrow (_, _) }
+      ':='            { TokenPosn TokColEq (_, _) }
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
@@ -56,6 +57,8 @@ import Value
 
       var             { TokenPosn TokVar (_, _) }
       const           { TokenPosn TokConst (_, _) }
+      box             { TokenPosn TokBox (_, _) }
+      unbox           { TokenPosn TokUnbox (_, _) }
 %%
 
 expr  : int                     { parseInt $1 }
@@ -73,15 +76,19 @@ expr  : int                     { parseInt $1 }
       | expr '<=' expr          { (ExprBinOp Leq $1 $3, ($1 <|> $3)) }
       | expr '>' expr           { (ExprBinOp Ge $1 $3, ($1 <|> $3)) }
       | expr '>=' expr          { (ExprBinOp Geq $1 $3, ($1 <|> $3)) }
-      | not expr                { parseLNot $1 $2 }
+      | not expr                { parseUnOp LNot $1 $2 }
       | '(' expr ')'            { (fst $2, (tokenPosn $1 <-> tokenPosn $3)) }
       | '-' int %prec NEG       { parseNInt $1 $2 }
 
       | var id '=' expr         { parseVar $1 $2 $4 }
       | const id '=' expr       { parseConst $1 $2 $4 }
       | id                      { parseId $1 }
-      | id '<-' expr            { parseAssign $1 $3 }
+      | id ':=' expr            { parseAssign $1 $3 }
       
+      | box expr                { parseUnOp Box $1 $2 }
+      | unbox expr              { parseUnOp Unbox $1 $2 }
+      | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
+
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
       | true                    { (ExprLit (ValBool True), tokenPosn $1) }
       | false                   { (ExprLit (ValBool False), tokenPosn $1) }
@@ -96,9 +103,9 @@ parseNInt :: TokenPosn -> TokenPosn -> ExprPosn
 parseNInt (TokenPosn _ pos1) (TokenPosn (TokInt int) pos2) =
   (ExprLit (ValInt $ -int), pos1 <-> pos2)
 
-parseLNot :: TokenPosn -> ExprPosn -> ExprPosn
-parseLNot (TokenPosn _ pos1) expr@(_, pos2) =
-  (ExprUnOp LNot expr, pos1 <-> pos2)
+parseUnOp :: UnOp -> TokenPosn -> ExprPosn -> ExprPosn
+parseUnOp op (TokenPosn _ pos1) expr@(_, pos2) =
+  (ExprUnOp op expr, pos1 <-> pos2)
 
 parseVar :: TokenPosn -> TokenPosn -> ExprPosn -> ExprPosn
 parseVar (TokenPosn _ pos1) (TokenPosn (TokId id) _) expr@(_, pos2) =
