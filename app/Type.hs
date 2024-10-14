@@ -4,8 +4,8 @@ data Type = TypeInt
           | TypeBool
           | TypeBox Type -- interior element type
           | TypeVoid
+          | TypeType
           | TypeAny
-          | TypeType Type
           deriving Eq
 
 instance Show Type where
@@ -13,8 +13,8 @@ instance Show Type where
   show TypeBool     = "bool"
   show TypeVoid     = "void"
   show (TypeBox t)  = concat ["box[", show t, "]"]
-  show (TypeType t) = concat ["type[", show t, "]"]
-  show TypeAny      = "?"
+  show TypeType     = "type"
+  show TypeAny      = "any"
 
 (<:) :: Type -> Type -> Bool
 (<:) = (==)

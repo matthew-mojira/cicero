@@ -29,7 +29,7 @@ main = do
           printErr $ errorArrow err
           exitFailure
         Right (val, env') -> do
-          putStrLn $ concat ["=> ", show val, " : ", show (typeof val)]
+          print val
           exitSuccess
     [] -> do
       putStrLn "   _______________                        |*\\_/*|________"
@@ -65,7 +65,7 @@ loop env = do
           printErr $ errorArrow err
           loop env
         Right (val, env') -> do
-          putStrLn $ concat ["=> ", show val, " : ", show (typeof val)]
+          print val
           loop env'
     PrintEnv -> do
       print env

@@ -33,19 +33,23 @@ eval (ExprUnOp LNot expr@(_, posn), _) = do
   x <- eval expr
   case x of
     ValBool bool -> return $ ValBool $ not bool
-    v            -> typeError TypeBool (typeof v) posn
+    val -> do
+      typ <- typeof val
+      typeError TypeBool typ posn
 eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
   | binOpEq op = do
     val1 <- eval expr1
     val2 <- eval expr2
-    if typeof val1 == typeof val2
+    typ1 <- typeof val1
+    typ2 <- typeof val2
+    if typ1 == typ2
       then do
         let op' =
               case op of
                 Eq  -> (==)
                 Neq -> (/=)
         return $ ValBool $ op' val1 val2
-      else typeError (typeof val1) (typeof val2) pos2
+      else typeError typ1 typ2 pos2
   | binOpComp op = do
     val1 <- eval expr1
     val2 <- eval expr2
@@ -58,9 +62,12 @@ eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
                 Ge  -> (>)
                 Geq -> (>=)
         return $ ValBool $ op' int1 int2
-      (ValInt _, v2) -> typeError TypeInt (typeof v2) pos2
-      (v1, ValInt _) -> typeError TypeInt (typeof v1) pos1
-      (v1, _)        -> typeError TypeInt (typeof v1) pos1
+      (ValInt _, v2) -> do
+        typ <- typeof v2
+        typeError TypeInt typ pos2
+      (v1, _)        -> do
+        typ <- typeof v1
+        typeError TypeInt typ pos1
   | binOpInt op = do
     val1 <- eval expr1
     val2 <- eval expr2
@@ -75,9 +82,12 @@ eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
                     then throwError $ Error posn (ArithmeticError "division by zero")
                     else return div
         return $ ValInt $ op' int1 int2
-      (ValInt _, v2) -> typeError TypeInt (typeof v2) pos2
-      (v1, ValInt _) -> typeError TypeInt (typeof v1) pos1
-      (v1, _)        -> typeError TypeInt (typeof v1) pos1
+      (ValInt _, v2) -> do
+        typ <- typeof v2
+        typeError TypeInt typ pos2
+      (v1, _)        -> do
+        typ <- typeof v1
+        typeError TypeInt typ pos1
   | binOpBool op = do
     val1 <- eval expr1
     val2 <- eval expr2
@@ -88,9 +98,12 @@ eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
                   LAnd -> (&&)
                   LOr  -> (||)
         return $ ValBool $ op' bool1 bool2
-      (ValBool _, v2) -> typeError TypeBool (typeof v2) pos2
-      (v1, ValBool _) -> typeError TypeBool (typeof v1) pos1
-      (v1, _)         -> typeError TypeBool (typeof v1) pos1
+      (ValBool _, v2) -> do
+        typ <- typeof v2
+        typeError TypeBool typ pos2
+      (v1, _)         -> do
+        typ <- typeof v1
+        typeError TypeBool typ pos1
 eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
   x <- eval pred
   case x of
@@ -98,7 +111,9 @@ eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
       if bool
         then eval exprT
         else eval exprF
-    v            -> typeError TypeBool (typeof v) posn
+    val -> do
+      typ <- typeof val
+      typeError TypeBool typ posn
 eval (ExprVar id expr, posn) = do
   env <- get
   case lookupEnv' id env of
@@ -146,7 +161,9 @@ eval (ExprUnOp Unbox expr@(_, posn), _) = do
     ValBox _ -> do
       env <- get
       return $ unboxValue val env
-    _ -> typeError (TypeBox TypeAny) (typeof val) posn
+    _ -> do
+      typ <- typeof val
+      typeError (TypeBox TypeAny) typ posn
 eval (ExprSetBox exprD@(_, posn) exprS, _) = do
   valD <- eval exprD
   case valD of
@@ -155,17 +172,30 @@ eval (ExprSetBox exprD@(_, posn) exprS, _) = do
       env  <- get
       put $ setBox valD valS env
       return valS
-    _ -> typeError (TypeBox TypeAny) (typeof valD) posn
+    _ -> do
+      typ <- typeof valD
+      typeError (TypeBox TypeAny) typ posn
 -- first-class type stuff
 eval (ExprUnOp Typeof expr, _) = do
   val <- eval expr
-  return $ ValType $ typeof val
+  typ <- typeof val
+  return $ ValType typ
 -- expression combinators
 eval (ExprBlock exprs, _) = do
   modify pushBlock
   val <- foldM (const eval) ValVoid exprs
   modify popBlock
   return val
+
+typeof :: Value -> Matthew Type
+typeof (ValInt _)     = return TypeInt
+typeof (ValBool _)    = return TypeBool
+typeof box@(ValBox _) = do
+  env <- get
+  let val' = unboxValue box env
+  typ <- typeof val'
+  return $ TypeBox typ
+typeof (ValType _)    = return TypeType
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)
