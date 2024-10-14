@@ -21,6 +21,7 @@ data Expr
 data UnOp = LNot
           | Box
           | Unbox
+          | Typeof
 
 data BinOp
   = Add

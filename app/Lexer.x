@@ -29,6 +29,7 @@ tokens :-
   \)                             { tok TokRParen }
   \<\-                           { tok TokLArrow }
   :=                             { tok TokColEq }
+  \?                             { tok TokQuestion }
 
   true                           { tok TokTrue }
   false                          { tok TokFalse }

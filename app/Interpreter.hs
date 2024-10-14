@@ -38,11 +38,14 @@ eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
   | binOpEq op = do
     val1 <- eval expr1
     val2 <- eval expr2
-    let op' =
-          case op of
-            Eq  -> (==)
-            Neq -> (/=)
-    return $ ValBool $ op' val1 val2
+    if typeof val1 == typeof val2
+      then do
+        let op' =
+              case op of
+                Eq  -> (==)
+                Neq -> (/=)
+        return $ ValBool $ op' val1 val2
+      else typeError (typeof val1) (typeof val2) pos2
   | binOpComp op = do
     val1 <- eval expr1
     val2 <- eval expr2
@@ -153,6 +156,10 @@ eval (ExprSetBox exprD@(_, posn) exprS, _) = do
       put $ setBox valD valS env
       return valS
     _ -> typeError (TypeBox TypeAny) (typeof valD) posn
+-- first-class type stuff
+eval (ExprUnOp Typeof expr, _) = do
+  val <- eval expr
+  return $ ValType $ typeof val
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)
