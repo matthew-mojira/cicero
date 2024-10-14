@@ -17,6 +17,7 @@ data Expr
   | ExprId     String
   | ExprAssign String ExprPosn
   | ExprSetBox ExprPosn ExprPosn
+  | ExprBlock  [ExprPosn]
 
 data UnOp = LNot
           | Box
@@ -72,6 +73,7 @@ instance Show Expr where
     "(" ++ show expr1 ++ " " ++ show op ++ " " ++ show expr2 ++ ")"
   show (ExprIfElse (expr1, _) (expr2, _) (expr3, _)) =
     show "if " ++ show expr1 ++ " then " ++ show expr2 ++ " else " ++ show expr3
+  show (ExprBlock exprs) = unlines $ ["{"] ++ map (show . fst) exprs ++ ["}"] -- need to indent
 
 instance Show UnOp where
   show LNot = "not"
