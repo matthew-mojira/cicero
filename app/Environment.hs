@@ -11,7 +11,7 @@ data Env = Env { idxs :: [[[(String, (Value, Bool))]]]
                }
 
 emptyEnv :: Env
-emptyEnv = Env [[]] []
+emptyEnv = Env [[[]]] []
 
 popFunc :: Env -> Env
 popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
