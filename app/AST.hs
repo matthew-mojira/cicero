@@ -17,8 +17,8 @@ data Expr
   | ExprId     String
   | ExprAssign String ExprPosn
 
-data UnOp =
-  LNot
+data UnOp = LNot
+          | Typeof
 
 data BinOp
   = Add

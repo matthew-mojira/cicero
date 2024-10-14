@@ -41,6 +41,7 @@ import Value
       '('             { TokenPosn TokLParen (_, _) }
       ')'             { TokenPosn TokRParen (_, _) }
       '<-'            { TokenPosn TokLArrow (_, _) }
+      '?'             { TokenPosn TokQuestion (_, _) }
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
@@ -81,6 +82,7 @@ expr  : int                     { parseInt $1 }
       | const id '=' expr       { parseConst $1 $2 $4 }
       | id                      { parseId $1 }
       | id '<-' expr            { parseAssign $1 $3 }
+      | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2)}
       
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
       | true                    { (ExprLit (ValBool True), tokenPosn $1) }
