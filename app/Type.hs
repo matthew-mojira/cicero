@@ -3,8 +3,8 @@ module Type where
 data Type = TypeInt
           | TypeBool
           | TypeBox Type -- interior element type
-          | TypeAny
           | TypeType
+          | TypeAny
           deriving Eq
 
 instance Show Type where
@@ -12,7 +12,7 @@ instance Show Type where
   show TypeBool     = "bool"
   show (TypeBox t)  = concat ["box[", show t, "]"]
   show TypeType     = "type"
-  show TypeAny      = "?"
+  show TypeAny      = "any"
 
 (<:) :: Type -> Type -> Bool
 (<:) = (==)
