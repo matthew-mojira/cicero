@@ -151,6 +151,10 @@ eval (ExprAssign id expr, posn) = do
         return val
       else throwError $ Error posn (AssignmentError id)
     Nothing -> throwError $ Error posn (NameError id)
+-- first-class type stuff
+eval (ExprUnOp Typeof expr, _) = do
+  val <- eval expr
+  return $ ValType $ typeof val
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)
