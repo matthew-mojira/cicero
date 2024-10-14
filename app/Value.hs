@@ -15,4 +15,4 @@ instance Show Value where
 typeof :: Value -> Type
 typeof (ValInt _)  = TypeInt
 typeof (ValBool _) = TypeBool
-typeof (ValType _) = TypeType
+typeof (ValType t) = TypeType t
