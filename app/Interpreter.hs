@@ -202,6 +202,8 @@ typeof box@(ValBox _) = do
   typ <- typeof val'
   return $ TypeBox typ
 typeof (ValType _)    = return TypeType
+typeof ValVoid        = return TypeVoid
+typeof (ValFunc _ _)  = return TypeFunc
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)
