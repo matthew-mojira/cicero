@@ -47,6 +47,7 @@ import Value
       '{'             { TokenPosn TokLBrace (_, _) }
       '}'             { TokenPosn TokRBrace (_, _) }
       ','             { TokenPosn TokComma (_, _) }
+      ';'             { TokenPosn TokSemicolon (_, _) }
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
@@ -115,7 +116,7 @@ fn : '(' ')' '->' expr          { (ExprFunc [] $4, tokenPosn $1 <-> snd $4) }
    | '(' ids ')' '->' expr      { (ExprFunc $2 $5, tokenPosn $1 <-> snd $5) }
 
 exprs :                         { [] }
-      | expr exprs              { $1 : $2 }
+      | expr ';' exprs          { $1 : $3 }
 
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }

@@ -21,6 +21,7 @@ data Token = TokPlus
            | TokComma
            | TokColEq
            | TokQuestion
+           | TokSemicolon
 
            | TokFunc
 

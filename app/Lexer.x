@@ -34,6 +34,7 @@ tokens :-
   \{                             { tok TokLBrace }
   \}                             { tok TokRBrace }
   \,                             { tok TokComma }
+  \;                             { tok TokSemicolon }
 
   func                           { tok TokFunc }
 
