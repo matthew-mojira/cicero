@@ -87,7 +87,7 @@ eval str env = do
   case runAlex str runHappy of
     Left  err  -> return $ Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err)
     Right prog -> do
-      print prog
+      print $ fst prog
       interp prog env
 
 repl :: IO ()
