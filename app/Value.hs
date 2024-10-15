@@ -7,6 +7,7 @@ data Value = ValInt  Integer
            | ValBox  Int  -- pointer
            | ValType Type
            | ValVoid
+           | ValFunc [String] Int
            deriving Eq
 
 instance Show Value where
@@ -15,3 +16,4 @@ instance Show Value where
   show (ValBox idx)   = concat ["box[#", show idx, "]"]
   show (ValType typ)  = concat ["type[", show typ, "]"]
   show ValVoid        = "void"
+  show (ValFunc _ id) = concat ["func[#", show id, "]"]

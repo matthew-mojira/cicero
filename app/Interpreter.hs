@@ -152,9 +152,9 @@ eval (ExprAssign id expr, posn) = do
 eval (ExprUnOp Box expr@(_, posn), _) = do
   val <- eval expr
   env <- get
-  let (env', val') = boxValue val env
+  let (env', idx) = boxValue val env
   put env'
-  return val'
+  return $ ValBox idx
 eval (ExprUnOp Unbox expr@(_, posn), _) = do
   val <- eval expr
   case val of
@@ -186,6 +186,12 @@ eval (ExprBlock exprs, _) = do
   val <- foldM (const eval) ValVoid exprs
   modify popBlock
   return val
+-- functions
+eval (ExprFunc params expr, _) = do
+  env <- get
+  let (env', idx) = extendFunc expr env
+  put env'
+  return $ ValFunc params idx
 
 typeof :: Value -> Matthew Type
 typeof (ValInt _)     = return TypeInt

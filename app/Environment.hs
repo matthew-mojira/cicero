@@ -4,14 +4,16 @@ import Data.Maybe
 import Data.List
 
 import Value
+import AST
 
-data Env = Env { idxs :: [[[(String, (Value, Bool))]]]
+data Env = Env { idxs  :: [[[(String, (Value, Bool))]]]
                  -- three levels: func block list
-               , vals :: [Value]
+               , vals  :: [Value]
+               , defns :: [ExprPosn]
                }
 
 emptyEnv :: Env
-emptyEnv = Env [[]] []
+emptyEnv = Env [[[]]] [] []
 
 popFunc :: Env -> Env
 popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
@@ -26,10 +28,10 @@ pushBlock :: Env -> Env
 pushBlock env@Env {idxs = idxs} = env {idxs = ([]:(head idxs)):tail idxs}
 
 lookupEnv :: String -> Env -> Maybe (Value, Bool)
-lookupEnv id (Env idxs _) = lookup id (concat (head idxs))
+lookupEnv id (Env {idxs = idxs}) = lookup id (concat (head idxs))
 
 lookupEnv' :: String -> Env -> Maybe (Value, Bool)  -- strictly in the same scope
-lookupEnv' id (Env idxs _) = lookup id (head (head idxs))
+lookupEnv' id (Env {idxs = idxs}) = lookup id (head (head idxs))
 
 extendConst :: String -> Value -> Env -> Env
 extendConst id val env@Env {idxs = idxs} =
@@ -58,10 +60,11 @@ setVar id val env@Env {idxs = idxs} =
           | key == x  = ((key, (y, bool)) : xs, True)
           | otherwise = let (restDict, replaced) = replaceInDict xs
                         in ((key, value) : restDict, replaced)
-boxValue :: Value -> Env -> (Env, Value)
+
+boxValue :: Value -> Env -> (Env, Int)
 boxValue val env@Env {vals = vals} =
   let idx = length vals
-   in (env {vals = val:vals}, ValBox idx)
+   in (env {vals = val:vals}, idx)
 
 unboxValue :: Value -> Env -> Value
 unboxValue (ValBox idx) env@Env {vals = vals} = vals!!(length vals - idx - 1)
@@ -73,6 +76,9 @@ setBox (ValBox idx) val env@Env {vals = vals} =
     setElem :: [a] -> Int -> a -> [a]
     setElem xs i x = let (h, t:ts) = splitAt i xs
                       in h ++ x:ts
+
+extendFunc :: ExprPosn -> Env -> (Env, Int)
+extendFunc func env@Env {defns = defns} = (env {defns = func:defns}, length defns)
 
 instance Show Env where
   show = undefined
