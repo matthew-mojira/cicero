@@ -18,8 +18,9 @@ emptyEnv = Env [[[]]] [] []
 popFunc :: Env -> Env
 popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
 
-pushFunc :: Env -> Env
-pushFunc env@Env {idxs = idxs} = env {idxs = []:idxs}
+pushFunc :: [String] -> [Value] -> Env -> Env
+pushFunc params args env@Env {idxs = idxs} =
+  env {idxs = [map (\(id, val) -> (id, (val, False))) (zip params args)]:idxs}
 
 popBlock :: Env -> Env
 popBlock env@Env {idxs = idxs} = env {idxs = (tail (head idxs)):tail idxs}
@@ -79,6 +80,9 @@ setBox (ValBox idx) val env@Env {vals = vals} =
 
 extendFunc :: ExprPosn -> Env -> (Env, Int)
 extendFunc func env@Env {defns = defns} = (env {defns = func:defns}, length defns)
+
+resolveFunc :: Int -> Env -> ExprPosn
+resolveFunc idx (Env {defns = defns}) = defns!!(length defns - idx - 1)
 
 instance Show Env where
   show = undefined

@@ -192,6 +192,27 @@ eval (ExprFunc params expr, _) = do
   let (env', idx) = extendFunc expr env
   put env'
   return $ ValFunc params idx
+eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
+  valF <- eval exprF
+  case valF of
+    ValFunc params idx -> do
+      if length params == length exprsA
+        then do
+          env <- get
+          let exprB = resolveFunc idx env
+
+          args <- mapM eval exprsA
+          modify $ pushFunc params args
+          valR <- eval exprB
+          modify $ popFunc
+
+          return valR
+        else do
+          throwError $ Error posn (ArityMismatchError (length params) (length exprsA))
+    _ -> do
+      env <- get
+      typ <- typeof valF
+      typeError (TypeFunc (-1)) typ posnF
 
 typeof :: Value -> Matthew Type
 typeof (ValInt _)     = return TypeInt

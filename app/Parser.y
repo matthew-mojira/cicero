@@ -110,6 +110,7 @@ expr  : int                     { parseInt $1 }
       | expr '(' ')'            { (ExprApply $1 [], snd $1 <-> tokenPosn $3) }
       | expr '(' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
 
+
 fn : '(' ')' '->' expr          { (ExprFunc [] $4, tokenPosn $1 <-> snd $4) }
    | '(' ids ')' '->' expr      { (ExprFunc $2 $5, tokenPosn $1 <-> snd $5) }
 

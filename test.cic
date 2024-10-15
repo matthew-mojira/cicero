@@ -1,8 +1,9 @@
 {
-  var x = 12
-  {
-    const y = 20
-    x <- x + x * y
+  func apply(f, x) -> {
+     f(x) 
   }
-  x
+--  func triple(x) -> {
+--    x * 3
+--  }
+--  apply(triple, 20)
 }
