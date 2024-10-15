@@ -1,4 +1,4 @@
-module Main where
+module Cicero where
 
 import Lexer (runAlex, AlexPosn(AlexPn))
 import Parser
@@ -54,7 +54,7 @@ main = do
 
 loop :: Env -> IO ()
 loop env = do
-  read <- Main.read
+  read <- Cicero.read
   case read of
     Run str -> do
       res <- eval str env
@@ -74,7 +74,7 @@ loop env = do
 
 read :: IO Command
 read = runInputT defaultSettings $ do
-  minput <- getInputLine "mpl> "
+  minput <- getInputLine "cicero> "
   case minput of
     Nothing      -> return Quit
     Just ""      -> return Quit
