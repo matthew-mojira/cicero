@@ -107,12 +107,17 @@ expr  : int                     { parseInt $1 }
 
       | func id fn              { (\(TokenPosn (TokId id) _) -> (ExprConst id $3, tokenPosn $1 <-> snd $3)) $2 }
       | fn                      { $1 }
+      | expr '(' ')'            { (ExprApply $1 [], snd $1 <-> tokenPosn $3) }
+      | expr '(' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
 
 fn : '(' ')' '->' expr          { (ExprFunc [] $4, tokenPosn $1 <-> snd $4) }
    | '(' ids ')' '->' expr      { (ExprFunc $2 $5, tokenPosn $1 <-> snd $5) }
 
 exprs :                         { [] }
       | expr exprs              { $1 : $2 }
+
+args : expr                     { [$1] }
+     | expr ',' args            { $1 : $3 }
 
 ids : id                        { (\(TokenPosn (TokId id) _) -> [id]) $1 }
     | id ',' ids                { ((\(TokenPosn (TokId id) _) -> id) $1) : $3 }    

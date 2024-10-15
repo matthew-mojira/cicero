@@ -203,7 +203,7 @@ typeof box@(ValBox _) = do
   return $ TypeBox typ
 typeof (ValType _)    = return TypeType
 typeof ValVoid        = return TypeVoid
-typeof (ValFunc _ _)  = return TypeFunc
+typeof (ValFunc ps _) = return $ TypeFunc (length ps)
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)
