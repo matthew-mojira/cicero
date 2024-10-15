@@ -41,13 +41,17 @@ import Value
       '('             { TokenPosn TokLParen (_, _) }
       ')'             { TokenPosn TokRParen (_, _) }
       '<-'            { TokenPosn TokLArrow (_, _) }
+      '->'            { TokenPosn TokRArrow (_, _) }
       ':='            { TokenPosn TokColEq (_, _) }
       '?'             { TokenPosn TokQuestion (_, _) }
       '{'             { TokenPosn TokLBrace (_, _) }
       '}'             { TokenPosn TokRBrace (_, _) }
+      ','             { TokenPosn TokComma (_, _) }
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
+
+      func            { TokenPosn TokFunc (_, _) }
 
       true            { TokenPosn TokTrue (_, _) }
       false           { TokenPosn TokFalse (_, _) }
@@ -101,8 +105,16 @@ expr  : int                     { parseInt $1 }
       | true                    { (ExprLit (ValBool True), tokenPosn $1) }
       | false                   { (ExprLit (ValBool False), tokenPosn $1) }
 
+      | func id fn
+
+fn : '(' ')' '->' expr          {
+   | '(' params ')' '->' expr   {
+
 exprs :                         { [] }
       | expr exprs              { $1 : $2 }
+
+ids : id         { \(TokenPosn (TokId id) _) -> [id]) $1 }
+    | id ',' ids { (\(TokenPosn (TokId id) _) -> [id]) $1) : $3 }    
 
 {
 

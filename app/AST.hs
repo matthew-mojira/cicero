@@ -18,6 +18,7 @@ data Expr
   | ExprAssign String ExprPosn
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
+  | ExprFunc   [String] ExprPosn]
 
 data UnOp = LNot
           | Box
