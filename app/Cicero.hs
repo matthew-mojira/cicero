@@ -1,4 +1,4 @@
-module Cicero where
+module Main where
 
 import Lexer (runAlex, AlexPosn(AlexPn))
 import Parser
@@ -54,7 +54,7 @@ main = do
 
 loop :: Env -> IO ()
 loop env = do
-  read <- Cicero.read
+  read <- Main.read
   case read of
     Run str -> do
       res <- eval str env
