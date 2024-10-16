@@ -8,16 +8,18 @@ type Prog = ExprPosn
 type ExprPosn = (Expr, Posn)
 
 data Expr
-  = ExprLit    Value
-  | ExprUnOp   UnOp ExprPosn
-  | ExprBinOp  BinOp ExprPosn ExprPosn
-  | ExprIfElse ExprPosn ExprPosn ExprPosn
-  | ExprVar    String ExprPosn -- omit type
-  | ExprConst  String ExprPosn -- omit type
-  | ExprId     String
-  | ExprAssign String ExprPosn
-  | ExprSetBox ExprPosn ExprPosn
-  | ExprBlock  [ExprPosn]
+  = ExprLit     Value
+  | ExprUnOp    UnOp ExprPosn
+  | ExprBinOp   BinOp ExprPosn ExprPosn
+  | ExprIfElse  ExprPosn ExprPosn ExprPosn
+  | ExprVar     String ExprPosn -- omit type
+  | ExprConst   String ExprPosn -- omit type
+  | ExprId      String
+  | ExprAssign  String ExprPosn
+  | ExprSetBox  ExprPosn ExprPosn
+  | ExprBlock   [ExprPosn]
+  | ExprWhileDo { guard :: ExprPosn, body :: ExprPosn }
+  | ExprDoWhile { guard :: ExprPosn, body :: ExprPosn }
 
 data UnOp = LNot
           | Box

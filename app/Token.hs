@@ -30,6 +30,8 @@ data Token = TokPlus
            | TokIf
            | TokThen
            | TokElse
+           | TokWhile
+           | TokDo
 
            | TokVar
            | TokConst
