@@ -1,3 +1,7 @@
 # Summary
 
-- [Chapter 1](./chapter_1.md)
+- [Introduction](./introduction.md)
+- [Integers](./integers.md)
+- [Expressions](./expressions.md)
+- [Types](./types.md)
+- [Boxes](./boxes.md)
