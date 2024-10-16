@@ -9,6 +9,7 @@ import Lexer (AlexPosn(AlexPn), Posn)
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.Identity
+import Control.Monad.Loops
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 
@@ -186,6 +187,20 @@ eval (ExprBlock exprs, _) = do
   val <- foldM (const eval) ValVoid exprs
   modify popBlock
   return val
+-- iteration expressions
+eval (ExprWhileDo exprG@(_, posnG) exprB, _) = do
+  vals <- whileM evalGuard (eval exprB)
+  case vals of
+    [] -> return ValVoid
+    _  -> return $ last vals
+  where
+    evalGuard = do
+      valG <- eval exprG
+      case valG of
+        ValBool bool -> return bool
+        _ -> do
+          typ <- typeof valG
+          typeError TypeBool typ posnG
 
 -- this computation does not need to be in the monad
 typeof :: Value -> Matthew Type

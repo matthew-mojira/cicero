@@ -68,11 +68,12 @@ executable cicero
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.16.4.0,
+    build-depends:    base,
                       array >=0.5.4.0,
                       mtl,
                       haskeline,
-                      transformers
+                      transformers,
+                      monad-loops
 
     -- Directories containing source files.
     hs-source-dirs:   app
