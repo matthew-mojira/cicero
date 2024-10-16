@@ -163,7 +163,7 @@ eval (ExprUnOp Unbox expr@(_, posn), _) = do
       return $ unboxValue val env
     _ -> do
       typ <- typeof val
-      typeError (TypeBox TypeAny) typ posn
+      typeError TypeBox typ posn
 eval (ExprSetBox exprD@(_, posn) exprS, _) = do
   valD <- eval exprD
   case valD of
@@ -174,7 +174,7 @@ eval (ExprSetBox exprD@(_, posn) exprS, _) = do
       return valS
     _ -> do
       typ <- typeof valD
-      typeError (TypeBox TypeAny) typ posn
+      typeError TypeBox typ posn
 -- first-class type stuff
 eval (ExprUnOp Typeof expr, _) = do
   val <- eval expr
@@ -187,15 +187,13 @@ eval (ExprBlock exprs, _) = do
   modify popBlock
   return val
 
+-- this computation does not need to be in the monad
 typeof :: Value -> Matthew Type
 typeof (ValInt _)     = return TypeInt
 typeof (ValBool _)    = return TypeBool
-typeof box@(ValBox _) = do
-  env <- get
-  let val' = unboxValue box env
-  typ <- typeof val'
-  return $ TypeBox typ
+typeof (ValBox _)     = return TypeBox
 typeof (ValType _)    = return TypeType
+typeof ValVoid        = return TypeVoid
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)
