@@ -1,8 +1,6 @@
 module Main where
 
-import Control.Monad.Loops
-
-import Lexer
+import Lexer (runAlex, AlexPosn(AlexPn))
 import Parser
 import Interpreter
 
@@ -86,8 +84,6 @@ read = runInputT defaultSettings $ do
 
 eval :: String -> Env -> IO (Either Error (Value, Env))
 eval str env = do
-  let Right toks =  runAlex str $ unfoldWhileM (\x -> x /= Eof) alexMonadScan
-  print $ map (\(TokenPosn tok _) -> tok) toks
   case runAlex str runHappy of
     Left  err  -> return $ Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err)
     Right prog -> interp prog env

@@ -11,6 +11,7 @@ $alpha = [a-zA-Z]       -- alphabetic characters
 
 tokens :-
 
+  $white+                        ;
   "--".*                         ;
   \+                             { tok TokPlus }
   (\-|−)                         { tok TokMinus }
@@ -24,8 +25,7 @@ tokens :-
   (\<=|≤)                        { tok TokLeq }
   >                              { tok TokGe }
   (>=|≥)                         { tok TokGeq }
-  $white+\(                      { tok TokLParen }
-  \(                             { tok TokLParenF }
+  \(                             { tok TokLParen }
   \)                             { tok TokRParen }
   \<\-                           { tok TokLArrow }
   \-\>                           { tok TokRArrow }
@@ -57,8 +57,6 @@ tokens :-
   $digit+                        { tok (TokInt undefined) }
   $alpha [$alpha $digit \_]*     { tok (TokId undefined) }
 
-  $white+                        ;
-
 {
 
 alexEOF :: Alex TokenPosn
@@ -77,7 +75,7 @@ tok token (posn, _, _, str) len = return $ TokenPosn token (posn, stop)
 
 data TokenPosn = TokenPosn Token (AlexPosn, AlexPosn) -- (start, end)
                | Eof
-               deriving (Show, Eq)
+               deriving Show
 
 type Posn = (AlexPosn, AlexPosn)
 }

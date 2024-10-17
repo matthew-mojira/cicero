@@ -39,7 +39,6 @@ import Value
       '>'             { TokenPosn TokGe (_, _) }
       '>='            { TokenPosn TokGeq (_, _) }
       '('             { TokenPosn TokLParen (_, _) }
-      '(F'             { TokenPosn TokLParenF (_, _) }
       ')'             { TokenPosn TokRParen (_, _) }
       '<-'            { TokenPosn TokLArrow (_, _) }
       '->'            { TokenPosn TokRArrow (_, _) }
@@ -87,6 +86,7 @@ expr  : int                     { parseInt $1 }
       | expr '>=' expr          { (ExprBinOp Geq $1 $3, ($1 <|> $3)) }
       | not expr                { parseUnOp LNot $1 $2 }
 
+      | '(' expr ')'            { (fst $2, tokenPosn $1 <-> tokenPosn $3) }
       | '{' exprs '}'           { (ExprBlock $2, tokenPosn $1 <-> tokenPosn $3)}
       
       | '-' int %prec NEG       { parseNInt $1 $2 }
@@ -106,22 +106,17 @@ expr  : int                     { parseInt $1 }
       | true                    { (ExprLit (ValBool True), tokenPosn $1) }
       | false                   { (ExprLit (ValBool False), tokenPosn $1) }
 
-      | expr '(F' ')'            { (ExprApply $1 [], snd $1 <-> tokenPosn $3) }
-      | expr '(F' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
       | func id fn              { (\(TokenPosn (TokId id) _) -> (ExprConst id $3, tokenPosn $1 <-> snd $3)) $2 }
-      | fnI                     { $1 }
+      | fn                      { $1 }
+      | expr '(' ')'            { (ExprApply $1 [], snd $1 <-> tokenPosn $3) }
+      | expr '(' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
 
-      | '(' expr ')'            { (fst $2, tokenPosn $1 <-> tokenPosn $3) }
-      | '(F' expr ')'            { (fst $2, tokenPosn $1 <-> tokenPosn $3) }
 
-fn : '(F' ')' '->' expr          { (ExprFunc [] $4, tokenPosn $1 <-> snd $4) }
-   | '(F' ids ')' '->' expr      { (ExprFunc $2 $5, tokenPosn $1 <-> snd $5) }
-
-fnI : '(' ')' '->' expr          { (ExprFunc [] $4, tokenPosn $1 <-> snd $4) }
-    | '(' ids ')' '->' expr      { (ExprFunc $2 $5, tokenPosn $1 <-> snd $5) }
+fn : '(' ')' '->' expr          { (ExprFunc [] $4, tokenPosn $1 <-> snd $4) }
+   | '(' ids ')' '->' expr      { (ExprFunc $2 $5, tokenPosn $1 <-> snd $5) }
 
 exprs :                         { [] }
-      | expr exprs              { $1 : $2 }
+      | expr ';' exprs          { $1 : $3 }
 
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }
