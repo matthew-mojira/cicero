@@ -13,6 +13,7 @@ data Token = TokPlus
            | TokGe
            | TokGeq
            | TokLParen
+           | TokLParenF
            | TokRParen
            | TokLBrace
            | TokRBrace

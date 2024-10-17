@@ -72,7 +72,8 @@ executable mpl
                       array >=0.5.4.0,
                       mtl,
                       haskeline,
-                      transformers
+                      transformers,
+                      monad-loops
 
     -- Directories containing source files.
     hs-source-dirs:   app
