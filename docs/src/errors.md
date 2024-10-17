@@ -19,13 +19,13 @@ else
   3
 ```
 
-# Arithmetic error
+## Arithmetic error
 
 Arithmetic errors can occur because of illegal operations in an arithmetic
 exception. There is only one possible arithmetic error:
 * division by zero: `1 / 0`
 
-# Name error
+## Name error
 
 A name error occurs when an identifier is used when it out of scope, or
 otherwise hasn't been defined.
@@ -37,7 +37,7 @@ otherwise hasn't been defined.
 x
 ```
 
-# Redefinition error
+## Redefinition error
 
 A redefinition errors occurs when an identifier is used in two declarations
 within the same scope.
@@ -47,7 +47,7 @@ var x = 1
 const x = 2
 ```
 
-# Assignment error
+## Assignment error
 
 An assignment error occurs when an assignment is being made to a constant,
 which cannot change, unlike variables:
@@ -57,7 +57,7 @@ const x = 1
 x := 2
 ```
 
-# Lexing/parsing error
+## Lexing/parsing error
 
 Lexing or parsing errors can occur when the interpreter is reading in malformed
 code. These occur before a program can be evaluated, because the interpreter
