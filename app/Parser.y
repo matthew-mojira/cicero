@@ -5,7 +5,6 @@ module Parser where
 import Lexer
 import Token
 import AST
-import Value
 
 }
 
@@ -103,8 +102,8 @@ expr  : int                     { parseInt $1 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
-      | true                    { (ExprLit (ValBool True), tokenPosn $1) }
-      | false                   { (ExprLit (ValBool False), tokenPosn $1) }
+      | true                    { (ExprLit (LitBool True), tokenPosn $1) }
+      | false                   { (ExprLit (LitBool False), tokenPosn $1) }
 
       | func id fn              { (\(TokenPosn (TokId id) _) -> (ExprConst id $3, tokenPosn $1 <-> snd $3)) $2 }
       | fn                      { $1 }
@@ -128,11 +127,11 @@ ids : id                        { (\(TokenPosn (TokId id) _) -> [id]) $1 }
 
 parseInt :: TokenPosn -> ExprPosn
 parseInt (TokenPosn (TokInt int) pos) =
-  (ExprLit (ValInt int), pos)
+  (ExprLit (LitInt int), pos)
 
 parseNInt :: TokenPosn -> TokenPosn -> ExprPosn
 parseNInt (TokenPosn _ pos1) (TokenPosn (TokInt int) pos2) =
-  (ExprLit (ValInt $ -int), pos1 <-> pos2)
+  (ExprLit (LitInt $ -int), pos1 <-> pos2)
 
 parseUnOp :: UnOp -> TokenPosn -> ExprPosn -> ExprPosn
 parseUnOp op (TokenPosn _ pos1) expr@(_, pos2) =

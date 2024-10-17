@@ -1,5 +1,6 @@
 module Value where
 
+import AST
 import Type
 
 data Value = ValInt  Integer
@@ -7,7 +8,7 @@ data Value = ValInt  Integer
            | ValBox  Int  -- pointer
            | ValType Type
            | ValVoid
-           | ValFunc [String] Int
+           | ValFunc [String] ExprPosn
            deriving Eq
 
 instance Show Value where
@@ -16,4 +17,4 @@ instance Show Value where
   show (ValBox idx)   = concat ["box[#", show idx, "]"]
   show (ValType typ)  = concat ["type[", show typ, "]"]
   show ValVoid        = "void"
-  show (ValFunc _ id) = concat ["func[#", show id, "]"]
+  show (ValFunc ps _) = concat ["func[@", show (length ps), "]"]

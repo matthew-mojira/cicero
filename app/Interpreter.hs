@@ -28,7 +28,9 @@ interp :: Prog -> Env -> IO (Either Error (Value, Env))
 interp prog env = runExceptT $ runStateT (eval prog) env
 
 eval :: ExprPosn -> Matthew Value
-eval (ExprLit value, _) = return value
+eval (ExprLit lit, _) = case lit of
+  (LitInt int)   -> return $ ValInt int
+  (LitBool bool) -> return $ ValBool bool
 eval (ExprUnOp LNot expr@(_, posn), _) = do
   x <- eval expr
   case x of
@@ -188,19 +190,13 @@ eval (ExprBlock exprs, _) = do
   return val
 -- functions
 eval (ExprFunc params expr, _) = do
-  env <- get
-  let (env', idx) = extendFunc expr env
-  put env'
-  return $ ValFunc params idx
+  return $ ValFunc params expr
 eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
   valF <- eval exprF
   case valF of
-    ValFunc params idx -> do
+    ValFunc params exprB -> do
       if length params == length exprsA
         then do
-          env <- get
-          let exprB = resolveFunc idx env
-
           args <- mapM eval exprsA
           modify $ pushFunc params args
           valR <- eval exprB

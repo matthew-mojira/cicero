@@ -9,11 +9,10 @@ import AST
 data Env = Env { idxs  :: [[[(String, (Value, Bool))]]]
                  -- three levels: func block list
                , vals  :: [Value]
-               , defns :: [ExprPosn]
                }
 
 emptyEnv :: Env
-emptyEnv = Env [[[]]] [] []
+emptyEnv = Env [[[]]] []
 
 popFunc :: Env -> Env
 popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
@@ -77,12 +76,6 @@ setBox (ValBox idx) val env@Env {vals = vals} =
     setElem :: [a] -> Int -> a -> [a]
     setElem xs i x = let (h, t:ts) = splitAt i xs
                       in h ++ x:ts
-
-extendFunc :: ExprPosn -> Env -> (Env, Int)
-extendFunc func env@Env {defns = defns} = (env {defns = func:defns}, length defns)
-
-resolveFunc :: Int -> Env -> ExprPosn
-resolveFunc idx (Env {defns = defns}) = defns!!(length defns - idx - 1)
 
 instance Show Env where
   show = undefined
