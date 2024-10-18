@@ -1,0 +1,4 @@
+Up to date
+[TokLBrace,TokFunc,TokId "foo",TokLParenF,TokId "x",TokRParen,TokRArrow,TokId "foo",TokLParenF,TokId "x",TokMinus,TokInt 1,TokRParen,TokId "foo",TokLParenF,TokInt 2,TokRParen,TokRBrace]
+(ExprBlock [(ExprConst "foo" (ExprFunc ["x"] (ExprApply (ExprId "foo",(AlexPn 19 2 18,AlexPn 22 2 21)) [(ExprBinOp Sub (ExprId "x",(AlexPn 23 2 22,AlexPn 24 2 23)) (ExprLit 1,(AlexPn 27 2 26,AlexPn 28 2 27)),(AlexPn 23 2 22,AlexPn 28 2 27))],(AlexPn 19 2 18,AlexPn 29 2 28)),(AlexPn 12 2 11,AlexPn 29 2 28)),(AlexPn 4 2 3,AlexPn 29 2 28)),(ExprId "foo",(AlexPn 32 3 3,AlexPn 35 3 6)),(ExprLit 2,(AlexPn 35 3 6,AlexPn 38 3 9))],AlexPn 0 1 1)
+2

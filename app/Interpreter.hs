@@ -25,7 +25,7 @@ import Value
 type Matthew a = StateT Env (ExceptT Error IO) a
 
 interp :: Prog -> Env -> IO (Either Error (Value, Env))
-interp prog env = runExceptT $ runStateT (eval prog) env
+interp prog env = runExceptT $ runStateT (foldM (const eval) ValVoid prog) env
 
 eval :: ExprPosn -> Matthew Value
 eval (ExprLit lit, _) = case lit of

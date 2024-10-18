@@ -68,6 +68,9 @@ import AST
       unbox           { TokenPosn TokUnbox (_, _) }
 %%
 
+exprs :                         { [] }
+      | expr ';' exprs          { $1 : $3 }
+
 expr  : int                     { parseInt $1 }
       | expr '+' expr           { (ExprBinOp Add $1 $3, ($1 <|> $3)) }
       | expr '-' expr           { (ExprBinOp Sub $1 $3, ($1 <|> $3)) }
@@ -112,9 +115,6 @@ expr  : int                     { parseInt $1 }
 
       | expr '(' ')'            { (ExprApply $1 [], snd $1 <-> tokenPosn $3) }
       | expr '(' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
-
-exprs :                         { [] }
-      | expr ';' exprs          { $1 : $3 }
 
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }

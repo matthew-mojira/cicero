@@ -2,7 +2,7 @@ module AST where
 
 import Lexer (AlexPosn, Posn)
 
-type Prog = ExprPosn
+type Prog = [ExprPosn]
 
 type ExprPosn = (Expr, Posn)
 
