@@ -5,6 +5,7 @@ data Type = TypeInt
           | TypeBox
           | TypeVoid
           | TypeType
+          | TypeFunc Int  -- number of params
           deriving Eq
 
 instance Show Type where
@@ -13,6 +14,7 @@ instance Show Type where
   show TypeVoid     = "void"
   show TypeBox      = "box"
   show TypeType     = "type"
+  show (TypeFunc i) = concat ["func[@", show i, "]"]
 
 (<:) :: Type -> Type -> Bool
 (<:) = (==)

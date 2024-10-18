@@ -25,10 +25,12 @@ import Value
 type Matthew a = StateT Env (ExceptT Error IO) a
 
 interp :: Prog -> Env -> IO (Either Error (Value, Env))
-interp prog env = runExceptT $ runStateT (eval prog) env
+interp prog env = runExceptT $ runStateT (foldM (const eval) ValVoid prog) env
 
 eval :: ExprPosn -> Matthew Value
-eval (ExprLit value, _) = return value
+eval (ExprLit lit, _) = case lit of
+  (LitInt int)   -> return $ ValInt int
+  (LitBool bool) -> return $ ValBool bool
 eval (ExprUnOp LNot expr@(_, posn), _) = do
   x <- eval expr
   case x of
@@ -152,9 +154,9 @@ eval (ExprAssign id expr, posn) = do
 eval (ExprUnOp Box expr@(_, posn), _) = do
   val <- eval expr
   env <- get
-  let (env', val') = boxValue val env
+  let (env', idx) = boxValue val env
   put env'
-  return val'
+  return $ ValBox idx
 eval (ExprUnOp Unbox expr@(_, posn), _) = do
   val <- eval expr
   case val of
@@ -186,14 +188,42 @@ eval (ExprBlock exprs, _) = do
   val <- foldM (const eval) ValVoid exprs
   modify popBlock
   return val
+-- functions
+eval (ExprFunc name params expr, _) = do
+  env <- get
+  case name of
+    Nothing   -> return $ ValFunc params (getClosure env) expr
+    Just self -> do
+      let func = ValFunc params ((self, func):(getClosure env)) expr
+      put $ extendConst self func env
+      return func
+eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
+  valF <- eval exprF
+  case valF of
+    ValFunc params closure exprB -> do
+      if length params == length exprsA
+        then do
+          args <- mapM eval exprsA
+          modify $ pushFunc (zip params args) closure
+          valR <- eval exprB
+          modify $ popFunc
+
+          return valR
+        else do
+          throwError $ Error posn (ArityMismatchError (length params) (length exprsA))
+    _ -> do
+      env <- get
+      typ <- typeof valF
+      typeError (TypeFunc (-1)) typ posnF
 
 -- this computation does not need to be in the monad
 typeof :: Value -> Matthew Type
-typeof (ValInt _)     = return TypeInt
-typeof (ValBool _)    = return TypeBool
-typeof (ValBox _)     = return TypeBox
-typeof (ValType _)    = return TypeType
-typeof ValVoid        = return TypeVoid
+typeof (ValInt _)       = return TypeInt
+typeof (ValBool _)      = return TypeBool
+typeof (ValFunc ps _ _) = return $ TypeFunc (length ps)
+typeof (ValBox _)       = return TypeBox
+typeof (ValType _)      = return TypeType
+typeof ValVoid          = return TypeVoid
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)

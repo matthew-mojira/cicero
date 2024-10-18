@@ -5,7 +5,6 @@ module Parser where
 import Lexer
 import Token
 import AST
-import Value
 
 }
 
@@ -41,13 +40,18 @@ import Value
       '('             { TokenPosn TokLParen (_, _) }
       ')'             { TokenPosn TokRParen (_, _) }
       '<-'            { TokenPosn TokLArrow (_, _) }
+      '->'            { TokenPosn TokRArrow (_, _) }
       ':='            { TokenPosn TokColEq (_, _) }
       '?'             { TokenPosn TokQuestion (_, _) }
       '{'             { TokenPosn TokLBrace (_, _) }
       '}'             { TokenPosn TokRBrace (_, _) }
+      ','             { TokenPosn TokComma (_, _) }
+      ';'             { TokenPosn TokSemicolon (_, _) }
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
+
+      func            { TokenPosn TokFunc (_, _) }
 
       true            { TokenPosn TokTrue (_, _) }
       false           { TokenPosn TokFalse (_, _) }
@@ -63,6 +67,9 @@ import Value
       box             { TokenPosn TokBox (_, _) }
       unbox           { TokenPosn TokUnbox (_, _) }
 %%
+
+exprs :                         { [] }
+      | expr ';' exprs          { $1 : $3 }
 
 expr  : int                     { parseInt $1 }
       | expr '+' expr           { (ExprBinOp Add $1 $3, ($1 <|> $3)) }
@@ -98,21 +105,32 @@ expr  : int                     { parseInt $1 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
-      | true                    { (ExprLit (ValBool True), tokenPosn $1) }
-      | false                   { (ExprLit (ValBool False), tokenPosn $1) }
+      | true                    { (ExprLit (LitBool True), tokenPosn $1) }
+      | false                   { (ExprLit (LitBool False), tokenPosn $1) }
 
-exprs :                         { [] }
-      | expr exprs              { $1 : $2 }
+      | func id '(' ')' '->' expr      { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6, tokenPosn $1 <-> snd $6)) $2 } 
+      | func id '(' ids ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7, tokenPosn $1 <-> snd $7)) $2 } 
+      | '(' ')' '->' expr       { (ExprFunc Nothing [] $4, tokenPosn $1 <-> snd $4) }
+      | '(' ids ')' '->' expr   { (ExprFunc Nothing $2 $5, tokenPosn $1 <-> snd $5) }
+
+      | expr '(' ')'            { (ExprApply $1 [], snd $1 <-> tokenPosn $3) }
+      | expr '(' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
+
+args : expr                     { [$1] }
+     | expr ',' args            { $1 : $3 }
+
+ids : id                        { (\(TokenPosn (TokId id) _) -> [id]) $1 }
+    | id ',' ids                { ((\(TokenPosn (TokId id) _) -> id) $1) : $3 }    
 
 {
 
 parseInt :: TokenPosn -> ExprPosn
 parseInt (TokenPosn (TokInt int) pos) =
-  (ExprLit (ValInt int), pos)
+  (ExprLit (LitInt int), pos)
 
 parseNInt :: TokenPosn -> TokenPosn -> ExprPosn
 parseNInt (TokenPosn _ pos1) (TokenPosn (TokInt int) pos2) =
-  (ExprLit (ValInt $ -int), pos1 <-> pos2)
+  (ExprLit (LitInt $ -int), pos1 <-> pos2)
 
 parseUnOp :: UnOp -> TokenPosn -> ExprPosn -> ExprPosn
 parseUnOp op (TokenPosn _ pos1) expr@(_, pos2) =

@@ -1,0 +1,50 @@
+Each file in a program defines a namespace, which is the name of the file
+without the `.co` extension. Folders may be used to define a sub-namespace, and
+all names are relative to the main file (i.e. the file that is selected
+to be interpreted) within a project.
+
+main.co
+single.co
+foo/
+  foo/foo1.co
+  foo/foo2.co
+bar/
+  bar/bar1.co
+  bar/bar2.co
+
+Visibility within a file:
+
+The top-level of a file is treated like an implicit block, except that all
+top-level declarations (that of constants, variables, or functions) are visible
+to each other, no matter the order it is declared.
+
+All functions are evaluated first (and thus made available in the scope of
+other functions, constants, and variables), then the initial values for
+constants and variables are evaluated. These are evaluated in the order they
+appear. Later declarations can use values from previous declarations.
+
+Functions are capable of violating this order, leading to some possible errors:
+
+```
+func foo() -> global2
+
+const global1 = foo()
+const global2 = 10
+```
+
+import Expression:
+
+Files can be imported using the `import` expression which is given a `str` as
+its input. Import expressions should be at the top level; an import expression
+not at the top-level is an error.
+
+The value of an import expression is `void`.
+
+The chain of import expressions forms a *directed acyclic graph* which is
+evaluated in order such that all dependencies can be resolved before any file
+is evaluated.
+
+Cyclic imports: forbidden as an anti-pattern
+
+
+

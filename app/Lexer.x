@@ -28,10 +28,15 @@ tokens :-
   \(                             { tok TokLParen }
   \)                             { tok TokRParen }
   \<\-                           { tok TokLArrow }
+  \-\>                           { tok TokRArrow }
   :=                             { tok TokColEq }
   \?                             { tok TokQuestion }
   \{                             { tok TokLBrace }
   \}                             { tok TokRBrace }
+  \,                             { tok TokComma }
+  \;                             { tok TokSemicolon }
+
+  func                           { tok TokFunc }
 
   true                           { tok TokTrue }
   false                          { tok TokFalse }

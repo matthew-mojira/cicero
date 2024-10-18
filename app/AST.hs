@@ -1,14 +1,13 @@
 module AST where
 
-import Value
 import Lexer (AlexPosn, Posn)
 
-type Prog = ExprPosn
+type Prog = [ExprPosn]
 
 type ExprPosn = (Expr, Posn)
 
 data Expr
-  = ExprLit    Value
+  = ExprLit    Lit
   | ExprUnOp   UnOp ExprPosn
   | ExprBinOp  BinOp ExprPosn ExprPosn
   | ExprIfElse ExprPosn ExprPosn ExprPosn
@@ -18,11 +17,19 @@ data Expr
   | ExprAssign String ExprPosn
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
+  | ExprFunc   (Maybe String) [String] ExprPosn
+  | ExprApply  ExprPosn [ExprPosn]
+  deriving Eq
+
+data Lit = LitInt  Integer
+         | LitBool Bool
+         deriving (Eq, Show)
 
 data UnOp = LNot
           | Box
           | Unbox
           | Typeof
+          deriving Eq
 
 data BinOp
   = Add
@@ -38,6 +45,7 @@ data BinOp
   | Leq
   | Ge
   | Geq
+  deriving Eq
 
 binOpInt :: BinOp -> Bool
 binOpInt Add  = True

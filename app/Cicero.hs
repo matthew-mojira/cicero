@@ -57,11 +57,11 @@ loop env = do
   read <- Main.read
   case read of
     Run str -> do
-      res <- eval str env
+      res <- eval (str ++ ";") env
       case res of
         Left err -> do
           printErr $ show err
-          printErr str
+          printErr (str ++ ";")
           printErr $ errorArrow err
           loop env
         Right (val, env') -> do
@@ -86,9 +86,7 @@ eval :: String -> Env -> IO (Either Error (Value, Env))
 eval str env = do
   case runAlex str runHappy of
     Left  err  -> return $ Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err)
-    Right prog -> do
-      print $ fst prog
-      interp prog env
+    Right prog -> interp prog env
 
 repl :: IO ()
 repl = loop emptyEnv
