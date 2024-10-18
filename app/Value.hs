@@ -10,7 +10,7 @@ data Value = ValInt  Integer
            | ValVoid
            | ValFunc { params :: [String]
 										 , env    :: [(String, Value)] -- closure
-										 , body   :: ExprPosn
+										 , body   :: ExprPosn          -- index into env
 									   }
            deriving Eq
 

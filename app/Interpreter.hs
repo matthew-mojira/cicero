@@ -189,9 +189,14 @@ eval (ExprBlock exprs, _) = do
   modify popBlock
   return val
 -- functions
-eval (ExprFunc params expr, _) = do
+eval (ExprFunc name params expr, _) = do
   env <- get
-  return $ ValFunc params (getClosure env) expr
+  case name of
+    Nothing   -> return $ ValFunc params (getClosure env) expr
+    Just self -> do
+      let func = ValFunc params ((self, func):(getClosure env)) expr
+      put $ extendConst self func env
+      return func
 eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
   valF <- eval exprF
   case valF of

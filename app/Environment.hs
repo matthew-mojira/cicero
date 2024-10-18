@@ -10,18 +10,19 @@ type Entry      = (String, (Value, Bool))
 type BlockEntry = [Entry]
 type FuncEntry  = [BlockEntry]
 
-data Env = Env { idxs  :: [FuncEntry]
+data Env = Env { idxs :: [FuncEntry]
                  -- three levels: func block list
                  -- [ func1, func2, func3, ..., funcN ]
                  --    ^
                  --    \-- [ block1, block2, block3, ..., blockN ]
                  --          ^
                  --          \-- [ bind1, bind2, bind3, ..., bindN ]
-               , vals  :: [Value]
+               , vals :: [Value]
+               , defs :: [ExprPosn]
                }
 
 emptyEnv :: Env
-emptyEnv = Env [[[]]] []
+emptyEnv = Env [[[]]] [] []
 
 popFunc :: Env -> Env
 popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
@@ -85,6 +86,8 @@ setBox (ValBox idx) val env@Env {vals = vals} =
     setElem :: [a] -> Int -> a -> [a]
     setElem xs i x = let (h, t:ts) = splitAt i xs
                       in h ++ x:ts
+
+-- functions and closures
 
 getClosure :: Env -> [(String, Value)]
 getClosure Env {idxs = idxs} = map (\(s, (v, _)) -> (s, v)) (concat $ head idxs)

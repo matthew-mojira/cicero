@@ -17,7 +17,7 @@ data Expr
   | ExprAssign String ExprPosn
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
-  | ExprFunc   [String] ExprPosn
+  | ExprFunc   (Maybe String) [String] ExprPosn
   | ExprApply  ExprPosn [ExprPosn]
   deriving Eq
 
