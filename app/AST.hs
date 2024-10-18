@@ -84,8 +84,8 @@ instance Show Expr where
   show (ExprVar id (expr, _)) = unwords ["var", id, "=", show expr]
   show (ExprConst id (expr, _)) = unwords ["const", id, "=", show expr]
   show (ExprId id) = id
-  show (ExprAssign id expr) = unwords [id, ":=", show expr]
-  show (ExprSetBox expr1 expr2) = unwords [show expr1, "<-", show expr2]
+  show (ExprAssign id (expr, _)) = unwords [id, ":=", show expr]
+  show (ExprSetBox (expr1, _) (expr2, _)) = unwords [show expr1, "<-", show expr2]
   show (ExprBlock exprs) =
     unlines $ ["{"] ++ map (show . fst) exprs ++ ["}"]
 

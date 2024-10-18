@@ -55,7 +55,7 @@ tokens :-
   unbox                          { tok TokUnbox }
 
   $digit+                        { tok (TokInt undefined) }
-  $alpha [$alpha $digit \_]*     { tok (TokId undefined) }
+  [$alpha\_][$alpha$digit\_]*    { tok (TokId undefined) }
 
 {
 

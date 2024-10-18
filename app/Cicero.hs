@@ -74,7 +74,7 @@ loop env = do
 
 read :: IO Command
 read = runInputT defaultSettings $ do
-  minput <- getInputLine "mpl> "
+  minput <- getInputLine "cicero> "
   case minput of
     Nothing      -> return Quit
     Just ""      -> return Quit
