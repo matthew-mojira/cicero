@@ -6,8 +6,17 @@ import Data.List
 import Value
 import AST
 
-data Env = Env { idxs  :: [[[(String, (Value, Bool))]]]
+type Entry      = (String, (Value, Bool))
+type BlockEntry = [Entry]
+type FuncEntry  = [BlockEntry]
+
+data Env = Env { idxs  :: [FuncEntry]
                  -- three levels: func block list
+                 -- [ func1, func2, func3, ..., funcN ]
+                 --    ^
+                 --    \-- [ block1, block2, block3, ..., blockN ]
+                 --          ^
+                 --          \-- [ bind1, bind2, bind3, ..., bindN ]
                , vals  :: [Value]
                }
 
@@ -17,9 +26,9 @@ emptyEnv = Env [[[]]] []
 popFunc :: Env -> Env
 popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
 
-pushFunc :: [String] -> [Value] -> Env -> Env
-pushFunc params args env@Env {idxs = idxs} =
-  env {idxs = [map (\(id, val) -> (id, (val, False))) (zip params args)]:idxs}
+pushFunc :: [(String, Value)] -> [(String, Value)] -> Env -> Env
+pushFunc args closure env@Env {idxs = idxs} =
+  env {idxs = [map (\(id, val) -> (id, (val, False))) (args ++ closure)]:idxs}
 
 popBlock :: Env -> Env
 popBlock env@Env {idxs = idxs} = env {idxs = (tail (head idxs)):tail idxs}
@@ -76,6 +85,9 @@ setBox (ValBox idx) val env@Env {vals = vals} =
     setElem :: [a] -> Int -> a -> [a]
     setElem xs i x = let (h, t:ts) = splitAt i xs
                       in h ++ x:ts
+
+getClosure :: Env -> [(String, Value)]
+getClosure Env {idxs = idxs} = map (\(s, (v, _)) -> (s, v)) (concat $ head idxs)
 
 instance Show Env where
   show = undefined

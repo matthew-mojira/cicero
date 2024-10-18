@@ -190,15 +190,16 @@ eval (ExprBlock exprs, _) = do
   return val
 -- functions
 eval (ExprFunc params expr, _) = do
-  return $ ValFunc params expr
+  env <- get
+  return $ ValFunc params (getClosure env) expr
 eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
   valF <- eval exprF
   case valF of
-    ValFunc params exprB -> do
+    ValFunc params closure exprB -> do
       if length params == length exprsA
         then do
           args <- mapM eval exprsA
-          modify $ pushFunc params args
+          modify $ pushFunc (zip params args) closure
           valR <- eval exprB
           modify $ popFunc
 
@@ -218,9 +219,9 @@ typeof box@(ValBox _) = do
   let val' = unboxValue box env
   typ <- typeof val'
   return $ TypeBox typ
-typeof (ValType _)    = return TypeType
-typeof ValVoid        = return TypeVoid
-typeof (ValFunc ps _) = return $ TypeFunc (length ps)
+typeof (ValType _)      = return TypeType
+typeof ValVoid          = return TypeVoid
+typeof (ValFunc ps _ _) = return $ TypeFunc (length ps)
 
 typeError :: MonadError Error m => Type -> Type -> Posn -> m a
 typeError exp act posn = throwError $ Error posn (TypeError exp act)

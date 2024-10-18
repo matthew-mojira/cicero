@@ -2,11 +2,14 @@
   func apply(f, x) -> {
      f(x);
   };
-  func triple(x) -> {
-    x * 3;
+
+  {
+    func triple(x) -> {
+      x * 3;
+    };
+    apply(triple, 20);
+    var x = 20;
+    var y = 25;
+    apply((x) -> x + 12 + y, 20);
   };
-  apply(triple, 20);
-  var x = 20;
-  var y = 25;
-  apply((x) -> x + y, 20);
 }
