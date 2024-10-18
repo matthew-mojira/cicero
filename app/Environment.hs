@@ -18,11 +18,10 @@ data Env = Env { idxs :: [FuncEntry]
                  --          ^
                  --          \-- [ bind1, bind2, bind3, ..., bindN ]
                , vals :: [Value]
-               , defs :: [ExprPosn]
                }
 
 emptyEnv :: Env
-emptyEnv = Env [[[]]] [] []
+emptyEnv = Env [[[]]] []
 
 popFunc :: Env -> Env
 popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
