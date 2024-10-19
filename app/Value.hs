@@ -3,6 +3,9 @@ module Value (Value(..)) where
 import AST
 import Type
 
+-- This type could better expressed as
+-- Result = Value
+--        = Void
 data Value = ValInt  Integer
            | ValBool Bool
            | ValBox  Int  -- pointer

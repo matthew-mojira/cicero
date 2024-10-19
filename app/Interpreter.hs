@@ -100,47 +100,51 @@ eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
         then eval exprT
         else eval exprF
     val -> typeError TypeBool val posn
-eval (ExprVar id expr, posn) = do
+eval (ExprVar id expr@(_, posnV), posn) = do
   env <- get
   case lookupEnv' id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
       val <- eval expr
-      env <- get
-      put $ extendVar id val env
-      return val
-eval (ExprConst id expr, posn) = do
+      assertValue val posnV $ do
+        env <- get
+        put $ extendVar id val env
+        return val
+eval (ExprConst id expr@(_, posnV), posn) = do
   env <- get
   case lookupEnv' id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
     Nothing -> do
       val <- eval expr
-      env <- get
-      put $ extendConst id val env
-      return val
+      assertValue val posnV $ do
+        env <- get
+        put $ extendConst id val env
+        return val
 eval (ExprId id, posn) = do
   env <- get
   case lookupEnv id env of
     Just (val, _) -> return val
     Nothing       -> throwError $ Error posn (NameError id)
-eval (ExprAssign id expr, posn) = do
+eval (ExprAssign id expr@(_, posnV), posn) = do
   env <- get
   case lookupEnv id env of
     Just (_, True) -> do
       val <- eval expr
-      env <- get
-      put $ setVar id val env
-      return val
+      assertValue val posnV $ do
+        env <- get
+        put $ setVar id val env
+        return val
     Just (_, False) -> throwError $ Error posn (AssignmentError id)
     Nothing -> throwError $ Error posn (NameError id)
 eval (ExprUnOp Box expr@(_, posn), _) = do
   val <- eval expr
-  env <- get
-  let (env', idx) = boxValue val env
-  put env'
-  return $ ValBox idx
+  assertValue val posn $ do
+    env <- get
+    let (env', idx) = boxValue val env
+    put env'
+    return $ ValBox idx
 eval (ExprUnOp Unbox expr@(_, posn), _) = do
   val <- eval expr
   case val of
@@ -148,15 +152,16 @@ eval (ExprUnOp Unbox expr@(_, posn), _) = do
       env <- get
       return $ unboxValue val env
     _ -> typeError TypeBox val posn
-eval (ExprSetBox exprD@(_, posn) exprS, _) = do
+eval (ExprSetBox exprD@(_, posnD) exprS@(_, posnS), _) = do
   valD <- eval exprD
   case valD of
     ValBox _ -> do
       valS <- eval exprS
-      env  <- get
-      put $ setBox valD valS env
-      return valS
-    _ -> typeError TypeBox valD posn
+      assertValue valS posnS $ do
+        env  <- get
+        put $ setBox valD valS env
+        return valS
+    _ -> typeError TypeBox valD posnD
 -- first-class type stuff
 eval (ExprUnOp Typeof expr, _) = do
   val <- eval expr
@@ -206,3 +211,8 @@ typeof (ValFunc ps _ _) = return TypeFunc
 typeof (ValBox _)       = return TypeBox
 typeof (ValType _)      = return TypeType
 typeof Void             = return TypeVoid
+
+-- assertion can be supplanted with proper types
+assertValue :: Value -> Posn -> Matthew a -> Matthew a
+assertValue Void posn _ = throwError $ Error posn ValueError
+assertValue _ _ seq     = seq

@@ -17,6 +17,7 @@ data ErrorKind = TypeError          { expected :: Type, actual :: Type }
                | RedefinitionError  { id :: String }
                | AssignmentError    { id :: String }
                | ArityMismatchError { expArity :: Int, actArity :: Int }
+               | ValueError
                | ManualError        { msg :: String }
 
 instance Show ErrorKind where
@@ -30,6 +31,7 @@ instance Show ErrorKind where
     ["redefinition error: identifier", id, "redeclared in the same scope"]
   show (AssignmentError id) = unwords
     ["assignment error: assignment to constant", id]
+  show ValueError = "value error: use of result of type void"
   show (ArityMismatchError exp act) = unwords
     ["arity mismatch error: call to function expected", show exp, "arguments but got", show act]
   show (ManualError msg)     = msg
