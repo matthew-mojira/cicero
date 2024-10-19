@@ -25,7 +25,7 @@ import Value
 type Matthew a = StateT Env (ExceptT Error IO) a
 
 interp :: Prog -> Env -> IO (Either Error (Value, Env))
-interp prog env = runExceptT $ runStateT (foldM (const eval) ValVoid prog) env
+interp prog env = runExceptT $ runStateT (foldM (const eval) Void prog) env
 
 eval :: ExprPosn -> Matthew Value
 eval (ExprLit lit, _) = case lit of
@@ -35,9 +35,7 @@ eval (ExprUnOp LNot expr@(_, posn), _) = do
   x <- eval expr
   case x of
     ValBool bool -> return $ ValBool $ not bool
-    val -> do
-      typ <- typeof val
-      typeError TypeBool typ posn
+    val          -> typeError TypeBool val posn
 eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
   | binOpEq op = do
     val1 <- eval expr1
@@ -51,7 +49,7 @@ eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
                 Eq  -> (==)
                 Neq -> (/=)
         return $ ValBool $ op' val1 val2
-      else typeError typ1 typ2 pos2
+      else typeError typ1 val2 pos2
   | binOpComp op = do
     val1 <- eval expr1
     val2 <- eval expr2
@@ -64,12 +62,8 @@ eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
                 Ge  -> (>)
                 Geq -> (>=)
         return $ ValBool $ op' int1 int2
-      (ValInt _, v2) -> do
-        typ <- typeof v2
-        typeError TypeInt typ pos2
-      (v1, _)        -> do
-        typ <- typeof v1
-        typeError TypeInt typ pos1
+      (ValInt _, v2) -> typeError TypeInt v2 pos2
+      (v1, _)        -> typeError TypeInt v1 pos1
   | binOpInt op = do
     val1 <- eval expr1
     val2 <- eval expr2
@@ -84,12 +78,8 @@ eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
                     then throwError $ Error posn (ArithmeticError "division by zero")
                     else return div
         return $ ValInt $ op' int1 int2
-      (ValInt _, v2) -> do
-        typ <- typeof v2
-        typeError TypeInt typ pos2
-      (v1, _)        -> do
-        typ <- typeof v1
-        typeError TypeInt typ pos1
+      (ValInt _, v2) -> typeError TypeInt v2 pos2
+      (v1, _)        -> typeError TypeInt v1 pos1
   | binOpBool op = do
     val1 <- eval expr1
     val2 <- eval expr2
@@ -100,12 +90,8 @@ eval (ExprBinOp op expr1@(_, pos1) expr2@(_, pos2), posn)
                   LAnd -> (&&)
                   LOr  -> (||)
         return $ ValBool $ op' bool1 bool2
-      (ValBool _, v2) -> do
-        typ <- typeof v2
-        typeError TypeBool typ pos2
-      (v1, _)         -> do
-        typ <- typeof v1
-        typeError TypeBool typ pos1
+      (ValBool _, v2) -> typeError TypeBool v2 pos2
+      (v1, _)         -> typeError TypeBool v1 pos1
 eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
   x <- eval pred
   case x of
@@ -113,9 +99,7 @@ eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
       if bool
         then eval exprT
         else eval exprF
-    val -> do
-      typ <- typeof val
-      typeError TypeBool typ posn
+    val -> typeError TypeBool val posn
 eval (ExprVar id expr, posn) = do
   env <- get
   case lookupEnv' id env of
@@ -163,9 +147,7 @@ eval (ExprUnOp Unbox expr@(_, posn), _) = do
     ValBox _ -> do
       env <- get
       return $ unboxValue val env
-    _ -> do
-      typ <- typeof val
-      typeError TypeBox typ posn
+    _ -> typeError TypeBox val posn
 eval (ExprSetBox exprD@(_, posn) exprS, _) = do
   valD <- eval exprD
   case valD of
@@ -174,9 +156,7 @@ eval (ExprSetBox exprD@(_, posn) exprS, _) = do
       env  <- get
       put $ setBox valD valS env
       return valS
-    _ -> do
-      typ <- typeof valD
-      typeError TypeBox typ posn
+    _ -> typeError TypeBox valD posn
 -- first-class type stuff
 eval (ExprUnOp Typeof expr, _) = do
   val <- eval expr
@@ -185,7 +165,7 @@ eval (ExprUnOp Typeof expr, _) = do
 -- expression combinators
 eval (ExprBlock exprs, _) = do
   modify pushBlock
-  val <- foldM (const eval) ValVoid exprs
+  val <- foldM (const eval) Void exprs
   modify popBlock
   return val
 -- functions
@@ -211,19 +191,18 @@ eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
           return valR
         else do
           throwError $ Error posn (ArityMismatchError (length params) (length exprsA))
-    _ -> do
-      env <- get
-      typ <- typeof valF
-      typeError (TypeFunc (-1)) typ posnF
+    _ -> typeError TypeFunc valF posnF
 
--- this computation does not need to be in the monad
+
+typeError :: Type -> Value -> Posn -> Matthew a
+typeError exp val posn = do
+  act <- typeof val
+  throwError $ Error posn (TypeError exp act)
+
 typeof :: Value -> Matthew Type
 typeof (ValInt _)       = return TypeInt
 typeof (ValBool _)      = return TypeBool
-typeof (ValFunc ps _ _) = return $ TypeFunc (length ps)
+typeof (ValFunc ps _ _) = return TypeFunc
 typeof (ValBox _)       = return TypeBox
 typeof (ValType _)      = return TypeType
-typeof ValVoid          = return TypeVoid
-
-typeError :: MonadError Error m => Type -> Type -> Posn -> m a
-typeError exp act posn = throwError $ Error posn (TypeError exp act)
+typeof Void             = return TypeVoid

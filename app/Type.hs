@@ -2,8 +2,8 @@ module Type where
 
 data Type = TypeInt
           | TypeBool
-          | TypeBox
           | TypeVoid
+          | TypeBox
           | TypeType
           | TypeFunc
           deriving Eq
