@@ -154,8 +154,8 @@ parseId (TokenPosn (TokId id) pos) = (ExprId id, pos)
 
 parseIds :: TokenPosn -> [String] -> [String]
 parseIds tok@(TokenPosn (TokId id) _) ts = if elem id ts
-                                             then error "Duplicate parameter name"
-                                             else id:ts
+  then error ("Duplicate parameter name in function definition: " ++ id)
+  else id:ts
 
 parseAssign :: TokenPosn -> ExprPosn -> ExprPosn
 parseAssign (TokenPosn (TokId id) pos1) expr@(_, pos2) =
