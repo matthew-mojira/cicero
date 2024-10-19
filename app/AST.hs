@@ -23,13 +23,13 @@ data Expr
 
 data Lit = LitInt  Integer
          | LitBool Bool
-         deriving (Eq, Show)
+         deriving Eq
 
 data UnOp = LNot
           | Box
           | Unbox
           | Typeof
-          deriving Eq
+          deriving (Eq, Show)
 
 data BinOp
   = Add
@@ -45,7 +45,7 @@ data BinOp
   | Leq
   | Ge
   | Geq
-  deriving Eq
+  deriving (Eq, Show)
 
 binOpInt :: BinOp -> Bool
 binOpInt Add  = True
@@ -75,36 +75,51 @@ binOpBool LOr  = True
 binOpBool _    = False
 
 instance Show Expr where
-  show (ExprLit val) = show val
-  show (ExprUnOp op (expr, _)) = show op ++ " " ++ show expr
+  show (ExprLit val) =
+    concat ["(Lit ", show val, ")"]
+  show (ExprUnOp op (expr, _)) =
+    concat ["(UnOp ", show op, " ", show expr, ")"]
   show (ExprBinOp op (expr1, _) (expr2, _)) =
-    "(" ++ show expr1 ++ " " ++ show op ++ " " ++ show expr2 ++ ")"
+    concat ["(BinOp ", show op, " ", show expr1, " ", show expr2, ")"]
   show (ExprIfElse (expr1, _) (expr2, _) (expr3, _)) =
-    unwords ["if", show expr1, "then", show expr2, "else", show expr3]
-  show (ExprVar id (expr, _)) = unwords ["var", id, "=", show expr]
-  show (ExprConst id (expr, _)) = unwords ["const", id, "=", show expr]
-  show (ExprId id) = id
-  show (ExprAssign id (expr, _)) = unwords [id, ":=", show expr]
-  show (ExprSetBox (expr1, _) (expr2, _)) = unwords [show expr1, "<-", show expr2]
+    concat ["(IfElse ", show expr1, " ", show expr2, " ", show expr3, ")"]
+  show (ExprVar id (expr, _)) =
+    concat ["(Var ", id, " ", show expr, ")"]
+  show (ExprConst id (expr, _)) =
+    concat ["(Const", id, " ", show expr, ")"]
+  show (ExprId id) =
+    concat ["(Id ", id, ")"]
+  show (ExprAssign id (expr, _)) =
+    concat ["(Assign ", id, " ", show expr, ")"]
+  show (ExprSetBox (expr1, _) (expr2, _)) =
+    concat ["(SetBox ", show expr1, " ", show expr2, ")"]
   show (ExprBlock exprs) =
-    unlines $ ["{"] ++ map (show . fst) exprs ++ ["}"]
+    concat ["(Block ", show $ map (show . fst) exprs, ")"]
+  show (ExprFunc name params (expr, _)) =
+    concat ["(Func ", show name, " ", show params, " ", show expr, ")"]
+  show (ExprApply func exprs) =
+    concat ["(Apply ", show func, " ", show $ map (show . fst) exprs, ")"]
 
-instance Show UnOp where
-  show LNot   = "not"
-  show Box    = "box"
-  show Unbox  = "unbox"
-  show Typeof = "typeof"
+instance Show Lit where
+  show (LitBool bool) = show bool
+  show (LitInt int)   = show int
 
-instance Show BinOp where
-  show Add  = "+"
-  show Sub  = "-"
-  show Mult = "*"
-  show Div  = "/"
-  show LAnd = "and"
-  show LOr  = "or"
-  show Eq   = "="
-  show Neq  = "!="
-  show Le   = "<"
-  show Leq  = "<="
-  show Ge   = ">"
-  show Geq  = ">="
+--instance Show UnOp where
+--  show LNot   = "not"
+--  show Box    = "box"
+--  show Unbox  = "unbox"
+--  show Typeof = "typeof"
+
+--instance Show BinOp where
+--  show Add  = "+"
+--  show Sub  = "-"
+--  show Mult = "*"
+--  show Div  = "/"
+--  show LAnd = "and"
+--  show LOr  = "or"
+--  show Eq   = "="
+--  show Neq  = "!="
+--  show Le   = "<"
+--  show Leq  = "<="
+--  show Ge   = ">"
+--  show Geq  = ">="

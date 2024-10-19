@@ -14,15 +14,20 @@ import AST
 %monad     { Alex }
 %tokentype { TokenPosn }
 
+%right ':=' '<-'
 %left  or
 %left  and
 %left  '=' '!='
 %left  '<' '<=' '>' '>='
 %left  '+' '-'
 %left  '*' '/'
-%right '**'
+%right '**' '^'
 %left  NEG
-%right not
+%right not box unbox
+%left  '?'
+%left  '->'
+%left  '('
+%right else
 
 %token
       '+'             { TokenPosn TokPlus (_, _) }
@@ -146,6 +151,11 @@ parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) expr@(_, pos2) =
 
 parseId :: TokenPosn -> ExprPosn
 parseId (TokenPosn (TokId id) pos) = (ExprId id, pos)
+
+parseIds :: TokenPosn -> [String] -> [String]
+parseIds tok@(TokenPosn (TokId id) _) ts = if elem id ts
+                                             then error "Duplicate parameter name"
+                                             else id:ts
 
 parseAssign :: TokenPosn -> ExprPosn -> ExprPosn
 parseAssign (TokenPosn (TokId id) pos1) expr@(_, pos2) =
