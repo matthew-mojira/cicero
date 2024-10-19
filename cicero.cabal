@@ -62,13 +62,13 @@ executable cicero
     main-is:          Cicero.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: AST, Error, Environment, Interpreter, Value, Lexer, Parser, Token, Type
+    other-modules: AST, Error, Environment, Interpreter, Lexer, Parser, Token, Type, Value
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base ^>=4.17.0.0,
+    build-depends:    base >=4.17.0.0,
                       array >=0.5.4.0,
                       mtl,
                       haskeline,
