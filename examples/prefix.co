@@ -1,0 +1,17 @@
+{
+  func add(x, y)  -> x + y;
+  func sub(x, y)  -> x + y;
+  func mul(x, y)  -> x + y;
+  func div(x, y)  -> x / y;
+  func pow(x, y)  -> x ^ y;
+  func _and(x, y) -> x and y;
+  func _or(x, y)  -> x or y;
+  func eq(x, y)   -> x = y;
+  func neq(x, y)  -> x != y;
+  func lt(x, y)   -> x < y;
+  func leq(x, y)  -> x <= y;
+  func gt(x, y)   -> x > y;
+  func geq(x, y)  -> x >= y;
+
+  func typeof(v)  -> v?;
+}
