@@ -2,7 +2,6 @@ module Type where
 
 data Type = TypeInt
           | TypeBool
-          | TypeVoid
           | TypeBox
           | TypeType
           | TypeFunc
@@ -11,10 +10,11 @@ data Type = TypeInt
 instance Show Type where
   show TypeInt      = "int"
   show TypeBool     = "bool"
-  show TypeVoid     = "void"
   show TypeBox      = "box"
   show TypeType     = "type"
   show TypeFunc     = "func"
+
+anyType = undefined
 
 (<:) :: Type -> Type -> Bool
 (<:) = (==)

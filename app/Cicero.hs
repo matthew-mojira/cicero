@@ -82,7 +82,7 @@ read = runInputT defaultSettings $ do
     Just ":env"  -> return PrintEnv
     Just input   -> return $ Run input
 
-eval :: String -> Env -> IO (Either Error (Value, Env))
+eval :: String -> Env -> IO (Either Error ([Value], Env))
 eval str env = do
   case runAlex str runHappy of
     Left  err  -> return $ Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err)

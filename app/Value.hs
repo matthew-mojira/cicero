@@ -3,9 +3,6 @@ module Value (Value(..)) where
 import AST
 import Type
 
--- This type could better expressed as
--- Result = Value
---        = Void
 data Value = ValInt  Integer
            | ValBool Bool
            | ValBox  Int  -- pointer
@@ -14,7 +11,6 @@ data Value = ValInt  Integer
 										 , env    :: [(String, Value)] -- closure
 										 , body   :: ExprPosn          -- index into env
 									   }
-				   | Void   -- void is not a value
            deriving Eq
 
 instance Show Value where
@@ -22,5 +18,4 @@ instance Show Value where
   show (ValBool bool) = if bool then "true" else "false"
   show (ValBox idx)   = concat ["box[#", show idx, "]"]
   show (ValType typ)  = concat ["type[", show typ, "]"]
-  show Void           = ""
   show (ValFunc _ _ _) = concat ["func[<impl>]"]
