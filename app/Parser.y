@@ -14,6 +14,7 @@ import AST
 %monad     { Alex }
 %tokentype { TokenPosn }
 
+%right else
 %right ':=' '<-'
 %left  or
 %left  and
@@ -27,7 +28,6 @@ import AST
 %left  '?'
 %left  '->'
 %left  '('
-%right else
 
 %token
       '+'             { TokenPosn TokPlus (_, _) }
@@ -125,7 +125,7 @@ args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }
 
 ids : id                        { (\(TokenPosn (TokId id) _) -> [id]) $1 }
-    | id ',' ids                { ((\(TokenPosn (TokId id) _) -> id) $1) : $3 }    
+    | id ',' ids                { parseIds $1 $3 }
 
 {
 
