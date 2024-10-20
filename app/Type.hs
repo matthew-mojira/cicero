@@ -5,6 +5,8 @@ data Type = TypeInt
           | TypeBox
           | TypeType
           | TypeFunc
+          | TypeStr
+          | TypeChar
           deriving Eq
 
 instance Show Type where
@@ -13,6 +15,8 @@ instance Show Type where
   show TypeBox      = "box"
   show TypeType     = "type"
   show TypeFunc     = "func"
+  show TypeStr      = "str"
+  show TypeChar     = "char"
 
 anyType = undefined
 

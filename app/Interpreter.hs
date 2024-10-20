@@ -9,6 +9,7 @@ import Lexer (AlexPosn(AlexPn), Posn)
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.Identity
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 
@@ -32,6 +33,8 @@ eval :: ExprPosn -> Matthew [Value]
 eval (ExprLit lit, _) = case lit of
   (LitInt int)   -> return [ValInt int]
   (LitBool bool) -> return [ValBool bool]
+  (LitStr str)   -> return [ValStr str]
+  (LitChar char) -> return [ValChar char]
   (LitType typ)  -> case typ of
     IntT  -> return [ValType TypeInt]
     BoolT -> return [ValType TypeBool]
@@ -219,7 +222,17 @@ eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
         else do
           throwError $ Error posn (ArityMismatchError (length params) (length exprsA))
     _ -> typeError [TypeFunc] valF posnF
-
+-- I/O
+eval (ExprUnOp Print expr@(_, posn), _) = do
+  x <- eval expr
+  case x of
+    [val] -> do
+      liftIO $ print val
+      return []
+    val -> typeError [TypeBool] val posn
+eval (ExprZeroOp Scan, _) = do
+  str <- liftIO $ getLine
+  return [ValStr str]
 
 typeError :: [Type] -> [Value] -> Posn -> Matthew a
 typeError exp val posn | length exp /= length val =
@@ -235,4 +248,6 @@ typeof (ValBool _)      = return TypeBool
 typeof (ValFunc ps _ _) = return TypeFunc
 typeof (ValBox _)       = return TypeBox
 typeof (ValType _)      = return TypeType
+typeof (ValStr _)       = return TypeStr
+typeof (ValChar _)      = return TypeChar
 

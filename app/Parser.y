@@ -55,6 +55,8 @@ import AST
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
+      str             { TokenPosn (TokStr _) (_, _) }
+      char            { TokenPosn (TokChar _) (_, _) }
 
       func            { TokenPosn TokFunc (_, _) }
 
@@ -72,6 +74,9 @@ import AST
       box             { TokenPosn TokBox (_, _) }
       unbox           { TokenPosn TokUnbox (_, _) }
 
+      print           { TokenPosn TokPrint (_, _) }
+      scan            { TokenPosn TokScan (_, _) }
+
       int_t           { TokenPosn TokIntT (_, _) }
       bool_t          { TokenPosn TokBoolT (_, _) }
       box_t           { TokenPosn TokBoxT (_, _) }
@@ -83,6 +88,8 @@ exprs :                         { [] }
       | expr ';' exprs          { $1 : $3 }
 
 expr  : int                     { parseInt $1 }
+      | str                     { parseString $1 }
+      | char                    { parseChar $1 }
       | expr '+' expr           { (ExprBinOp Add $1 $3, ($1 <|> $3)) }
       | expr '-' expr           { (ExprBinOp Sub $1 $3, ($1 <|> $3)) }
       | expr '*' expr           { (ExprBinOp Mult $1 $3, ($1 <|> $3)) }
@@ -124,6 +131,9 @@ expr  : int                     { parseInt $1 }
       | expr '(' ')'            { (ExprApply $1 [], snd $1 <-> tokenPosn $3) }
       | expr '(' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
 
+      | print expr              { parseUnOp Print $1 $2 }
+      | scan                    { (ExprZeroOp Scan, tokenPosn $1) }
+
       | true                    { (ExprLit (LitBool True), tokenPosn $1) }
       | false                   { (ExprLit (LitBool False), tokenPosn $1) }
       | int_t                   { (ExprLit (LitType IntT), tokenPosn $1) }
@@ -148,6 +158,14 @@ parseInt (TokenPosn (TokInt int) pos) =
 parseNInt :: TokenPosn -> TokenPosn -> ExprPosn
 parseNInt (TokenPosn _ pos1) (TokenPosn (TokInt int) pos2) =
   (ExprLit (LitInt $ -int), pos1 <-> pos2)
+
+parseString :: TokenPosn -> ExprPosn
+parseString (TokenPosn (TokStr str) pos) =
+  (ExprLit (LitStr str), pos)
+
+parseChar :: TokenPosn -> ExprPosn
+parseChar (TokenPosn (TokChar char) pos) =
+  (ExprLit (LitChar char), pos)
 
 parseUnOp :: UnOp -> TokenPosn -> ExprPosn -> ExprPosn
 parseUnOp op (TokenPosn _ pos1) expr@(_, pos2) =

@@ -42,8 +42,10 @@ data Token = TokPlus
            | TokUnbox
 
            -- literal values
-           | TokInt Integer
-           | TokId  String
+           | TokInt  Integer
+           | TokId   String
+           | TokStr  String
+           | TokChar Char
            | TokTrue
            | TokFalse
            -- type literals
@@ -52,5 +54,9 @@ data Token = TokPlus
            | TokBoxT
            | TokTypeT
            | TokFuncT
+
+           -- I/O
+           | TokPrint
+           | TokScan
 
            deriving (Eq, Show)
