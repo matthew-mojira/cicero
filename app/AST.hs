@@ -109,6 +109,8 @@ instance Show Expr where
     concat ["(Func ", show name, " ", show params, " ", show expr, ")"]
   show (ExprApply func exprs) =
     concat ["(Apply ", show func, " ", show $ map (show . fst) exprs, ")"]
+  show (ExprWhileDo (guard, _) (body, _)) =
+    concat ["(WhileDo ", show guard, " ", show body, ")"]
 
 instance Show Lit where
   show (LitBool bool) = show bool

@@ -205,7 +205,7 @@ eval (ExprWhileDo exprG@(_, posnG) exprB, _) = do
       valG <- eval exprG
       case valG of
         [ValBool bool] -> return bool
-        _ -> do typeError [TypeBool] typ posnG
+        _ -> do typeError [TypeBool] valG posnG
 -- functions
 eval (ExprFunc name params expr, _) = do
   env <- get
