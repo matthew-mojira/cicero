@@ -202,23 +202,23 @@ eval (ExprFunc name params expr, _) = do
       let func = ValFunc params ((self, func):(getClosure env)) expr
       put $ extendConst self func env
       return [func]
-eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
-  valF <- eval exprF
-  case valF of
-    [ValFunc params closure exprB] -> do
-      -- redo all this later, temporary
-      args <- mapM eval exprsA
-      let args' = concat args
-      if length params == length args'
-        then do
-          modify $ pushFunc (zip params args') closure
-          valR <- eval exprB
-          modify $ popFunc
-
-          return valR
-        else do
-          throwError $ Error posn (ArityMismatchError (length params) (length exprsA))
-    _ -> typeError [TypeFunc] valF posnF
+--eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
+--  valF <- eval exprF
+--  case valF of
+--    [ValFunc params closure exprB] -> do
+--      -- redo all this later, temporary
+--      args <- mapM eval exprsA
+--      let args' = concat args
+--      if length params == length args'
+--        then do
+--          modify $ pushFunc (zip params args') closure
+--          valR <- eval exprB
+--          modify $ popFunc
+--
+--          return valR
+--        else do
+--          throwError $ Error posn (ArityMismatchError (length params) (length exprsA))
+--    _ -> typeError [TypeFunc] valF posnF
 
 
 typeError :: [Type] -> [Value] -> Posn -> Matthew a

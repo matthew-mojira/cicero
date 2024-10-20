@@ -26,8 +26,8 @@ import AST
 %left  NEG
 %right not box unbox
 %left  '?'
+%left  APPLY
 %left  '->'
-%left  '('
 
 %token
       '+'             { TokenPosn TokPlus (_, _) }
@@ -99,15 +99,16 @@ expr  : int                     { parseInt $1 }
       | expr '>=' expr          { (ExprBinOp Geq $1 $3, ($1 <|> $3)) }
       | not expr                { parseUnOp LNot $1 $2 }
 
-      | '(' expr ')'            { (fst $2, tokenPosn $1 <-> tokenPosn $3) }
+      | '(' ')'                 { (ExprTuple [], tokenPosn $1 <-> tokenPosn $2) }
+      | '(' args ')'            { (ExprTuple $2, tokenPosn $1 <-> tokenPosn $3) }
       | '{' exprs '}'           { (ExprBlock $2, tokenPosn $1 <-> tokenPosn $3)}
       
       | '-' int %prec NEG       { parseNInt $1 $2 }
 
       | var id '=' expr         { parseVar $1 $2 $4 }
       | const id '=' expr       { parseConst $1 $2 $4 }
-      | id                      { parseId $1 }
       | id ':=' expr            { parseAssign $1 $3 }
+      | id                      { parseId $1 }
 
       | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2)}
       
@@ -118,11 +119,10 @@ expr  : int                     { parseInt $1 }
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
       | func id '(' ')' '->' expr      { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6, tokenPosn $1 <-> snd $6)) $2 } 
       | func id '(' ids ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7, tokenPosn $1 <-> snd $7)) $2 } 
-      | '(' ')' '->' expr       { (ExprFunc Nothing [] $4, tokenPosn $1 <-> snd $4) }
-      | '(' ids ')' '->' expr   { (ExprFunc Nothing $2 $5, tokenPosn $1 <-> snd $5) }
+      | func '(' ')' '->' expr       { (ExprFunc Nothing [] $5, tokenPosn $1 <-> snd $5) }
+      | func '(' ids ')' '->' expr   { (ExprFunc Nothing $3 $6, tokenPosn $1 <-> snd $6) }
 
-      | expr '(' ')'            { (ExprApply $1 [], snd $1 <-> tokenPosn $3) }
-      | expr '(' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
+      | expr apply expr               { (ExprApply $1 $3, snd $1 <-> snd $3) }
 
       | true                    { (ExprLit (LitBool True), tokenPosn $1) }
       | false                   { (ExprLit (LitBool False), tokenPosn $1) }
@@ -132,6 +132,7 @@ expr  : int                     { parseInt $1 }
       | type_t                  { (ExprLit (LitType TypeT), tokenPosn $1) }
       | func_t                  { (ExprLit (LitType FuncT), tokenPosn $1) }
 
+apply :  %prec APPLY   {}
 
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }
