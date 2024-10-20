@@ -30,8 +30,14 @@ interp prog env = runExceptT $ runStateT (foldM (const eval) [] prog) env
 
 eval :: ExprPosn -> Matthew [Value]
 eval (ExprLit lit, _) = case lit of
-  (LitInt int)   -> return $ [ValInt int]
-  (LitBool bool) -> return $ [ValBool bool]
+  (LitInt int)   -> return [ValInt int]
+  (LitBool bool) -> return [ValBool bool]
+  (LitType typ)  -> case typ of
+    IntT  -> return [ValType TypeInt]
+    BoolT -> return [ValType TypeBool]
+    BoxT  -> return [ValType TypeBox]
+    TypeT -> return [ValType TypeType]
+    FuncT -> return [ValType TypeFunc]
 eval (ExprUnOp LNot expr@(_, posn), _) = do
   x <- eval expr
   case x of

@@ -71,6 +71,12 @@ import AST
       const           { TokenPosn TokConst (_, _) }
       box             { TokenPosn TokBox (_, _) }
       unbox           { TokenPosn TokUnbox (_, _) }
+
+      int_t           { TokenPosn TokIntT (_, _) }
+      bool_t          { TokenPosn TokBoolT (_, _) }
+      box_t           { TokenPosn TokBoxT (_, _) }
+      type_t          { TokenPosn TokTypeT (_, _) }
+      func_t          { TokenPosn TokFuncT (_, _) }
 %%
 
 exprs :                         { [] }
@@ -110,9 +116,6 @@ expr  : int                     { parseInt $1 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
-      | true                    { (ExprLit (LitBool True), tokenPosn $1) }
-      | false                   { (ExprLit (LitBool False), tokenPosn $1) }
-
       | func id '(' ')' '->' expr      { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6, tokenPosn $1 <-> snd $6)) $2 } 
       | func id '(' ids ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7, tokenPosn $1 <-> snd $7)) $2 } 
       | '(' ')' '->' expr       { (ExprFunc Nothing [] $4, tokenPosn $1 <-> snd $4) }
@@ -120,6 +123,15 @@ expr  : int                     { parseInt $1 }
 
       | expr '(' ')'            { (ExprApply $1 [], snd $1 <-> tokenPosn $3) }
       | expr '(' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
+
+      | true                    { (ExprLit (LitBool True), tokenPosn $1) }
+      | false                   { (ExprLit (LitBool False), tokenPosn $1) }
+      | int_t                   { (ExprLit (LitType IntT), tokenPosn $1) }
+      | bool_t                  { (ExprLit (LitType BoolT), tokenPosn $1) }
+      | box_t                   { (ExprLit (LitType BoxT), tokenPosn $1) }
+      | type_t                  { (ExprLit (LitType TypeT), tokenPosn $1) }
+      | func_t                  { (ExprLit (LitType FuncT), tokenPosn $1) }
+
 
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }
