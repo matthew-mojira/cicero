@@ -37,6 +37,7 @@ data UnOp = LNot
           | Box
           | Unbox
           | Typeof
+          | Print
           deriving (Eq, Show)
 
 data BinOp

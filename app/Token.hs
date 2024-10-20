@@ -53,4 +53,7 @@ data Token = TokPlus
            | TokTypeT
            | TokFuncT
 
+           -- I/O
+           | TokPrint
+
            deriving (Eq, Show)

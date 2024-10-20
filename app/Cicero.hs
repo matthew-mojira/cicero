@@ -8,6 +8,8 @@ import Environment
 import Error
 import Value
 
+import Control.Monad
+
 import System.Console.Haskeline
 import System.Environment
 import System.Exit
@@ -64,8 +66,10 @@ loop env = do
           printErr (str ++ ";")
           printErr $ errorArrow err
           loop env
-        Right (val, env') -> do
-          print val
+        Right (vals, env') -> do
+          case vals of
+            [] -> return ()
+            _  -> forM_ vals print
           loop env'
     PrintEnv -> do
       print env
@@ -87,7 +91,7 @@ eval str env = do
   case runAlex str runHappy of
     Left  err  -> return $ Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err)
     Right prog -> do
-      print $ fst $ prog!!0
+--      print $ fst $ prog!!0
       interp prog env
 
 repl :: IO ()

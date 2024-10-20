@@ -9,6 +9,7 @@ import Lexer (AlexPosn(AlexPn), Posn)
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.Identity
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 
@@ -219,6 +220,14 @@ eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
         else do
           throwError $ Error posn (ArityMismatchError (length params) (length exprsA))
     _ -> typeError [TypeFunc] valF posnF
+-- I/O
+eval (ExprUnOp Print expr@(_, posn), _) = do
+  x <- eval expr
+  case x of
+    [val] -> do
+      liftIO $ print val
+      return []
+    val -> typeError [TypeBool] val posn
 
 
 typeError :: [Type] -> [Value] -> Posn -> Matthew a
