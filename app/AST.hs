@@ -8,6 +8,7 @@ type ExprPosn = (Expr, Posn)
 
 data Expr
   = ExprLit    Lit
+  | ExprZeroOp ZeroOp
   | ExprUnOp   UnOp ExprPosn
   | ExprBinOp  BinOp ExprPosn ExprPosn
   | ExprIfElse ExprPosn ExprPosn ExprPosn
@@ -36,6 +37,9 @@ data LitT = IntT
           | StrT
           | CharT
           deriving (Eq, Show)
+
+data ZeroOp = Scan
+            deriving (Eq, Show)
 
 data UnOp = LNot
           | Box
@@ -90,6 +94,8 @@ binOpBool _    = False
 instance Show Expr where
   show (ExprLit val) =
     concat ["(Lit ", show val, ")"]
+  show (ExprZeroOp op) =
+    concat ["(ZeroOp ", show op, ")"]
   show (ExprUnOp op (expr, _)) =
     concat ["(UnOp ", show op, " ", show expr, ")"]
   show (ExprBinOp op (expr1, _) (expr2, _)) =

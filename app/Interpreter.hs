@@ -230,7 +230,9 @@ eval (ExprUnOp Print expr@(_, posn), _) = do
       liftIO $ print val
       return []
     val -> typeError [TypeBool] val posn
-
+eval (ExprZeroOp Scan, _) = do
+  str <- liftIO $ getLine
+  return [ValStr str]
 
 typeError :: [Type] -> [Value] -> Posn -> Matthew a
 typeError exp val posn | length exp /= length val =

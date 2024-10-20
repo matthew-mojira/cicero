@@ -75,6 +75,7 @@ import AST
       unbox           { TokenPosn TokUnbox (_, _) }
 
       print           { TokenPosn TokPrint (_, _) }
+      scan            { TokenPosn TokScan (_, _) }
 
       int_t           { TokenPosn TokIntT (_, _) }
       bool_t          { TokenPosn TokBoolT (_, _) }
@@ -131,6 +132,7 @@ expr  : int                     { parseInt $1 }
       | expr '(' args ')'       { (ExprApply $1 $3, snd $1 <-> tokenPosn $4) }
 
       | print expr              { parseUnOp Print $1 $2 }
+      | scan                    { (ExprZeroOp Scan, tokenPosn $1) }
 
       | true                    { (ExprLit (LitBool True), tokenPosn $1) }
       | false                   { (ExprLit (LitBool False), tokenPosn $1) }

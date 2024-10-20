@@ -21,5 +21,5 @@ instance Show Value where
   show (ValBox idx)    = concat ["box[#", show idx, "]"]
   show (ValType typ)   = concat ["type[", show typ, "]"]
   show (ValFunc _ _ _) = concat ["func[<impl>]"]
-  show (ValStr str)    = str
+  show (ValStr str)    = show str
   show (ValChar char)  = show char

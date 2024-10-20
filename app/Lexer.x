@@ -55,6 +55,7 @@ tokens :-
   unbox                          { tok TokUnbox }
 
   print                          { tok TokPrint }
+  scan                           { tok TokScan }
 
   int_t                          { tok TokIntT }
   bool_t                         { tok TokBoolT }
