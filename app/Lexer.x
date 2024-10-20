@@ -54,6 +54,12 @@ tokens :-
   box                            { tok TokBox }
   unbox                          { tok TokUnbox }
 
+  int_t                          { tok TokIntT }
+  bool_t                         { tok TokBoolT }
+  box_t                          { tok TokBoxT }
+  type_t                         { tok TokTypeT }
+  func_t                         { tok TokFuncT }
+
   $digit+                        { tok (TokInt undefined) }
   [$alpha\_][$alpha$digit\_]*    { tok (TokId undefined) }
 

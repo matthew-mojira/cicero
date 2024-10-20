@@ -23,7 +23,15 @@ data Expr
 
 data Lit = LitInt  Integer
          | LitBool Bool
+         | LitType LitT
          deriving Eq
+
+data LitT = IntT
+          | BoolT
+          | BoxT
+          | TypeT
+          | FuncT
+          deriving (Eq, Show)
 
 data UnOp = LNot
           | Box
@@ -103,6 +111,7 @@ instance Show Expr where
 instance Show Lit where
   show (LitBool bool) = show bool
   show (LitInt int)   = show int
+  show (LitType typ)  = show typ
 
 --instance Show UnOp where
 --  show LNot   = "not"

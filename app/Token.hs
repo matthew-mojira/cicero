@@ -25,13 +25,13 @@ data Token = TokPlus
 
            | TokFunc
 
-           | TokTrue
-           | TokFalse
+           -- boolean operations
            | TokAnd
            | TokOr
            | TokEor
            | TokNot
 
+           -- conditional operations
            | TokIf
            | TokThen
            | TokElse
@@ -41,6 +41,16 @@ data Token = TokPlus
            | TokBox
            | TokUnbox
 
+           -- literal values
            | TokInt Integer
            | TokId  String
+           | TokTrue
+           | TokFalse
+           -- type literals
+           | TokIntT
+           | TokBoolT
+           | TokBoxT
+           | TokTypeT
+           | TokFuncT
+
            deriving (Eq, Show)

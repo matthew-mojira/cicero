@@ -31,7 +31,7 @@ instance Show ErrorKind where
   show (AssignmentError id) = unwords
     ["assignment error: assignment to constant", id]
   show (ArityMismatchError exp act) = unwords
-    ["arity mismatch error: call to function expected", show exp, "arguments but got", show act]
+    ["type error: expected", show exp, "value(s) but got", show act]
   show (ManualError msg)     = msg
 
 errorArrow :: Error -> String
