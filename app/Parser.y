@@ -52,6 +52,7 @@ import AST
       '}'             { TokenPosn TokRBrace (_, _) }
       ','             { TokenPosn TokComma (_, _) }
       ';'             { TokenPosn TokSemicolon (_, _) }
+      ':'             { TokenPosn TokColon (_, _) }
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
@@ -105,8 +106,11 @@ expr  : int                     { parseInt $1 }
       
       | '-' int %prec NEG       { parseNInt $1 $2 }
 
-      | var id '=' expr         { parseVar $1 $2 $4 }
-      | const id '=' expr       { parseConst $1 $2 $4 }
+      | var id '=' expr         { parseVar $1 $2 PatWild $4 }
+      | var id ':' pat '=' expr         { parseVar $1 $2 $4 $6 }
+      | const id '=' expr       { parseConst $1 $2 PatWild $4 }
+      | const id ':' pat '=' expr       { parseConst $1 $2 $4 $6 }
+
       | id ':=' expr            { parseAssign $1 $3 }
       | id                      { parseId $1 }
 
@@ -122,7 +126,7 @@ expr  : int                     { parseInt $1 }
       | func '(' ')' '->' expr       { (ExprFunc Nothing [] $5, tokenPosn $1 <-> snd $5) }
       | func '(' ids ')' '->' expr   { (ExprFunc Nothing $3 $6, tokenPosn $1 <-> snd $6) }
 
-      | expr apply expr               { (ExprApply $1 $3, snd $1 <-> snd $3) }
+      | expr apply expr         { (ExprApply $1 $3, snd $1 <-> snd $3) }
 
       | true                    { (ExprLit (LitBool True), tokenPosn $1) }
       | false                   { (ExprLit (LitBool False), tokenPosn $1) }
@@ -139,6 +143,12 @@ args : expr                     { [$1] }
 
 ids : id                        { (\(TokenPosn (TokId id) _) -> [id]) $1 }
     | id ',' ids                { parseIds $1 $3 }
+
+pat : int_t                   { (PatLit IntT) }
+    | bool_t                  { (PatLit BoolT) }
+    | box_t                   { (PatLit BoxT) }
+    | type_t                  { (PatLit TypeT) }
+    | func_t                  { (PatLit FuncT) }
 
 {
 

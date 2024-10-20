@@ -11,8 +11,8 @@ data Expr
   | ExprUnOp   UnOp ExprPosn
   | ExprBinOp  BinOp ExprPosn ExprPosn
   | ExprIfElse ExprPosn ExprPosn ExprPosn
-  | ExprVar    String ExprPosn -- omit type
-  | ExprConst  String ExprPosn -- omit type
+  | ExprVar    String PatT ExprPosn
+  | ExprConst  String PatT ExprPosn
   | ExprId     String
   | ExprAssign String ExprPosn
   | ExprSetBox ExprPosn ExprPosn
@@ -26,6 +26,10 @@ data Lit = LitInt  Integer
          | LitBool Bool
          | LitType LitT
          deriving Eq
+
+data PatT = PatLit LitT
+          | PatWild
+          deriving (Eq, Show)
 
 data LitT = IntT
           | BoolT
