@@ -33,6 +33,8 @@ eval :: ExprPosn -> Matthew [Value]
 eval (ExprLit lit, _) = case lit of
   (LitInt int)   -> return [ValInt int]
   (LitBool bool) -> return [ValBool bool]
+  (LitStr str)   -> return [ValStr str]
+  (LitChar char) -> return [ValChar char]
   (LitType typ)  -> case typ of
     IntT  -> return [ValType TypeInt]
     BoolT -> return [ValType TypeBool]
