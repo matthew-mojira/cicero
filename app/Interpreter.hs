@@ -246,4 +246,6 @@ typeof (ValBool _)      = return TypeBool
 typeof (ValFunc ps _ _) = return TypeFunc
 typeof (ValBox _)       = return TypeBox
 typeof (ValType _)      = return TypeType
+typeof (ValStr _)       = return TypeStr
+typeof (ValChar _)      = return TypeChar
 
