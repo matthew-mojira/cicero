@@ -193,6 +193,13 @@ eval (ExprBlock exprs, _) = do
   val <- foldM (const eval) [] exprs
   modify popBlock
   return val
+eval (ExprTuple exprs, _) = mapM evalSingle exprs
+  where
+    evalSingle expr@(_, posn) = do
+      vals <- eval expr
+      case vals of
+        [val] -> return val
+        _     -> typeError [undefined] vals posn
 -- functions
 eval (ExprFunc name params expr, _) = do
   env <- get
@@ -202,23 +209,20 @@ eval (ExprFunc name params expr, _) = do
       let func = ValFunc params ((self, func):(getClosure env)) expr
       put $ extendConst self func env
       return [func]
---eval (ExprApply exprF@(_, posnF) exprsA, posn) = do
---  valF <- eval exprF
---  case valF of
---    [ValFunc params closure exprB] -> do
---      -- redo all this later, temporary
---      args <- mapM eval exprsA
---      let args' = concat args
---      if length params == length args'
---        then do
---          modify $ pushFunc (zip params args') closure
---          valR <- eval exprB
---          modify $ popFunc
---
---          return valR
---        else do
---          throwError $ Error posn (ArityMismatchError (length params) (length exprsA))
---    _ -> typeError [TypeFunc] valF posnF
+eval (ExprApply exprF@(_, posnF) exprA@(_, posn), _) = do
+  valF <- eval exprF
+  case valF of
+    [ValFunc params closure exprB] -> do
+      args <- eval exprA
+      if length params == length args
+        then do
+          modify $ pushFunc (zip params args) closure
+          valR <- eval exprB
+          modify $ popFunc
+
+          return valR
+        else typeError (replicate (length params) undefined) args posn
+    _ -> typeError [TypeFunc] valF posnF
 
 
 typeError :: [Type] -> [Value] -> Posn -> Matthew a
