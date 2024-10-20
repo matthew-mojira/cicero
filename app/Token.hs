@@ -17,8 +17,13 @@ data Token = TokPlus
            | TokLBrace
            | TokRBrace
            | TokLArrow
+           | TokRArrow
+           | TokComma
            | TokColEq
            | TokQuestion
+           | TokSemicolon
+
+           | TokFunc
 
            | TokTrue
            | TokFalse

@@ -1,0 +1,17 @@
+func apply(f, x) -> {
+   f(x);
+};
+
+{
+  func triple(x) -> {
+    x * 3;
+  };
+  apply(triple, 20);
+  var x = 20;
+  var y = 25;
+  apply((x) -> x + 12 + y, 20);
+};
+
+var x = box 5;
+x <- x := 3;
+x;

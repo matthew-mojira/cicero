@@ -4,9 +4,19 @@ import Data.Maybe
 import Data.List
 
 import Value
+import AST
 
-data Env = Env { idxs :: [[[(String, (Value, Bool))]]]
+type Entry      = (String, (Value, Bool))
+type BlockEntry = [Entry]
+type FuncEntry  = [BlockEntry]
+
+data Env = Env { idxs :: [FuncEntry]
                  -- three levels: func block list
+                 -- [ func1, func2, func3, ..., funcN ]
+                 --    ^
+                 --    \-- [ block1, block2, block3, ..., blockN ]
+                 --          ^
+                 --          \-- [ bind1, bind2, bind3, ..., bindN ]
                , vals :: [Value]
                }
 
@@ -16,8 +26,9 @@ emptyEnv = Env [[[]]] []
 popFunc :: Env -> Env
 popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
 
-pushFunc :: Env -> Env
-pushFunc env@Env {idxs = idxs} = env {idxs = []:idxs}
+pushFunc :: [(String, Value)] -> [(String, Value)] -> Env -> Env
+pushFunc args closure env@Env {idxs = idxs} =
+  env {idxs = [map (\(id, val) -> (id, (val, False))) (args ++ closure)]:idxs}
 
 popBlock :: Env -> Env
 popBlock env@Env {idxs = idxs} = env {idxs = (tail (head idxs)):tail idxs}
@@ -26,10 +37,10 @@ pushBlock :: Env -> Env
 pushBlock env@Env {idxs = idxs} = env {idxs = ([]:(head idxs)):tail idxs}
 
 lookupEnv :: String -> Env -> Maybe (Value, Bool)
-lookupEnv id (Env idxs _) = lookup id (concat (head idxs))
+lookupEnv id (Env {idxs = idxs}) = lookup id (concat (head idxs))
 
 lookupEnv' :: String -> Env -> Maybe (Value, Bool)  -- strictly in the same scope
-lookupEnv' id (Env idxs _) = lookup id (head (head idxs))
+lookupEnv' id (Env {idxs = idxs}) = lookup id (head (head idxs))
 
 extendConst :: String -> Value -> Env -> Env
 extendConst id val env@Env {idxs = idxs} =
@@ -58,10 +69,11 @@ setVar id val env@Env {idxs = idxs} =
           | key == x  = ((key, (y, bool)) : xs, True)
           | otherwise = let (restDict, replaced) = replaceInDict xs
                         in ((key, value) : restDict, replaced)
-boxValue :: Value -> Env -> (Env, Value)
+
+boxValue :: Value -> Env -> (Env, Int)
 boxValue val env@Env {vals = vals} =
   let idx = length vals
-   in (env {vals = val:vals}, ValBox idx)
+   in (env {vals = val:vals}, idx)
 
 unboxValue :: Value -> Env -> Value
 unboxValue (ValBox idx) env@Env {vals = vals} = vals!!(length vals - idx - 1)
@@ -73,6 +85,11 @@ setBox (ValBox idx) val env@Env {vals = vals} =
     setElem :: [a] -> Int -> a -> [a]
     setElem xs i x = let (h, t:ts) = splitAt i xs
                       in h ++ x:ts
+
+-- functions and closures
+
+getClosure :: Env -> [(String, Value)]
+getClosure Env {idxs = idxs} = map (\(s, (v, _)) -> (s, v)) (concat $ head idxs)
 
 instance Show Env where
   show = undefined

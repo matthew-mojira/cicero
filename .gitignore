@@ -24,3 +24,4 @@ cabal.project.local~
 *.swp
 Lexer.hs
 Parser.hs
+/docs/book

@@ -11,12 +11,13 @@ instance Show Error where
   show (Error (AlexPn _ line col, _) kind) = concat
     ["<repl>:", show line, ":", show col, ": ", show kind]
 
-data ErrorKind = TypeError         { expected :: Type, actual :: Type }
-               | ArithmeticError   { msg :: String }
-               | NameError         { id :: String }
-               | RedefinitionError { id :: String }
-               | AssignmentError   { id :: String }
-               | ManualError       { msg :: String }
+data ErrorKind = TypeError          { expected :: Type, actual :: Type }
+               | ArithmeticError    { msg :: String }
+               | NameError          { id :: String }
+               | RedefinitionError  { id :: String }
+               | AssignmentError    { id :: String }
+               | ArityMismatchError { expArity :: Int, actArity :: Int }
+               | ManualError        { msg :: String }
 
 instance Show ErrorKind where
   show (TypeError exp act)   = unwords
@@ -29,6 +30,8 @@ instance Show ErrorKind where
     ["redefinition error: identifier", id, "redeclared in the same scope"]
   show (AssignmentError id) = unwords
     ["assignment error: assignment to constant", id]
+  show (ArityMismatchError exp act) = unwords
+    ["arity mismatch error: call to function expected", show exp, "arguments but got", show act]
   show (ManualError msg)     = msg
 
 errorArrow :: Error -> String

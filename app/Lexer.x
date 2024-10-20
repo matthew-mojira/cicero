@@ -28,10 +28,15 @@ tokens :-
   \(                             { tok TokLParen }
   \)                             { tok TokRParen }
   \<\-                           { tok TokLArrow }
+  \-\>                           { tok TokRArrow }
   :=                             { tok TokColEq }
   \?                             { tok TokQuestion }
   \{                             { tok TokLBrace }
   \}                             { tok TokRBrace }
+  \,                             { tok TokComma }
+  \;                             { tok TokSemicolon }
+
+  func                           { tok TokFunc }
 
   true                           { tok TokTrue }
   false                          { tok TokFalse }
@@ -52,7 +57,7 @@ tokens :-
   unbox                          { tok TokUnbox }
 
   $digit+                        { tok (TokInt undefined) }
-  $alpha [$alpha $digit \_]*     { tok (TokId undefined) }
+  [$alpha\_][$alpha$digit\_]*    { tok (TokId undefined) }
 
 {
 
