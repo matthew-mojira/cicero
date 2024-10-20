@@ -20,7 +20,6 @@ data Expr
   | ExprFunc   (Maybe String) [String] ExprPosn
   | ExprApply  ExprPosn [ExprPosn]
   | ExprWhileDo { guard :: ExprPosn, body :: ExprPosn }
-  | ExprDoWhile { guard :: ExprPosn, body :: ExprPosn }
   deriving Eq
 
 data Lit = LitInt  Integer
