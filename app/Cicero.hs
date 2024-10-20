@@ -57,7 +57,7 @@ loop env = do
   read <- Main.read
   case read of
     Run str -> do
-      res <- eval (str ++ ";") env
+      res <- eval str env
       case res of
         Left err -> do
           printErr $ show err

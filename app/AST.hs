@@ -11,20 +11,25 @@ data Expr
   | ExprUnOp   UnOp ExprPosn
   | ExprBinOp  BinOp ExprPosn ExprPosn
   | ExprIfElse ExprPosn ExprPosn ExprPosn
-  | ExprVar    String ExprPosn -- omit type
-  | ExprConst  String ExprPosn -- omit type
+  | ExprVar    String PatT ExprPosn
+  | ExprConst  String PatT ExprPosn
   | ExprId     String
   | ExprAssign String ExprPosn
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
   | ExprFunc   (Maybe String) [String] ExprPosn
-  | ExprApply  ExprPosn [ExprPosn]
+  | ExprApply  ExprPosn ExprPosn
+  | ExprTuple  [ExprPosn]
   deriving Eq
 
 data Lit = LitInt  Integer
          | LitBool Bool
          | LitType LitT
          deriving Eq
+
+data PatT = PatLit LitT
+          | PatWild
+          deriving (Eq, Show)
 
 data LitT = IntT
           | BoolT
@@ -105,8 +110,10 @@ instance Show Expr where
     concat ["(Block ", show $ map (show . fst) exprs, ")"]
   show (ExprFunc name params (expr, _)) =
     concat ["(Func ", show name, " ", show params, " ", show expr, ")"]
-  show (ExprApply func exprs) =
-    concat ["(Apply ", show func, " ", show $ map (show . fst) exprs, ")"]
+  show (ExprTuple exprs) =
+    concat ["(Tuple ", show $ map (show . fst) exprs, ")"]
+  show (ExprApply func (expr, _)) =
+    concat ["(Apply ", show (fst func), " ", show expr, ")"]
 
 instance Show Lit where
   show (LitBool bool) = show bool
