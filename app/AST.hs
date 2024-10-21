@@ -96,10 +96,10 @@ instance Show Expr where
     concat ["(BinOp ", show op, " ", show expr1, " ", show expr2, ")"]
   show (ExprIfElse (expr1, _) (expr2, _) (expr3, _)) =
     concat ["(IfElse ", show expr1, " ", show expr2, " ", show expr3, ")"]
-  show (ExprVar id (expr, _)) =
-    concat ["(Var ", id, " ", show expr, ")"]
-  show (ExprConst id (expr, _)) =
-    concat ["(Const", id, " ", show expr, ")"]
+  show (ExprVar id pat (expr, _)) =
+    concat ["(Var ", id, " ", show pat, " ", show expr, ")"]
+  show (ExprConst id pat (expr, _)) =
+    concat ["(Const", id, " ", show pat, " ", show expr, ")"]
   show (ExprId id) =
     concat ["(Id ", id, ")"]
   show (ExprAssign id (expr, _)) =

@@ -164,13 +164,13 @@ parseUnOp :: UnOp -> TokenPosn -> ExprPosn -> ExprPosn
 parseUnOp op (TokenPosn _ pos1) expr@(_, pos2) =
   (ExprUnOp op expr, pos1 <-> pos2)
 
-parseVar :: TokenPosn -> TokenPosn -> ExprPosn -> ExprPosn
-parseVar (TokenPosn _ pos1) (TokenPosn (TokId id) _) expr@(_, pos2) =
-  (ExprVar id expr, pos1 <-> pos2)
+parseVar :: TokenPosn -> TokenPosn -> PatT -> ExprPosn -> ExprPosn
+parseVar (TokenPosn _ pos1) (TokenPosn (TokId id) _) pat expr@(_, pos2) =
+  (ExprVar id pat expr, pos1 <-> pos2)
 
-parseConst :: TokenPosn -> TokenPosn -> ExprPosn -> ExprPosn
-parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) expr@(_, pos2) =
-  (ExprConst id expr, pos1 <-> pos2)
+parseConst :: TokenPosn -> TokenPosn -> PatT -> ExprPosn -> ExprPosn
+parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) pat expr@(_, pos2) =
+  (ExprConst id pat expr, pos1 <-> pos2)
 
 parseId :: TokenPosn -> ExprPosn
 parseId (TokenPosn (TokId id) pos) = (ExprId id, pos)

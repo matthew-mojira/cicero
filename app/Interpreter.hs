@@ -107,7 +107,7 @@ eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
         then eval exprT
         else eval exprF
     val -> typeError [TypeBool] val posn
-eval (ExprVar id expr@(_, posnV), posn) = do
+eval (ExprVar id pat expr@(_, posnV), posn) = do
   env <- get
   case lookupEnv' id env of
   -- don't allow redeclaration in the same scope
@@ -116,11 +116,12 @@ eval (ExprVar id expr@(_, posnV), posn) = do
       vals <- eval expr
       case vals of
         [val] -> do
+          assertMatch pat val posnV
           env <- get
           put $ extendVar id val env
           return [val]
         _ -> typeError [anyType] vals posnV
-eval (ExprConst id expr@(_, posnV), posn) = do
+eval (ExprConst id pat expr@(_, posnV), posn) = do
   env <- get
   case lookupEnv' id env of
   -- don't allow redeclaration in the same scope
@@ -129,6 +130,7 @@ eval (ExprConst id expr@(_, posnV), posn) = do
       vals <- eval expr
       case vals of
         [val] -> do
+          assertMatch pat val posnV
           env <- get
           put $ extendConst id val env
           return [val]
@@ -240,3 +242,16 @@ typeof (ValFunc ps _ _) = return TypeFunc
 typeof (ValBox _)       = return TypeBox
 typeof (ValType _)      = return TypeType
 
+assertMatch :: PatT -> Value -> Posn -> Matthew ()
+assertMatch PatWild _ _ = return ()
+assertMatch (PatLit lit) val posn = do
+  typ <- typeof val
+  let typA = case lit of
+        IntT  -> TypeInt
+        BoolT -> TypeBool
+        FuncT -> TypeFunc
+        BoxT  -> TypeBox
+        TypeT -> TypeType
+  if typ == typA
+    then return ()
+    else typeError [typA] [val] posn
