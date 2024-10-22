@@ -14,8 +14,8 @@ import AST
 %monad     { Alex }
 %tokentype { TokenPosn }
 
-%left  '->'
 %right else
+%left  APPLY '->'
 %right ':=' '<-'
 %left  or
 %left  and
@@ -27,7 +27,6 @@ import AST
 %left  NEG
 %right not box unbox
 %left  '?'
-%left  APPLY
 
 %token
       '+'             { TokenPosn TokPlus (_, _) }
