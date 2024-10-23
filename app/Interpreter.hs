@@ -32,12 +32,6 @@ eval :: ExprPosn -> Matthew [Value]
 eval (ExprLit lit, _) = case lit of
   (LitInt int)   -> return [ValInt int]
   (LitBool bool) -> return [ValBool bool]
-  (LitType typ)  -> case typ of
-    IntT  -> return [ValType TypeInt]
-    BoolT -> return [ValType TypeBool]
-    BoxT  -> return [ValType TypeBox]
-    TypeT -> return [ValType TypeType]
-    FuncT -> return [ValType TypeFunc]
 eval (ExprUnOp LNot expr@(_, posn), _) = do
   x <- eval expr
   case x of
@@ -181,14 +175,6 @@ eval (ExprSetBox exprD@(_, posnD) exprS@(_, posnS), _) = do
           return valS
         _ -> typeError [anyType] valS posnS
     _ -> typeError [TypeBox] valD posnD
--- first-class type stuff
-eval (ExprUnOp Typeof expr@(_, posn), _) = do
-  vals <- eval expr
-  case vals of
-    [val] -> do
-      typ <- typeof val
-      return $ [ValType typ]
-    _ -> typeError [anyType] vals posn
 -- expression combinators
 eval (ExprBlock exprs, _) = do
   modify pushBlock
@@ -240,7 +226,6 @@ typeof (ValInt _)       = return TypeInt
 typeof (ValBool _)      = return TypeBool
 typeof (ValFunc ps _ _) = return TypeFunc
 typeof (ValBox _)       = return TypeBox
-typeof (ValType _)      = return TypeType
 
 assertMatch :: PatT -> Value -> Posn -> Matthew ()
 assertMatch PatWild _ _ = return ()
@@ -251,7 +236,6 @@ assertMatch (PatLit lit) val posn = do
         BoolT -> TypeBool
         FuncT -> TypeFunc
         BoxT  -> TypeBox
-        TypeT -> TypeType
   if typ == typA
     then return ()
     else typeError [typA] [val] posn

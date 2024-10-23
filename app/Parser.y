@@ -114,8 +114,6 @@ expr  : int                     { parseInt $1 }
       | id ':=' expr            { parseAssign $1 $3 }
       | id                      { parseId $1 }
 
-      | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2)}
-      
       | box expr                { parseUnOp Box $1 $2 }
       | unbox expr              { parseUnOp Unbox $1 $2 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
@@ -130,11 +128,6 @@ expr  : int                     { parseInt $1 }
 
       | true                    { (ExprLit (LitBool True), tokenPosn $1) }
       | false                   { (ExprLit (LitBool False), tokenPosn $1) }
-      | int_t                   { (ExprLit (LitType IntT), tokenPosn $1) }
-      | bool_t                  { (ExprLit (LitType BoolT), tokenPosn $1) }
-      | box_t                   { (ExprLit (LitType BoxT), tokenPosn $1) }
-      | type_t                  { (ExprLit (LitType TypeT), tokenPosn $1) }
-      | func_t                  { (ExprLit (LitType FuncT), tokenPosn $1) }
 
 apply :  %prec APPLY   {}
 

@@ -24,7 +24,6 @@ data Expr
 
 data Lit = LitInt  Integer
          | LitBool Bool
-         | LitType LitT
          deriving Eq
 
 data PatT = PatLit LitT
@@ -41,7 +40,6 @@ data LitT = IntT
 data UnOp = LNot
           | Box
           | Unbox
-          | Typeof
           deriving (Eq, Show)
 
 data BinOp
@@ -118,7 +116,6 @@ instance Show Expr where
 instance Show Lit where
   show (LitBool bool) = show bool
   show (LitInt int)   = show int
-  show (LitType typ)  = show typ
 
 --instance Show UnOp where
 --  show LNot   = "not"
