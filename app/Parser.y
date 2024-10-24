@@ -44,15 +44,18 @@ import AST
       '>='            { TokenPosn TokGeq (_, _) }
       '('             { TokenPosn TokLParen (_, _) }
       ')'             { TokenPosn TokRParen (_, _) }
+      '{'             { TokenPosn TokLBrace (_, _) }
+      '}'             { TokenPosn TokRBrace (_, _) }
+      '['             { TokenPosn TokLBrack (_, _) }
+      ']'             { TokenPosn TokRBrack (_, _) }
       '<-'            { TokenPosn TokLArrow (_, _) }
       '->'            { TokenPosn TokRArrow (_, _) }
       ':='            { TokenPosn TokColEq (_, _) }
       '?'             { TokenPosn TokQuestion (_, _) }
-      '{'             { TokenPosn TokLBrace (_, _) }
-      '}'             { TokenPosn TokRBrace (_, _) }
       ','             { TokenPosn TokComma (_, _) }
       ';'             { TokenPosn TokSemicolon (_, _) }
       ':'             { TokenPosn TokColon (_, _) }
+      '_'             { TokenPosn TokUnderscore (_, _) }
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
@@ -137,11 +140,11 @@ args : expr                     { [$1] }
 ids : id                        { (\(TokenPosn (TokId id) _) -> [id]) $1 }
     | id ',' ids                { parseIds $1 $3 }
 
-pat : int_t                   { (PatLit IntT) }
-    | bool_t                  { (PatLit BoolT) }
-    | box_t                   { (PatLit BoxT) }
-    | type_t                  { (PatLit TypeT) }
-    | func_t                  { (PatLit FuncT) }
+pat : '_'                     { PatWild }
+    | int_t                   { PatIntT }
+    | bool_t                  { PatBoolT }
+    | box_t '[' pat ']'       { PatBoxT $3 }
+    | func_t                  { PatFuncT }
 
 {
 

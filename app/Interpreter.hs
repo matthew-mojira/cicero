@@ -228,14 +228,17 @@ typeof (ValFunc ps _ _) = return TypeFunc
 typeof (ValBox _)       = return TypeBox
 
 assertMatch :: PatT -> Value -> Posn -> Matthew ()
-assertMatch PatWild _ _ = return ()
-assertMatch (PatLit lit) val posn = do
-  typ <- typeof val
-  let typA = case lit of
-        IntT  -> TypeInt
-        BoolT -> TypeBool
-        FuncT -> TypeFunc
-        BoxT  -> TypeBox
-  if typ == typA
-    then return ()
-    else typeError [typA] [val] posn
+assertMatch PatWild _ _             = return ()
+assertMatch PatIntT (ValInt _) _    = return ()
+assertMatch PatBoolT (ValBool _) _  = return ()
+assertMatch PatFuncT (ValFunc {}) _ = return ()
+assertMatch pat val posn            = undefined
+--  typ <- typeof val
+--  let typA = case lit of
+--        IntT  -> TypeInt
+--        BoolT -> TypeBool
+--        FuncT -> TypeFunc
+--        BoxT  -> TypeBox
+--  if typ == typA
+--    then return ()
+--    else typeError [taypA] [val] posn

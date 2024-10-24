@@ -23,6 +23,9 @@ data Token = TokPlus
            | TokQuestion
            | TokSemicolon
            | TokColon
+           | TokLBrack
+           | TokRBrack
+           | TokUnderscore
 
            | TokFunc
 

@@ -26,15 +26,11 @@ data Lit = LitInt  Integer
          | LitBool Bool
          deriving Eq
 
-data PatT = PatLit LitT
+data PatT = PatIntT
+          | PatBoolT
+          | PatBoxT PatT
+          | PatFuncT
           | PatWild
-          deriving (Eq, Show)
-
-data LitT = IntT
-          | BoolT
-          | BoxT
-          | TypeT
-          | FuncT
           deriving (Eq, Show)
 
 data UnOp = LNot
