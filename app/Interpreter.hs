@@ -138,14 +138,15 @@ eval (ExprAssign id expr@(_, posnV), posn) = do
       modify $ setVar id val
       return [val]
     Nothing -> throwError $ Error posn (NameError id)
-eval (ExprUnOp Box expr@(_, posn), _) = do
+eval (ExprBox pat expr@(_, posn), _) = do
   vals <- eval expr
-  assertArity 1 vals posn
+  let pat' = interpPat pat
+  assertTypes vals [pat'] posn  -- assert both arity and type
   let [val] = vals
   env <- get
   let (env', idx) = boxValue val env
   put env'
-  return [ValBox PatAny idx]
+  return [ValBox pat' idx]
 eval (ExprUnOp Unbox expr@(_, posn), _) = do
   val <- eval expr
   assertTypes val [PatBox PatAny] posn
