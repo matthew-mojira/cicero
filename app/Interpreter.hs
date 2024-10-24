@@ -104,8 +104,9 @@ eval (ExprVar id pat expr@(_, posnV), posn) = do
       vals <- eval expr
       assertArity 1 vals posnV
       let [val] = vals
---      assertType val pat posnV
-      modify $ extendVar id val
+      let pat' = interpPat pat
+      assertType val pat' posnV
+      modify $ extendVar id val pat'
       return [val]
 eval (ExprConst id pat expr@(_, posnV), posn) = do
   env <- get
@@ -116,7 +117,8 @@ eval (ExprConst id pat expr@(_, posnV), posn) = do
       vals <- eval expr
       assertArity 1 vals posnV
       let [val] = vals
---      assertType val pat posnV
+      let pat' = interpPat pat
+      assertType val pat' posnV
       modify $ extendConst id val
       return [val]
 eval (ExprId id, posn) = do
@@ -127,13 +129,13 @@ eval (ExprId id, posn) = do
 eval (ExprAssign id expr@(_, posnV), posn) = do
   env <- get
   case lookupEnv id env of
-    Just (_, True) -> do
+    Just (_, pat) -> do
       vals <- eval expr
       assertArity 1 vals posnV
       let [val] = vals
+      assertType val pat posnV
       modify $ setVar id val
       return [val]
-    Just (_, False) -> throwError $ Error posn (AssignmentError id)
     Nothing -> throwError $ Error posn (NameError id)
 eval (ExprUnOp Box expr@(_, posn), _) = do
   vals <- eval expr
@@ -189,6 +191,13 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), _) = do
   valR <- eval exprB
   modify $ popFunc
   return valR
+
+interpPat :: PatT -> Pattern
+interpPat PatIntT       = PatInt
+interpPat PatBoolT      = PatBool
+interpPat (PatBoxT pat) = PatBox (interpPat pat)
+interpPat PatFuncT      = PatFunc
+interpPat PatWild       = PatAny
 
 assertType :: Value -> Pattern -> Posn -> Matthew ()
 assertType val pat posn =
