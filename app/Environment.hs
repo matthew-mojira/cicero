@@ -75,11 +75,11 @@ boxValue val env@Env {vals = vals} =
   let idx = length vals
    in (env {vals = val:vals}, idx)
 
-unboxValue :: Value -> Env -> Value
-unboxValue (ValBox idx) env@Env {vals = vals} = vals!!(length vals - idx - 1)
+unboxValue :: Int -> Env -> Value
+unboxValue idx env@Env {vals = vals} = vals!!(length vals - idx - 1)
 
-setBox :: Value -> Value -> Env -> Env
-setBox (ValBox idx) val env@Env {vals = vals} =
+setBox :: Int -> Value -> Env -> Env
+setBox idx val env@Env {vals = vals} =
   env {vals = setElem vals (length vals - idx - 1) val}
   where
     setElem :: [a] -> Int -> a -> [a]

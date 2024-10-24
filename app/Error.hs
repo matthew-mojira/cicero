@@ -1,7 +1,7 @@
 module Error where
 
 import Lexer(AlexPosn(AlexPn), Posn)
-import Type
+import Pattern
 
 data Error = Error { posn :: Posn
                    , kind :: ErrorKind
@@ -11,7 +11,7 @@ instance Show Error where
   show (Error (AlexPn _ line col, _) kind) = concat
     ["<repl>:", show line, ":", show col, ": ", show kind]
 
-data ErrorKind = TypeError          { expected :: Type, actual :: Type }
+data ErrorKind = TypeError          { expected :: Pat, actual :: Pat }
                | ArithmeticError    { msg :: String }
                | NameError          { id :: String }
                | RedefinitionError  { id :: String }
