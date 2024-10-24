@@ -6,7 +6,14 @@ data Pattern = PatInt
              | PatFunc
              | PatAny
              | PatNone
-             deriving (Eq, Show)
+             deriving Eq
+
+instance Show Pattern where
+  show PatInt       = "int"
+  show PatBool      = "bool"
+  show (PatBox pat) = concat ["box[", show pat, "]"]
+  show PatFunc      = "func"
+  show PatAny       = "any"
 
 (<:) :: Pattern -> Pattern -> Bool
 _           <: PatAny      = True

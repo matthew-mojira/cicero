@@ -133,6 +133,7 @@ eval (ExprAssign id expr@(_, posnV), posn) = do
       vals <- eval expr
       assertArity 1 vals posnV
       let [val] = vals
+      when (pat == PatNone) $ throwError $ Error posn (AssignmentError id)
       assertType val pat posnV
       modify $ setVar id val
       return [val]
