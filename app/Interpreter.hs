@@ -156,9 +156,9 @@ eval (ExprUnOp Unbox expr@(_, posn), _) = do
 eval (ExprSetBox exprD@(_, posnD) exprS@(_, posnS), _) = do
   valD <- eval exprD
   assertTypes valD [PatBox PatAny] posnD
-  let [(ValBox _ idx)] = valD
+  let [(ValBox pat idx)] = valD
   valS <- eval exprS
-  assertArity 1 valS posnS
+  assertTypes valS [pat] posnS
   modify $ setBox idx (valS!!0)
   return valS
 -- expression combinators
