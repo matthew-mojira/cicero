@@ -11,7 +11,7 @@ instance Show Error where
   show (Error (AlexPn _ line col, _) kind) = concat
     ["<repl>:", show line, ":", show col, ": ", show kind]
 
-data ErrorKind = TypeError          { expected :: Pat, actual :: Pat }
+data ErrorKind = TypeError          { expected :: Pattern, actual :: Pattern }
                | ArithmeticError    { msg :: String }
                | NameError          { id :: String }
                | RedefinitionError  { id :: String }

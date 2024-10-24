@@ -34,7 +34,7 @@ eval (ExprLit lit, _) = case lit of
   (LitBool bool) -> return [ValBool bool]
 eval (ExprUnOp LNot expr@(_, posn), _) = do
   val <- eval expr
-  assertTypes val [Just PatBool] posn
+  assertTypes val [PatBool] posn
   let [ValBool bool] = val
   return [ValBool $ not bool]
 eval (ExprBinOp op expr1@(_, posn1) expr2@(_, posn2), posn)
@@ -43,7 +43,7 @@ eval (ExprBinOp op expr1@(_, posn1) expr2@(_, posn2), posn)
     val2 <- eval expr2
     assertArity 1 val1 posn1 -- assert single arity
     let typ = typeof (val1!!0)
-    assertTypes val2 [Just typ] posn2
+    assertTypes val2 [typ] posn2
     let op' = case op of
                 Eq  -> (==)
                 Neq -> (/=)
@@ -51,8 +51,8 @@ eval (ExprBinOp op expr1@(_, posn1) expr2@(_, posn2), posn)
   | binOpComp op = do
     val1 <- eval expr1
     val2 <- eval expr2
-    assertTypes val1 [Just PatInt] posn1
-    assertTypes val2 [Just PatInt] posn2
+    assertTypes val1 [PatInt] posn1
+    assertTypes val2 [PatInt] posn2
     let [ValInt int1] = val1
     let [ValInt int2] = val2
     let op' = case op of
@@ -64,8 +64,8 @@ eval (ExprBinOp op expr1@(_, posn1) expr2@(_, posn2), posn)
   | binOpInt op = do
     val1 <- eval expr1
     val2 <- eval expr2
-    assertTypes val1 [Just PatInt] posn1
-    assertTypes val2 [Just PatInt] posn2
+    assertTypes val1 [PatInt] posn1
+    assertTypes val2 [PatInt] posn2
     let [ValInt int1] = val1
     let [ValInt int2] = val2
     op' <- case op of
@@ -80,8 +80,8 @@ eval (ExprBinOp op expr1@(_, posn1) expr2@(_, posn2), posn)
   | binOpBool op = do
     val1 <- eval expr1
     val2 <- eval expr2
-    assertTypes val1 [Just PatBool] posn1
-    assertTypes val2 [Just PatBool] posn2
+    assertTypes val1 [PatBool] posn1
+    assertTypes val2 [PatBool] posn2
     let [ValBool bool1] = val1
     let [ValBool bool2] = val2
     let op' = case op of
@@ -90,7 +90,7 @@ eval (ExprBinOp op expr1@(_, posn1) expr2@(_, posn2), posn)
     return [ValBool $ op' bool1 bool2]
 eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
   val <- eval pred
-  assertTypes val [Just PatBool] posn
+  assertTypes val [PatBool] posn
   let [ValBool bool] = val
   if bool
     then eval exprT
@@ -142,16 +142,16 @@ eval (ExprUnOp Box expr@(_, posn), _) = do
   env <- get
   let (env', idx) = boxValue val env
   put env'
-  return $ [ValBox Nothing idx]
+  return [ValBox PatAny idx]
 eval (ExprUnOp Unbox expr@(_, posn), _) = do
   val <- eval expr
-  assertTypes val [Just (PatBox Nothing)] posn
+  assertTypes val [PatBox PatAny] posn
   let [ValBox _ idx] = val
   env <- get
   return [unboxValue idx env]
 eval (ExprSetBox exprD@(_, posnD) exprS@(_, posnS), _) = do
   valD <- eval exprD
-  assertTypes valD [Just (PatBox Nothing)] posnD
+  assertTypes valD [PatBox PatAny] posnD
   let [(ValBox _ idx)] = valD
   valS <- eval exprS
   assertArity 1 valS posnS
@@ -181,7 +181,7 @@ eval (ExprFunc name params expr, _) = do
       return [func]
 eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), _) = do
   valF <- eval exprF
-  assertTypes valF [Just PatFunc] posnF
+  assertTypes valF [PatFunc] posnF
   let [ValFunc params closure exprB] = valF
   args <- eval exprsA
   assertArity (length params) args posn
@@ -190,17 +190,17 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), _) = do
   modify $ popFunc
   return valR
 
-assertType :: Value -> Pat -> Posn -> Matthew ()
+assertType :: Value -> Pattern -> Posn -> Matthew ()
 assertType val pat posn =
   if val `matches` pat
     then return ()
-    else throwError $ Error posn (TypeError pat (Just (typeof val)))
+    else throwError $ Error posn (TypeError pat (typeof val))
 
-assertTypes :: [Value] -> [Pat] -> Posn -> Matthew ()
+assertTypes :: [Value] -> [Pattern] -> Posn -> Matthew ()
 assertTypes vals pats posn =
   if length vals /= length pats
     then throwError $ Error posn (ArityMismatchError (length pats) (length vals))
     else mapM_ (\(val, pat) -> assertType val pat posn) (zip vals pats)
 
 assertArity :: Int -> [Value] -> Posn -> Matthew ()
-assertArity cnt vals posn = assertTypes vals (replicate cnt Nothing) posn
+assertArity cnt vals posn = assertTypes vals (replicate cnt PatAny) posn

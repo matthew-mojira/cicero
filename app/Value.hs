@@ -5,7 +5,7 @@ import Pattern
 
 data Value = ValInt  Integer
            | ValBool Bool
-           | ValBox  Pat Int  -- pointer
+           | ValBox  Pattern Int  -- pointer
            | ValFunc { params :: [String]
 										 , env    :: [(String, Value)] -- closure
 										 , body   :: ExprPosn          -- index into env
@@ -18,9 +18,8 @@ typeof (ValBool _)    = PatBool
 typeof (ValBox pat _) = PatBox pat
 typeof (ValFunc {})   = PatFunc
 
-matches :: Value -> Pat -> Bool
-matches val pat = let pat' = Just (typeof val)
-                   in pat' <: pat
+matches :: Value -> Pattern -> Bool
+matches val pat = (typeof val) <: pat
 
 instance Show Value where
   show (ValInt int)    = show int
