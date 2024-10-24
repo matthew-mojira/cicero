@@ -36,6 +36,9 @@ tokens :-
   \,                             { tok TokComma }
   \;                             { tok TokSemicolon }
   :                              { tok TokColon }
+  _                              { tok TokUnderscore }
+  \[                             { tok TokLBrack }
+  \]                             { tok TokRBrack }
 
   func                           { tok TokFunc }
 

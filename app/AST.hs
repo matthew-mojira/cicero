@@ -15,6 +15,7 @@ data Expr
   | ExprConst  String PatT ExprPosn
   | ExprId     String
   | ExprAssign String ExprPosn
+  | ExprBox    { pat :: PatT, init :: ExprPosn}
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
   | ExprFunc   (Maybe String) [String] ExprPosn
@@ -24,24 +25,17 @@ data Expr
 
 data Lit = LitInt  Integer
          | LitBool Bool
-         | LitType LitT
          deriving Eq
 
-data PatT = PatLit LitT
+data PatT = PatIntT
+          | PatBoolT
+          | PatBoxT PatT
+          | PatFuncT
           | PatWild
           deriving (Eq, Show)
 
-data LitT = IntT
-          | BoolT
-          | BoxT
-          | TypeT
-          | FuncT
-          deriving (Eq, Show)
-
 data UnOp = LNot
-          | Box
           | Unbox
-          | Typeof
           deriving (Eq, Show)
 
 data BinOp
@@ -96,14 +90,16 @@ instance Show Expr where
     concat ["(BinOp ", show op, " ", show expr1, " ", show expr2, ")"]
   show (ExprIfElse (expr1, _) (expr2, _) (expr3, _)) =
     concat ["(IfElse ", show expr1, " ", show expr2, " ", show expr3, ")"]
-  show (ExprVar id (expr, _)) =
-    concat ["(Var ", id, " ", show expr, ")"]
-  show (ExprConst id (expr, _)) =
-    concat ["(Const", id, " ", show expr, ")"]
+  show (ExprVar id pat (expr, _)) =
+    concat ["(Var ", show id, " ", show pat, " ", show expr, ")"]
+  show (ExprConst id pat (expr, _)) =
+    concat ["(Const ", show id, " ", show pat, " ", show expr, ")"]
   show (ExprId id) =
-    concat ["(Id ", id, ")"]
+    concat ["(Id ", show id, ")"]
   show (ExprAssign id (expr, _)) =
     concat ["(Assign ", id, " ", show expr, ")"]
+  show (ExprBox pat (expr, _)) =
+    concat ["(Box ", show pat, " ", show expr, ")"]
   show (ExprSetBox (expr1, _) (expr2, _)) =
     concat ["(SetBox ", show expr1, " ", show expr2, ")"]
   show (ExprBlock exprs) =
@@ -118,7 +114,6 @@ instance Show Expr where
 instance Show Lit where
   show (LitBool bool) = show bool
   show (LitInt int)   = show int
-  show (LitType typ)  = show typ
 
 --instance Show UnOp where
 --  show LNot   = "not"

@@ -44,15 +44,18 @@ import AST
       '>='            { TokenPosn TokGeq (_, _) }
       '('             { TokenPosn TokLParen (_, _) }
       ')'             { TokenPosn TokRParen (_, _) }
+      '{'             { TokenPosn TokLBrace (_, _) }
+      '}'             { TokenPosn TokRBrace (_, _) }
+      '['             { TokenPosn TokLBrack (_, _) }
+      ']'             { TokenPosn TokRBrack (_, _) }
       '<-'            { TokenPosn TokLArrow (_, _) }
       '->'            { TokenPosn TokRArrow (_, _) }
       ':='            { TokenPosn TokColEq (_, _) }
       '?'             { TokenPosn TokQuestion (_, _) }
-      '{'             { TokenPosn TokLBrace (_, _) }
-      '}'             { TokenPosn TokRBrace (_, _) }
       ','             { TokenPosn TokComma (_, _) }
       ';'             { TokenPosn TokSemicolon (_, _) }
       ':'             { TokenPosn TokColon (_, _) }
+      '_'             { TokenPosn TokUnderscore (_, _) }
 
       int             { TokenPosn (TokInt _) (_, _) }
       id              { TokenPosn (TokId _) (_, _) }
@@ -114,9 +117,8 @@ expr  : int                     { parseInt $1 }
       | id ':=' expr            { parseAssign $1 $3 }
       | id                      { parseId $1 }
 
-      | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2)}
-      
-      | box expr                { parseUnOp Box $1 $2 }
+      | box expr                { (ExprBox PatWild $2, tokenPosn $1 <-> snd $2) }
+      | box '[' pat ']' expr    { (ExprBox $3 $5, tokenPosn $1 <-> snd $5) }
       | unbox expr              { parseUnOp Unbox $1 $2 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
@@ -130,11 +132,6 @@ expr  : int                     { parseInt $1 }
 
       | true                    { (ExprLit (LitBool True), tokenPosn $1) }
       | false                   { (ExprLit (LitBool False), tokenPosn $1) }
-      | int_t                   { (ExprLit (LitType IntT), tokenPosn $1) }
-      | bool_t                  { (ExprLit (LitType BoolT), tokenPosn $1) }
-      | box_t                   { (ExprLit (LitType BoxT), tokenPosn $1) }
-      | type_t                  { (ExprLit (LitType TypeT), tokenPosn $1) }
-      | func_t                  { (ExprLit (LitType FuncT), tokenPosn $1) }
 
 apply :  %prec APPLY   {}
 
@@ -144,11 +141,11 @@ args : expr                     { [$1] }
 ids : id                        { (\(TokenPosn (TokId id) _) -> [id]) $1 }
     | id ',' ids                { parseIds $1 $3 }
 
-pat : int_t                   { (PatLit IntT) }
-    | bool_t                  { (PatLit BoolT) }
-    | box_t                   { (PatLit BoxT) }
-    | type_t                  { (PatLit TypeT) }
-    | func_t                  { (PatLit FuncT) }
+pat : '_'                     { PatWild }
+    | int_t                   { PatIntT }
+    | bool_t                  { PatBoolT }
+    | box_t '[' pat ']'       { PatBoxT $3 }
+    | func_t                  { PatFuncT }
 
 {
 
@@ -164,13 +161,13 @@ parseUnOp :: UnOp -> TokenPosn -> ExprPosn -> ExprPosn
 parseUnOp op (TokenPosn _ pos1) expr@(_, pos2) =
   (ExprUnOp op expr, pos1 <-> pos2)
 
-parseVar :: TokenPosn -> TokenPosn -> ExprPosn -> ExprPosn
-parseVar (TokenPosn _ pos1) (TokenPosn (TokId id) _) expr@(_, pos2) =
-  (ExprVar id expr, pos1 <-> pos2)
+parseVar :: TokenPosn -> TokenPosn -> PatT -> ExprPosn -> ExprPosn
+parseVar (TokenPosn _ pos1) (TokenPosn (TokId id) _) pat expr@(_, pos2) =
+  (ExprVar id pat expr, pos1 <-> pos2)
 
-parseConst :: TokenPosn -> TokenPosn -> ExprPosn -> ExprPosn
-parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) expr@(_, pos2) =
-  (ExprConst id expr, pos1 <-> pos2)
+parseConst :: TokenPosn -> TokenPosn -> PatT -> ExprPosn -> ExprPosn
+parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) pat expr@(_, pos2) =
+  (ExprConst id pat expr, pos1 <-> pos2)
 
 parseId :: TokenPosn -> ExprPosn
 parseId (TokenPosn (TokId id) pos) = (ExprId id, pos)
