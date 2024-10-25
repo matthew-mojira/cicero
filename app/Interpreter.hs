@@ -32,6 +32,7 @@ eval :: ExprPosn -> Matthew [Value]
 eval (ExprLit lit, _) = case lit of
   (LitInt int)   -> return [ValInt int]
   (LitBool bool) -> return [ValBool bool]
+  (LitPat pat)   -> return [ValPat (interpPat pat)]
 eval (ExprUnOp LNot expr@(_, posn), _) = do
   val <- eval expr
   assertTypes val [PatBool] posn
@@ -138,15 +139,17 @@ eval (ExprAssign id expr@(_, posnV), posn) = do
       modify $ setVar id val
       return [val]
     Nothing -> throwError $ Error posn (NameError id)
-eval (ExprBox pat expr@(_, posn), _) = do
-  vals <- eval expr
-  let pat' = interpPat pat
-  assertTypes vals [pat'] posn  -- assert both arity and type
-  let [val] = vals
+eval (ExprBox patE@(_, patP) initE@(_, initP), _) = do  -- new naming convention
+  patV <- eval patE
+  assertTypes patV [PatPat] patP
+  let [ValPat pat] = patV
+  initV <- eval initE
+  assertTypes initV [pat] initP  -- assert both arity and type
+  let [val] = initV
   env <- get
   let (env', idx) = boxValue val env
   put env'
-  return [ValBox pat' idx]
+  return [ValBox pat idx]
 eval (ExprUnOp Unbox expr@(_, posn), _) = do
   val <- eval expr
   assertTypes val [PatBox PatAny] posn

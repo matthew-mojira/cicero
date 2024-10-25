@@ -5,7 +5,9 @@ import Pattern
 
 data Value = ValInt  Integer
            | ValBool Bool
-           | ValBox  Pattern Int  -- pointer
+           | ValBox  { pat   :: Pattern  -- not a value, just the internal pattern
+                     , index :: Int
+                     }
            | ValFunc { params :: [String]
 										 , env    :: [(String, Value)] -- closure
 										 , body   :: ExprPosn          -- index into env

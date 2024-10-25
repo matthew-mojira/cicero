@@ -115,6 +115,7 @@ instance Show Expr where
 instance Show Lit where
   show (LitBool bool) = show bool
   show (LitInt int)   = show int
+  show (LitPat pat)   = show pat
 
 --instance Show UnOp where
 --  show LNot   = "not"

@@ -117,8 +117,8 @@ expr  : int                     { parseInt $1 }
       | id ':=' expr            { parseAssign $1 $3 }
       | id                      { parseId $1 }
 
-      | box expr                { (ExprBox PatWild $2, tokenPosn $1 <-> snd $2) }
-      | box '[' pat ']' expr    { (ExprBox $3 $5, tokenPosn $1 <-> snd $5) }
+      | box expr                { (ExprBox (ExprLit (LitPat PatWild), undefined) $2, tokenPosn $1 <-> snd $2) }
+      | box '[' expr ']' expr   { (ExprBox $3 $5, tokenPosn $1 <-> snd $5) }
       | unbox expr              { parseUnOp Unbox $1 $2 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
@@ -132,6 +132,12 @@ expr  : int                     { parseInt $1 }
 
       | true                    { (ExprLit (LitBool True), tokenPosn $1) }
       | false                   { (ExprLit (LitBool False), tokenPosn $1) }
+
+      | '_'                     { (ExprLit (LitPat PatWild), tokenPosn $1) }
+      | int_t                   { (ExprLit (LitPat PatIntT), tokenPosn $1) }
+      | bool_t                  { (ExprLit (LitPat PatBoolT), tokenPosn $1) }
+      | box_t '[' pat ']'       { (ExprLit (LitPat (PatBoxT $3)), tokenPosn $1 <-> tokenPosn $4) }
+      | func_t                  { (ExprLit (LitPat PatFuncT), tokenPosn $1) }
 
 apply :  %prec APPLY   {}
 
