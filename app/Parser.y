@@ -138,6 +138,7 @@ expr  : int                     { parseInt $1 }
       | bool_t                  { (ExprLit (LitPat PatBoolT), tokenPosn $1) }
       | box_t '[' pat ']'       { (ExprLit (LitPat (PatBoxT $3)), tokenPosn $1 <-> tokenPosn $4) }
       | func_t                  { (ExprLit (LitPat PatFuncT), tokenPosn $1) }
+      | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2) }
 
 apply :  %prec APPLY   {}
 

@@ -37,6 +37,7 @@ data PatT = PatIntT
 
 data UnOp = LNot
           | Unbox
+          | Typeof
           deriving (Eq, Show)
 
 data BinOp

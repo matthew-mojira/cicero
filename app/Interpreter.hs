@@ -33,6 +33,10 @@ eval (ExprLit lit, _) = case lit of
   (LitInt int)   -> return [ValInt int]
   (LitBool bool) -> return [ValBool bool]
   (LitPat pat)   -> return [ValPat (interpPat pat)]
+eval (ExprUnOp Typeof expr@(_, posn), _) = do
+  vals <- eval expr
+  val  <- assertArity1 vals posn
+  return [ValPat (typeof val)]
 eval (ExprUnOp LNot expr@(_, posn), _) = do
   val <- eval expr
   assertTypes val [PatBool] posn
@@ -218,3 +222,8 @@ assertTypes vals pats posn =
 
 assertArity :: Int -> [Value] -> Posn -> Matthew ()
 assertArity cnt vals posn = assertTypes vals (replicate cnt PatAny) posn
+
+assertArity1 :: [Value] -> Posn -> Matthew Value
+assertArity1 vals posn = do
+  assertArity 1 vals posn
+  return $ head vals
