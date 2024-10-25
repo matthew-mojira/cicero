@@ -124,9 +124,9 @@ expr  : int                     { parseInt $1 }
 
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
       | func id '(' ')' '->' expr      { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6, tokenPosn $1 <-> snd $6)) $2 } 
-      | func id '(' ids ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7, tokenPosn $1 <-> snd $7)) $2 } 
+      | func id '(' params ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7, tokenPosn $1 <-> snd $7)) $2 } 
       | func '(' ')' '->' expr       { (ExprFunc Nothing [] $5, tokenPosn $1 <-> snd $5) }
-      | func '(' ids ')' '->' expr   { (ExprFunc Nothing $3 $6, tokenPosn $1 <-> snd $6) }
+      | func '(' params ')' '->' expr   { (ExprFunc Nothing $3 $6, tokenPosn $1 <-> snd $6) }
 
       | expr apply expr         { (ExprApply $1 $3, snd $1 <-> snd $3) }
 
@@ -145,8 +145,11 @@ apply :  %prec APPLY   {}
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }
 
-ids : id                        { (\(TokenPosn (TokId id) _) -> [Param id PatWild]) $1 }
-    | id ',' ids                { parseParams $1 $3 }
+params : param                { [$1] }
+       | param ',' params     { parseParams $1 $3 }
+
+param : id                    { (\(TokenPosn (TokId id) _) -> (Param id PatWild)) $1 }
+      | id ':' pat            { (\(TokenPosn (TokId id) _) -> (Param id $3)) $1 }
 
 pat : '_'                     { PatWild }
     | int_t                   { PatIntT }
@@ -179,10 +182,10 @@ parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) pat expr@(_, pos2) =
 parseId :: TokenPosn -> ExprPosn
 parseId (TokenPosn (TokId id) pos) = (ExprId id, pos)
 
-parseParams :: TokenPosn -> [Param] -> [Param]
-parseParams tok@(TokenPosn (TokId id) _) ps = if elem id (map paramName ps)
+parseParams :: Param -> [Param] -> [Param]
+parseParams p@(Param id _) ps = if elem id (map paramName ps)
   then error ("Duplicate parameter name in function definition: " ++ id)
-  else (Param id PatWild):ps
+  else p:ps
 
 parseAssign :: TokenPosn -> ExprPosn -> ExprPosn
 parseAssign (TokenPosn (TokId id) pos1) expr@(_, pos2) =

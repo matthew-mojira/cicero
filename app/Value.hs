@@ -9,10 +9,10 @@ data Value = ValInt  Integer
                      , index :: Int
                      }
            | ValFunc { params :: [Param]            -- constraint on values
-										 , env    :: [(String, Value)]  -- closure
-										 , body   :: ExprPosn           -- index into env
-									   }
-			     | ValPat  { pat :: Pattern }
+                     , env    :: [(String, Value)]  -- closure
+                     , body   :: ExprPosn           -- index into env
+                     }
+           | ValPat  { pat :: Pattern }
            deriving Eq
 
 typeof :: Value -> Pattern

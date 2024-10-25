@@ -197,7 +197,7 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), _) = do
   let [ValFunc params closure exprB] = valF
   -- assert that params are the correct type
   args <- eval exprsA
-  assertTypes args (map (interpParam) params) posn
+  assertTypes args (map interpParam params) posn
   -- call the function
   modify $ pushFunc (zip (map paramName params) args) closure
   valR <- eval exprB
