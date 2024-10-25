@@ -15,7 +15,7 @@ data Expr
   | ExprConst  String PatT ExprPosn
   | ExprId     String
   | ExprAssign String ExprPosn
-  | ExprBox    { pat :: PatT, init :: ExprPosn}
+  | ExprBox    { pat :: ExprPosn, init :: ExprPosn}
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
   | ExprFunc   (Maybe String) [String] ExprPosn
@@ -25,6 +25,7 @@ data Expr
 
 data Lit = LitInt  Integer
          | LitBool Bool
+         | LitPat  PatT
          deriving Eq
 
 data PatT = PatIntT

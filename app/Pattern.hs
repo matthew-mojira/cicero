@@ -14,7 +14,7 @@ instance Show Pattern where
   show PatBool      = "bool"
   show (PatBox pat) = concat ["box[", show pat, "]"]
   show PatFunc      = "func"
-  show PatPat       = "pat"
+  show PatPat       = "type"
   show PatAny       = "any"
 
 (<:) :: Pattern -> Pattern -> Bool
