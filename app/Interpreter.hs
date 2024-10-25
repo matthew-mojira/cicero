@@ -182,19 +182,19 @@ eval (ExprTuple exprs, _) = mapM evalSingle exprs
       let [val] = vals
       return val
 -- functions
-eval (ExprFunc name params expr, _) = do
+eval (ExprFunc name params expr retPats, _) = do
   env <- get
   case name of
-    Nothing   -> return $ [ValFunc params (getClosure env) expr]
+    Nothing   -> return $ [ValFunc params (getClosure env) expr (fmap (map interpPat) retPats)]
     Just self -> do
-      let func = ValFunc params ((self, func):(getClosure env)) expr
+      let func = ValFunc params ((self, func):(getClosure env)) expr (fmap (map interpPat) retPats)
       modify $ extendConst self func
       return [func]
-eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), _) = do
+eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
   -- assert we are calling a function
   valF <- eval exprF
   assertTypes valF [PatFunc] posnF
-  let [ValFunc params closure exprB] = valF
+  let [ValFunc params closure exprB retPats] = valF
   -- assert that params are the correct type
   args <- eval exprsA
   assertTypes args (map interpParam params) posn
@@ -202,6 +202,11 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), _) = do
   modify $ pushFunc (zip (map paramName params) args) closure
   valR <- eval exprB
   modify $ popFunc
+  -- assert return value is correct type
+  -- note: this is really not the place to do it. it needs to be in the function
+  case retPats of
+    Nothing   -> return ()
+    Just pats -> assertTypes valR pats posnFIXME
   return valR
   where
     interpParam = interpPat . paramPat

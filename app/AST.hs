@@ -20,7 +20,8 @@ data Expr
   | ExprBlock  [ExprPosn]
   | ExprFunc   { funcName   :: (Maybe String)
                , funcParams :: [Param]
-               , funcBody   ::  ExprPosn
+               , funcBody   :: ExprPosn
+               , funcRetPat :: Maybe [PatT]
                }
   | ExprApply  ExprPosn ExprPosn
   | ExprTuple  [ExprPosn]
@@ -112,7 +113,7 @@ instance Show Expr where
     concat ["(SetBox ", show expr1, " ", show expr2, ")"]
   show (ExprBlock exprs) =
     concat ["(Block ", show $ map (show . fst) exprs, ")"]
-  show (ExprFunc name params (expr, _)) =
+  show (ExprFunc name params (expr, _) _) =
     concat ["(Func ", show name, " ", show params, " ", show expr, ")"]
   show (ExprTuple exprs) =
     concat ["(Tuple ", show $ map (show . fst) exprs, ")"]

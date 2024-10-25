@@ -81,6 +81,7 @@ import AST
       box_t           { TokenPosn TokBoxT (_, _) }
       type_t          { TokenPosn TokTypeT (_, _) }
       func_t          { TokenPosn TokFuncT (_, _) }
+      void            { TokenPosn TokVoid (_, _) }
 %%
 
 exprs :                         { [] }
@@ -123,10 +124,19 @@ expr  : int                     { parseInt $1 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
-      | func id '(' ')' '->' expr      { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6, tokenPosn $1 <-> snd $6)) $2 } 
-      | func id '(' params ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7, tokenPosn $1 <-> snd $7)) $2 } 
-      | func '(' ')' '->' expr       { (ExprFunc Nothing [] $5, tokenPosn $1 <-> snd $5) }
-      | func '(' params ')' '->' expr   { (ExprFunc Nothing $3 $6, tokenPosn $1 <-> snd $6) }
+
+      | func id '(' ')' '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6 Nothing, tokenPosn $1 <-> snd $6)) $2 } 
+      | func id '(' params ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7 Nothing , tokenPosn $1 <-> snd $7)) $2 } 
+      | func '(' ')' '->' expr            { (ExprFunc Nothing [] $5 Nothing, tokenPosn $1 <-> snd $5) }
+      | func '(' params ')' '->' expr     { (ExprFunc Nothing $3 $6 Nothing, tokenPosn $1 <-> snd $6) }
+      | func id '(' ')' ':' void '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $8 (Just []), tokenPosn $1 <-> snd $8)) $2 } 
+      | func id '(' params ')' ':' void '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $9 (Just []), tokenPosn $1 <-> snd $9)) $2 } 
+      | func '(' ')' ':' void '->' expr            { (ExprFunc Nothing [] $7 (Just []), tokenPosn $1 <-> snd $7) }
+      | func '(' params ')' ':' void '->' expr     { (ExprFunc Nothing $3 $8 (Just []), tokenPosn $1 <-> snd $8) }
+      | func id '(' ')' ':' pats '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $8 (Just $6), tokenPosn $1 <-> snd $8)) $2 } 
+      | func id '(' params ')' ':' pats '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $9 (Just $7), tokenPosn $1 <-> snd $9)) $2 } 
+      | func '(' ')' ':' pats '->' expr            { (ExprFunc Nothing [] $7 (Just $5), tokenPosn $1 <-> snd $7) }
+      | func '(' params ')' ':' pats '->' expr     { (ExprFunc Nothing $3 $8 (Just $6), tokenPosn $1 <-> snd $8) }
 
       | expr apply expr         { (ExprApply $1 $3, snd $1 <-> snd $3) }
 
@@ -144,6 +154,9 @@ apply :  %prec APPLY   {}
 
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }
+
+pats : pat                    { [$1] }
+     | pat ',' pats           { $1 : $3 }
 
 params : param                { [$1] }
        | param ',' params     { parseParams $1 $3 }

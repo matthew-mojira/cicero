@@ -56,5 +56,6 @@ data Token = TokPlus
            | TokBoxT
            | TokTypeT
            | TokFuncT
+           | TokVoid
 
            deriving (Eq, Show)

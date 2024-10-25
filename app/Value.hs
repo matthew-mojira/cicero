@@ -8,9 +8,10 @@ data Value = ValInt  Integer
            | ValBox  { pat   :: Pattern  -- not a value, just the internal pattern
                      , index :: Int
                      }
-           | ValFunc { params :: [Param]            -- constraint on values
-                     , env    :: [(String, Value)]  -- closure
-                     , body   :: ExprPosn           -- index into env
+           | ValFunc { params  :: [Param]            -- constraint on values
+                     , env     :: [(String, Value)]  -- closure
+                     , body    :: ExprPosn           -- index into env
+                     , retPats :: Maybe [Pattern]    -- return patterns/arity
                      }
            | ValPat  { pat :: Pattern }
            deriving Eq
@@ -29,5 +30,5 @@ instance Show Value where
   show (ValInt int)    = show int
   show (ValBool bool)  = if bool then "true" else "false"
   show (ValBox _ idx)  = concat ["box[#", show idx, "]"]
-  show (ValFunc _ _ _) = concat ["func[<impl>]"]
+  show (ValFunc _ _ _ _) = concat ["func[<impl>]"]
   show (ValPat pat)    = concat ["type[", show pat, "]"]
