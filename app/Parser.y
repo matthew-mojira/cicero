@@ -145,8 +145,8 @@ apply :  %prec APPLY   {}
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }
 
-ids : id                        { (\(TokenPosn (TokId id) _) -> [id]) $1 }
-    | id ',' ids                { parseIds $1 $3 }
+ids : id                        { (\(TokenPosn (TokId id) _) -> [Param id PatWild]) $1 }
+    | id ',' ids                { parseParams $1 $3 }
 
 pat : '_'                     { PatWild }
     | int_t                   { PatIntT }
@@ -179,10 +179,10 @@ parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) pat expr@(_, pos2) =
 parseId :: TokenPosn -> ExprPosn
 parseId (TokenPosn (TokId id) pos) = (ExprId id, pos)
 
-parseIds :: TokenPosn -> [String] -> [String]
-parseIds tok@(TokenPosn (TokId id) _) ts = if elem id ts
+parseParams :: TokenPosn -> [Param] -> [Param]
+parseParams tok@(TokenPosn (TokId id) _) ps = if elem id (map paramName ps)
   then error ("Duplicate parameter name in function definition: " ++ id)
-  else id:ts
+  else (Param id PatWild):ps
 
 parseAssign :: TokenPosn -> ExprPosn -> ExprPosn
 parseAssign (TokenPosn (TokId id) pos1) expr@(_, pos2) =

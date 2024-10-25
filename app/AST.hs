@@ -15,13 +15,19 @@ data Expr
   | ExprConst  String PatT ExprPosn
   | ExprId     String
   | ExprAssign String ExprPosn
-  | ExprBox    { pat :: ExprPosn, init :: ExprPosn}
+  | ExprBox    { boxPat :: ExprPosn, boxInit :: ExprPosn}
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
-  | ExprFunc   (Maybe String) [String] ExprPosn
+  | ExprFunc   { funcName   :: (Maybe String)
+               , funcParams :: [Param]
+               , funcBody   ::  ExprPosn
+               }
   | ExprApply  ExprPosn ExprPosn
   | ExprTuple  [ExprPosn]
   deriving Eq
+
+data Param = Param { paramName :: String, paramPat :: PatT }
+               deriving (Eq, Show)
 
 data Lit = LitInt  Integer
          | LitBool Bool

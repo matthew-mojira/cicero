@@ -8,9 +8,9 @@ data Value = ValInt  Integer
            | ValBox  { pat   :: Pattern  -- not a value, just the internal pattern
                      , index :: Int
                      }
-           | ValFunc { params :: [String]
-										 , env    :: [(String, Value)] -- closure
-										 , body   :: ExprPosn          -- index into env
+           | ValFunc { params :: [Param]            -- constraint on values
+										 , env    :: [(String, Value)]  -- closure
+										 , body   :: ExprPosn           -- index into env
 									   }
 			     | ValPat  { pat :: Pattern }
            deriving Eq

@@ -191,15 +191,20 @@ eval (ExprFunc name params expr, _) = do
       modify $ extendConst self func
       return [func]
 eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), _) = do
+  -- assert we are calling a function
   valF <- eval exprF
   assertTypes valF [PatFunc] posnF
   let [ValFunc params closure exprB] = valF
+  -- assert that params are the correct type
   args <- eval exprsA
-  assertArity (length params) args posn
-  modify $ pushFunc (zip params args) closure
+  assertTypes args (map (interpParam) params) posn
+  -- call the function
+  modify $ pushFunc (zip (map paramName params) args) closure
   valR <- eval exprB
   modify $ popFunc
   return valR
+  where
+    interpParam = interpPat . paramPat
 
 interpPat :: PatT -> Pattern
 interpPat PatIntT       = PatInt
