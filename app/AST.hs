@@ -18,6 +18,7 @@ data Expr
   | ExprBox    { boxPat :: ExprPosn, boxInit :: ExprPosn}
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
+  | ExprWhile  { guard :: ExprPosn, body :: ExprPosn }
   | ExprFunc   { funcName   :: (Maybe String)
                , funcParams :: [Param]
                , funcBody   :: ExprPosn
@@ -116,6 +117,8 @@ instance Show Expr where
     concat ["(Block ", show $ map (show . fst) exprs, ")"]
   show (ExprFunc name params (expr, _) _) =
     concat ["(Func ", show name, " ", show params, " ", show expr, ")"]
+  show (ExprWhile (guard, _) (body, _)) =
+    concat ["(While ", show guard, " ", show body, ")"]
   show (ExprTuple exprs) =
     concat ["(Tuple ", show $ map (show . fst) exprs, ")"]
   show (ExprApply func (expr, _)) =

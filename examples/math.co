@@ -1,0 +1,18 @@
+func isqrt(n: int_t): int_t -> {
+  func recurse(x: int_t): int_t -> {
+    if x * x <= n and n < (x + 1) * (x + 1)
+      then x
+      else recurse((x + n / x) / 2);
+  };
+  recurse(n / 2 + 1);
+};
+
+func isqrt_(n: int_t): int_t -> {
+  var x: int_t = n;
+  while x * x > n do
+    x := (x + n / x) / 2;
+  x;
+};
+
+isqrt(200000000000000000000000000);
+isqrt_(200000000000000000000000000);
