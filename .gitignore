@@ -25,3 +25,4 @@ cabal.project.local~
 Lexer.hs
 Parser.hs
 /docs/book
+.DS_Store
