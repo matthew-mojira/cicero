@@ -1,0 +1,67 @@
+Boxed types
+
+Should the type of a value depend on its value? Stupid question. But this
+problem comes up because of mutable boxes in the language:
+
+```
+var x = box 5
+x?
+x <- true
+x?
+```
+
+Here, the same box `x` has two different types as its contents. If the type of
+the box reflects the type of its contents, then this would be a change in type
+(`box[int]` -> `box[bool]`).
+
+
+Types of functions
+
+Functions should also get a type based on their parameters and return type.
+Declaring a function requires we specify its arity, but not necessarily
+restrictions on types:
+
+```
+func foo(x, y) -> { }
+```
+
+We could capture this type as follows:
+```
+func[(_, _) -> ()]
+```
+
+This seems to suggest that type patterns must also be first-class values, not
+just the types themselves. Thus it would also be cool to have
+* ways of manipulating patterns
+* runtime check of functions
+
+Can we include these in our pattern matches as well? So that you can also use
+variables which hold type patterns.
+
+
+Type type
+
+So now the type type is now a type pattern, where the possibilities are:
+TypePat = PatInt
+        | PatBool
+        | PatType
+        | PatWild (Maybe String) -- bind it to a name sometimes?
+        | PatBox TypePat
+        | PatType [TypePat] [TypePat]  -- note, this handles tuples BUT NOT ARITY
+
+Should the `when` clause be included in part of the matching? So now we have an
+expression also part of the type. But this would also depend on the binding for
+the destructuring of values...
+
+
+Revisiting the box type
+
+So that gives us our answer for the box type. When the box is declared, a type
+pattern which constrains the set of values for which the box is allowed is
+included, and this is the internal type of box. A box without such a pattern
+declared is deemed `PatWild`, so it can hold anything.
+
+
+Static concerns
+
+Can such a thing be statically type checked?

@@ -4,9 +4,10 @@ import Data.Maybe
 import Data.List
 
 import Value
+import Pattern
 import AST
 
-type Entry      = (String, (Value, Bool))
+type Entry      = (String, (Value, Pattern))
 type BlockEntry = [Entry]
 type FuncEntry  = [BlockEntry]
 
@@ -28,7 +29,7 @@ popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
 
 pushFunc :: [(String, Value)] -> [(String, Value)] -> Env -> Env
 pushFunc args closure env@Env {idxs = idxs} =
-  env {idxs = [map (\(id, val) -> (id, (val, False))) (args ++ closure)]:idxs}
+  env {idxs = [map (\(id, val) -> (id, (val, PatNone))) (args ++ closure)]:idxs}
 
 popBlock :: Env -> Env
 popBlock env@Env {idxs = idxs} = env {idxs = (tail (head idxs)):tail idxs}
@@ -36,29 +37,26 @@ popBlock env@Env {idxs = idxs} = env {idxs = (tail (head idxs)):tail idxs}
 pushBlock :: Env -> Env
 pushBlock env@Env {idxs = idxs} = env {idxs = ([]:(head idxs)):tail idxs}
 
-lookupEnv :: String -> Env -> Maybe (Value, Bool)
+lookupEnv :: String -> Env -> Maybe (Value, Pattern)
 lookupEnv id (Env {idxs = idxs}) = lookup id (concat (head idxs))
 
-lookupEnv' :: String -> Env -> Maybe (Value, Bool)  -- strictly in the same scope
+lookupEnv' :: String -> Env -> Maybe (Value, Pattern)  -- strictly in the same scope
 lookupEnv' id (Env {idxs = idxs}) = lookup id (head (head idxs))
 
 extendConst :: String -> Value -> Env -> Env
-extendConst id val env@Env {idxs = idxs} =
-  let Just (fun, funs) = uncons idxs
-      Just (blk, blks) = uncons fun
-   in env {idxs = (((id, (val, False)):blk):blks):funs}
+extendConst id val env = extendVar id val PatNone env
 
-extendVar :: String -> Value -> Env -> Env
-extendVar id val env@Env {idxs = idxs} =
+extendVar :: String -> Value -> Pattern -> Env -> Env
+extendVar id val pat env@Env {idxs = idxs} =
   let Just (fun, funs) = uncons idxs
       Just (blk, blks) = uncons fun
-   in env {idxs = (((id, (val, True)):blk):blks):funs}
+   in env {idxs = (((id, (val, pat)):blk):blks):funs}
 
 setVar :: String -> Value -> Env -> Env
 setVar id val env@Env {idxs = idxs} =
   env {idxs = (replace id val (head idxs)):(tail idxs) }
   where
-    replace :: Eq a => a -> b -> [[(a, (b, Bool))]] -> [[(a, (b, Bool))]]
+    replace :: Eq a => a -> b -> [[(a, (b, c))]] -> [[(a, (b, c))]]
     replace _ _ [] = []
     replace x y (dict:rest) = case replaceInDict dict of
         (newDict, True)  -> newDict : rest  -- Stop when the first replacement is made
@@ -75,11 +73,11 @@ boxValue val env@Env {vals = vals} =
   let idx = length vals
    in (env {vals = val:vals}, idx)
 
-unboxValue :: Value -> Env -> Value
-unboxValue (ValBox idx) env@Env {vals = vals} = vals!!(length vals - idx - 1)
+unboxValue :: Int -> Env -> Value
+unboxValue idx env@Env {vals = vals} = vals!!(length vals - idx - 1)
 
-setBox :: Value -> Value -> Env -> Env
-setBox (ValBox idx) val env@Env {vals = vals} =
+setBox :: Int -> Value -> Env -> Env
+setBox idx val env@Env {vals = vals} =
   env {vals = setElem vals (length vals - idx - 1) val}
   where
     setElem :: [a] -> Int -> a -> [a]

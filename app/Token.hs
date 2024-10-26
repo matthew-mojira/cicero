@@ -23,6 +23,9 @@ data Token = TokPlus
            | TokQuestion
            | TokSemicolon
            | TokColon
+           | TokLBrack
+           | TokRBrack
+           | TokUnderscore
 
            | TokFunc
 
@@ -53,5 +56,6 @@ data Token = TokPlus
            | TokBoxT
            | TokTypeT
            | TokFuncT
+           | TokVoid
 
            deriving (Eq, Show)

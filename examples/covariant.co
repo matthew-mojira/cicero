@@ -1,0 +1,5 @@
+-- Covariant boxes
+
+var x: box_t[int_t] = box[int_t](5);
+var y: box_t[_] = x;
+y <- false;

@@ -36,6 +36,9 @@ tokens :-
   \,                             { tok TokComma }
   \;                             { tok TokSemicolon }
   :                              { tok TokColon }
+  _                              { tok TokUnderscore }
+  \[                             { tok TokLBrack }
+  \]                             { tok TokRBrack }
 
   func                           { tok TokFunc }
 
@@ -60,6 +63,7 @@ tokens :-
   box_t                          { tok TokBoxT }
   type_t                         { tok TokTypeT }
   func_t                         { tok TokFuncT }
+  void                           { tok TokVoid }
 
   $digit+                        { tok (TokInt undefined) }
   [$alpha\_][$alpha$digit\_]*    { tok (TokId undefined) }
