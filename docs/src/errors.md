@@ -19,6 +19,12 @@ else
   3
 ```
 
+Type errors can also happen when a expression returns the wrong arity:
+
+```
+var x = (1, 2)
+```
+
 ## Arithmetic error
 
 Arithmetic errors can occur because of illegal operations in an arithmetic

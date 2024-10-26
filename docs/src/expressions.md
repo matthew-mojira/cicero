@@ -22,6 +22,14 @@ assignment, which is its side effect.
 Arity is a feature which allows an expression to evaluate to a number of
 values. Arity is not a structure of the language or a compound value type.
 
-Currently, expressions can only evaluate to zero or one values. For example,
-a block expression evaluates to the value of the last block in the
-expression, but the empty block `{ }` evaluates to zero values.
+The only way to construct an expression which evaluates to multiple values is
+to use the *tuple* construct:
+
+```
+()        -- zero arity
+(1)       -- one arity
+(1, 2, 3) -- three arity
+```
+
+Unlike other languages, a tuple is *not* first class. Its uses require it to be
+deconstructed right away.
