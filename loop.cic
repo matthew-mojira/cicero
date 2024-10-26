@@ -1,0 +1,11 @@
+{
+  var x = 5
+  var y = true
+  while y do {
+    x := x + 1
+    if x := 9^9^9 then
+      y := 99
+    else
+      0
+  }
+}

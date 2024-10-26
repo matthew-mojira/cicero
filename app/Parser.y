@@ -15,7 +15,7 @@ import AST
 %tokentype { TokenPosn }
 
 %left  '->'
-%right else
+%right else while do
 %right ':=' '<-'
 %left  or
 %left  and
@@ -70,6 +70,8 @@ import AST
       if              { TokenPosn TokIf (_, _) }
       then            { TokenPosn TokThen (_, _) }
       else            { TokenPosn TokElse (_, _) }
+      while           { TokenPosn TokWhile (_, _) }
+      do              { TokenPosn TokDo (_, _) }
 
       var             { TokenPosn TokVar (_, _) }
       const           { TokenPosn TokConst (_, _) }
@@ -124,6 +126,8 @@ expr  : int                     { parseInt $1 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
+
+      | while expr do expr      { (ExprWhile $2 $4, tokenPosn $1 <-> snd $4) }
 
       | func id '(' ')' '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6 Nothing, tokenPosn $1 <-> snd $6)) $2 } 
       | func id '(' params ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7 Nothing , tokenPosn $1 <-> snd $7)) $2 } 

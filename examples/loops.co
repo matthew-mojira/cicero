@@ -1,0 +1,13 @@
+func fac(n) -> {
+  var i = 1;
+  var x = 1;
+
+  while i < n do {
+    x := x * i;
+    i := i + 1;
+  };
+
+  x;
+};
+
+fac(800);

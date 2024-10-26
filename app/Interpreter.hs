@@ -9,6 +9,7 @@ import Lexer (AlexPosn(AlexPn), Posn)
 import Control.Monad
 import Control.Monad.Except
 import Control.Monad.Identity
+import Control.Monad.Loops
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 
@@ -174,6 +175,18 @@ eval (ExprBlock exprs, _) = do
   val <- foldM (const eval) [] exprs
   modify popBlock
   return val
+-- iteration expressions
+eval (ExprWhile exprG@(_, posnG) exprB, _) = do
+  vals <- whileM evalGuard (eval exprB)
+  case vals of
+    [] -> return []
+    _  -> return $ last vals
+  where
+    evalGuard = do
+      valG <- eval exprG
+      assertTypes valG [PatBool] posnG
+      let [ValBool bool] = valG
+      return bool
 eval (ExprTuple exprs, _) = mapM evalSingle exprs
   where
     evalSingle expr@(_, posn) = do

@@ -52,6 +52,8 @@ tokens :-
   if                             { tok TokIf }
   then                           { tok TokThen }
   else                           { tok TokElse }
+  while                          { tok TokWhile }
+  do                             { tok TokDo }
 
   var                            { tok TokVar }
   const                          { tok TokConst }
