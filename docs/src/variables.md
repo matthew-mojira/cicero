@@ -58,3 +58,13 @@ than the original declaration. This is known as *shadowing*:
 
 Right now, there is no way to access the value of `x` in the outer scope from
 within the inner scope after the second `x` is declared.
+
+## Type patterns
+
+One can declare the type of values which can be assigned to a variable or
+constant:
+
+```
+var x: int_t = 5
+x := 6
+```

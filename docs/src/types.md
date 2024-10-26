@@ -17,3 +17,18 @@ One can get the type of a value using the `?` suffix operator:
 => int
 ```
 
+## Dynamic typing
+
+There is no static type checking. All types are checked dynamically.
+
+## Recursive types
+
+The `box` type is recursive, with an additional parameter specifying the types
+of an element it holds:
+
+```
+box_t[int_t]
+```
+
+The `_` term represents a *wild card* meaning the type of a box whose contents
+can be any time.

@@ -21,6 +21,10 @@ foo(10, 11);
 => 21
 ```
 
+Unlike other languages, the arguments are immutable (i.e. constant). This helps
+eliminate unintuitive behavior because of multiple expectations from assigning
+to arguments in other languages.
+
 ## Anonymous functions
 
 Anonymous functions, also known as *lambdas*, are functions defined without
@@ -80,4 +84,36 @@ func fib(n) -> {
   else
     fib(n - 1) + fib(n - 2);
 }
+```
+
+## Returning multiple values from a function
+
+One can return multiple values from a function using the *tuple* construct:
+
+```
+func two() -> (1, 2)
+```
+
+Unlike other languages, tuples are not first class.
+
+## Type patterns
+
+One can specify patterns which arguments or return values must satisfy. These
+are dynamically checked at call time and before returning.
+
+```
+func apply(f: func_t, x) -> f(x);
+```
+
+In this case, the return type and arity are untyped. One can specify how many
+return values by separating them with `,`:
+
+```
+func bar(): int_t, bool_t -> (3, false);
+```
+
+To specify that the function does not return any values, use `void`:
+
+```
+func nothing(): void -> { };
 ```

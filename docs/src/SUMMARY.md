@@ -6,7 +6,7 @@
 - [Conditionals](./conditionals.md)
 - [Variables and constants](./variables.md)
 - [Types](./types.md)
-  - [Type patterns](./type_patterns.md)
 - [Functions](./functions.md)
+- [Iteration](./iteration.md)
 - [Boxes](./boxes.md)
 - [Errors](./errors.md)

@@ -39,6 +39,7 @@ data PatT = PatIntT
           | PatBoolT
           | PatBoxT PatT
           | PatFuncT
+          | PatTypeT
           | PatWild
           deriving (Eq, Show)
 
