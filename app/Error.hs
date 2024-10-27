@@ -6,6 +6,7 @@ import Pattern
 data Error = Error { posn :: Posn
                    , kind :: ErrorKind
                    }
+           deriving Eq
 
 instance Show Error where
   show (Error (AlexPn _ line col, _) kind) = concat
@@ -18,6 +19,7 @@ data ErrorKind = TypeError          { expected :: Pattern, actual :: Pattern }
                | AssignmentError    { id :: String }
                | ArityMismatchError { expArity :: Int, actArity :: Int }
                | ManualError        { msg :: String }
+               deriving Eq
 
 instance Show ErrorKind where
   show (TypeError exp act)   = unwords
