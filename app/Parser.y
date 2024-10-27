@@ -15,7 +15,7 @@ import AST
 %tokentype { TokenPosn }
 
 %left  '->'
-%right else while do
+%right else while do catch
 %right ':=' '<-'
 %left  or
 %left  and
@@ -78,6 +78,10 @@ import AST
       box             { TokenPosn TokBox (_, _) }
       unbox           { TokenPosn TokUnbox (_, _) }
 
+      try             { TokenPosn TokTry (_, _) }
+      catch           { TokenPosn TokCatch (_, _) }
+      finally         { TokenPosn TokFinally (_, _) }
+
       int_t           { TokenPosn TokIntT (_, _) }
       bool_t          { TokenPosn TokBoolT (_, _) }
       box_t           { TokenPosn TokBoxT (_, _) }
@@ -128,6 +132,8 @@ expr  : int                     { parseInt $1 }
       | if expr then expr else expr { (ExprIfElse $2 $4 $6, tokenPosn $1 <-> snd $6) }
 
       | while expr do expr      { (ExprWhile $2 $4, tokenPosn $1 <-> snd $4) }
+
+      | try expr catch expr     { (ExprTry $2 $4 undefined, tokenPosn $1 <-> snd $4) }
 
       | func id '(' ')' '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6 Nothing, tokenPosn $1 <-> snd $6)) $2 } 
       | func id '(' params ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7 Nothing , tokenPosn $1 <-> snd $7)) $2 } 

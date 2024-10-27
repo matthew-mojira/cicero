@@ -47,6 +47,11 @@ data Token = TokPlus
            | TokBox
            | TokUnbox
 
+           -- error stuff
+           | TokTry
+           | TokCatch
+           | TokFinally
+
            -- literal values
            | TokInt Integer
            | TokId  String

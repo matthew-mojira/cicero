@@ -60,6 +60,10 @@ tokens :-
   box                            { tok TokBox }
   unbox                          { tok TokUnbox }
 
+  try                            { tok TokTry }
+  catch                          { tok TokCatch }
+  finally                        { tok TokFinally }
+
   int_t                          { tok TokIntT }
   bool_t                         { tok TokBoolT }
   box_t                          { tok TokBoxT }

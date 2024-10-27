@@ -26,6 +26,10 @@ data Expr
                }
   | ExprApply  ExprPosn ExprPosn
   | ExprTuple  [ExprPosn]
+  | ExprTry    { try     :: ExprPosn
+               , catch   :: ExprPosn
+               , finally :: ExprPosn
+               }
   deriving Eq
 
 data Param = Param { paramName :: String, paramPat :: PatT }
