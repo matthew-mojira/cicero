@@ -24,10 +24,19 @@ import Error
 import Pattern
 import Value
 
-type Matthew a = StateT Env (ExceptT Error IO) a
+type Matthew a = ExceptT Error (StateT Env IO) a
 
-interp :: Prog -> Env -> IO (Either Error ([Value], Env))
-interp prog env = runExceptT $ runStateT (foldM (const eval) [] prog) env
+getEnv :: Matthew Env
+getEnv = lift get
+
+putEnv :: Env -> Matthew ()
+putEnv = lift . put
+
+modifyEnv :: (Env -> Env) -> Matthew ()
+modifyEnv = lift . modify
+
+interp :: Prog -> Env -> IO (Either Error [Value], Env)
+interp prog env = runStateT (runExceptT (foldM (const eval) [] prog)) env
 
 eval :: ExprPosn -> Matthew [Value]
 eval (ExprLit lit, _) = case lit of
@@ -102,7 +111,7 @@ eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
     then eval exprT
     else eval exprF
 eval (ExprVar id pat expr@(_, posnV), posn) = do
-  env <- get
+  env <- getEnv
   case lookupEnv' id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
@@ -112,10 +121,10 @@ eval (ExprVar id pat expr@(_, posnV), posn) = do
       let [val] = vals
       let pat' = interpPat pat
       assertType val pat' posnV
-      modify $ extendVar id val pat'
+      modifyEnv $ extendVar id val pat'
       return [val]
 eval (ExprConst id pat expr@(_, posnV), posn) = do
-  env <- get
+  env <- getEnv
   case lookupEnv' id env of
   -- don't allow redeclaration in the same scope
     Just _  -> throwError $ Error posn (RedefinitionError id)
@@ -125,15 +134,15 @@ eval (ExprConst id pat expr@(_, posnV), posn) = do
       let [val] = vals
       let pat' = interpPat pat
       assertType val pat' posnV
-      modify $ extendConst id val
+      modifyEnv $ extendConst id val
       return [val]
 eval (ExprId id, posn) = do
-  env <- get
+  env <- getEnv
   case lookupEnv id env of
     Just (val, _) -> return [val]
     Nothing       -> throwError $ Error posn (NameError id)
 eval (ExprAssign id expr@(_, posnV), posn) = do
-  env <- get
+  env <- getEnv
   case lookupEnv id env of
     Just (_, pat) -> do
       vals <- eval expr
@@ -141,7 +150,7 @@ eval (ExprAssign id expr@(_, posnV), posn) = do
       let [val] = vals
       when (pat == PatNone) $ throwError $ Error posn (AssignmentError id)
       assertType val pat posnV
-      modify $ setVar id val
+      modifyEnv $ setVar id val
       return [val]
     Nothing -> throwError $ Error posn (NameError id)
 eval (ExprBox patE@(_, patP) initE@(_, initP), _) = do  -- new naming convention
@@ -151,15 +160,15 @@ eval (ExprBox patE@(_, patP) initE@(_, initP), _) = do  -- new naming convention
   initV <- eval initE
   assertTypes initV [pat] initP  -- assert both arity and type
   let [val] = initV
-  env <- get
+  env <- getEnv
   let (env', idx) = boxValue val env
-  put env'
+  putEnv env'
   return [ValBox pat idx]
 eval (ExprUnOp Unbox expr@(_, posn), _) = do
   val <- eval expr
   assertTypes val [PatBox PatAny] posn
   let [ValBox _ idx] = val
-  env <- get
+  env <- getEnv
   return [unboxValue idx env]
 eval (ExprSetBox exprD@(_, posnD) exprS@(_, posnS), _) = do
   valD <- eval exprD
@@ -167,13 +176,13 @@ eval (ExprSetBox exprD@(_, posnD) exprS@(_, posnS), _) = do
   let [(ValBox pat idx)] = valD
   valS <- eval exprS
   assertTypes valS [pat] posnS
-  modify $ setBox idx (valS!!0)
+  modifyEnv $ setBox idx (valS!!0)
   return valS
 -- expression combinators
 eval (ExprBlock exprs, _) = do
-  modify pushBlock
+  modifyEnv pushBlock
   val <- foldM (const eval) [] exprs
-  modify popBlock
+  modifyEnv popBlock
   return val
 -- iteration expressions
 eval (ExprWhile exprG@(_, posnG) exprB, _) = do
@@ -196,12 +205,12 @@ eval (ExprTuple exprs, _) = mapM evalSingle exprs
       return val
 -- functions
 eval (ExprFunc name params expr retPats, _) = do
-  env <- get
+  env <- getEnv
   case name of
     Nothing   -> return $ [ValFunc params (getClosure env) expr (fmap (map interpPat) retPats)]
     Just self -> do
       let func = ValFunc params ((self, func):(getClosure env)) expr (fmap (map interpPat) retPats)
-      modify $ extendConst self func
+      modifyEnv $ extendConst self func
       return [func]
 eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
   -- assert we are calling a function
@@ -212,9 +221,9 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
   args <- eval exprsA
   assertTypes args (map interpParam params) posn
   -- call the function
-  modify $ pushFunc (zip (map paramName params) args) closure
+  modifyEnv $ pushFunc (zip (map paramName params) args) closure
   valR <- eval exprB
-  modify $ popFunc
+  modifyEnv $ popFunc
   -- assert return value is correct type
   -- note: this is really not the place to do it. it needs to be in the function
   case retPats of
@@ -223,6 +232,9 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
   return valR
   where
     interpParam = interpPat . paramPat
+-- error
+eval (ExprTry tryE catchE _, _) = catchError (eval tryE) (const $ eval catchE)
+
 
 interpPat :: PatT -> Pattern
 interpPat PatIntT       = PatInt

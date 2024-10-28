@@ -127,6 +127,8 @@ instance Show Expr where
     concat ["(Tuple ", show $ map (show . fst) exprs, ")"]
   show (ExprApply func (expr, _)) =
     concat ["(Apply ", show (fst func), " ", show expr, ")"]
+  show (ExprTry (tryE, _) (catchE, _) (finE, _)) =
+    concat ["(Try ", show tryE, " ", show catchE, ")"]
 
 instance Show Lit where
   show (LitBool bool) = show bool
