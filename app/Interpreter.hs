@@ -222,16 +222,28 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
   assertTypes args (map interpParam params) posn
   -- call the function
   modifyEnv $ pushFunc (zip (map paramName params) args) closure
-  valR <- eval exprB
-  modifyEnv $ popFunc
-  -- assert return value is correct type
-  -- note: this is really not the place to do it. it needs to be in the function
-  case retPats of
-    Nothing   -> return ()
-    Just pats -> assertTypes valR pats posnFIXME
-  return valR
+
+  -- this should be abstracted better (abstract the entire function eval)
+  do
+    valR <- evalFunc exprB retPats
+    modifyEnv popFunc
+    return valR
+    `catchError` (\err -> do
+      modifyEnv popFunc
+      throwError err)
+
   where
     interpParam = interpPat . paramPat
+
+    evalFunc exprB retPats = do
+      valR <- eval exprB
+      -- assert return value is correct type
+      -- note: this is really not the place to do it. it needs to be in the function
+      case retPats of
+        Nothing   -> return ()
+        Just pats -> assertTypes valR pats posnFIXME
+      return valR
+
 -- error
 eval (ExprTry tryE catchE _, _) = catchError (eval tryE) (const $ eval catchE)
 
