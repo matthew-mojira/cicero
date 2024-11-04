@@ -94,6 +94,7 @@ exprs :                         { [] }
       | expr ';' exprs          { $1 : $3 }
 
 expr  : int                     { parseInt $1 }
+
       | expr '+' expr           { (ExprBinOp Add $1 $3, ($1 <|> $3)) }
       | expr '-' expr           { (ExprBinOp Sub $1 $3, ($1 <|> $3)) }
       | expr '*' expr           { (ExprBinOp Mult $1 $3, ($1 <|> $3)) }
@@ -148,7 +149,7 @@ expr  : int                     { parseInt $1 }
       | func '(' ')' ':' pats '->' expr            { (ExprFunc Nothing [] $7 (Just $5), tokenPosn $1 <-> snd $7) }
       | func '(' params ')' ':' pats '->' expr     { (ExprFunc Nothing $3 $8 (Just $6), tokenPosn $1 <-> snd $8) }
 
-      | expr apply expr         { (ExprApply $1 $3, snd $1 <-> snd $3) }
+      | expr apply expr %prec APPLY   { (ExprApply $1 $3, snd $1 <-> snd $3) }
 
       | true                    { (ExprLit (LitBool True), tokenPosn $1) }
       | false                   { (ExprLit (LitBool False), tokenPosn $1) }
@@ -161,7 +162,7 @@ expr  : int                     { parseInt $1 }
       | type_t                  { (ExprLit (LitPat PatTypeT), tokenPosn $1) }
       | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2) }
 
-apply :  %prec APPLY   {}
+apply : {}
 
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }

@@ -1,0 +1,1 @@
+(Func Just fib [Param {paramName = n, paramPat = PatWild}] (Block [(IfElse (BinOp LOr (BinOp Eq (Id n) (Lit 0)) (BinOp Eq (Id n) (Lit 1))) (Block [(Lit 1)]) (Block [(Apply (Id fib) (BinOp Add (Tuple [(Apply (Id n) (Lit -1))]) (Apply (Id fib) (Tuple [(Apply (Id n) (Lit -2))]))))]))]))
