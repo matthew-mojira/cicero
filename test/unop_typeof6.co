@@ -1,0 +1,4 @@
+func foo(x) -> {
+  42;
+};
+foo(false)?;
