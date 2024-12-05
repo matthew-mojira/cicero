@@ -1,0 +1,47 @@
+==
+5?;
+--
+type[int]
+--
+func foo(x): void -> {
+  42;
+};
+foo?;
+--
+type[func]
+--
+box(42)?;
+--
+type[box[any]]
+--
+box[int_t](42)?;
+--
+type[box[int]]
+--
+(box[int_t](42))?;
+--
+type[box[int]]
+--
+const x = box 75;
+(unbox x)?;
+--
+type[int]
+--
+func foo(x) -> {
+  42;
+};
+foo(false)?;
+--
+type[int]
+--
+func foo(x) -> {
+  42;
+};
+(foo(false))?;
+--
+type[int]
+--
+(unbox(box(5)))?;
+--
+type[int]
+--
