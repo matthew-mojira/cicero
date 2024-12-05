@@ -1,0 +1,14 @@
+func fail() -> 1/0;
+
+func foo() -> {
+  var x = 5;
+  try {
+    x := 6;
+    fail();
+    x := 7;
+  } catch {
+    x + 2;
+  };
+};
+
+foo();

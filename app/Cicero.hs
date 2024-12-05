@@ -29,7 +29,7 @@ main = do
           printErr $ errorArrow err
           exitFailure
         Right (val, env') -> do
-          print val
+          mapM_ print val
           exitSuccess
     [] -> do
       putStrLn "   _______________                        |*\\_/*|________"
