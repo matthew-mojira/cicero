@@ -118,7 +118,7 @@ expr  : int                     { parseInt $1 }
       | id                      { parseId $1 }
 
       | box expr                { (ExprBox (ExprLit (LitPat PatWild), undefined) $2, tokenPosn $1 <-> snd $2) }
-      | box '[' expr ']' expr   { (ExprBox $3 $5, tokenPosn $1 <-> snd $5) }
+      | box '[' expr ']' '(' expr ')'   { (ExprBox $3 $6, tokenPosn $1 <-> snd $6) }
       | unbox expr              { parseUnOp Unbox $1 $2 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
@@ -152,7 +152,7 @@ expr  : int                     { parseInt $1 }
       | type_t                  { (ExprLit (LitPat PatTypeT), tokenPosn $1) }
       | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2) }
 
-apply :  {}
+apply : %prec APPLY {}
 
 args : expr                     { [$1] }
      | expr ',' args            { $1 : $3 }
@@ -171,7 +171,7 @@ pat : '_'                     { PatWild }
     | bool_t                  { PatBoolT }
     | box_t '[' pat ']'       { PatBoxT $3 }
     | func_t                  { PatFuncT }
-    | func_t                  { PatTypeT }
+    | type_t                  { PatTypeT }
 
 {
 
