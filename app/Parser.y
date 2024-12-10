@@ -128,16 +128,16 @@ expr  : int                     { parseInt $1 }
 
       | func id '(' ')' '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6 Nothing, tokenPosn $1 <-> snd $6)) $2 } 
       | func id '(' params ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7 Nothing , tokenPosn $1 <-> snd $7)) $2 } 
+      | func '(' ')' '->' expr            { (ExprFunc Nothing [] $5 Nothing, tokenPosn $1 <-> snd $5) }
+      | func '(' params ')' '->' expr     { (ExprFunc Nothing $3 $6 Nothing, tokenPosn $1 <-> snd $6) }
       | func id '(' ')' ':' void '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $8 (Just []), tokenPosn $1 <-> snd $8)) $2 } 
       | func id '(' params ')' ':' void '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $9 (Just []), tokenPosn $1 <-> snd $9)) $2 } 
+      | func '(' ')' ':' void '->' expr            { (ExprFunc Nothing [] $7 (Just []), tokenPosn $1 <-> snd $7) }
+      | func '(' params ')' ':' void '->' expr     { (ExprFunc Nothing $3 $8 (Just []), tokenPosn $1 <-> snd $8) }
       | func id '(' ')' ':' pats '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $8 (Just $6), tokenPosn $1 <-> snd $8)) $2 } 
       | func id '(' params ')' ':' pats '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $9 (Just $7), tokenPosn $1 <-> snd $9)) $2 } 
-      | '(' ')' '->' expr                     { (ExprFunc Nothing [] $4 Nothing, tokenPosn $1 <-> snd $4) }
-      | '(' params ')' '->' expr              { (ExprFunc Nothing $2 $5 Nothing, tokenPosn $1 <-> snd $5) }
-      | '(' ')' ':' void '->' expr            { (ExprFunc Nothing [] $6 (Just []), tokenPosn $1 <-> snd $6) }
-      | '(' params ')' ':' void '->' expr     { (ExprFunc Nothing $2 $7 (Just []), tokenPosn $1 <-> snd $7) }
-      | '(' ')' ':' pats '->' expr            { (ExprFunc Nothing [] $6 (Just $4), tokenPosn $1 <-> snd $6) }
-      | '(' params ')' ':' pats '->' expr     { (ExprFunc Nothing $2 $7 (Just $5), tokenPosn $1 <-> snd $7) }
+      | func '(' ')' ':' pats '->' expr            { (ExprFunc Nothing [] $7 (Just $5), tokenPosn $1 <-> snd $7) }
+      | func '(' params ')' ':' pats '->' expr     { (ExprFunc Nothing $3 $8 (Just $6), tokenPosn $1 <-> snd $8) }
 
       | expr apply expr %prec APPLY    { (ExprApply $1 $3, snd $1 <-> snd $3) }
 
