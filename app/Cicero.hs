@@ -8,6 +8,8 @@ import Environment
 import Error
 import Value
 
+import Control.Monad
+
 import System.Console.Haskeline
 import System.Environment
 import System.Exit
