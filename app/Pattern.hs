@@ -8,6 +8,7 @@ data Pattern = PatInt
              | PatChar
              | PatAny
              | PatPat
+             | PatErr
              | PatNone
              deriving Eq
 
@@ -19,6 +20,7 @@ instance Show Pattern where
   show PatStr       = "str"
   show PatChar      = "char"
   show PatPat       = "type"
+  show PatErr       = "error"
   show PatAny       = "any"
 
 (<:) :: Pattern -> Pattern -> Bool
@@ -31,4 +33,5 @@ PatFunc     <: PatFunc     = True
 PatChar     <: PatChar     = True
 PatPat      <: PatPat      = True
 PatPat      <: PatPat      = True
+PatErr      <: PatErr      = True
 _           <: _           = False

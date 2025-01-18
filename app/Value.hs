@@ -1,6 +1,7 @@
 module Value where
 
 import AST
+import Error
 import Pattern
 
 data Value = ValInt  Integer
@@ -14,6 +15,7 @@ data Value = ValInt  Integer
                      , retPats :: Maybe [Pattern]    -- return patterns/arity
                      }
            | ValPat  { pat :: Pattern }
+           | ValErr  { err :: Error }
            | ValStr  String
            | ValChar Char
            deriving Eq
@@ -26,6 +28,7 @@ typeof (ValFunc {})   = PatFunc
 typeof (ValStr _)     = PatStr
 typeof (ValChar _)    = PatChar
 typeof (ValPat _)     = PatPat
+typeof (ValErr _)     = PatErr
 
 matches :: Value -> Pattern -> Bool
 matches val pat = (typeof val) <: pat
@@ -36,5 +39,6 @@ instance Show Value where
   show (ValBox _ idx)  = concat ["box[#", show idx, "]"]
   show (ValFunc _ _ _ _) = concat ["func[<impl>]"]
   show (ValPat pat)    = concat ["type[", show pat, "]"]
+  show (ValErr _)      = concat ["error[?]"]
   show (ValStr str)    = show str
   show (ValChar char)  = show char

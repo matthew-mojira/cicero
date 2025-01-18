@@ -24,13 +24,13 @@ main = do
       contents <- hGetContents handle
       res <- eval contents emptyEnv
       case res of
-        Left err -> do
+        (Left err, _) -> do
           printErr $ show err
           let (AlexPn _ line _, _) = posn err
           printErr $ (lines contents)!!(line - 1)
           printErr $ errorArrow err
           exitFailure
-        Right (val, env') -> do
+        (Right val, env') -> do
           mapM_ print val
           exitSuccess
     [] -> do
@@ -61,12 +61,12 @@ loop env = do
     Run str -> do
       res <- eval (str ++ ";") env
       case res of
-        Left err -> do
+        (Left err, env') -> do
           printErr $ show err
           printErr (str ++ ";")
           printErr $ errorArrow err
-          loop env
-        Right (val, env') -> do
+          loop env'
+        (Right val, env') -> do
           mapM_ print val
           loop env'
     PrintEnv -> do
@@ -84,10 +84,10 @@ read = runInputT defaultSettings $ do
     Just ":env"  -> return PrintEnv
     Just input   -> return $ Run input
 
-eval :: String -> Env -> IO (Either Error ([Value], Env))
+eval :: String -> Env -> IO (Either Error [Value], Env)
 eval str env = do
   case runAlex str runHappy of
-    Left  err  -> return $ Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err)
+    Left  err  -> return $ (Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err), env)
     Right prog -> interp prog env
 
 repl :: IO ()

@@ -60,6 +60,9 @@ tokens :-
   box                            { tok TokBox }
   unbox                          { tok TokUnbox }
 
+  try                            { tok TokTry }
+  catch                          { tok TokCatch }
+  finally                        { tok TokFinally }
   print                          { tok TokPrint }
   scan                           { tok TokScan }
 

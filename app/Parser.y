@@ -15,7 +15,7 @@ import AST
 %tokentype { TokenPosn }
 
 %left  '->'
-%right else while do
+%right else while do catch
 %right ':=' '<-'
 %left  or
 %left  and
@@ -79,6 +79,9 @@ import AST
       box             { TokenPosn TokBox (_, _) }
       unbox           { TokenPosn TokUnbox (_, _) }
 
+      try             { TokenPosn TokTry (_, _) }
+      catch           { TokenPosn TokCatch (_, _) }
+      finally         { TokenPosn TokFinally (_, _) }
       print           { TokenPosn TokPrint (_, _) }
       scan            { TokenPosn TokScan (_, _) }
 
@@ -133,6 +136,8 @@ expr  : int                     { parseInt $1 }
 
       | while expr do expr      { (ExprWhile $2 $4, tokenPosn $1 <-> snd $4) }
 
+      | try expr catch expr     { (ExprTry $2 $4 nop, tokenPosn $1 <-> snd $4) }
+
       | func id '(' ')' '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6 Nothing, tokenPosn $1 <-> snd $6)) $2 } 
       | func id '(' params ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7 Nothing , tokenPosn $1 <-> snd $7)) $2 } 
       | func '(' ')' '->' expr            { (ExprFunc Nothing [] $5 Nothing, tokenPosn $1 <-> snd $5) }
@@ -145,6 +150,7 @@ expr  : int                     { parseInt $1 }
       | func id '(' params ')' ':' pats '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $9 (Just $7), tokenPosn $1 <-> snd $9)) $2 } 
       | func '(' ')' ':' pats '->' expr            { (ExprFunc Nothing [] $7 (Just $5), tokenPosn $1 <-> snd $7) }
       | func '(' params ')' ':' pats '->' expr     { (ExprFunc Nothing $3 $8 (Just $6), tokenPosn $1 <-> snd $8) }
+
 
       | expr apply expr %prec APPLY    { (ExprApply $1 $3, snd $1 <-> snd $3) }
 
@@ -184,6 +190,8 @@ pat : '_'                     { PatWild }
     | type_t                  { PatTypeT }
 
 {
+
+nop = (ExprBlock [], undefined)
 
 parseInt :: TokenPosn -> ExprPosn
 parseInt (TokenPosn (TokInt int) pos) =

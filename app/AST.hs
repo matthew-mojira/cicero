@@ -1,5 +1,7 @@
 module AST where
 
+import Data.List
+
 import Lexer (AlexPosn, Posn)
 
 type Prog = [ExprPosn]
@@ -27,6 +29,10 @@ data Expr
                }
   | ExprApply  ExprPosn ExprPosn
   | ExprTuple  [ExprPosn]
+  | ExprTry    { try     :: ExprPosn
+               , catch   :: ExprPosn
+               , finally :: ExprPosn
+               }
   deriving Eq
 
 data Param = Param { paramName :: String, paramPat :: PatT }
@@ -81,7 +87,22 @@ data BinOp
   | Leq
   | Ge
   | Geq
-  deriving (Eq, Show)
+  deriving Eq
+
+instance Show BinOp where
+  show Add = "+"
+  show Sub = "-"
+  show Mult = "*"
+  show Exp = "^"
+  show Div = "/"
+  show LAnd = "and"
+  show LOr = "or"
+  show Eq = "="
+  show Neq = "/="
+  show Le = "<"
+  show Leq = "<="
+  show Ge = ">"
+  show Geq = ">="
 
 binOpInt :: BinOp -> Bool
 binOpInt Add  = True
@@ -111,6 +132,7 @@ binOpBool LOr  = True
 binOpBool _    = False
 
 instance Show Expr where
+
   show (ExprLit val) =
     concat ["(Lit ", show val, ")"]
   show (ExprZeroOp op) =
@@ -118,15 +140,15 @@ instance Show Expr where
   show (ExprUnOp op (expr, _)) =
     concat ["(UnOp ", show op, " ", show expr, ")"]
   show (ExprBinOp op (expr1, _) (expr2, _)) =
-    concat ["(BinOp ", show op, " ", show expr1, " ", show expr2, ")"]
+    concat [show expr1, " ", show op, " ", show expr2]
   show (ExprIfElse (expr1, _) (expr2, _) (expr3, _)) =
-    concat ["(IfElse ", show expr1, " ", show expr2, " ", show expr3, ")"]
+    concat ["(if ", show expr1, " then ", show expr2, " else ", show expr3]
   show (ExprVar id pat (expr, _)) =
     concat ["(Var ", show id, " ", show pat, " ", show expr, ")"]
   show (ExprConst id pat (expr, _)) =
     concat ["(Const ", show id, " ", show pat, " ", show expr, ")"]
-  show (ExprId id) =
-    concat ["(Id ", show id, ")"]
+  show (ExprId id) = id
+--    concat ["(Id ", id, ")"]
   show (ExprAssign id (expr, _)) =
     concat ["(Assign ", id, " ", show expr, ")"]
   show (ExprBox pat (expr, _)) =
@@ -134,15 +156,17 @@ instance Show Expr where
   show (ExprSetBox (expr1, _) (expr2, _)) =
     concat ["(SetBox ", show expr1, " ", show expr2, ")"]
   show (ExprBlock exprs) =
-    concat ["(Block ", show $ map (show . fst) exprs, ")"]
+    concat ["{", concatMap (\(e, _) -> show e ++ ";") exprs, "}"]
   show (ExprFunc name params (expr, _) _) =
     concat ["(Func ", show name, " ", show params, " ", show expr, ")"]
   show (ExprWhile (guard, _) (body, _)) =
-    concat ["(While ", show guard, " ", show body, ")"]
+    concat ["while ", show guard, " do ", show body]
   show (ExprTuple exprs) =
-    concat ["(Tuple ", show $ map (show . fst) exprs, ")"]
+    concat ["(", intercalate "," (map (\(e, _) -> show e) exprs), ")"]
   show (ExprApply func (expr, _)) =
-    concat ["(Apply ", show (fst func), " ", show expr, ")"]
+    concat [show (fst func), " [", show expr, "]"]
+  show (ExprTry (tryE, _) (catchE, _) (finE, _)) =
+    concat ["try ", show tryE, " catch ", show catchE]
 
 instance Show Lit where
   show (LitBool bool) = show bool

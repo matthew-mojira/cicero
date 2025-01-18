@@ -1,0 +1,15 @@
+func fail() -> 1 / 0;
+
+func deg(x: box_t[int_t]): void -> {
+  try {
+    const y = unbox x;
+    x <- 360 / y;
+  } catch {
+    x <- -1;
+  };
+  ();
+};
+
+const b = box[int_t](999);
+deg(b);
+unbox b;

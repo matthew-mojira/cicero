@@ -1,0 +1,7 @@
+func double_box(b) -> {
+  b <- 2 * unbox b;
+};
+
+var x: box_t[int_t] = box[5?](5);
+double_box(x);
+x;

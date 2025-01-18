@@ -1,0 +1,7 @@
+func fst(x, y) -> x;
+func snd(x, y) -> y;
+
+func select(cond: bool_t, valT, valF): int_t ->
+  if cond then fst(valT, valF) else snd(valT, valF);
+
+select(667 = 668, 1, 2) + 1;
