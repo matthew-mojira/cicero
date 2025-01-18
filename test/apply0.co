@@ -1,0 +1,5 @@
+func apply(f, x) -> {
+  f(x);
+};
+func double(x) -> x * 2;
+apply(double, 10);

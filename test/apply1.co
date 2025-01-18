@@ -1,0 +1,4 @@
+func apply(f, x) -> {
+  f(x);
+};
+apply(func (x) -> x * 2, 10);

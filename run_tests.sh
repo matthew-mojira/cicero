@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cabal install --installdir=. --overwrite-policy=always
+
 pass_count=0
 total_count=0
 
