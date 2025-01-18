@@ -56,7 +56,7 @@ common warnings
 
 executable cicero
     -- Import common warning flags.
-    import:           warnings
+    -- import:           warnings
 
     -- .hs or .lhs file containing the Main module.
     main-is:          Cicero.hs
@@ -76,7 +76,7 @@ executable cicero
                       monad-loops
 
     -- Directories containing source files.
-    hs-source-dirs:   app
+    hs-source-dirs:   app, test
 
     -- Base language which the package is written in.
     default-language: Haskell2010

@@ -1,0 +1,4 @@
+const x = box 42;
+const y = x;
+x <- 173;
+unbox y;

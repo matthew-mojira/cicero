@@ -1,0 +1,4 @@
+Enable tests with expected exceptions (or just use exception handling in the
+language!)
+* 0^0
+* divide by zero

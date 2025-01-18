@@ -67,7 +67,7 @@ tokens :-
   func_t                         { tok TokFuncT }
   void                           { tok TokVoid }
 
-  $digit+                        { tok (TokInt undefined) }
+  \-?$digit+                     { tok (TokInt undefined) }
   [$alpha\_][$alpha$digit\_]*    { tok (TokId undefined) }
 
 {

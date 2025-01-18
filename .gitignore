@@ -26,3 +26,5 @@ Lexer.hs
 Parser.hs
 /docs/book
 .DS_Store
+/test/output/*
+/cicero

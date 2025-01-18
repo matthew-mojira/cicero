@@ -1,0 +1,13 @@
+func apply(f, x) -> {
+  f(x);
+};
+==
+func double(x) -> x * 2;
+apply(double, 10);
+--
+20
+--
+apply((x) -> x * 2, 10);
+--
+20
+--
