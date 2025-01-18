@@ -237,15 +237,6 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
 
   where
     interpParam = interpPat . paramPat
--- I/O
-eval (ExprUnOp Print expr@(_, posn), _) = do
-  x <- eval expr
-  val <- assertArity1 x posn
-  liftIO $ print val
-  return []
-eval (ExprZeroOp Scan, _) = do
-  str <- liftIO $ getLine
-  return [ValStr str]
 
     evalFunc exprB retPats = do
       valR <- eval exprB
@@ -255,10 +246,17 @@ eval (ExprZeroOp Scan, _) = do
         Nothing   -> return ()
         Just pats -> assertTypes valR pats posnFIXME
       return valR
-
 -- error
 eval (ExprTry tryE catchE _, _) = catchError (eval tryE) (const $ eval catchE)
-
+-- I/O
+eval (ExprUnOp Print expr@(_, posn), _) = do
+  x <- eval expr
+  val <- assertArity1 x posn
+  liftIO $ print val
+  return []
+eval (ExprZeroOp Scan, _) = do
+  str <- liftIO $ getLine
+  return [ValStr str]
 
 interpPat :: PatT -> Pattern
 interpPat PatIntT       = PatInt

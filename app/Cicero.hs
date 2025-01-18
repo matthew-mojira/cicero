@@ -30,7 +30,7 @@ main = do
           printErr $ (lines contents)!!(line - 1)
           printErr $ errorArrow err
           exitFailure
-        Right (val, env') -> do
+        (Right val, env') -> do
           mapM_ print val
           exitSuccess
     [] -> do
@@ -66,7 +66,7 @@ loop env = do
           printErr (str ++ ";")
           printErr $ errorArrow err
           loop env'
-        Right (val, env') -> do
+        (Right val, env') -> do
           mapM_ print val
           loop env'
     PrintEnv -> do
