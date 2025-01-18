@@ -20,6 +20,7 @@ data Env = Env { idxs :: [FuncEntry]
                  --          \-- [ bind1, bind2, bind3, ..., bindN ]
                , vals :: [Value]
                }
+         deriving Show
 
 emptyEnv :: Env
 emptyEnv = Env [[[]]] []
@@ -89,5 +90,5 @@ setBox idx val env@Env {vals = vals} =
 getClosure :: Env -> [(String, Value)]
 getClosure Env {idxs = idxs} = map (\(s, (v, _)) -> (s, v)) (concat $ head idxs)
 
-instance Show Env where
-  show = undefined
+--instance Show Env where
+--  show = undefined

@@ -1,0 +1,27 @@
+==
+x;
+--
+--
+const x = 12;
+x := 11;
+--
+--
+const x = 15;
+const x = 77;
+--
+--
+var x = 15;
+const x = 77;
+--
+--
+const x = 77;
+var x = 15;
+--
+--
+var x = 23;
+var x = 15;
+--
+--
+const x = x + 333;
+--
+--

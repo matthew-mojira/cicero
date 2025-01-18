@@ -1,0 +1,4 @@
+func foo(x): void -> {
+  42;
+};
+foo?;

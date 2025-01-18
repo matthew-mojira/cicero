@@ -8,6 +8,8 @@ import Environment
 import Error
 import Value
 
+import Control.Monad
+
 import System.Console.Haskeline
 import System.Environment
 import System.Exit
@@ -28,8 +30,8 @@ main = do
           printErr $ (lines contents)!!(line - 1)
           printErr $ errorArrow err
           exitFailure
-        (Right val, env') -> do
-          print val
+        Right (val, env') -> do
+          mapM_ print val
           exitSuccess
     [] -> do
       putStrLn "   _______________                        |*\\_/*|________"
@@ -64,8 +66,8 @@ loop env = do
           printErr (str ++ ";")
           printErr $ errorArrow err
           loop env'
-        (Right val, env') -> do
-          print val
+        Right (val, env') -> do
+          mapM_ print val
           loop env'
     PrintEnv -> do
       print env
@@ -86,9 +88,7 @@ eval :: String -> Env -> IO (Either Error [Value], Env)
 eval str env = do
   case runAlex str runHappy of
     Left  err  -> return $ (Left $ Error (AlexPn 0 0 0, AlexPn 0 0 0) (ManualError err), env)
-    Right prog -> do
-      print $ fst $ prog!!0
-      interp prog env
+    Right prog -> interp prog env
 
 repl :: IO ()
 repl = loop emptyEnv

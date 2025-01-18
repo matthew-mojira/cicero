@@ -1,0 +1,67 @@
+==
+unbox(box 40);
+--
+40
+--
+unbox(unbox(box(box(40))));
+--
+40
+--
+const x = box 42;
+unbox x;
+--
+42
+--
+const x = box 42;
+x <- 73;
+unbox x;
+--
+73
+--
+const x = box 72;
+const y = box 42;
+x <- 73;
+unbox y;
+--
+42
+--
+const x = box 42;
+const y = unbox x;
+y;
+--
+42
+--
+const x = box 42;
+const y = x;
+unbox y;
+--
+42
+--
+const x = box 42;
+const y = x;
+unbox x;
+--
+42
+--
+const x = box 42;
+const y = x;
+x <- 173;
+unbox y;
+--
+173
+--
+const x = box 42;
+const y = x;
+y <- 173;
+unbox x;
+--
+173
+--
+const x = box 42;
+var y = x;
+y := box 61;
+y <- 173;
+unbox x;
+--
+173
+--

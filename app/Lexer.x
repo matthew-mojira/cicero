@@ -63,6 +63,8 @@ tokens :-
   try                            { tok TokTry }
   catch                          { tok TokCatch }
   finally                        { tok TokFinally }
+  print                          { tok TokPrint }
+  scan                           { tok TokScan }
 
   int_t                          { tok TokIntT }
   bool_t                         { tok TokBoolT }
@@ -71,9 +73,10 @@ tokens :-
   func_t                         { tok TokFuncT }
   void                           { tok TokVoid }
 
-  $digit+                        { tok (TokInt undefined) }
+  \-?$digit+                     { tok (TokInt undefined) }
   [$alpha\_][$alpha$digit\_]*    { tok (TokId undefined) }
-
+  \"[^\"]*\"                     { tok (TokStr undefined) }
+  \'[^\']*\'                     { tok (TokChar undefined) }
 {
 
 alexEOF :: Alex TokenPosn
@@ -84,6 +87,12 @@ tok (TokId _) (posn, _, _, str) len = return $ TokenPosn (TokId (take len str)) 
   where
     stop = foldl alexMove posn $ take len str
 tok (TokInt _) (posn, _, _, str) len = return $ TokenPosn (TokInt (read $ take len str)) (posn, stop)
+  where
+    stop = foldl alexMove posn $ take len str
+tok (TokStr _) (posn, _, _, str) len = return $ TokenPosn (TokStr (read $ take len str)) (posn, stop)
+  where
+    stop = foldl alexMove posn $ take len str
+tok (TokChar _) (posn, _, _, str) len = return $ TokenPosn (TokChar (read $ take len str)) (posn, stop)
   where
     stop = foldl alexMove posn $ take len str
 tok token (posn, _, _, str) len = return $ TokenPosn token (posn, stop)

@@ -1,0 +1,6 @@
+var i = 0;
+while i < 1000000 do {
+  box i;
+  i := i + 1;
+};
+box 25;

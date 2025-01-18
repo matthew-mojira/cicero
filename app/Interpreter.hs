@@ -10,6 +10,7 @@ import Control.Monad
 import Control.Monad.Except
 import Control.Monad.Identity
 import Control.Monad.Loops
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 
@@ -43,6 +44,8 @@ eval (ExprLit lit, _) = case lit of
   (LitInt int)   -> return [ValInt int]
   (LitBool bool) -> return [ValBool bool]
   (LitPat pat)   -> return [ValPat (interpPat pat)]
+  (LitStr str)   -> return [ValStr str]
+  (LitChar char) -> return [ValChar char]
 eval (ExprUnOp Typeof expr@(_, posn), _) = do
   vals <- eval expr
   val  <- assertArity1 vals posn
@@ -234,6 +237,15 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
 
   where
     interpParam = interpPat . paramPat
+-- I/O
+eval (ExprUnOp Print expr@(_, posn), _) = do
+  x <- eval expr
+  val <- assertArity1 x posn
+  liftIO $ print val
+  return []
+eval (ExprZeroOp Scan, _) = do
+  str <- liftIO $ getLine
+  return [ValStr str]
 
     evalFunc exprB retPats = do
       valR <- eval exprB
@@ -253,6 +265,8 @@ interpPat PatIntT       = PatInt
 interpPat PatBoolT      = PatBool
 interpPat (PatBoxT pat) = PatBox (interpPat pat)
 interpPat PatFuncT      = PatFunc
+interpPat PatStrT       = PatStr
+interpPat PatCharT      = PatChar
 interpPat PatWild       = PatAny
 
 assertType :: Value -> Pattern -> Posn -> Matthew ()

@@ -1,0 +1,3 @@
+const x = box 42;
+const y = x;
+unbox x;

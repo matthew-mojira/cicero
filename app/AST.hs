@@ -10,6 +10,7 @@ type ExprPosn = (Expr, Posn)
 
 data Expr
   = ExprLit    Lit
+  | ExprZeroOp ZeroOp
   | ExprUnOp   UnOp ExprPosn
   | ExprBinOp  BinOp ExprPosn ExprPosn
   | ExprIfElse ExprPosn ExprPosn ExprPosn
@@ -35,10 +36,12 @@ data Expr
   deriving Eq
 
 data Param = Param { paramName :: String, paramPat :: PatT }
-               deriving (Eq, Show)
+           deriving (Eq, Show)
 
 data Lit = LitInt  Integer
          | LitBool Bool
+         | LitStr  String
+         | LitChar Char
          | LitPat  PatT
          deriving Eq
 
@@ -47,12 +50,27 @@ data PatT = PatIntT
           | PatBoxT PatT
           | PatFuncT
           | PatTypeT
+          | PatStrT
+          | PatCharT
           | PatWild
           deriving (Eq, Show)
+
+data LitT = IntT
+          | BoolT
+          | BoxT
+          | TypeT
+          | FuncT
+          | StrT
+          | CharT
+          deriving (Eq, Show)
+
+data ZeroOp = Scan
+            deriving (Eq, Show)
 
 data UnOp = LNot
           | Unbox
           | Typeof
+          | Print
           deriving (Eq, Show)
 
 data BinOp
@@ -114,8 +132,11 @@ binOpBool LOr  = True
 binOpBool _    = False
 
 instance Show Expr where
-  show (ExprLit val) = show val
---    concat ["(Lit ", show val, ")"]
+
+  show (ExprLit val) =
+    concat ["(Lit ", show val, ")"]
+  show (ExprZeroOp op) =
+    concat ["(ZeroOp ", show op, ")"]
   show (ExprUnOp op (expr, _)) =
     concat ["(UnOp ", show op, " ", show expr, ")"]
   show (ExprBinOp op (expr1, _) (expr2, _)) =
@@ -151,6 +172,8 @@ instance Show Lit where
   show (LitBool bool) = show bool
   show (LitInt int)   = show int
   show (LitPat pat)   = show pat
+  show (LitStr str)   = str
+  show (LitChar char) = show char
 
 --instance Show UnOp where
 --  show LNot   = "not"

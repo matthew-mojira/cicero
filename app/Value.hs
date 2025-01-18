@@ -16,6 +16,8 @@ data Value = ValInt  Integer
                      }
            | ValPat  { pat :: Pattern }
            | ValErr  { err :: Error }
+           | ValStr  String
+           | ValChar Char
            deriving Eq
 
 typeof :: Value -> Pattern
@@ -23,6 +25,8 @@ typeof (ValInt _)     = PatInt
 typeof (ValBool _)    = PatBool
 typeof (ValBox pat _) = PatBox pat
 typeof (ValFunc {})   = PatFunc
+typeof (ValStr _)     = PatStr
+typeof (ValChar _)    = PatChar
 typeof (ValPat _)     = PatPat
 typeof (ValErr _)     = PatErr
 
@@ -36,3 +40,5 @@ instance Show Value where
   show (ValFunc _ _ _ _) = concat ["func[<impl>]"]
   show (ValPat pat)    = concat ["type[", show pat, "]"]
   show (ValErr _)      = concat ["error[?]"]
+  show (ValStr str)    = show str
+  show (ValChar char)  = show char
