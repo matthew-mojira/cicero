@@ -321,7 +321,7 @@ assertPat id val posnV pat@(TypeP typ (Just expr@(_, posn))) = do
   assertType val (interpType typ) posnV -- refactor everything
   env <- getEnv
   let env' = extendVar id val pat env
-  res <- liftIO $ runStateT (runExceptT (eval expr)) env
+  res <- liftIO $ runStateT (runExceptT (eval expr)) env'
   case res of
     (Left  err, _)     -> throwError err
     (Right vals, env'') -> do
@@ -342,7 +342,7 @@ assertPat' id val posnV pat@(TypeP typ (Just expr@(_, posn))) = do
   assertType val (interpType typ) posnV -- refactor everything
   env <- getEnv
   let env' = setVar id val env
-  res <- liftIO $ runStateT (runExceptT (eval expr)) env
+  res <- liftIO $ runStateT (runExceptT (eval expr)) env'
   case res of
     (Left  err, _)     -> throwError err
     (Right vals, env'') -> do

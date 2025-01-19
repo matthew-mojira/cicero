@@ -67,6 +67,8 @@ data Token = TokPlus
            | TokFuncT
            | TokVoid
 
+           | TokWhere
+
            -- I/O
            | TokPrint
            | TokScan

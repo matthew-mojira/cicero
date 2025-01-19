@@ -73,6 +73,8 @@ tokens :-
   func_t                         { tok TokFuncT }
   void                           { tok TokVoid }
 
+  where                          { tok TokWhere }
+
   \-?$digit+                     { tok (TokInt undefined) }
   [$alpha\_][$alpha$digit\_]*    { tok (TokId undefined) }
   \"[^\"]*\"                     { tok (TokStr undefined) }

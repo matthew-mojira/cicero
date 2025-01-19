@@ -24,6 +24,7 @@ import AST
 %left  '+' '-'
 %left  '*' '/'
 %right '**' '^'
+%left  where
 %right not box unbox
 %left  '?'
 %left  APPLY
@@ -91,6 +92,8 @@ import AST
       type_t          { TokenPosn TokTypeT (_, _) }
       func_t          { TokenPosn TokFuncT (_, _) }
       void            { TokenPosn TokVoid (_, _) }
+
+      where           { TokenPosn TokWhere (_, _) }
 %%
 
 exprs :                         { [] }
@@ -136,18 +139,18 @@ expr  : int                     { parseInt $1 }
 
       | try expr catch expr     { (ExprTry $2 $4 nop, tokenPosn $1 <-> snd $4) }
 
-      | func id '(' ')' '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6 Nothing, tokenPosn $1 <-> snd $6)) $2 } 
-      | func id '(' params ')' '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7 Nothing , tokenPosn $1 <-> snd $7)) $2 } 
-      | func '(' ')' '->' expr            { (ExprFunc Nothing [] $5 Nothing, tokenPosn $1 <-> snd $5) }
-      | func '(' params ')' '->' expr     { (ExprFunc Nothing $3 $6 Nothing, tokenPosn $1 <-> snd $6) }
-      | func id '(' ')' ':' void '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $8 (Just []), tokenPosn $1 <-> snd $8)) $2 } 
+      | func id '('        ')'          '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $6 Nothing, tokenPosn $1 <-> snd $6)) $2 } 
+      | func id '(' params ')'          '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $7 Nothing , tokenPosn $1 <-> snd $7)) $2 } 
+      | func    '('        ')'          '->' expr  { (ExprFunc Nothing [] $5 Nothing, tokenPosn $1 <-> snd $5) }
+      | func    '(' params ')'          '->' expr  { (ExprFunc Nothing $3 $6 Nothing, tokenPosn $1 <-> snd $6) }
+      | func id '('        ')' ':' void '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $8 (Just []), tokenPosn $1 <-> snd $8)) $2 } 
       | func id '(' params ')' ':' void '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $9 (Just []), tokenPosn $1 <-> snd $9)) $2 } 
-      | func '(' ')' ':' void '->' expr            { (ExprFunc Nothing [] $7 (Just []), tokenPosn $1 <-> snd $7) }
-      | func '(' params ')' ':' void '->' expr     { (ExprFunc Nothing $3 $8 (Just []), tokenPosn $1 <-> snd $8) }
-      | func id '(' ')' ':' pats '->' expr         { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $8 (Just $6), tokenPosn $1 <-> snd $8)) $2 } 
+      | func    '('        ')' ':' void '->' expr  { (ExprFunc Nothing [] $7 (Just []), tokenPosn $1 <-> snd $7) }
+      | func    '(' params ')' ':' void '->' expr  { (ExprFunc Nothing $3 $8 (Just []), tokenPosn $1 <-> snd $8) }
+      | func id '('        ')' ':' pats '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) [] $8 (Just $6), tokenPosn $1 <-> snd $8)) $2 } 
       | func id '(' params ')' ':' pats '->' expr  { (\(TokenPosn (TokId id) _) -> (ExprFunc (Just id) $4 $9 (Just $7), tokenPosn $1 <-> snd $9)) $2 } 
-      | func '(' ')' ':' pats '->' expr            { (ExprFunc Nothing [] $7 (Just $5), tokenPosn $1 <-> snd $7) }
-      | func '(' params ')' ':' pats '->' expr     { (ExprFunc Nothing $3 $8 (Just $6), tokenPosn $1 <-> snd $8) }
+      | func    '('        ')' ':' pats '->' expr  { (ExprFunc Nothing [] $7 (Just $5), tokenPosn $1 <-> snd $7) }
+      | func    '(' params ')' ':' pats '->' expr  { (ExprFunc Nothing $3 $8 (Just $6), tokenPosn $1 <-> snd $8) }
 
       | expr apply expr %prec APPLY    { (ExprApply $1 $3, snd $1 <-> snd $3) }
 
@@ -177,11 +180,14 @@ params : param                { [$1] }
 param : id                    { (\(TokenPosn (TokId id) _) -> (Param id AnyP)) $1 }
       | id ':' pat            { (\(TokenPosn (TokId id) _) -> (Param id $3)) $1 }
 
-pat : '_'                     { AnyP }
-    | int_t                   { TypeP IntT Nothing }
-    | bool_t                  { TypeP BoolT Nothing }
-    | func_t                  { TypeP FuncT Nothing }
-    | type_t                  { TypeP TypeT Nothing }
+pat  : '_'                     { AnyP }        
+     | patT                    { TypeP $1 Nothing }
+     | patT where expr         { TypeP $1 (Just $3) }
+
+patT : int_t                   { IntT  }
+     | bool_t                  { BoolT }
+     | func_t                  { FuncT }
+     | type_t                  { TypeT }
 
 typeT : {}
 
