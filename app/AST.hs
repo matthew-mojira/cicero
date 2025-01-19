@@ -14,8 +14,8 @@ data Expr
   | ExprUnOp   UnOp ExprPosn
   | ExprBinOp  BinOp ExprPosn ExprPosn
   | ExprIfElse ExprPosn ExprPosn ExprPosn
-  | ExprVar    String PatT ExprPosn
-  | ExprConst  String PatT ExprPosn
+  | ExprVar    String Pattern ExprPosn
+  | ExprConst  String Pattern ExprPosn
   | ExprId     String
   | ExprAssign String ExprPosn
   | ExprBox    { boxPat :: ExprPosn, boxInit :: ExprPosn}
@@ -25,7 +25,7 @@ data Expr
   | ExprFunc   { funcName   :: (Maybe String)
                , funcParams :: [Param]
                , funcBody   :: ExprPosn
-               , funcRetPat :: Maybe [PatT]
+               , funcRetPat :: Maybe [Pattern]
                }
   | ExprApply  ExprPosn ExprPosn
   | ExprTuple  [ExprPosn]
@@ -35,29 +35,24 @@ data Expr
                }
   deriving Eq
 
-data Param = Param { paramName :: String, paramPat :: PatT }
+data Param = Param { paramName :: String, paramPat :: Pattern }
            deriving (Eq, Show)
 
 data Lit = LitInt  Integer
          | LitBool Bool
          | LitStr  String
          | LitChar Char
-         | LitPat  PatT
+         | LitType LitT
          deriving Eq
 
-data PatT = PatIntT
-          | PatBoolT
-          | PatBoxT PatT
-          | PatFuncT
-          | PatTypeT
-          | PatStrT
-          | PatCharT
-          | PatWild
-          deriving (Eq, Show)
+data Pattern = AnyP
+             | NoneP
+ 		     | TypeP { typ :: LitT , pred :: Maybe ExprPosn }
+             deriving (Eq, Show)
 
 data LitT = IntT
           | BoolT
-          | BoxT
+          | BoxT LitT
           | TypeT
           | FuncT
           | StrT
@@ -171,7 +166,7 @@ instance Show Expr where
 instance Show Lit where
   show (LitBool bool) = show bool
   show (LitInt int)   = show int
-  show (LitPat pat)   = show pat
+  show (LitType typ)  = show typ
   show (LitStr str)   = str
   show (LitChar char) = show char
 

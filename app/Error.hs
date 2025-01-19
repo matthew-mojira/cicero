@@ -1,7 +1,7 @@
 module Error where
 
 import Lexer(AlexPosn(AlexPn), Posn)
-import Pattern
+import Type
 
 data Error = Error { posn :: Posn
                    , kind :: ErrorKind
@@ -12,7 +12,8 @@ instance Show Error where
   show (Error (AlexPn _ line col, _) kind) = concat
     ["<repl>:", show line, ":", show col, ": ", show kind]
 
-data ErrorKind = TypeError          { expected :: Pattern, actual :: Pattern }
+data ErrorKind = TypeError          { expected :: Type, actual :: Type }
+               | AssertionError     { msg :: String }
                | ArithmeticError    { msg :: String }
                | NameError          { id :: String }
                | RedefinitionError  { id :: String }
@@ -24,6 +25,8 @@ data ErrorKind = TypeError          { expected :: Pattern, actual :: Pattern }
 instance Show ErrorKind where
   show (TypeError exp act)   = unwords
     ["type error: expected value of type", show exp, "but got", show act]
+  show (AssertionError msg) = unwords
+    ["assertion error:", msg]
   show (ArithmeticError msg) = unwords
     ["arithmetic error:", msg]
   show (NameError id) = unwords

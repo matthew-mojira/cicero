@@ -4,7 +4,6 @@ import Data.Maybe
 import Data.List
 
 import Value
-import Pattern
 import AST
 
 type Entry      = (String, (Value, Pattern))
@@ -30,7 +29,7 @@ popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
 
 pushFunc :: [(String, Value)] -> [(String, Value)] -> Env -> Env
 pushFunc args closure env@Env {idxs = idxs} =
-  env {idxs = [map (\(id, val) -> (id, (val, PatNone))) (args ++ closure)]:idxs}
+  env {idxs = [map (\(id, val) -> (id, (val, NoneP))) (args ++ closure)]:idxs}
 
 popBlock :: Env -> Env
 popBlock env@Env {idxs = idxs} = env {idxs = (tail (head idxs)):tail idxs}
@@ -45,7 +44,7 @@ lookupEnv' :: String -> Env -> Maybe (Value, Pattern)  -- strictly in the same s
 lookupEnv' id (Env {idxs = idxs}) = lookup id (head (head idxs))
 
 extendConst :: String -> Value -> Env -> Env
-extendConst id val env = extendVar id val PatNone env
+extendConst id val env = extendVar id val NoneP env
 
 extendVar :: String -> Value -> Pattern -> Env -> Env
 extendVar id val pat env@Env {idxs = idxs} =

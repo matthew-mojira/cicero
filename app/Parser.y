@@ -119,16 +119,14 @@ expr  : int                     { parseInt $1 }
       | '(' args ')'            { (ExprTuple $2, tokenPosn $1 <-> tokenPosn $3) }
       | '{' exprs '}'           { (ExprBlock $2, tokenPosn $1 <-> tokenPosn $3)}
       
-      | var id '=' expr         { parseVar $1 $2 PatWild $4 }
-      | var id ':' pat '=' expr         { parseVar $1 $2 $4 $6 }
-      | const id '=' expr       { parseConst $1 $2 PatWild $4 }
-      | const id ':' pat '=' expr       { parseConst $1 $2 $4 $6 }
+      | var id '=' expr             { parseVar $1 $2 AnyP $4 }
+      | var id ':' pat '=' expr     { parseVar $1 $2 $4 $6 }
+      | const id '=' expr           { parseConst $1 $2 AnyP $4 }
+      | const id ':' pat '=' expr   { parseConst $1 $2 $4 $6 }
 
       | id ':=' expr            { parseAssign $1 $3 }
       | id                      { parseId $1 }
 
-      | box expr                { (ExprBox (ExprLit (LitPat PatWild), undefined) $2, tokenPosn $1 <-> snd $2) }
-      | box '[' expr ']' '(' expr ')'   { (ExprBox $3 $6, tokenPosn $1 <-> snd $6) }
       | unbox expr              { parseUnOp Unbox $1 $2 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
@@ -151,21 +149,18 @@ expr  : int                     { parseInt $1 }
       | func '(' ')' ':' pats '->' expr            { (ExprFunc Nothing [] $7 (Just $5), tokenPosn $1 <-> snd $7) }
       | func '(' params ')' ':' pats '->' expr     { (ExprFunc Nothing $3 $8 (Just $6), tokenPosn $1 <-> snd $8) }
 
-
       | expr apply expr %prec APPLY    { (ExprApply $1 $3, snd $1 <-> snd $3) }
 
-      | print expr              { parseUnOp Print $1 $2 }
+      | print '(' expr ')'      { parseUnOp Print $1 $3 }
       | scan                    { (ExprZeroOp Scan, tokenPosn $1) }
 
       | true                    { (ExprLit (LitBool True), tokenPosn $1) }
       | false                   { (ExprLit (LitBool False), tokenPosn $1) }
 
-      | '_'                     { (ExprLit (LitPat PatWild), tokenPosn $1) }
-      | int_t                   { (ExprLit (LitPat PatIntT), tokenPosn $1) }
-      | bool_t                  { (ExprLit (LitPat PatBoolT), tokenPosn $1) }
-      | box_t '[' pat ']'       { (ExprLit (LitPat (PatBoxT $3)), tokenPosn $1 <-> tokenPosn $4) }
-      | func_t                  { (ExprLit (LitPat PatFuncT), tokenPosn $1) }
-      | type_t                  { (ExprLit (LitPat PatTypeT), tokenPosn $1) }
+      | int_t                   { (ExprLit (LitType IntT), tokenPosn $1) }
+      | bool_t                  { (ExprLit (LitType BoolT), tokenPosn $1) }
+      | func_t                  { (ExprLit (LitType FuncT), tokenPosn $1) }
+      | type_t                  { (ExprLit (LitType TypeT), tokenPosn $1) }
       | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2) }
 
 apply : %prec APPLY {}
@@ -179,15 +174,16 @@ pats : pat                    { [$1] }
 params : param                { [$1] }
        | param ',' params     { parseParams $1 $3 }
 
-param : id                    { (\(TokenPosn (TokId id) _) -> (Param id PatWild)) $1 }
+param : id                    { (\(TokenPosn (TokId id) _) -> (Param id AnyP)) $1 }
       | id ':' pat            { (\(TokenPosn (TokId id) _) -> (Param id $3)) $1 }
 
-pat : '_'                     { PatWild }
-    | int_t                   { PatIntT }
-    | bool_t                  { PatBoolT }
-    | box_t '[' pat ']'       { PatBoxT $3 }
-    | func_t                  { PatFuncT }
-    | type_t                  { PatTypeT }
+pat : '_'                     { AnyP }
+    | int_t                   { TypeP IntT Nothing }
+    | bool_t                  { TypeP BoolT Nothing }
+    | func_t                  { TypeP FuncT Nothing }
+    | type_t                  { TypeP TypeT Nothing }
+
+typeT : {}
 
 {
 
@@ -209,11 +205,11 @@ parseUnOp :: UnOp -> TokenPosn -> ExprPosn -> ExprPosn
 parseUnOp op (TokenPosn _ pos1) expr@(_, pos2) =
   (ExprUnOp op expr, pos1 <-> pos2)
 
-parseVar :: TokenPosn -> TokenPosn -> PatT -> ExprPosn -> ExprPosn
+parseVar :: TokenPosn -> TokenPosn -> Pattern -> ExprPosn -> ExprPosn
 parseVar (TokenPosn _ pos1) (TokenPosn (TokId id) _) pat expr@(_, pos2) =
   (ExprVar id pat expr, pos1 <-> pos2)
 
-parseConst :: TokenPosn -> TokenPosn -> PatT -> ExprPosn -> ExprPosn
+parseConst :: TokenPosn -> TokenPosn -> Pattern -> ExprPosn -> ExprPosn
 parseConst (TokenPosn _ pos1) (TokenPosn (TokId id) _) pat expr@(_, pos2) =
   (ExprConst id pat expr, pos1 <-> pos2)
 
