@@ -14,6 +14,8 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 
+import System.IO
+
 import Data.List
 import Data.Maybe
 
@@ -113,10 +115,10 @@ eval (ExprVar id pat expr@(_, posnV), posn) = do
     TypeP typ Nothing -> do
       assertType posn (interpType typ) val
       modifyEnv $ extendVar id val pat
-    TypeP typ (Just exprC@(_, posnC)) -> do
+    TypeP typ (Just exprC) -> do
       assertType posn (interpType typ) val
       env <- getEnv
-      res <- liftIO $ runStateT (runExceptT (eval expr)) (extendVar id val pat env)
+      res <- liftIO $ runStateT (runExceptT (eval exprC)) (extendVar id val pat env)
       -- three cases of errors
       -- - an error happened while evaluating the condition
       -- - the condition did not error, but the value is not a boolean
@@ -192,9 +194,6 @@ eval (ExprFunc name params expr retPats, _) = do
     Nothing   -> return $ [ValFunc params (getClosure env) expr retPats]
     Just self -> do
       let func = ValFunc params ((self, func):(getClosure env)) expr retPats
-      -- TODO what does it mean that a function can be overwritten?
-      -- it simply means the binding is, but perhaps it should change the
-      -- internal definition? differential intuition
       modifyEnv $ extendVar' self func
       return [func]
 eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
@@ -265,6 +264,7 @@ eval (ExprTry tryE catchE _, _) = catchError (eval tryE) (const $ eval catchE)
 eval (ExprUnOp Print expr@(_, posn), _) = do
   val <- eval expr >>= assertArity1 posn
   liftIO $ print val
+  liftIO $ hFlush stdout
   return []
 eval (ExprZeroOp Scan, _) = do
   str <- liftIO $ getLine

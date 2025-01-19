@@ -1,0 +1,4 @@
+var x: int_t where x > 0 = 99999;
+
+while true do
+  x := x - 1;

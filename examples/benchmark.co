@@ -1,0 +1,40 @@
+func foo(x, y) -> {
+  if x < y
+    then x + 213
+    else y * 9;
+};
+
+func mod(a, b) -> a - (a / b) * b;
+
+func min(a, b) -> if a < b then a else b;
+
+func bar(z) -> {
+  if z < 41 then 1
+  else if mod(z, 4) = 0 then 61
+  else if z > 10000000 then 999
+  else 23;
+};
+
+func benchmark() -> {
+  var a = 71;
+  var b = 14;
+  var c = 303;
+
+  while a + b < c do {
+    var d = c;
+    c := c * 17 / 3;
+    a := foo(a, b);
+    var i = 0;
+    while i < min(c, d) do {
+      b := mod(bar(i), 7);
+      i := i + 1;
+    };
+    print(a);
+    print(b);
+    print(c);
+  };
+};
+
+print("Running benchmark");
+
+benchmark();
