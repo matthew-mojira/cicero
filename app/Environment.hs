@@ -46,6 +46,7 @@ lookupEnv' id (Env {idxs = idxs}) = lookup id (head (head idxs))
 extendConst :: String -> Value -> Env -> Env
 extendConst id val env = extendVar id val NoneP env
 
+-- this does not check the value matches the pattern
 extendVar :: String -> Value -> Pattern -> Env -> Env
 extendVar id val pat env@Env {idxs = idxs} =
   let Just (fun, funs) = uncons idxs

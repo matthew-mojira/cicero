@@ -122,24 +122,9 @@ eval (ExprVar id pat expr@(_, posnV), posn) = do
       vals <- eval expr
       assertArity 1 vals posnV
       let [val] = vals
-      -- TODO modification is observable
+      assertPat id val posnV pat
       modifyEnv $ extendVar id val pat
-      case pat of
-        AnyP -> do
-          return [val]
-        TypeP typ con -> do
-          assertType val (interpType typ) posnV
-          case con of
-            Nothing -> do
-              return [val]
-            Just exprC@(_, posnC) -> do
-              -- assert the condition
-              valC <- eval exprC
-              assertTypes valC [TypeBool] posnC
-              let [ValBool bool] = valC
-              if bool
-                then return [val]
-                else throwError $ Error posnC (AssertionError $ "failed to assign to variable " ++ id)
+      return [val]
 eval (ExprConst id pat expr@(_, posnV), posn) = do
   env <- getEnv
   case lookupEnv' id env of
@@ -149,23 +134,9 @@ eval (ExprConst id pat expr@(_, posnV), posn) = do
       vals <- eval expr
       assertArity 1 vals posnV
       let [val] = vals
-      -- TODO modification is observable
+      assertPat id val posnV pat
       modifyEnv $ extendConst id val
-      case pat of
-        AnyP -> return [val]
-        TypeP typ con -> do
-          assertType val (interpType typ) posnV
-          case con of
-            Nothing -> do
-              return [val]
-            Just exprC@(_, posnC) -> do
-              -- assert the condition
-              valC <- eval exprC
-              assertTypes valC [TypeBool] posnC
-              let [ValBool bool] = valC
-              if bool
-                then return [val]
-                else throwError $ Error posnC (AssertionError $ "failed to assign to constant " ++ id)
+      return [val]
 eval (ExprId id, posn) = do
   env <- getEnv
   case lookupEnv id env of
@@ -180,23 +151,9 @@ eval (ExprAssign id expr@(_, posnV), posn) = do
       let [val] = vals
       when (pat == NoneP) $ throwError $ Error posn (AssignmentError id)
       -- TODO modification is observable
+      assertPat' id val posnV pat
       modifyEnv $ setVar id val
-      case pat of
-        AnyP -> do
-          return [val]
-        TypeP typ con -> do
-          assertType val (interpType typ) posnV
-          case con of
-            Nothing -> do
-              return [val]
-            Just exprC@(_, posnC) -> do
-              -- assert the condition
-              valC <- eval exprC
-              assertTypes valC [TypeBool] posnC
-              let [ValBool bool] = valC
-              if bool
-                then return [val]
-                else throwError $ Error posnC (AssertionError $ "failed to assign to variable " ++ id)
+      return [val]
     Nothing -> throwError $ Error posn (NameError id)
 eval (ExprBox typeE@(_, typeP) initE@(_, initP), _) = do  -- new naming convention
   typeV <- eval typeE
@@ -341,7 +298,7 @@ assertTypes vals types posn =
 
 assertArity :: Int -> [Value] -> Posn -> Matthew ()
 assertArity cnt vals posn =
-  if length vals /= cnt
+  if length vals == cnt
     then return ()
     else throwError $ Error posn (ArityMismatchError cnt (length vals))
 
@@ -353,3 +310,46 @@ assertArity1 vals posn = do
 assertBox :: Value -> Posn -> Matthew ()
 assertBox (ValBox _ _) _ = return ()
 assertBox val posn       = throwError $ Error posn (TypeError (TypeBox undefined) (typeof val))
+
+-- assert that a new binding is valid (both in type and condition)
+assertPat :: String -> Value -> Posn -> Pattern -> Matthew ()
+assertPat _ _ _ AnyP                         = return ()
+assertPat _ _ _ NoneP                        = return () -- add failure here
+assertPat _ val posn (TypeP typ Nothing)     = do
+  assertType val (interpType typ) posn
+assertPat id val posnV pat@(TypeP typ (Just expr@(_, posn))) = do
+  assertType val (interpType typ) posnV -- refactor everything
+  env <- getEnv
+  let env' = extendVar id val pat env
+  res <- liftIO $ runStateT (runExceptT (eval expr)) env
+  case res of
+    (Left  err, _)     -> throwError err
+    (Right vals, env'') -> do
+      val <- assertArity1 vals posn
+      assertType val TypeBool posn
+      let ValBool bool = val
+      if bool
+        then putEnv env''
+        else throwError $ Error posn (AssertionError "failed condition on new binding")
+
+-- assert that modifying an existing binding is valid (both in type and condition)
+assertPat' :: String -> Value -> Posn -> Pattern -> Matthew ()
+assertPat' _ _ _ AnyP                         = return ()
+assertPat' _ _ _ NoneP                        = return () -- add failure here
+assertPat' _ val posn (TypeP typ Nothing)     = do
+  assertType val (interpType typ) posn
+assertPat' id val posnV pat@(TypeP typ (Just expr@(_, posn))) = do
+  assertType val (interpType typ) posnV -- refactor everything
+  env <- getEnv
+  let env' = setVar id val env
+  res <- liftIO $ runStateT (runExceptT (eval expr)) env
+  case res of
+    (Left  err, _)     -> throwError err
+    (Right vals, env'') -> do
+      val <- assertArity1 vals posn
+      assertType val TypeBool posn
+      let ValBool bool = val
+      if bool
+        then putEnv env''
+        else throwError $ Error posn (AssertionError "failed condition on modifying existing binding")
+
