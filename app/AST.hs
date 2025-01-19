@@ -46,8 +46,7 @@ data Lit = LitInt  Integer
          deriving Eq
 
 data Pattern = AnyP
-             | NoneP
- 		     | TypeP { typ :: LitT , pred :: Maybe ExprPosn }
+             | TypeP { typ :: LitT , pred :: Maybe ExprPosn }
              deriving (Eq, Show)
 
 data LitT = IntT
