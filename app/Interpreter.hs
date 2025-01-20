@@ -14,6 +14,8 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State
 
+import System.IO
+
 import Data.List
 import Data.Maybe
 
@@ -22,7 +24,7 @@ import AST
 import Environment
 
 import Error
-import Pattern
+import Type
 import Value
 
 type Matthew a = ExceptT Error (StateT Env IO) a
@@ -39,53 +41,49 @@ modifyEnv = lift . modify
 interp :: Prog -> Env -> IO (Either Error [Value], Env)
 interp prog env = runStateT (runExceptT (foldM (const eval) [] prog)) env
 
+returnBool :: Bool -> Matthew [Value]
+returnBool = return . singleton . ValBool
+
+returnInt :: Integer -> Matthew [Value]
+returnInt = return . singleton . ValInt
+
+return1 :: Value -> Matthew [Value]
+return1 = return . singleton
+
 eval :: ExprPosn -> Matthew [Value]
-eval (ExprLit lit, _) = case lit of
-  (LitInt int)   -> return [ValInt int]
-  (LitBool bool) -> return [ValBool bool]
-  (LitPat pat)   -> return [ValPat (interpPat pat)]
-  (LitStr str)   -> return [ValStr str]
-  (LitChar char) -> return [ValChar char]
+eval (ExprLit lit, _) = return $ singleton $ case lit of
+  (LitInt int)   -> ValInt  int
+  (LitBool bool) -> ValBool bool
+  (LitType typ)  -> ValType (interpType typ)
+  (LitStr str)   -> ValStr  str
+  (LitChar char) -> ValChar char
 eval (ExprUnOp Typeof expr@(_, posn), _) = do
-  vals <- eval expr
-  val  <- assertArity1 vals posn
-  return [ValPat (typeof val)]
+  val <- eval expr >>= assertArity1 posn
+  return1 $ ValType (typeof val)
 eval (ExprUnOp LNot expr@(_, posn), _) = do
-  val <- eval expr
-  assertTypes val [PatBool] posn
-  let [ValBool bool] = val
-  return [ValBool $ not bool]
+  bool <- eval expr >>= assertBool posn
+  returnBool $ not bool
 eval (ExprBinOp op expr1@(_, posn1) expr2@(_, posn2), posn)
   | binOpEq op = do
-    val1 <- eval expr1
-    val2 <- eval expr2
-    assertArity 1 val1 posn1 -- assert single arity
-    let typ = typeof (val1!!0)
-    assertTypes val2 [typ] posn2
+    val1 <- eval expr1 >>= assertArity1 posn1
+    val2 <- eval expr2 >>= assertArity1 posn2
+    assertType posn2 (typeof val1) val2
     let op' = case op of
                 Eq  -> (==)
                 Neq -> (/=)
-    return [ValBool $ op' val1 val2]
+    returnBool $ op' val1 val2
   | binOpComp op = do
-    val1 <- eval expr1
-    val2 <- eval expr2
-    assertTypes val1 [PatInt] posn1
-    assertTypes val2 [PatInt] posn2
-    let [ValInt int1] = val1
-    let [ValInt int2] = val2
+    int1 <- eval expr1 >>= assertInt posn1
+    int2 <- eval expr2 >>= assertInt posn2
     let op' = case op of
                 Le  -> (<)
                 Leq -> (<=)
                 Ge  -> (>)
                 Geq -> (>=)
-    return [ValBool $ op' int1 int2]
+    returnBool $ op' int1 int2
   | binOpInt op = do
-    val1 <- eval expr1
-    val2 <- eval expr2
-    assertTypes val1 [PatInt] posn1
-    assertTypes val2 [PatInt] posn2
-    let [ValInt int1] = val1
-    let [ValInt int2] = val2
+    int1 <- eval expr1 >>= assertInt posn1
+    int2 <- eval expr2 >>= assertInt posn2
     op' <- case op of
              Add  -> return (+)
              Sub  -> return (-)
@@ -94,195 +92,255 @@ eval (ExprBinOp op expr1@(_, posn1) expr2@(_, posn2), posn)
              Div  -> if int2 == 0
                        then throwError $ Error posn (ArithmeticError "division by zero")
                        else return div
-    return [ValInt $ op' int1 int2]
+    returnInt $ op' int1 int2
   | binOpBool op = do
-    val1 <- eval expr1
-    val2 <- eval expr2
-    assertTypes val1 [PatBool] posn1
-    assertTypes val2 [PatBool] posn2
-    let [ValBool bool1] = val1
-    let [ValBool bool2] = val2
+    bool1 <- eval expr1 >>= assertBool posn1
+    bool2 <- eval expr2 >>= assertBool posn2
     let op' = case op of
                 LAnd -> (&&)
                 LOr  -> (||)
-    return [ValBool $ op' bool1 bool2]
+    returnBool $ op' bool1 bool2
 eval (ExprIfElse pred@(_, posn) exprT exprF, _) = do
-  val <- eval pred
-  assertTypes val [PatBool] posn
-  let [ValBool bool] = val
+  bool <- eval pred >>= assertBool posn
   if bool
     then eval exprT
     else eval exprF
 eval (ExprVar id pat expr@(_, posnV), posn) = do
-  env <- getEnv
-  case lookupEnv' id env of
-  -- don't allow redeclaration in the same scope
-    Just _  -> throwError $ Error posn (RedefinitionError id)
-    Nothing -> do
-      vals <- eval expr
-      assertArity 1 vals posnV
-      let [val] = vals
-      let pat' = interpPat pat
-      assertType val pat' posnV
-      modifyEnv $ extendVar id val pat'
-      return [val]
-eval (ExprConst id pat expr@(_, posnV), posn) = do
-  env <- getEnv
-  case lookupEnv' id env of
-  -- don't allow redeclaration in the same scope
-    Just _  -> throwError $ Error posn (RedefinitionError id)
-    Nothing -> do
-      vals <- eval expr
-      assertArity 1 vals posnV
-      let [val] = vals
-      let pat' = interpPat pat
-      assertType val pat' posnV
-      modifyEnv $ extendConst id val
-      return [val]
+  assertNotDefined posn id
+
+  val <- eval expr >>= assertArity1 posnV
+  case pat of
+    AnyP              -> modifyEnv $ extendVar id val pat
+    TypeP typ Nothing -> do
+      assertType posn (interpType typ) val
+      modifyEnv $ extendVar id val pat
+    TypeP typ (Just exprC) -> do
+      assertType posn (interpType typ) val
+      env <- getEnv
+      res <- liftIO $ runStateT (runExceptT (eval exprC)) (extendVar id val pat env)
+      -- three cases of errors
+      -- - an error happened while evaluating the condition
+      -- - the condition did not error, but the value is not a boolean
+      -- - the value is a boolean, but it is false
+      case res of
+        (Left  err, _) -> throwError err -- an error happened when evaluating the condition
+        (Right vals, env') -> do
+          bool <- assertBool posn vals
+          if bool
+            then putEnv env' -- this includes the new binding anyway
+            else throwError $ Error posn (AssertionError $ "failed condition on new variable " ++ id)
+  return1 val
 eval (ExprId id, posn) = do
   env <- getEnv
   case lookupEnv id env of
-    Just (val, _) -> return [val]
+    Just (val, _) -> return1 val
     Nothing       -> throwError $ Error posn (NameError id)
 eval (ExprAssign id expr@(_, posnV), posn) = do
   env <- getEnv
   case lookupEnv id env of
-    Just (_, pat) -> do
-      vals <- eval expr
-      assertArity 1 vals posnV
-      let [val] = vals
-      when (pat == PatNone) $ throwError $ Error posn (AssignmentError id)
-      assertType val pat posnV
-      modifyEnv $ setVar id val
-      return [val]
+    Just (_, Nothing)  -> throwError $ Error posn (AssignmentError id)
+    Just (_, Just pat) -> do
+      val <- eval expr >>= assertArity1 posnV
+      case pat of
+        AnyP              -> modifyEnv $ setVar id val
+        TypeP typ Nothing -> do
+          assertType posn (interpType typ) val
+          modifyEnv $ extendVar id val pat
+        TypeP typ (Just exprC@(_, posnC)) -> do
+          assertType posn (interpType typ) val
+          env <- getEnv
+          res <- liftIO $ runStateT (runExceptT (eval expr)) (setVar id val env)
+          -- three cases of errors
+          -- - an error happened while evaluating the condition
+          -- - the condition did not error, but the value is not a boolean
+          -- - the value is a boolean, but it is false
+          case res of
+            (Left  err, _) -> throwError err -- an error happened when evaluating the condition
+            (Right vals, env') -> do
+              bool <- assertBool posn vals
+              if bool
+                then putEnv env' -- this includes the new binding anyway
+                else throwError $ Error posn (AssertionError $ "failed condition on modifying variable " ++ id)
+      return1 val
     Nothing -> throwError $ Error posn (NameError id)
-eval (ExprBox patE@(_, patP) initE@(_, initP), _) = do  -- new naming convention
-  patV <- eval patE
-  assertTypes patV [PatPat] patP
-  let [ValPat pat] = patV
-  initV <- eval initE
-  assertTypes initV [pat] initP  -- assert both arity and type
-  let [val] = initV
+eval (ExprUnOp Box expr@(_, posn), _) = do
+  val <- eval expr >>= assertArity1 posn
   env <- getEnv
   let (env', idx) = boxValue val env
   putEnv env'
-  return [ValBox pat idx]
+  return1 $ ValBox idx
 eval (ExprUnOp Unbox expr@(_, posn), _) = do
-  val <- eval expr
-  assertTypes val [PatBox PatAny] posn
-  let [ValBox _ idx] = val
+  idx <- eval expr >>= assertBox posn
   env <- getEnv
-  return [unboxValue idx env]
+  return1 $ unboxValue idx env
 eval (ExprSetBox exprD@(_, posnD) exprS@(_, posnS), _) = do
-  valD <- eval exprD
-  assertTypes valD [PatBox PatAny] posnD
-  let [(ValBox pat idx)] = valD
-  valS <- eval exprS
-  assertTypes valS [pat] posnS
-  modifyEnv $ setBox idx (valS!!0)
-  return valS
+  idx <- eval exprD >>= assertBox posnD
+  valS <- eval exprS >>= assertArity1 posnS
+  modifyEnv $ setBox idx valS
+  return1 valS
 -- expression combinators
 eval (ExprBlock exprs, _) = do
   modifyEnv pushBlock
   val <- foldM (const eval) [] exprs
   modifyEnv popBlock
-  return val
+  return val -- TODO check this
 -- iteration expressions
 eval (ExprWhile exprG@(_, posnG) exprB, _) = do
   vals <- whileM evalGuard (eval exprB)
   case vals of
     [] -> return []
-    _  -> return $ last vals
+    _  -> return $ last vals -- TODO check this
   where
-    evalGuard = do
-      valG <- eval exprG
-      assertTypes valG [PatBool] posnG
-      let [ValBool bool] = valG
-      return bool
+    evalGuard = eval exprG >>= assertBool posnG
 eval (ExprTuple exprs, _) = mapM evalSingle exprs
   where
-    evalSingle expr@(_, posn) = do
-      vals <- eval expr
-      assertArity 1 vals posn
-      let [val] = vals
-      return val
+    evalSingle expr@(_, posn) = eval expr >>= assertArity1 posn
 -- functions
 eval (ExprFunc name params expr retPats, _) = do
   env <- getEnv
   case name of
-    Nothing   -> return $ [ValFunc params (getClosure env) expr (fmap (map interpPat) retPats)]
+    Nothing   -> return $ [ValFunc params (getClosure env) expr retPats]
     Just self -> do
-      let func = ValFunc params ((self, func):(getClosure env)) expr (fmap (map interpPat) retPats)
-      modifyEnv $ extendConst self func
+      let func = ValFunc params ((self, func):(getClosure env)) expr retPats
+      modifyEnv $ extendVar' self func
       return [func]
 eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
   -- assert we are calling a function
-  valF <- eval exprF
-  assertTypes valF [PatFunc] posnF
-  let [ValFunc params closure exprB retPats] = valF
-  -- assert that params are the correct type
-  args <- eval exprsA
-  assertTypes args (map interpParam params) posn
-  -- call the function
-  modifyEnv $ pushFunc (zip (map paramName params) args) closure
+  valF <- eval exprF >>= assertFunc posnF
+  let ValFunc params closure exprB retPats = valF
 
-  -- this should be abstracted better (abstract the entire function eval)
+  -- assert correct number of args
+  args <- eval exprsA
+  assertArity (length params) args posn
+
+  -- assert all patterns are satisfied
+  env <- getEnv
+  let env' = pushFunc (zip (map paramName params) (zip args (map paramPat params))) closure env
+  env'' <- foldM checkArg env' (zip args params)
+
+  -- call the function
+  putEnv env''
   do
-    valR <- evalFunc exprB retPats
+    valsR <- evalFunc exprB retPats
     modifyEnv popFunc
-    return valR
+    return valsR
+    -- error in evaluating function (including return type/arity)
+    -- should be propagated up. this needs to be reorganized badly
     `catchError` (\err -> do
       modifyEnv popFunc
       throwError err)
 
   where
-    interpParam = interpPat . paramPat
-
+    -- function evaluation, refactor everything?
     evalFunc exprB retPats = do
-      valR <- eval exprB
-      -- assert return value is correct type
-      -- note: this is really not the place to do it. it needs to be in the function
+      valsR <- eval exprB
       case retPats of
         Nothing   -> return ()
-        Just pats -> assertTypes valR pats posnFIXME
-      return valR
+        Just pats -> do
+          -- FIXME should be the location of the return value(s)
+          assertArity (length pats) valsR posnFIXME
+          -- at this point, we can only assert types are okay, can't check condition
+          forM_ (zip valsR pats) $ \(val, pat) -> do
+            case pat of
+              AnyP        -> return ()
+              TypeP typ _ -> assertType posnFIXME (interpType typ) val
+      return valsR
+    checkArg env (arg, Param name pat) = do
+      case pat of
+        AnyP              -> return env
+        TypeP typ Nothing -> do
+          assertType posn (interpType typ) arg
+          return env
+        TypeP typ (Just exprC@(_, posnC)) -> do
+          assertType posn (interpType typ) arg
+          res <- liftIO $ runStateT (runExceptT (eval exprC)) (setVar name arg env)
+          -- three cases of errors
+          -- - an error happened while evaluating the condition
+          -- - the condition did not error, but the value is not a boolean
+          -- - the value is a boolean, but it is false
+          case res of
+            (Left  err, _) -> throwError err -- an error happened when evaluating the condition
+            (Right vals, env') -> do
+              bool <- assertBool posn vals
+              if bool
+                then return env'
+                else throwError $ Error posn (AssertionError $ "failed condition on argument " ++ name)
 -- error
 eval (ExprTry tryE catchE _, _) = catchError (eval tryE) (const $ eval catchE)
 -- I/O
 eval (ExprUnOp Print expr@(_, posn), _) = do
-  x <- eval expr
-  val <- assertArity1 x posn
+  val <- eval expr >>= assertArity1 posn
   liftIO $ print val
+  liftIO $ hFlush stdout
   return []
 eval (ExprZeroOp Scan, _) = do
   str <- liftIO $ getLine
   return [ValStr str]
 
-interpPat :: PatT -> Pattern
-interpPat PatIntT       = PatInt
-interpPat PatBoolT      = PatBool
-interpPat (PatBoxT pat) = PatBox (interpPat pat)
-interpPat PatFuncT      = PatFunc
-interpPat PatStrT       = PatStr
-interpPat PatCharT      = PatChar
-interpPat PatWild       = PatAny
+interpType :: LitT -> Type
+interpType IntT       = TypeInt
+interpType BoolT      = TypeBool
+interpType BoxT       = TypeBox
+interpType FuncT      = TypeFunc
+interpType StrT       = TypeStr
+interpType CharT      = TypeChar
 
-assertType :: Value -> Pattern -> Posn -> Matthew ()
-assertType val pat posn =
-  if val `matches` pat
+{-
+  ASSERTIONS
+-}
+
+assertType :: Posn -> Type -> Value -> Matthew ()
+assertType posn typ val =
+  if typeof val == typ
     then return ()
-    else throwError $ Error posn (TypeError pat (typeof val))
-
-assertTypes :: [Value] -> [Pattern] -> Posn -> Matthew ()
-assertTypes vals pats posn =
-  if length vals /= length pats
-    then throwError $ Error posn (ArityMismatchError (length pats) (length vals))
-    else mapM_ (\(val, pat) -> assertType val pat posn) (zip vals pats)
+    else throwError $ Error posn (TypeError typ (typeof val))
 
 assertArity :: Int -> [Value] -> Posn -> Matthew ()
-assertArity cnt vals posn = assertTypes vals (replicate cnt PatAny) posn
+assertArity cnt vals posn =
+  if length vals == cnt
+    then return ()
+    else throwError $ Error posn (ArityMismatchError cnt (length vals))
 
-assertArity1 :: [Value] -> Posn -> Matthew Value
-assertArity1 vals posn = do
+assertArity1 :: Posn -> [Value] -> Matthew Value
+assertArity1 posn vals = do
   assertArity 1 vals posn
   return $ head vals
+
+{-
+  Assert types
+-}
+
+assertBool :: Posn -> [Value] -> Matthew Bool
+assertBool posn vals = do
+  val <- assertArity1 posn vals
+  assertType posn TypeBool val
+  let ValBool bool = val
+  return bool
+
+assertInt :: Posn -> [Value] -> Matthew Integer
+assertInt posn vals = do
+  val <- assertArity1 posn vals
+  assertType posn TypeInt val
+  let ValInt int = val
+  return int
+
+assertBox :: Posn -> [Value] -> Matthew Int
+assertBox posn vals = do
+  val <- assertArity1 posn vals
+  assertType posn TypeBox val
+  let ValBox idx = val
+  return idx
+
+assertFunc :: Posn -> [Value] -> Matthew Value
+assertFunc posn vals = do
+  val <- assertArity1 posn vals
+  assertType posn TypeFunc val
+  return val
+
+-- don't allow redeclaration in the same scope
+assertNotDefined :: Posn -> String -> Matthew ()
+assertNotDefined posn id = do
+  env <- getEnv
+  case lookupEnv' id env of
+    Just _  -> throwError $ Error posn (RedefinitionError id)
+    Nothing -> return ()

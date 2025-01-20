@@ -61,11 +61,3 @@ unbox x
 
 Even though `y` is a constant (set to the box) the value inside the box is
 *not* constant, so it can be mutated.
-
-## Boxes with type constraints
-
-One can specify a type for which values in the box must satisfy:
-
-```
-box[int_t](5)
-```

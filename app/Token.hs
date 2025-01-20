@@ -65,7 +65,11 @@ data Token = TokPlus
            | TokBoxT
            | TokTypeT
            | TokFuncT
+           | TokStrT
+           | TokCharT
            | TokVoid
+
+           | TokWhere
 
            -- I/O
            | TokPrint

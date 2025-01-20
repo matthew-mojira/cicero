@@ -1,0 +1,3 @@
+var x: int_t where x > 0 = 5;
+
+(func (p: int_t): int_t -> x + p)(5);

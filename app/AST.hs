@@ -14,18 +14,17 @@ data Expr
   | ExprUnOp   UnOp ExprPosn
   | ExprBinOp  BinOp ExprPosn ExprPosn
   | ExprIfElse ExprPosn ExprPosn ExprPosn
-  | ExprVar    String PatT ExprPosn
-  | ExprConst  String PatT ExprPosn
+  | ExprVar    String Pattern ExprPosn
+  | ExprConst  String Pattern ExprPosn
   | ExprId     String
   | ExprAssign String ExprPosn
-  | ExprBox    { boxPat :: ExprPosn, boxInit :: ExprPosn}
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
   | ExprWhile  { guard :: ExprPosn, body :: ExprPosn }
   | ExprFunc   { funcName   :: (Maybe String)
                , funcParams :: [Param]
                , funcBody   :: ExprPosn
-               , funcRetPat :: Maybe [PatT]
+               , funcRetPat :: Maybe [Pattern]
                }
   | ExprApply  ExprPosn ExprPosn
   | ExprTuple  [ExprPosn]
@@ -35,25 +34,27 @@ data Expr
                }
   deriving Eq
 
-data Param = Param { paramName :: String, paramPat :: PatT }
-           deriving (Eq, Show)
+data Param = Param { paramName :: String, paramPat :: Pattern }
+           deriving Eq
+
+instance Show Param where
+  show (Param name pat) = name ++ ": " ++ show pat
 
 data Lit = LitInt  Integer
          | LitBool Bool
          | LitStr  String
          | LitChar Char
-         | LitPat  PatT
+         | LitType LitT
          deriving Eq
 
-data PatT = PatIntT
-          | PatBoolT
-          | PatBoxT PatT
-          | PatFuncT
-          | PatTypeT
-          | PatStrT
-          | PatCharT
-          | PatWild
-          deriving (Eq, Show)
+data Pattern = AnyP
+             | TypeP { typ :: LitT , pred :: Maybe ExprPosn }
+             deriving Eq
+
+instance Show Pattern where
+  show AnyP                         = "any"
+  show (TypeP typ Nothing)          = show typ
+  show (TypeP typ (Just (pred, _))) = show typ ++ " where " ++ show pred
 
 data LitT = IntT
           | BoolT
@@ -68,6 +69,7 @@ data ZeroOp = Scan
             deriving (Eq, Show)
 
 data UnOp = LNot
+          | Box
           | Unbox
           | Typeof
           | Print
@@ -151,8 +153,6 @@ instance Show Expr where
 --    concat ["(Id ", id, ")"]
   show (ExprAssign id (expr, _)) =
     concat ["(Assign ", id, " ", show expr, ")"]
-  show (ExprBox pat (expr, _)) =
-    concat ["(Box ", show pat, " ", show expr, ")"]
   show (ExprSetBox (expr1, _) (expr2, _)) =
     concat ["(SetBox ", show expr1, " ", show expr2, ")"]
   show (ExprBlock exprs) =
@@ -171,7 +171,7 @@ instance Show Expr where
 instance Show Lit where
   show (LitBool bool) = show bool
   show (LitInt int)   = show int
-  show (LitPat pat)   = show pat
+  show (LitType typ)  = show typ
   show (LitStr str)   = str
   show (LitChar char) = show char
 

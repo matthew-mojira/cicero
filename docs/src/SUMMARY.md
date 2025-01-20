@@ -10,3 +10,5 @@
 - [Iteration](./iteration.md)
 - [Boxes](./boxes.md)
 - [Errors](./errors.md)
+- [Strings and characters](./strings.md)
+- [Printing and scanning](./io.md)

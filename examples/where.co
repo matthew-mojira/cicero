@@ -1,0 +1,6 @@
+func foo(x: int_t where x = 11,
+         y: int_t where x < y) -> {
+  x + y;
+};
+
+foo(11, 12);

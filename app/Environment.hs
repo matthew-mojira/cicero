@@ -4,10 +4,9 @@ import Data.Maybe
 import Data.List
 
 import Value
-import Pattern
 import AST
 
-type Entry      = (String, (Value, Pattern))
+type Entry      = (String, (Value, Maybe Pattern))
 type BlockEntry = [Entry]
 type FuncEntry  = [BlockEntry]
 
@@ -28,9 +27,11 @@ emptyEnv = Env [[[]]] []
 popFunc :: Env -> Env
 popFunc env@Env {idxs = idxs} = env {idxs = tail idxs} -- garbage collect?
 
-pushFunc :: [(String, Value)] -> [(String, Value)] -> Env -> Env
+pushFunc :: [(String, (Value, Pattern))] -> [(String, Value)] -> Env -> Env
 pushFunc args closure env@Env {idxs = idxs} =
-  env {idxs = [map (\(id, val) -> (id, (val, PatNone))) (args ++ closure)]:idxs}
+  env {idxs = [   map (\(id, (val, pat)) -> (id, (val, Just pat))) args
+               ++ map (\(id, val)        -> (id, (val, Nothing)))  closure
+              ]:idxs}
 
 popBlock :: Env -> Env
 popBlock env@Env {idxs = idxs} = env {idxs = (tail (head idxs)):tail idxs}
@@ -38,21 +39,27 @@ popBlock env@Env {idxs = idxs} = env {idxs = (tail (head idxs)):tail idxs}
 pushBlock :: Env -> Env
 pushBlock env@Env {idxs = idxs} = env {idxs = ([]:(head idxs)):tail idxs}
 
-lookupEnv :: String -> Env -> Maybe (Value, Pattern)
+lookupEnv :: String -> Env -> Maybe (Value, Maybe Pattern)
 lookupEnv id (Env {idxs = idxs}) = lookup id (concat (head idxs))
 
-lookupEnv' :: String -> Env -> Maybe (Value, Pattern)  -- strictly in the same scope
+lookupEnv' :: String -> Env -> Maybe (Value, Maybe Pattern)  -- strictly in the same scope
 lookupEnv' id (Env {idxs = idxs}) = lookup id (head (head idxs))
 
-extendConst :: String -> Value -> Env -> Env
-extendConst id val env = extendVar id val PatNone env
-
+-- this does not check the value matches the pattern
 extendVar :: String -> Value -> Pattern -> Env -> Env
 extendVar id val pat env@Env {idxs = idxs} =
   let Just (fun, funs) = uncons idxs
       Just (blk, blks) = uncons fun
-   in env {idxs = (((id, (val, pat)):blk):blks):funs}
+   in env {idxs = (((id, (val, Just pat)):blk):blks):funs}
 
+-- immutable
+extendVar' :: String -> Value -> Env -> Env
+extendVar' id val env@Env {idxs = idxs} =
+  let Just (fun, funs) = uncons idxs
+      Just (blk, blks) = uncons fun
+   in env {idxs = (((id, (val, Nothing)):blk):blks):funs}
+
+-- does not check if variable is immutable
 setVar :: String -> Value -> Env -> Env
 setVar id val env@Env {idxs = idxs} =
   env {idxs = (replace id val (head idxs)):(tail idxs) }

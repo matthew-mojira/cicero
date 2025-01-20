@@ -1,18 +1,16 @@
-# Variables and constants
+# Variables
 
-Variables and constants are places where you can store values. They are
-declared using the `var` and `const` keywords, where you supply the name of the
-element and an initial value:
+Variables are places where you can store values. They are declared using the
+`var` keyword, where you supply the name of the element and an initial value:
 
 ```
 var x = 1
-const y = 2
+var y = 2
 x + y
 => 3
 ```
 
-Variables can be modified using the assignment operator in `:=`. Constants,
-however, cannot be modified and will result in an error.
+Variables can be modified using the assignment operator in `:=`.
 
 ```
 x := 2
@@ -26,11 +24,11 @@ together:
 
 ```
 {
-  var x = 1
-  var y = 2
-  x := x * 2
-  y := x + 375
-  x * y
+  var x = 1;
+  var y = 2;
+  x := x * 2;
+  y := x + 375;
+  x * y;
 }
 => 754
 ```
@@ -46,12 +44,12 @@ than the original declaration. This is known as *shadowing*:
 
 ```
 {
-  const x = 1
+  var x = 1;
   {
-    var x = 9
-    x := 10
-  }
-  x
+    var x = 9;
+    x := 10;
+  };
+  x;
 }
 => 1
 ```
@@ -59,7 +57,7 @@ than the original declaration. This is known as *shadowing*:
 Right now, there is no way to access the value of `x` in the outer scope from
 within the inner scope after the second `x` is declared.
 
-## Type patterns
+## Typed variables
 
 One can declare the type of values which can be assigned to a variable or
 constant:
@@ -67,4 +65,13 @@ constant:
 ```
 var x: int_t = 5
 x := 6
+```
+
+In addition, one can use a `where` clause to define a condition which must hold
+for an assignment to be made.
+
+```
+var i: int_t where i > 0 = 30
+i := 20
+i := 0   -- fails
 ```
