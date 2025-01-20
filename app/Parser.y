@@ -91,6 +91,8 @@ import AST
       box_t           { TokenPosn TokBoxT (_, _) }
       type_t          { TokenPosn TokTypeT (_, _) }
       func_t          { TokenPosn TokFuncT (_, _) }
+      str_t           { TokenPosn TokStrT (_, _) }
+      char_t          { TokenPosn TokCharT (_, _) }
       void            { TokenPosn TokVoid (_, _) }
 
       where           { TokenPosn TokWhere (_, _) }
@@ -165,6 +167,8 @@ expr  : int                     { parseInt $1 }
       | bool_t                  { (ExprLit (LitType BoolT), tokenPosn $1) }
       | func_t                  { (ExprLit (LitType FuncT), tokenPosn $1) }
       | type_t                  { (ExprLit (LitType TypeT), tokenPosn $1) }
+      | str_t                   { (ExprLit (LitType StrT), tokenPosn $1) }
+      | char_t                  { (ExprLit (LitType CharT), tokenPosn $1) }
       | expr '?'                { (ExprUnOp Typeof $1, snd $1 <-> tokenPosn $2) }
 
 apply : %prec APPLY {}

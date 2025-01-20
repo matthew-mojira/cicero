@@ -71,6 +71,8 @@ tokens :-
   box_t                          { tok TokBoxT }
   type_t                         { tok TokTypeT }
   func_t                         { tok TokFuncT }
+  str_t                          { tok TokStrT }
+  char_t                         { tok TokCharT }
   void                           { tok TokVoid }
 
   where                          { tok TokWhere }
