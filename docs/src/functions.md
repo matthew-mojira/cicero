@@ -21,9 +21,9 @@ foo(10, 11);
 => 21
 ```
 
-Unlike other languages, the arguments are immutable (i.e. constant). This helps
-eliminate unintuitive behavior because of multiple expectations from assigning
-to arguments in other languages.
+<!--Unlike other languages, the arguments are immutable (i.e. constant). This helps-->
+<!--eliminate unintuitive behavior because of multiple expectations from assigning-->
+<!--to arguments in other languages.-->
 
 ## Anonymous functions
 
@@ -32,7 +32,7 @@ names. One can write a lambda similarly to the named function, but without the
 name:
 
 ```
-(x) -> x + 1
+func (x) -> x + 1
 ```
 
 ## Higher-order functions
@@ -96,7 +96,7 @@ func two() -> (1, 2)
 
 Unlike other languages, tuples are not first class.
 
-## Type patterns
+## Typed functions
 
 One can specify patterns which arguments or return values must satisfy. These
 are dynamically checked at call time and before returning.
@@ -116,4 +116,18 @@ To specify that the function does not return any values, use `void`:
 
 ```
 func nothing(): void -> { };
+```
+
+One can also specify a condition in which arguments must satisfy when the
+function is called using a `where` clause:
+
+```
+func isqrt(n: int_t where n >= 0): int_t -> {
+  ...
+}
+
+func foo(x: int_t where x > 0,
+         y: int_t where x + y /= 0) -> {
+  ...
+}
 ```
