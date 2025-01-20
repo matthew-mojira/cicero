@@ -18,7 +18,6 @@ data Expr
   | ExprConst  String Pattern ExprPosn
   | ExprId     String
   | ExprAssign String ExprPosn
-  | ExprBox    { boxPat :: ExprPosn, boxInit :: ExprPosn}
   | ExprSetBox ExprPosn ExprPosn
   | ExprBlock  [ExprPosn]
   | ExprWhile  { guard :: ExprPosn, body :: ExprPosn }
@@ -59,7 +58,7 @@ instance Show Pattern where
 
 data LitT = IntT
           | BoolT
-          | BoxT LitT
+          | BoxT
           | TypeT
           | FuncT
           | StrT
@@ -70,6 +69,7 @@ data ZeroOp = Scan
             deriving (Eq, Show)
 
 data UnOp = LNot
+          | Box
           | Unbox
           | Typeof
           | Print
@@ -153,8 +153,6 @@ instance Show Expr where
 --    concat ["(Id ", id, ")"]
   show (ExprAssign id (expr, _)) =
     concat ["(Assign ", id, " ", show expr, ")"]
-  show (ExprBox pat (expr, _)) =
-    concat ["(Box ", show pat, " ", show expr, ")"]
   show (ExprSetBox (expr1, _) (expr2, _)) =
     concat ["(SetBox ", show expr1, " ", show expr2, ")"]
   show (ExprBlock exprs) =

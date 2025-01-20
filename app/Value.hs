@@ -6,9 +6,7 @@ import Type
 
 data Value = ValInt  Integer
            | ValBool Bool
-           | ValBox  { typ   :: Type
-                     , index :: Int
-                     }
+           | ValBox  { index :: Int }
            | ValFunc { params  :: [Param]            -- constraint on values
                      , env     :: [(String, Value)]  -- closure
                      , body    :: ExprPosn           -- index into env
@@ -23,7 +21,7 @@ data Value = ValInt  Integer
 typeof :: Value -> Type
 typeof (ValInt _)     = TypeInt
 typeof (ValBool _)    = TypeBool
-typeof (ValBox pat _) = TypeBox pat
+typeof (ValBox _)     = TypeBox
 typeof (ValFunc {})   = TypeFunc
 typeof (ValStr _)     = TypeStr
 typeof (ValChar _)    = TypeChar
@@ -33,7 +31,7 @@ typeof (ValErr _)     = TypeErr
 instance Show Value where
   show (ValInt int)    = show int
   show (ValBool bool)  = if bool then "true" else "false"
-  show (ValBox _ idx)  = concat ["box[#", show idx, "]"]
+  show (ValBox idx)    = concat ["box[#", show idx, "]"]
   show (ValFunc _ _ _ _) = concat ["func[<impl>]"]
   show (ValType typ)    = concat ["type[", show typ, "]"]
   show (ValErr _)      = concat ["error[?]"]

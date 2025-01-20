@@ -47,20 +47,19 @@ returnBool = return . singleton . ValBool
 returnInt :: Integer -> Matthew [Value]
 returnInt = return . singleton . ValInt
 
-returnVal :: Value -> Matthew [Value]
-returnVal = return . singleton
+return1 :: Value -> Matthew [Value]
+return1 = return . singleton
 
 eval :: ExprPosn -> Matthew [Value]
 eval (ExprLit lit, _) = return $ singleton $ case lit of
-  (LitInt int)   -> ValInt int
+  (LitInt int)   -> ValInt  int
   (LitBool bool) -> ValBool bool
   (LitType typ)  -> ValType (interpType typ)
-  (LitStr str)   -> ValStr str
+  (LitStr str)   -> ValStr  str
   (LitChar char) -> ValChar char
 eval (ExprUnOp Typeof expr@(_, posn), _) = do
-  vals <- eval expr
-  val  <- assertArity1 posn vals
-  return [ValType (typeof val)]
+  val <- eval expr >>= assertArity1 posn
+  return1 $ ValType (typeof val)
 eval (ExprUnOp LNot expr@(_, posn), _) = do
   bool <- eval expr >>= assertBool posn
   returnBool $ not bool
@@ -130,11 +129,11 @@ eval (ExprVar id pat expr@(_, posnV), posn) = do
           if bool
             then putEnv env' -- this includes the new binding anyway
             else throwError $ Error posn (AssertionError $ "failed condition on new variable " ++ id)
-  returnVal val
+  return1 val
 eval (ExprId id, posn) = do
   env <- getEnv
   case lookupEnv id env of
-    Just (val, _) -> returnVal val
+    Just (val, _) -> return1 val
     Nothing       -> throwError $ Error posn (NameError id)
 eval (ExprAssign id expr@(_, posnV), posn) = do
   env <- getEnv
@@ -162,14 +161,23 @@ eval (ExprAssign id expr@(_, posnV), posn) = do
               if bool
                 then putEnv env' -- this includes the new binding anyway
                 else throwError $ Error posn (AssertionError $ "failed condition on modifying variable " ++ id)
-      returnVal val
+      return1 val
     Nothing -> throwError $ Error posn (NameError id)
-eval (ExprBox typeE@(_, typeP) initE@(_, initP), _) = undefined
+eval (ExprUnOp Box expr@(_, posn), _) = do
+  val <- eval expr >>= assertArity1 posn
+  env <- getEnv
+  let (env', idx) = boxValue val env
+  putEnv env'
+  return1 $ ValBox idx
 eval (ExprUnOp Unbox expr@(_, posn), _) = do
   idx <- eval expr >>= assertBox posn
   env <- getEnv
-  returnVal $ unboxValue idx env
-eval (ExprSetBox exprD@(_, posnD) exprS@(_, posnS), _) = undefined
+  return1 $ unboxValue idx env
+eval (ExprSetBox exprD@(_, posnD) exprS@(_, posnS), _) = do
+  idx <- eval exprD >>= assertBox posnD
+  valS <- eval exprS >>= assertArity1 posnS
+  modifyEnv $ setBox idx valS
+  return1 valS
 -- expression combinators
 eval (ExprBlock exprs, _) = do
   modifyEnv pushBlock
@@ -272,7 +280,7 @@ eval (ExprZeroOp Scan, _) = do
 interpType :: LitT -> Type
 interpType IntT       = TypeInt
 interpType BoolT      = TypeBool
-interpType (BoxT typ) = TypeBox (interpType typ)
+interpType BoxT       = TypeBox
 interpType FuncT      = TypeFunc
 interpType StrT       = TypeStr
 interpType CharT      = TypeChar
@@ -317,8 +325,11 @@ assertInt posn vals = do
   return int
 
 assertBox :: Posn -> [Value] -> Matthew Int
-assertBox _ [ValBox _ idx] = return idx
-assertBox _ _ = undefined
+assertBox posn vals = do
+  val <- assertArity1 posn vals
+  assertType posn TypeBox val
+  let ValBox idx = val
+  return idx
 
 assertFunc :: Posn -> [Value] -> Matthew Value
 assertFunc posn vals = do

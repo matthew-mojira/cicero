@@ -130,6 +130,7 @@ expr  : int                     { parseInt $1 }
       | id ':=' expr            { parseAssign $1 $3 }
       | id                      { parseId $1 }
 
+      | box expr                { parseUnOp Box $1 $2 }
       | unbox expr              { parseUnOp Unbox $1 $2 }
       | expr '<-' expr          { (ExprSetBox $1 $3, ($1 <|> $3)) }
 
