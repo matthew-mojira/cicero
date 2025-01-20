@@ -245,7 +245,6 @@ eval (ExprApply exprF@(_, posnF) exprsA@(_, posn), posnFIXME) = do
           return env
         TypeP typ (Just exprC@(_, posnC)) -> do
           assertType posn (interpType typ) arg
-          env <- getEnv
           res <- liftIO $ runStateT (runExceptT (eval exprC)) (setVar name arg env)
           -- three cases of errors
           -- - an error happened while evaluating the condition

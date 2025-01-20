@@ -36,7 +36,10 @@ data Expr
   deriving Eq
 
 data Param = Param { paramName :: String, paramPat :: Pattern }
-           deriving (Eq, Show)
+           deriving Eq
+
+instance Show Param where
+  show (Param name pat) = name ++ ": " ++ show pat
 
 data Lit = LitInt  Integer
          | LitBool Bool
@@ -47,7 +50,12 @@ data Lit = LitInt  Integer
 
 data Pattern = AnyP
              | TypeP { typ :: LitT , pred :: Maybe ExprPosn }
-             deriving (Eq, Show)
+             deriving Eq
+
+instance Show Pattern where
+  show AnyP                         = "any"
+  show (TypeP typ Nothing)          = show typ
+  show (TypeP typ (Just (pred, _))) = show typ ++ " where " ++ show pred
 
 data LitT = IntT
           | BoolT

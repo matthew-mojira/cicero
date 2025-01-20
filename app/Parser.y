@@ -15,6 +15,7 @@ import AST
 %tokentype { TokenPosn }
 
 %left  '->'
+%left  where
 %right else while do catch
 %right ':=' '<-'
 %left  or
@@ -24,7 +25,6 @@ import AST
 %left  '+' '-'
 %left  '*' '/'
 %right '**' '^'
-%left  where
 %right not box unbox
 %left  '?'
 %left  APPLY
