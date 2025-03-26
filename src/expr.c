@@ -27,7 +27,7 @@ Expr *parse_sexp(Sexp *sexp) {
 			val->v_type = INT_T;
 			IntV *v_int = NEW(IntV);
 			assert(v_int != NULL);
-			v_int->value = atoll(sexp->sexp_data.string);
+			v_int->value = atol(sexp->sexp_data.string);
 			val->v_data.v_int = v_int;
 			expr->e_data.e_lit = val;
 		}

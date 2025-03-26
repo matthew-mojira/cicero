@@ -1,3 +1,5 @@
+#include <inttypes.h>
+
 #ifndef VALUE_H
 #define VALUE_H
 
@@ -6,7 +8,7 @@ typedef enum {
 } Type;
 
 typedef struct {
-	long long value;
+	uint64_t value;
 } IntV;
 
 typedef struct {
@@ -15,5 +17,7 @@ typedef struct {
 		IntV *v_int;
 	} v_data;
 } Value;
+
+void print_value(Value *);
 
 #endif
