@@ -1,0 +1,29 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "expr.h"
+#include "sexp.h"
+
+int main(int argc, char **argv) {
+	if (argc != 2) {
+		fprintf(stderr, "usage: %s <file>\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	Sexp **sexps = parse_sexps(argv[1]);
+
+	if (sexps == NULL) exit(EXIT_FAILURE);
+
+	/* print out all found sexps */
+	uint32_t i;
+	for (i = 0; sexps[i] != NULL; i++) {
+		print_sexp(sexps[i]);
+		putchar('\n');
+		print_expr(parse_sexp(sexps[i]));
+		putchar('\n');
+		// free_sexp(sexps[i]);
+	}
+
+	exit(EXIT_SUCCESS);
+}

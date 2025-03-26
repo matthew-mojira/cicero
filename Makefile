@@ -9,8 +9,8 @@ OBJDIR = obj
 
 # Files
 TARGET = program  # Output program name
-SRCFILES = $(SRCDIR)/main.c $(SRCDIR)/parser/sexp.c
-OBJFILES = $(OBJDIR)/main.o $(OBJDIR)/sexp.o
+SRCFILES = $(SRCDIR)/main.c $(SRCDIR)/parser/sexp.c $(SRCDIR)/expr.c
+OBJFILES = $(OBJDIR)/main.o $(OBJDIR)/sexp.o $(OBJDIR)/expr.o
 
 # Include directories
 INCLUDES = -I$(INCDIR)
@@ -20,15 +20,19 @@ INCLUDES = -I$(INCDIR)
 all: $(TARGET)
 
 $(TARGET): $(OBJFILES)
-	$(CC) $(OBJFILES) -o $(TARGET)
+	$(CC) $(INCLUDES) $(OBJFILES) -o $(TARGET)
 
-$(OBJDIR)/main.o: $(SRCDIR)/main.c
+$(OBJDIR)/main.o: $(SRCDIR)/main.c $(SRCDIR)/parser/sexp.c $(SRCDIR)/expr.c
 	@mkdir -p $(OBJDIR)  # Create obj directory if it doesn't exist
 	$(CC) $(CFLAGS) $(INCLUDES) -c $(SRCDIR)/main.c -o $(OBJDIR)/main.o
 
 $(OBJDIR)/sexp.o: $(SRCDIR)/parser/sexp.c $(INCDIR)/sexp.h
 	@mkdir -p $(OBJDIR)  # Create obj directory if it doesn't exist
 	$(CC) $(CFLAGS) $(INCLUDES) -c $(SRCDIR)/parser/sexp.c -o $(OBJDIR)/sexp.o
+
+$(OBJDIR)/expr.o: $(SRCDIR)/expr.c $(INCDIR)/expr.h $(INCDIR)/value.h
+	@mkdir -p $(OBJDIR)  # Create obj directory if it doesn't exist
+	$(CC) $(CFLAGS) $(INCLUDES) -c $(SRCDIR)/expr.c -o $(OBJDIR)/expr.o
 
 clean:
 	rm -rf $(OBJDIR) $(TARGET)
