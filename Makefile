@@ -8,7 +8,7 @@ INCDIR = include
 OBJDIR = obj
 
 # Files
-TARGET = program  # Output program name
+TARGET = cicero
 SRCFILES = $(SRCDIR)/main.c $(SRCDIR)/parser/sexp.c $(SRCDIR)/expr.c
 OBJFILES = $(OBJDIR)/main.o $(OBJDIR)/sexp.o $(OBJDIR)/expr.o
 
