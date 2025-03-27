@@ -3,7 +3,9 @@
 #include <stdlib.h>
 
 #include "expr.h"
+#include "interp.h"
 #include "sexp.h"
+#include "value.h"
 
 int main(int argc, char **argv) {
 	if (argc != 2) {
@@ -20,7 +22,10 @@ int main(int argc, char **argv) {
 	for (i = 0; sexps[i] != NULL; i++) {
 		print_sexp(sexps[i]);
 		putchar('\n');
-		print_expr(parse_sexp(sexps[i]));
+		Expr *expr = parse_sexp(sexps[i]);
+		print_expr(expr);
+		putchar('\n');
+		print_value(eval_expr(expr));
 		putchar('\n');
 		// free_sexp(sexps[i]);
 	}
