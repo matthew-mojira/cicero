@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "expr.h"
 
@@ -15,21 +16,31 @@ Expr *parse_sexp(Sexp *sexp) {
 	switch (sexp->sexp_type) {
 	case Atomic:
 		assert(sexp->size > 0);
-		// FIXME temporary string reader
 		switch (sexp->sexp_data.string[0]) {
+		case '0'...'9':
+		case '-':
 		case '+':
-			expr->e_type = PLUS;
-			break;
-		default:
 			expr->e_type = LIT;
 			Value *val = NEW(Value);
 			assert(val != NULL);
 			val->v_type = INT_T;
 			IntV *v_int = NEW(IntV);
 			assert(v_int != NULL);
-			v_int->value = atol(sexp->sexp_data.string);
+			char *end;
+			v_int->value = strtol(sexp->sexp_data.string, &end, 10);
+			// assert entire number matched
+			if (*end != '\0') {
+				goto id;
+			}
 			val->v_data.v_int = v_int;
 			expr->e_data.e_lit = val;
+			break;
+id:
+		default:
+			expr->e_type = ID;
+			size_t len = strlen(sexp->sexp_data.string); // does not include NUL byte 
+			expr->e_data.e_id = calloc(sizeof(char), len + 1);
+			strncpy(expr->e_data.e_id, sexp->sexp_data.string, len + 1);
 		}
 		break;
 	case Apply:
@@ -71,9 +82,8 @@ void print_expr(Expr *expr) {
 		}
 		printf(")");
 		break;
-	case PLUS:
-		printf("+");
-		break;
+	case ID:
+		printf("<id: %s>", expr->e_data.e_id);
 	case LIT:
 		printf("<literal>");
 		break;

@@ -7,8 +7,9 @@
 #include "value.h"
 
 typedef struct {
-	enum { APPLY, PLUS, LIT, EMPTY } e_type;
+	enum { APPLY, ID, LIT, EMPTY } e_type;
 	union {
+		char *e_id;
 		struct _ApplyE *e_apply;
 		Value *e_lit;
 	} e_data;

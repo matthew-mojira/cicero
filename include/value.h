@@ -3,8 +3,10 @@
 #ifndef VALUE_H
 #define VALUE_H
 
+typedef struct _value Value;
+
 typedef enum {
-	INT_T
+	INT_T, FUNC_T
 } Type;
 
 typedef struct {
@@ -12,11 +14,17 @@ typedef struct {
 } IntV;
 
 typedef struct {
+	size_t n_params;
+	Value *(*func)(Value *, ...);
+} FuncV;
+
+typedef struct _value {
 	Type v_type;
 	union {
 		IntV *v_int;
+		FuncV *v_func;
 	} v_data;
-} Value;
+};
 
 void print_value(Value *);
 
