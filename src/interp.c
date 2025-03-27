@@ -4,31 +4,11 @@
 #include <string.h>
 
 #include "interp.h"
+#include "int.h"
 #include "expr.h"
+#include "func.h"
 
 #define IS_BUILTIN(S) (!strcmp(expr->e_data.e_id, S))
-
-
-Value *builtin_add(Value *val1, Value *val2) {
-	assert(val1 != NULL);
-	assert(val2 != NULL);
-	// first assert types are correct
-	assert(val1->v_type == INT_T);
-	assert(val2->v_type == INT_T);
-
-	// allocate space for return
-	Value *value = malloc(sizeof(Value));
-	assert(value != NULL);
-
-	value->v_type = INT_T;
-
-	IntV *int_v = malloc(sizeof(IntV));
-	int_v->value = val1->v_data.v_int->value + val2->v_data.v_int->value;
-
-	value->v_data.v_int = int_v;
-
-	return value;
-}
 
 Value *eval_expr(Expr *expr) {
 	assert(expr != NULL);
@@ -41,48 +21,29 @@ Value *eval_expr(Expr *expr) {
 		break;
 	case APPLY:
 		ApplyE *apply = expr->e_data.e_apply;
-		assert(apply->func != NULL);
-	
-		Value *v_func = eval_expr(apply->func);
-		assert(v_func->v_type == FUNC_T);
-		
-		FuncV *func = v_func->v_data.v_func;
-		assert(func->n_params == apply->size);
 
-		switch (func->n_params) {
-		case 0:
-			value = func->func();
-		case 1:
-			Value *arg0;
-			arg0 = eval_expr(apply->args[0]);
-			value = func->func(arg0);
-			break;
-		case 2:
-			Value *arg1;
-			arg0 = eval_expr(apply->args[0]);
-			arg1 = eval_expr(apply->args[1]);
-			value = func->func(arg0, arg1);
-			break;
-		default:
-			assert(0);
+		Value *func = eval_expr(apply->func);
+		assert(func != NULL);
+		
+		Value **args = calloc(apply->size + 1, sizeof(Value *));
+		assert(args != NULL);
+		for (int i = 0; i < apply->size; i++) {
+			Value *arg = eval_expr(apply->args[i]);
+			assert(arg != NULL);
+			args[i] = arg;
 		}
+
+		value = f_call(func, args);
 		break;
 	case ID:
 		if (IS_BUILTIN("+")) {
-			value = malloc(sizeof(Value));
-			assert(value != NULL);
-			value->v_type = FUNC_T;
-
-			FuncV *func = malloc(sizeof(FuncV));
-			assert(func != NULL);
-			func->n_params = 2;
-			func->func = builtin_add;
-
-			value->v_data.v_func = func;
+			builtin_to_value(2, i_add);
 		} else {
 			assert(0);
 		}
 	default:
+		// TODO implement
+		assert(0);
 	}
 
 	return value;

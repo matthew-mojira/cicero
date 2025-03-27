@@ -1,31 +1,32 @@
 #include <inttypes.h>
 
+/* What are values in cicero are objects in CPython. In CPython, objects are
+ * represented using a fake supertype (PyObject) and each object struct gets
+ * a common header provided by a macro. Here, we use a more conventional
+ * tag-union approach.
+ */
+
 #ifndef VALUE_H
 #define VALUE_H
 
+#include "type.h"
+
+#define assert_type(T, V) (assert(v_type(V) == T))
+
 typedef struct _value Value;
 
-typedef enum {
-	INT_T, FUNC_T
-} Type;
+/* memory management */
+Value *alloc_value(Type, void *);
+void free_value(Value *);
 
-typedef struct {
-	uint64_t value;
-} IntV;
+/* struct access */
+Type v_type(Value *);
+void *v_data(Value *);
 
-typedef struct {
-	size_t n_params;
-	Value *(*func)(); // XXX unknown arguments
-} FuncV;
+/* operations on values */
+Value *v_typeof(Value *);
 
-typedef struct _value {
-	Type v_type;
-	union {
-		IntV *v_int;
-		FuncV *v_func;
-	} v_data;
-} Value;
-
+/* misc */
 void print_value(Value *);
 
 #endif

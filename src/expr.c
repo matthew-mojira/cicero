@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "expr.h"
+#include "int.h"
 
 #define NEW(X) malloc(sizeof(X))
 
@@ -16,24 +17,18 @@ Expr *parse_sexp(Sexp *sexp) {
 	switch (sexp->sexp_type) {
 	case Atomic:
 		assert(sexp->size > 0);
+		
+		// TODO better string matching (regex!)
 		switch (sexp->sexp_data.string[0]) {
 		case '0'...'9':
 		case '-':
 		case '+':
 			expr->e_type = LIT;
-			Value *val = NEW(Value);
-			assert(val != NULL);
-			val->v_type = INT_T;
-			IntV *v_int = NEW(IntV);
-			assert(v_int != NULL);
 			char *end;
-			v_int->value = strtol(sexp->sexp_data.string, &end, 10);
+			int value = strtol(sexp->sexp_data.string, &end, 10);
 			// assert entire number matched
-			if (*end != '\0') {
-				goto id;
-			}
-			val->v_data.v_int = v_int;
-			expr->e_data.e_lit = val;
+			if (*end != '\0') goto id;
+			expr->e_data.e_lit = int_to_value(value);
 			break;
 id:
 		default:
