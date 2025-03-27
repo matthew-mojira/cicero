@@ -8,5 +8,8 @@ void print_value(Value *value) {
 		IntV *v_int = value->v_data.v_int;
 		printf("%ld", v_int->value);
 		break;
+	case FUNC_T:
+		printf("<func>");
+		break;
 	}
 }

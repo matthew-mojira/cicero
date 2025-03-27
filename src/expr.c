@@ -84,6 +84,7 @@ void print_expr(Expr *expr) {
 		break;
 	case ID:
 		printf("<id: %s>", expr->e_data.e_id);
+		break;
 	case LIT:
 		printf("<literal>");
 		break;

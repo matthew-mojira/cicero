@@ -6,7 +6,7 @@
 #include "interp.h"
 #include "expr.h"
 
-#define IS_BUILTIN(S) (strcmp(expr->e_data.e_id, S))
+#define IS_BUILTIN(S) (!strcmp(expr->e_data.e_id, S))
 
 
 Value *builtin_add(Value *val1, Value *val2) {
@@ -42,23 +42,32 @@ Value *eval_expr(Expr *expr) {
 	case APPLY:
 		ApplyE *apply = expr->e_data.e_apply;
 		assert(apply->func != NULL);
+	
+		Value *v_func = eval_expr(apply->func);
+		assert(v_func->v_type == FUNC_T);
 		
-		assert(apply->size == 2);
-		uint64_t fst = apply->args[0]->e_data.e_lit->v_data.v_int->value;
-		uint64_t snd = apply->args[1]->e_data.e_lit->v_data.v_int->value;
-		{
-			value = malloc(sizeof(Value));
-			assert(value != NULL);
-			value->v_type = INT_T;
-			IntV *v_int = malloc(sizeof (IntV));
-			assert(v_int != NULL);
-			v_int->value = fst + snd;
-			value->v_data.v_int = v_int;
+		FuncV *func = v_func->v_data.v_func;
+		assert(func->n_params == apply->size);
+
+		switch (func->n_params) {
+		case 0:
+			assert(0);
+		case 1:
+			Value *arg0;
+			break;
+		case 2:
+			Value *arg1;
+			arg0 = eval_expr(apply->args[0]);
+			arg1 = eval_expr(apply->args[1]);
+			value = func->func(arg0, arg1);
+			break;
+		default:
+			assert(0);
 		}
 		break;
 	case ID:
 		if (IS_BUILTIN("+")) {
-			Value *value = malloc(sizeof(Value));
+			value = malloc(sizeof(Value));
 			assert(value != NULL);
 			value->v_type = FUNC_T;
 
@@ -66,9 +75,12 @@ Value *eval_expr(Expr *expr) {
 			assert(func != NULL);
 			func->n_params = 2;
 			func->func = builtin_add;
+
+			value->v_data.v_func = func;
+		} else {
+			assert(0);
 		}
 	default:
-		assert(0);
 	}
 
 	return value;

@@ -15,7 +15,7 @@ typedef struct {
 
 typedef struct {
 	size_t n_params;
-	Value *(*func)(Value *, ...);
+	Value *(*func)(); // XXX unknown arguments
 } FuncV;
 
 typedef struct _value {
@@ -24,7 +24,7 @@ typedef struct _value {
 		IntV *v_int;
 		FuncV *v_func;
 	} v_data;
-};
+} Value;
 
 void print_value(Value *);
 
