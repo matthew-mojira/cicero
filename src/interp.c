@@ -51,9 +51,11 @@ Value *eval_expr(Expr *expr) {
 
 		switch (func->n_params) {
 		case 0:
-			assert(0);
+			value = func->func();
 		case 1:
 			Value *arg0;
+			arg0 = eval_expr(apply->args[0]);
+			value = func->func(arg0);
 			break;
 		case 2:
 			Value *arg1;
