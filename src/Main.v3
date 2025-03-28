@@ -1,0 +1,15 @@
+def main(args: Array<string>) -> int {
+	if (args.length != 1) System.error("argument error", "need file argument");
+	var reader = SexpReader.new(args[0]);
+	if (reader.ok) {
+		def sexps = reader.getSexps();
+		for (sexp in sexps) {
+			Sexps.print_sexp(sexp);
+		}
+	} else {
+		System.puts(reader.fileName);
+		System.puts(Strings.format3(":%d:%d %s\n", reader.error_line, reader.error_column, reader.error_msg));
+		return 1;
+	}
+	return 0;
+}

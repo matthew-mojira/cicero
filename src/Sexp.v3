@@ -1,0 +1,72 @@
+class Sexp(data: SexpData, range: FileRange) { }
+
+type SexpData {
+	case Token(token: string)	{
+		def hash() -> int { return Strings.hash(token); }
+		def display() -> string { return token; }			  		
+	}
+	case Apply(sexps: Array<Sexp>)	{
+		def hash() -> int { return Arrays.hash(0, sexps, Sexps.hash); } 
+		def display() -> string {
+			def buf = StringBuilder.new();
+			buf.putc('(');
+			for (sexp in sexps) {
+				buf.puts(sexp.data.display());
+				buf.putc(' ');
+			}
+			buf.putc(')');
+			return buf.extract();
+		}
+	}
+
+	def hash() -> int;
+	def display() -> string;
+}
+
+component Sexps {
+	def print_sexp(sexp: Sexp) {
+		print_sexp_nest(sexp, 0);
+	}
+	def equal(sexp1: Sexp, sexp2: Sexp) -> bool {
+		return Sexps.equalData(sexp1.data, sexp2.data);
+	}
+	def hash(sexp: Sexp) -> int {
+		return sexp.data.hash();
+	}
+}
+
+def equalData(sexp1: SexpData, sexp2: SexpData) -> bool {
+	match (sexp1) {
+		Token(token1) => match (sexp2) {
+			Token(token2) => return Strings.equal(token1, token2);
+			_ => return false;
+		}
+		Apply(sexps1) => match (sexp2) {
+			Apply(sexps2) => return Arrays.equal(sexps1, sexps2);
+			_ => return false;
+		}
+	}
+}
+def print_sexp_nest(sexp: Sexp, nest: int) {
+	var rem = nest;
+	while (rem --> 0) System.puts("  ");
+	
+	match (sexp.data) {
+		Token(str) => {
+			System.puts(str);
+			System.ln();
+		}
+		Apply(sexps) => {
+			System.puts("(");
+			System.ln();
+			for (sexp in sexps) {
+				print_sexp_nest(sexp, nest + 1);
+			}
+			var rem = nest;
+			while (rem --> 0) System.puts("  ");
+			System.puts(")");
+			System.ln();
+		}
+	}
+}
+
