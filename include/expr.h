@@ -6,24 +6,11 @@
 #include "sexp.h"
 #include "value.h"
 
-typedef struct {
-	enum { APPLY, ID, LIT, EMPTY } e_type;
-	union {
-		char *e_id;
-		struct _ApplyE *e_apply;
-		Value *e_lit;
-	} e_data;
-} Expr;
+/* constructor */
+Value *parse_sexp(Sexp *);
 
-typedef struct _ApplyE {
-	Expr *func;
-	size_t size;
-	Expr **args;
-} ApplyE;
-
-Expr *parse_sexp(Sexp *);
-void free_expr(Expr *);
-
-void print_expr(Expr *);
+/* operations on expressions */
+Value *e_eval(Value *);
+Value *e_print(Value *);
 
 #endif

@@ -27,11 +27,11 @@ int main(int argc, char **argv) {
 // 			printf("%d: %p\n", i, sexps[i]);
 // 			print_sexp(sexps[i]);
 // 			putchar('\n');
- 			Expr *expr = parse_sexp(sexps[i]);
+// 			Expr *expr = parse_sexp(sexps[i]);
 //  		print_expr(expr);
 //  		putchar('\n');
- 			v_print(eval_expr(expr));
- 			putchar('\n');
+// 			v_print(eval_expr(expr));
+// 			putchar('\n');
 			// free_sexp(sexps[i]);
 		}
 
@@ -41,14 +41,12 @@ int main(int argc, char **argv) {
 			printf("cicero> ");
 			Sexp *sexp = parse_sexp_stdin();
 			assert(sexp != NULL);
-// 			print_sexp(sexp);
-// 			putchar('\n');
-
-			Expr *expr = parse_sexp(sexp);
-//			print_expr(expr);
-// 			putchar('\n');
+			Value *expr = parse_sexp(sexp);
+			assert(expr != NULL);
+			Value *value = e_eval(expr);
+			assert(value != NULL);
 			printf("=> ");
-			v_print(eval_expr(expr));
+			v_print(value);
 			putchar('\n');
 		}
 	default:

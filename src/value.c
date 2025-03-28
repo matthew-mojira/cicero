@@ -6,6 +6,7 @@
 #include "int.h"
 #include "func.h"
 #include "type.h"
+#include "expr.h"
 #include "poopcrap.h"
 
 struct _value {
@@ -64,8 +65,11 @@ Value *v_print(Value *value) {
 		return t_print(value);
 	case POOPCRAP_T:
 		return p_print(value);
-	default:
-		fprintf(stderr, "Unrecognized type");
-		return NULL;
+	case EXPR_T:
+		return e_print(value);
  	}
+
+	fprintf(stderr, "Unrecognized type in print");
+	assert(0);
+	return NULL;
 }

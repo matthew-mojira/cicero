@@ -5,86 +5,136 @@
 
 #include "expr.h"
 #include "int.h"
+#include "func.h"
+#include "value.h"
+#include "poopcrap.h"
 
 #define NEW(X) malloc(sizeof(X))
+#define IS_BUILTIN(S) (!strcmp(expr->e_data.e_id, S))
 
-Expr *parse_sexp(Sexp *sexp) {
+typedef struct {
+	enum { APPLY, ID } e_type;
+	union {
+		char *e_id;
+		struct _ApplyE *e_apply;
+	} e_data;
+} Expr;
+
+typedef struct _ApplyE {
+	Value *func;
+	size_t size;
+	Value **args;
+} ApplyE;
+
+Value *parse_sexp(Sexp *sexp) {
 	assert(sexp != NULL);
 
 	Expr *expr = NEW(Expr);
-	assert(expr != NULL);
 
 	switch (sexp->sexp_type) {
 	case Atomic:
 		assert(sexp->size > 0);
-		
-		// TODO better string matching (regex!)
-		switch (sexp->sexp_data.string[0]) {
-		case '0'...'9':
-		case '-':
-		case '+':
-			expr->e_type = LIT;
-			char *end;
-			int value = strtol(sexp->sexp_data.string, &end, 10);
-			// assert entire number matched
-			if (*end != '\0') goto id;
-			expr->e_data.e_lit = int_to_value(value);
-			break;
-id:
-		default:
-			expr->e_type = ID;
-			size_t len = strlen(sexp->sexp_data.string); // does not include NUL byte 
-			expr->e_data.e_id = calloc(sizeof(char), len + 1);
-			strncpy(expr->e_data.e_id, sexp->sexp_data.string, len + 1);
-		}
+
+		expr->e_type = ID;
+		size_t len = strlen(sexp->sexp_data.string); // does not include NUL byte 
+		expr->e_data.e_id = calloc(sizeof(char), len + 1);
+		strncpy(expr->e_data.e_id, sexp->sexp_data.string, len + 1);
 		break;
 	case Apply:
-		if (sexp->size == 0) {
-			expr->e_type = EMPTY;
-		} else {
-			expr->e_type = APPLY;
-			ApplyE *apply = NEW(ApplyE);
-			assert(apply != NULL);
-			apply->func = parse_sexp(sexp->sexp_data.apply[0]);
-			apply->size = (size_t) sexp->size - 1;
-			apply->args = calloc(apply->size, sizeof(Expr *));
-			for (int i = 0; i < apply->size; i++) {
-				apply->args[i] = parse_sexp(sexp->sexp_data.apply[i + 1]);
-			}
-			expr->e_data.e_apply = apply;
+		expr->e_type = APPLY;
+		ApplyE *apply = NEW(ApplyE);
+		assert(apply != NULL);
+		apply->func = parse_sexp(sexp->sexp_data.apply[0]);
+		apply->size = (size_t) sexp->size - 1;
+		apply->args = calloc(apply->size, sizeof(Expr *));
+		for (int i = 0; i < apply->size; i++) {
+			apply->args[i] = parse_sexp(sexp->sexp_data.apply[i + 1]);
 		}
+		expr->e_data.e_apply = apply;
 	}
 
-	return expr;
-}
-
-void free_expr(Expr *expr) {
-	assert(0);
-}
-
-void print_expr(Expr *expr) {
 	assert(expr != NULL);
+	return alloc_value(EXPR_T, expr);
+}
+
+/* operations on exprs */
+Value *e_eval(Value *input) {
+	assert(input != NULL);
+	assert_type(EXPR_T, input);
+
+	Expr *expr = v_data(input);
+	Value *value = NULL;
 
 	switch (expr->e_type) {
 	case APPLY:
-		printf("(APPLY ");
 		ApplyE *apply = expr->e_data.e_apply;
-		print_expr(apply->func);
-		printf(" TO");
+
+		Value *func = e_eval(apply->func);
+		assert(func != NULL);
+		value = f_call(func, apply->args);
+		break;
+	case ID:
+		if (IS_BUILTIN("+")) {
+			value = builtin_to_value(2, i_add);
+		} else if (IS_BUILTIN("typeof")) {
+			value = builtin_to_value(1, v_typeof);
+		} else if (IS_BUILTIN("print")) {
+			value = builtin_to_value(1, v_print);
+		} else {
+			char *str = expr->e_data.e_id;
+			assert(strlen(str) > 0);
+			
+			switch (str[0]) {
+			case '0'...'9':
+			case '-':
+			case '+':
+				char *end;
+				long num = strtol(str, &end, 10);
+				// assert entire number matched
+				if (*end == '\0') {
+					value = int_to_value(num);
+					break;
+				}
+			default:
+				fprintf(stderr, "Unrecognized identifier: %s\n", str);
+				value = NULL;
+			}
+		}
+	}
+
+	return value;
+}
+
+
+Value *e_print(Value *value) {
+	assert(value != NULL);
+	assert_type(EXPR_T, value);
+
+	Expr *expr = v_data(value);
+
+	switch (expr->e_type) {
+	case APPLY:
+		printf("(");
+		ApplyE *apply = expr->e_data.e_apply;
+		e_print(apply->func);
+		printf(" ");
 		for (int i = 0; i < apply->size; i++) {
 			printf(" ");
-			print_expr(apply->args[i]);
+			e_print(apply->args[i]);
 		}
 		printf(")");
 		break;
 	case ID:
-		printf("<id: %s>", expr->e_data.e_id);
-		break;
-	case LIT:
-		printf("<literal>");
-		break;
-	case EMPTY:
-		printf("()");
+		printf("%s", expr->e_data.e_id);
 		break;
 	}
+
+	return poop_to_crap();
+}
+
+Value *e_noeval(Value *value) {
+	assert(value != NULL);
+	assert_type(EXPR_T, value);
+
+	return value;
 }

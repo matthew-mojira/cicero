@@ -24,6 +24,8 @@ Value *t_print(Value *value) {
 	case POOPCRAP_T:
 		printf("poopcrap");
 		break;
+	case EXPR_T:
+		printf("expr");
 	}
 
 	return poop_to_crap();

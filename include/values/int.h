@@ -4,8 +4,6 @@
 #include <inttypes.h>
 #include "value.h"
 
-typedef struct _int Int;
-
 /* constructor */
 Value *int_to_value(uint64_t);
 

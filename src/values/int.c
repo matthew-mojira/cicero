@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "int.h"
+#include "expr.h"
 #include "value.h"
 #include "poopcrap.h"
 #include "type.h"
@@ -12,8 +13,8 @@ struct _int {
 	uint64_t i_value;
 };
 
-static Int *wrap_int(uint64_t num) {
-	Int* obj = malloc(sizeof(Int));
+static struct _int *wrap_int(uint64_t num) {
+	struct _int* obj = malloc(sizeof(struct _int));
 	assert(obj != NULL);
 	obj->i_value = num;
 
@@ -36,6 +37,9 @@ Value *int_to_value(uint64_t num) {
 /* operations on integers */
 
 Value *i_add(Value *fst, Value *snd) {
+	fst = e_eval(fst);
+	snd = e_eval(snd);
+
 	return int_to_value(value_to_int(fst) + value_to_int(snd));
 }
 
