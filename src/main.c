@@ -24,28 +24,30 @@ int main(int argc, char **argv) {
 		/* print out all found sexps */
 		uint32_t i;
 		for (i = 0; sexps[i] != NULL; i++) {
+			printf("%d: %p\n", i, sexps[i]);
 			print_sexp(sexps[i]);
 			putchar('\n');
-			Expr *expr = parse_sexp(sexps[i]);
-			print_expr(expr);
-			putchar('\n');
-			print_value(eval_expr(expr));
-			putchar('\n');
+// 			Expr *expr = parse_sexp(sexps[i]);
+// 			print_expr(expr);
+// 			putchar('\n');
+// 			print_value(eval_expr(expr));
+// 			putchar('\n');
 			// free_sexp(sexps[i]);
 		}
 
 		exit(EXIT_SUCCESS);
 	case 1:
-		char buf[BUFFER_SIZE];
 		while (1) {
 			printf("cicero> ");
-			if (!fgets(buf, sizeof(buf), stdin)) break;
+			Sexp *sexp = parse_sexp_stdin();
+			assert(sexp != NULL);
+			print_sexp(sexp);
+			putchar('\n');
 
-			Sexp **sexps = parse_sexps(buf);
-			assert(sexps != NULL);
-			assert(sexps[0] != NULL);
-
-			Expr *expr = parse_sexp(sexps[0]);
+			Expr *expr = parse_sexp(sexp);
+ 			print_expr(expr);
+			putchar('\n');
+			
 			print_value(eval_expr(expr));
 			putchar('\n');
 		}
