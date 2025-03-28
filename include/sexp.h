@@ -23,5 +23,6 @@ void print_sexp(Sexp *);
 void free_sexp(Sexp *);
 
 Sexp **parse_sexps(const char *filename);
+Sexp *parse_sexp_stdin(void);
 
 #endif
