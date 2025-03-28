@@ -41,14 +41,14 @@ int main(int argc, char **argv) {
 			printf("cicero> ");
 			Sexp *sexp = parse_sexp_stdin();
 			assert(sexp != NULL);
-			print_sexp(sexp);
-			putchar('\n');
+// 			print_sexp(sexp);
+// 			putchar('\n');
 
 			Expr *expr = parse_sexp(sexp);
- 			print_expr(expr);
-			putchar('\n');
+//			print_expr(expr);
+// 			putchar('\n');
 			
-			print_value(eval_expr(expr));
+			v_print(eval_expr(expr));
 			putchar('\n');
 		}
 	default:

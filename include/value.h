@@ -9,11 +9,11 @@
 #ifndef VALUE_H
 #define VALUE_H
 
-#include "type.h"
-
 #define assert_type(T, V) (assert(v_type(V) == T))
 
 typedef struct _value Value;
+
+#include "type.h"
 
 /* memory management */
 Value *alloc_value(Type, void *);
@@ -25,8 +25,6 @@ void *v_data(Value *);
 
 /* operations on values */
 Value *v_typeof(Value *);
-
-/* misc */
-void print_value(Value *);
+Value *v_print(Value *);
 
 #endif

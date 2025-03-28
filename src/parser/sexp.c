@@ -401,6 +401,8 @@ Sexp *parse_sexp_stdin(void) {
 		}
 	}
 end:
-	assert(sexps_count == 1);
+	assert(sexps_count <= 1);
+	fflush(stdin);
+	if (sexps_count == 0) return NULL;
 	return sexps[0];
 }

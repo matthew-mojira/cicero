@@ -13,7 +13,7 @@
 Value *eval_expr(Expr *expr) {
 	assert(expr != NULL);
 
-	Value *value;
+	Value *value = NULL;
 
 	switch (expr->e_type) {
 	case LIT:
@@ -37,10 +37,11 @@ Value *eval_expr(Expr *expr) {
 		break;
 	case ID:
 		if (IS_BUILTIN("+")) {
-			builtin_to_value(2, i_add);
+			value = builtin_to_value(2, i_add);
 		} else {
 			assert(0);
 		}
+		break;
 	default:
 		// TODO implement
 		assert(0);

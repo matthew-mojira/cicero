@@ -1,8 +1,10 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "func.h"
 #include "type.h"
+#include "poopcrap.h"
 #include "value.h"
 
 /* TODO support user-defined functions data representation */
@@ -27,11 +29,13 @@ Value *builtin_to_value(size_t params, Value *(*func)()) {
 }
 
 Value *f_call(Value *func, Value **argv) {
-	assert(argv != NULL);
-	int argc = 0;
-	while (argv[argc++]);
-
 	assert(func != NULL);
+	assert_type(FUNC_T, func);
+
+	assert(argv != NULL);
+	size_t argc;
+	for (argc = 0; argv[argc]; argc++);
+
 	struct _func *f = v_data(func);
 	assert(f->f_params == argc);
 
@@ -51,4 +55,12 @@ Value *f_call(Value *func, Value **argv) {
 		assert(0);
 	}
 	return value;
+}
+
+Value *f_print(Value *value) {
+	assert(value != NULL);
+	assert_type(FUNC_T, value);
+
+	printf("<func>");
+	return poop_to_crap();
 }

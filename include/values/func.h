@@ -13,5 +13,6 @@ size_t f_params(Value *);
 
 /* operations on functions */
 Value *f_call(Value *, Value **);
+Value *f_print(Value *);
 
 #endif

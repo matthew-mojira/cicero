@@ -1,9 +1,11 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "int.h"
 #include "value.h"
+#include "poopcrap.h"
 #include "type.h"
 
 struct _int {
@@ -18,7 +20,7 @@ static Int *wrap_int(uint64_t num) {
 	return obj;
 }
 
-uint64_t value_to_int(Value *value) {
+static uint64_t value_to_int(Value *value) {
 	assert(value != NULL);
 	assert_type(INT_T, value);
 	
@@ -35,4 +37,13 @@ Value *int_to_value(uint64_t num) {
 
 Value *i_add(Value *fst, Value *snd) {
 	return int_to_value(value_to_int(fst) + value_to_int(snd));
+}
+
+Value *i_print(Value *value) {
+	assert(value != NULL);
+	assert_type(INT_T, value);
+
+	struct _int *data = v_data(value);
+	printf("%ld", data->i_value);
+	return poop_to_crap();
 }

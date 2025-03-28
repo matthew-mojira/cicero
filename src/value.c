@@ -3,6 +3,10 @@
 #include <stdlib.h>
 
 #include "value.h"
+#include "int.h"
+#include "func.h"
+#include "type.h"
+#include "poopcrap.h"
 
 struct _value {
 	Type  v_type;
@@ -10,8 +14,6 @@ struct _value {
 };
 
 Value *alloc_value(Type type, void *data) {
-	assert(data != NULL);
-
 	Value *value = malloc(sizeof(struct _value));
 	assert(value != NULL);
 
@@ -38,16 +40,21 @@ void *v_data(Value *value) {
 	return value->v_data;
 }
 
-void print_value(Value *value) {
+/* a polymorphic printing function */
+Value *v_print(Value *value) {
 	assert(value != NULL);
 
-// 	switch (value->v_type) {
-// 	case INT_T:
-// 		IntV *v_int = value->v_data.v_int;
-// 		printf("%ld", v_int->value);
-// 		break;
-// 	case FUNC_T:
-// 		printf("<func>");
-// 		break;
-// 	}
+ 	switch (v_type(value)) {
+ 	case INT_T:
+ 		return i_print(value);
+ 	case FUNC_T:
+ 		return f_print(value);
+	case TYPE_T:
+		return t_print(value);
+	case POOPCRAP_T:
+		return p_print(value);
+	default:
+		fprintf(stderr, "Unrecognized type");
+		return NULL;
+ 	}
 }
