@@ -152,21 +152,26 @@ Sexp **parse_sexps(const char *filename) {
 				}
 				sexps[sexps_count] = done_sexp;
 				sexps_count += 1;
-
-				break;
+			} else {
+				/* otherwise, add it to enclosing sexp */
+				ADD_SEXP(done_sexp);
 			}
-			/* otherwise, add it to enclosing sexp */
-			ADD_SEXP(done_sexp);
 
 			break;
 		case '\n':
 			if (buf_index > 0) {
 				CREATE_ATOMIC();
-				/* if there is no enclosing sexp, then exit */
+				/* if there is no enclosing sexp, then add to top level */
 				if (depth == 0) {
-					fprintf(stderr, "%s:%d:%d: identifier outside of s-expression\n", filename, line, col);
+					fprintf(stderr, "%s:%d:%d: newline identifier outside of s-expression\n", filename, line, col);
+					if (sexps_count >= MAX_SEXPS) {
+						fprintf(stderr, "%s:%d:%d: too many s-expressions (max=%d)\n", filename, line, col, MAX_SEXPS);
+					}
+					sexps[sexps_count] = new_sexp;
+					sexps_count += 1;
+				} else {
+					ADD_SEXP(new_sexp);
 				}
-				ADD_SEXP(new_sexp);
 				RESET_BUFFER();
 			}
 			line += 1;
@@ -176,11 +181,18 @@ Sexp **parse_sexps(const char *filename) {
 		case '\r':
 			if (buf_index > 0) {
 				CREATE_ATOMIC();
-				/* if there is no enclosing sexp, then exit */
+				/* if there is no enclosing sexp, then add to top level */
 				if (depth == 0) {
-					fprintf(stderr, "%s:%d:%d: identifier outside of s-expression\n", filename, line, col);
+					fprintf(stderr, "%s:%d:%d: whsp identifier outside of s-expression\n", filename, line, col);
+					
+					if (sexps_count >= MAX_SEXPS) {
+						fprintf(stderr, "%s:%d:%d: too many s-expressions (max=%d)\n", filename, line, col, MAX_SEXPS);
+					}
+					sexps[sexps_count] = new_sexp;
+					sexps_count += 1;
+				} else {
+					ADD_SEXP(new_sexp);
 				}
-				ADD_SEXP(new_sexp);
 				RESET_BUFFER();
 			}
 			break;
@@ -209,8 +221,10 @@ Sexp **parse_sexps(const char *filename) {
 	}
 
 	/* we return a pointer to a null-terminated array of sexp pointers */
-	Sexp **result = calloc(sexps_count, sizeof(Sexp *));
+	Sexp **result = calloc(sexps_count + 1, sizeof(Sexp *));
 	memcpy(result, sexps, sexps_count * sizeof(Sexp *));
+
+	printf("%d\n", sexps_count);
 
 	return result;
 }
