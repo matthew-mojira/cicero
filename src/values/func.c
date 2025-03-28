@@ -50,6 +50,9 @@ Value *f_call(Value *func, Value **argv) {
 	case 2:
 		value = f->f_func(argv[0], argv[1]);
 		break;
+	case 3:
+		value = f->f_func(argv[0], argv[1], argv[2]);
+		break;
 	default:
 		// TODO implement
 		assert(0);

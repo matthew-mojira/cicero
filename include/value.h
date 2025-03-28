@@ -26,5 +26,7 @@ void *v_data(Value *);
 /* operations on values */
 Value *v_typeof(Value *);
 Value *v_print(Value *);
+Value *v_istrue(Value *);
+Value *v_if(Value *, Value *, Value *);
 
 #endif

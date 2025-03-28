@@ -2,7 +2,7 @@
 #define TYPE_H
 
 typedef enum {
-	INT_T, FUNC_T, TYPE_T, POOPCRAP_T, EXPR_T
+	INT_T, FUNC_T, TYPE_T, POOPCRAP_T, EXPR_T, BOOL_T
 } Type;
 
 #include "value.h"

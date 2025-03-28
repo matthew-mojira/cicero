@@ -7,6 +7,7 @@
 #include "int.h"
 #include "func.h"
 #include "value.h"
+#include "bool.h"
 #include "poopcrap.h"
 
 #define NEW(X) malloc(sizeof(X))
@@ -23,7 +24,7 @@ typedef struct {
 typedef struct _ApplyE {
 	Value *func;
 	size_t size;
-	Value **args;
+	Value **args; // args is also nul-terminated array (assume Value * null is not valid)
 } ApplyE;
 
 Value *parse_sexp(Sexp *sexp) {
@@ -46,7 +47,7 @@ Value *parse_sexp(Sexp *sexp) {
 		assert(apply != NULL);
 		apply->func = parse_sexp(sexp->sexp_data.apply[0]);
 		apply->size = (size_t) sexp->size - 1;
-		apply->args = calloc(apply->size, sizeof(Expr *));
+		apply->args = calloc(apply->size + 1, sizeof(Expr *));
 		for (int i = 0; i < apply->size; i++) {
 			apply->args[i] = parse_sexp(sexp->sexp_data.apply[i + 1]);
 		}
@@ -80,6 +81,18 @@ Value *e_eval(Value *input) {
 			value = builtin_to_value(1, v_typeof);
 		} else if (IS_BUILTIN("print")) {
 			value = builtin_to_value(1, v_print);
+		} else if (IS_BUILTIN("eval")) {
+			value = builtin_to_value(1, e_eval);
+		} else if (IS_BUILTIN("noeval")) {
+			value = builtin_to_value(1, e_noeval);
+		} else if (IS_BUILTIN("if")) {
+			value = builtin_to_value(3, v_if);
+		} else if (IS_BUILTIN("istrue")) {
+			value = builtin_to_value(1, v_istrue);
+		} else if (IS_BUILTIN("true")) {
+			value = b_true();
+		} else if (IS_BUILTIN("false")) {
+			value = b_false();
 		} else {
 			char *str = expr->e_data.e_id;
 			assert(strlen(str) > 0);
@@ -117,7 +130,6 @@ Value *e_print(Value *value) {
 		printf("(");
 		ApplyE *apply = expr->e_data.e_apply;
 		e_print(apply->func);
-		printf(" ");
 		for (int i = 0; i < apply->size; i++) {
 			printf(" ");
 			e_print(apply->args[i]);

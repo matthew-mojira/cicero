@@ -8,6 +8,7 @@
 #include "type.h"
 #include "expr.h"
 #include "poopcrap.h"
+#include "bool.h"
 
 struct _value {
 	Type  v_type;
@@ -44,6 +45,8 @@ void *v_data(Value *value) {
 /* operations on values */
 Value *v_typeof(Value *value) {
 	assert(value != NULL);
+	value = e_eval(value);
+	assert(value != NULL);
 
 	Type *data = malloc(sizeof(Type));
 	assert(data != NULL);
@@ -67,9 +70,45 @@ Value *v_print(Value *value) {
 		return p_print(value);
 	case EXPR_T:
 		return e_print(value);
+	case BOOL_T:
+		return b_print(value);
  	}
 
 	fprintf(stderr, "Unrecognized type in print");
 	assert(0);
 	return NULL;
+}
+
+Value *v_istrue(Value *value) {
+	assert(value != NULL);
+
+	Value *out;
+
+	switch (v_type(value)) {
+	case BOOL_T:
+		out = value;
+		break;
+	case POOPCRAP_T:
+		out = b_false();
+		break;
+	default:
+		out = b_true();
+		break;
+	}
+
+	return out;
+}
+
+Value *v_if(Value *cond, Value *e_true, Value *e_false) {
+	assert(cond != NULL);
+	assert(e_true != NULL);
+	assert(e_false != NULL);
+	
+	cond = e_eval(cond);
+	assert(cond != NULL);
+
+	Value *out = istrue(cond) ? e_eval(e_true) : e_eval(e_false);
+	assert(out != NULL);
+
+	return out;
 }

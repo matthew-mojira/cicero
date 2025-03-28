@@ -26,6 +26,10 @@ Value *t_print(Value *value) {
 		break;
 	case EXPR_T:
 		printf("expr");
+		break;
+	case BOOL_T:
+		printf("bool");
+		break;
 	}
 
 	return poop_to_crap();

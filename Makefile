@@ -9,8 +9,8 @@ OBJDIR = obj
 
 # Files
 TARGET = cicero
-SRCFILES = $(SRCDIR)/main.c $(SRCDIR)/expr.c $(SRCDIR)/interp.c $(SRCDIR)/value.c $(SRCDIR)/parser/sexp.c $(SRCDIR)/values/int.c $(SRCDIR)/values/func.c $(SRCDIR)/values/poopcrap.c $(SRCDIR)/values/type.c
-OBJFILES = $(OBJDIR)/main.o $(OBJDIR)/sexp.o $(OBJDIR)/expr.o $(OBJDIR)/interp.o $(OBJDIR)/value.o $(OBJDIR)/int.o $(OBJDIR)/func.o $(OBJDIR)/poopcrap.o $(OBJDIR)/type.o
+SRCFILES = $(SRCDIR)/main.c $(SRCDIR)/expr.c $(SRCDIR)/interp.c $(SRCDIR)/value.c $(SRCDIR)/parser/sexp.c $(SRCDIR)/values/int.c $(SRCDIR)/values/func.c $(SRCDIR)/values/poopcrap.c $(SRCDIR)/values/type.c $(SRCDIR)/values/bool.c
+OBJFILES = $(OBJDIR)/main.o $(OBJDIR)/sexp.o $(OBJDIR)/expr.o $(OBJDIR)/interp.o $(OBJDIR)/value.o $(OBJDIR)/int.o $(OBJDIR)/func.o $(OBJDIR)/poopcrap.o $(OBJDIR)/type.o $(OBJDIR)/bool.o
 
 # Include directories
 INCLUDES = -I$(INCDIR) -I$(INCDIR)/values
@@ -57,6 +57,11 @@ $(OBJDIR)/poopcrap.o: $(SRCDIR)/values/poopcrap.c $(INCDIR)/values/poopcrap.h $(
 $(OBJDIR)/type.o: $(SRCDIR)/values/type.c $(INCDIR)/values/type.h $(INCDIR)/value.h $(INCDIR)/values/poopcrap.h
 	@mkdir -p $(OBJDIR)  # Create obj directory if it doesn't exist
 	$(CC) $(CFLAGS) $(INCLUDES) -c $(SRCDIR)/values/type.c -o $(OBJDIR)/type.o
+
+$(OBJDIR)/bool.o: $(SRCDIR)/values/bool.c $(INCDIR)/values/bool.h $(INCDIR)/values/type.h $(INCDIR)/value.h $(INCDIR)/values/poopcrap.h
+	@mkdir -p $(OBJDIR)  # Create obj directory if it doesn't exist
+	$(CC) $(CFLAGS) $(INCLUDES) -c $(SRCDIR)/values/bool.c -o $(OBJDIR)/bool.o
+
 clean:
 	rm -rf $(OBJDIR) $(TARGET)
 

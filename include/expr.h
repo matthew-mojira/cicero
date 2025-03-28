@@ -11,6 +11,7 @@ Value *parse_sexp(Sexp *);
 
 /* operations on expressions */
 Value *e_eval(Value *);
+Value *e_noeval(Value *);
 Value *e_print(Value *);
 
 #endif
