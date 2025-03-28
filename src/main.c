@@ -24,14 +24,14 @@ int main(int argc, char **argv) {
 		/* print out all found sexps */
 		uint32_t i;
 		for (i = 0; sexps[i] != NULL; i++) {
-			printf("%d: %p\n", i, sexps[i]);
-			print_sexp(sexps[i]);
-			putchar('\n');
-// 			Expr *expr = parse_sexp(sexps[i]);
-// 			print_expr(expr);
+// 			printf("%d: %p\n", i, sexps[i]);
+// 			print_sexp(sexps[i]);
 // 			putchar('\n');
-// 			print_value(eval_expr(expr));
-// 			putchar('\n');
+ 			Expr *expr = parse_sexp(sexps[i]);
+//  		print_expr(expr);
+//  		putchar('\n');
+ 			v_print(eval_expr(expr));
+ 			putchar('\n');
 			// free_sexp(sexps[i]);
 		}
 
@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
 			Expr *expr = parse_sexp(sexp);
 //			print_expr(expr);
 // 			putchar('\n');
-			
+			printf("=> ");
 			v_print(eval_expr(expr));
 			putchar('\n');
 		}
