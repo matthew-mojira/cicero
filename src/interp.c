@@ -7,6 +7,7 @@
 #include "int.h"
 #include "expr.h"
 #include "func.h"
+#include "value.h"
 
 #define IS_BUILTIN(S) (!strcmp(expr->e_data.e_id, S))
 
@@ -38,6 +39,10 @@ Value *eval_expr(Expr *expr) {
 	case ID:
 		if (IS_BUILTIN("+")) {
 			value = builtin_to_value(2, i_add);
+		} else if (IS_BUILTIN("typeof")) {
+			value = builtin_to_value(1, v_typeof);
+		} else if (IS_BUILTIN("print")) {
+			value = builtin_to_value(1, v_print);
 		} else {
 			assert(0);
 		}

@@ -34,7 +34,7 @@ $(OBJDIR)/expr.o: $(SRCDIR)/expr.c $(INCDIR)/expr.h $(INCDIR)/value.h $(INCDIR)/
 	@mkdir -p $(OBJDIR)  # Create obj directory if it doesn't exist
 	$(CC) $(CFLAGS) $(INCLUDES) -c $(SRCDIR)/expr.c -o $(OBJDIR)/expr.o
 
-$(OBJDIR)/interp.o: $(SRCDIR)/interp.c $(INCDIR)/interp.h $(INCDIR)/expr.h $(INCDIR)/values/int.h $(INCDIR)/values/func.h
+$(OBJDIR)/interp.o: $(SRCDIR)/interp.c $(INCDIR)/interp.h $(INCDIR)/expr.h $(INCDIR)/value.h $(INCDIR)/values/int.h $(INCDIR)/values/func.h
 	@mkdir -p $(OBJDIR)  # Create obj directory if it doesn't exist
 	$(CC) $(CFLAGS) $(INCLUDES) -c $(SRCDIR)/interp.c -o $(OBJDIR)/interp.o
 

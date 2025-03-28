@@ -40,6 +40,17 @@ void *v_data(Value *value) {
 	return value->v_data;
 }
 
+/* operations on values */
+Value *v_typeof(Value *value) {
+	assert(value != NULL);
+
+	Type *data = malloc(sizeof(Type));
+	assert(data != NULL);
+	*data = v_type(value);
+
+	return alloc_value(TYPE_T, data);
+}
+
 /* a polymorphic printing function */
 Value *v_print(Value *value) {
 	assert(value != NULL);
