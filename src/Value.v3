@@ -1,0 +1,23 @@
+type Value {
+	case Int(i: int);
+	case Bool(b: bool);
+	case Func(f: Array<Value> -> Value);
+	case Str(s: string);
+	case Char(c: byte);
+	case Type(t: Type);
+	case PoopCrap;
+}
+
+component Values {
+	def v_typeof(v: Value) -> Value {
+		match (v) {
+			Int(_)  => return Value.Type(Type.Int);
+			Bool(_) => return Value.Type(Type.Bool);
+			Func(_) => return Value.Type(Type.Func);
+			Str(_)  => return Value.Type(Type.Str);
+			Char(_) => return Value.Type(Type.Char);
+			Type(_) => return Value.Type(Type.Type);
+			PoopCrap => return Value.Type(Type.PoopCrap);
+		}
+	}
+}

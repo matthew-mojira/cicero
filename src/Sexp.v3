@@ -28,7 +28,7 @@ component Sexps {
 		print_sexp_nest(sexp, 0);
 	}
 	def equal(sexp1: Sexp, sexp2: Sexp) -> bool {
-		return Sexps.equalData(sexp1.data, sexp2.data);
+		return equalData(sexp1.data, sexp2.data);
 	}
 	def hash(sexp: Sexp) -> int {
 		return sexp.data.hash();

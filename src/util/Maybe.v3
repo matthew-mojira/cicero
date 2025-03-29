@@ -1,0 +1,4 @@
+type Maybe<T> {
+	case Just(elt: T);
+	case Nothing;
+}
