@@ -12,6 +12,8 @@ def main(args: Array<string>) -> int {
 		def eval = Eval.new();
 
 		for (expr in exprs) {
+			System.puts(expr.display());
+			System.ln();
 			def val = eval.eval(expr);
 			System.puts(val.display());
 			System.ln();

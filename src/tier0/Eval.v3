@@ -15,6 +15,10 @@ class Eval {
 				Assert.assertArity(argv, func.argc);
 				return func.func(argv);
 			}
+			If(exprC, exprT, exprF) => {
+				def cond = eval(exprC);
+				return eval(if(cond.isTrue(), exprT, exprF));
+			}
 		}
 	}
 }

@@ -1,6 +1,9 @@
+/* An operation is built-in if and only if it does not require non-strict
+ * evaluation.
+ */
 enum Builtin(keyword: string, argc: int, func: Array<Value> -> Value) {
 	V_TYPEOF("typeof", 1, v_typeof),
-	V_PRINT ("print",  1, v_print)
+	V_PRINT ("print",  1, v_print),
 }
 
 def v_typeof(vals: Array<Value>) -> Value {

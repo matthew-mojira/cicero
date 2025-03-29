@@ -1,29 +1,36 @@
 type Value {
 	case Int(int_: int) {
-		def typeof() -> Type { return Type.Int; }
+		def typeof()  -> Type { return Type.Int; }
 		def display() -> string { return Strings.format1("%d", int_); }
+		def isTrue()  -> bool { return true; }
 	}
 	case Bool(bool_: bool) {
-		def typeof() -> Type { return Type.Bool; }
+		def typeof()  -> Type { return Type.Bool; }
 		def display() -> string { return if(bool_, "true", "false"); }
+		def isTrue()  -> bool { return bool_; }
 	}
 	case Func(argc: int, func: Range<Value> -> Value) {
-		def typeof() -> Type { return Type.Func; }
+		def typeof()  -> Type { return Type.Func; }
 		def display() -> string { return "<func>"; }
+		def isTrue()  -> bool { return true; }
 	}
 	case Str(str: string) {
-		def typeof() -> Type { return Type.Str; }
+		def typeof()  -> Type { return Type.Str; }
 		def display() -> string { return str; }
+		def isTrue()  -> bool { return true; }
 	}
 	case Type(type_: Type) {
-		def typeof() -> Type { return Type.Type; }
+		def typeof()  -> Type { return Type.Type; }
 		def display() -> string { return type_.display(); }
+		def isTrue()  -> bool { return true; }
 	}
 	case PoopCrap {
-		def typeof() -> Type { return Type.PoopCrap; }
+		def typeof()  -> Type { return Type.PoopCrap; }
 		def display() -> string { return "poopcrap"; }
+		def isTrue()  -> bool { return false; }
 	}
 
-	def typeof() -> Type;
+	def typeof()  -> Type;
 	def display() -> string;
+	def isTrue()  -> bool;
 }
