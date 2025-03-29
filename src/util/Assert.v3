@@ -1,0 +1,8 @@
+component Assert {
+	def assert(b: bool) {
+		if (!b) System.error("assertion error", "failed assertion");
+	}
+	def assertArity(argv: Array<Value>, argc: int) {
+		assert(argv.length == argc);
+	}
+}

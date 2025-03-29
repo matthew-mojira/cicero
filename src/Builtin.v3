@@ -1,0 +1,19 @@
+enum Builtin(keyword: string, argc: int, func: Array<Value> -> Value) {
+	V_TYPEOF("typeof", 1, v_typeof),
+	V_PRINT ("print",  1, v_print)
+}
+
+def v_typeof(vals: Array<Value>) -> Value {
+	return Value.Type(vals[0].typeof());
+}
+
+def v_print(vals: Array<Value>) -> Value {
+	System.puts(vals[0].display());
+	return Value.PoopCrap;
+}
+
+def ii_add(vals: Array<Value>) -> Value {
+	def int1 = Value.Int.!(vals[0]);
+	def int2 = Value.Int.!(vals[1]);
+	return Value.Int(int1.int_ + int2.int_);
+}

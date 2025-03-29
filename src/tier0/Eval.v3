@@ -1,0 +1,20 @@
+class Eval {
+	private def env: HashMap<string, Value> = Strings.newMap();
+
+	new() {
+		// TODO add built-ins 
+	}
+
+	def eval(expr: Expr) -> Value {
+		match (expr.data) {
+			Lit(val) => return val;
+			Id(id) => return env[id];
+			Apply(tgt, args) => {
+				def func = Value.Func.!(eval(tgt));
+				def argv = Arrays.map(args, eval);
+				Assert.assertArity(argv, func.argc);
+				return func.func(argv);
+			}
+		}
+	}
+}

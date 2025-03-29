@@ -1,23 +1,29 @@
 type Value {
-	case Int(i: int);
-	case Bool(b: bool);
-	case Func(f: Array<Value> -> Value);
-	case Str(s: string);
-	case Char(c: byte);
-	case Type(t: Type);
-	case PoopCrap;
-}
-
-component Values {
-	def v_typeof(v: Value) -> Value {
-		match (v) {
-			Int(_)  => return Value.Type(Type.Int);
-			Bool(_) => return Value.Type(Type.Bool);
-			Func(_) => return Value.Type(Type.Func);
-			Str(_)  => return Value.Type(Type.Str);
-			Char(_) => return Value.Type(Type.Char);
-			Type(_) => return Value.Type(Type.Type);
-			PoopCrap => return Value.Type(Type.PoopCrap);
-		}
+	case Int(int_: int) {
+		def typeof() -> Type { return Type.Int; }
+		def display() -> string { return Strings.format1("%d", int_); }
 	}
+	case Bool(bool_: bool) {
+		def typeof() -> Type { return Type.Bool; }
+		def display() -> string { return if(bool_, "true", "false"); }
+	}
+	case Func(argc: int, func: Range<Value> -> Value) {
+		def typeof() -> Type { return Type.Func; }
+		def display() -> string { return "<func>"; }
+	}
+	case Str(str: string) {
+		def typeof() -> Type { return Type.Str; }
+		def display() -> string { return str; }
+	}
+	case Type(type_: Type) {
+		def typeof() -> Type { return Type.Type; }
+		def display() -> string { return type_.display(); }
+	}
+	case PoopCrap {
+		def typeof() -> Type { return Type.PoopCrap; }
+		def display() -> string { return "poopcrap"; }
+	}
+
+	def typeof() -> Type;
+	def display() -> string;
 }

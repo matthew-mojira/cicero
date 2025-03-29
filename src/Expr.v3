@@ -48,7 +48,6 @@ def parseLit(str: string) -> Maybe<Value> {
 	if (str == "bool") return Maybe.Just(Value.Type(Type.Bool));
 	if (str == "func") return Maybe.Just(Value.Type(Type.Func));
 	if (str == "str")  return Maybe.Just(Value.Type(Type.Str));
-	if (str == "char") return Maybe.Just(Value.Type(Type.Char));
 	if (str == "type") return Maybe.Just(Value.Type(Type.Type));
 	if (str == "poopcrap") return Maybe.Just(Value.Type(Type.PoopCrap));
 

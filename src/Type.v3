@@ -3,7 +3,6 @@ type Type {
 	case Bool { def display() -> string { return "bool"; } }
 	case Func { def display() -> string { return "func"; } }
 	case Str  { def display() -> string { return "str"; } }
-	case Char { def display() -> string { return "char"; } }
 	case Type { def display() -> string { return "type"; } }
 	case PoopCrap { def display() -> string { return "poopcrap"; } }
 

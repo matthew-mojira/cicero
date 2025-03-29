@@ -3,8 +3,18 @@ def main(args: Array<string>) -> int {
 	var reader = SexpReader.new(args[0]);
 	if (reader.ok) {
 		def sexps = reader.getSexps();
-		for (sexp in sexps) {
-			Sexps.print_sexp(sexp);
+//		for (sexp in sexps) {
+//			Sexps.print_sexp(sexp);
+//		}
+
+		def exprs = Exprs.parse_sexps(sexps);
+
+		def eval = Eval.new();
+
+		for (expr in exprs) {
+			def val = eval.eval(expr);
+			System.puts(val.display());
+			System.ln();
 		}
 	} else {
 		System.puts(reader.fileName);
