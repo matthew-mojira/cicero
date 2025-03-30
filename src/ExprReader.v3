@@ -2,7 +2,7 @@ class ExprReader extends TextReader {
 	private def lits: HashMap<string, Value> = Strings.newMap();
 	private def exprs: Vector<Expr> = Vector<Expr>.new();
 
-	new(fileName: string) super(fileName, System.fileLoad(fileName)) {
+	new(fileName: string, data: string) super(fileName, data) {
 		lits["true"]  = Value.Bool(true);
 		lits["false"] = Value.Bool(false);
 		lits["int"]   = Value.Type(Type.Int);
@@ -92,8 +92,8 @@ class ExprReader extends TextReader {
 				def status = res.0, value = res.1;
 				if (status > 0) {
 					if (status != str.length) {
-						System.puts(Strings.format3("string is \"%s\", found %d characters and length is %d\n",
-									str, status, str.length));
+//						System.puts(Strings.format3("string is \"%s\", found %d characters and length is %d\n",
+//									str, status, str.length));
 						fail("trailing information after integer literal");
 						return null;
 					}

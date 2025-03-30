@@ -1,21 +1,46 @@
 def main(args: Array<string>) -> int {
-	if (args.length != 1) System.error("argument error", "need file argument");
-	var reader = ExprReader.new(args[0]);
-	if (reader.ok) {
-		def exprs = reader.getExprs();
-		def eval = Eval.new();
+	match (args.length) {
+		0 => {
+			var scanner = Scanner.new();
+			while (true) {
+				System.puts("cicero> ");
+				var reader = ExprReader.new("<repl>", scanner.nextLine());
+				if (reader.ok) {
+					def exprs = reader.getExprs();
+					def eval = Eval.new();
 
-		for (expr in exprs) {
-//			System.puts(expr.display());
-//			System.ln();
-			def val = eval.eval(expr);
-			System.puts(val.display());
-			System.ln();
+					for (expr in exprs) {
+						def val = eval.eval(expr);
+
+						System.puts("=> ");
+						System.puts(val.display());
+						System.ln();
+					}
+				} else {
+					System.puts(Strings.format1("parse error: %s\n", reader.error_msg));
+				}
+			}
 		}
-	} else {
-		System.puts(reader.fileName);
-		System.puts(Strings.format3(":%d:%d %s\n", reader.error_line, reader.error_column, reader.error_msg));
-		return 1;
+		1 => {
+			var reader = ExprReader.new(args[0], System.fileLoad(args[0]));
+			if (reader.ok) {
+				def exprs = reader.getExprs();
+				def eval = Eval.new();
+
+				for (expr in exprs) {
+					def val = eval.eval(expr);
+
+					System.puts(val.display());
+					System.ln();
+				}
+			} else {
+				System.puts(reader.fileName);
+				System.puts(Strings.format3(":%d:%d: parse error: %s\n", reader.error_line, reader.error_column, reader.error_msg));
+				return 1;
+			}
+			return 0;
+		}
+		_ => System.error("argument error", "invalid use of program (too many arguments)");
 	}
-	return 0;
+	return 1;
 }
