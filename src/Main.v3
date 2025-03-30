@@ -1,22 +1,16 @@
 def main(args: Array<string>) -> int {
 	if (args.length != 1) System.error("argument error", "need file argument");
-	var reader = SexpReader.new(args[0]);
+	var reader = ExprReader.new(args[0]);
 	if (reader.ok) {
-		def sexps = reader.getSexps();
-//		for (sexp in sexps) {
-//			Sexps.print_sexp(sexp);
-//		}
-
-		def exprs = Exprs.parse_sexps(sexps);
-
+		def exprs = reader.getExprs();
 		def eval = Eval.new();
 
 		for (expr in exprs) {
 			System.puts(expr.display());
 			System.ln();
-			def val = eval.eval(expr);
-			System.puts(val.display());
-			System.ln();
+//			def val = eval.eval(expr);
+//			System.puts(val.display());
+//			System.ln();
 		}
 	} else {
 		System.puts(reader.fileName);

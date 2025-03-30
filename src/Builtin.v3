@@ -1,21 +1,23 @@
 /* An operation is built-in if and only if it does not require non-strict
- * evaluation.
+ * evaluation and has an exact number of arguments.
  */
-enum Builtin(keyword: string, argc: int, func: Array<Value> -> Value) {
+enum Builtin(id: string, argc: int, func: Range<Value> -> Value) {
 	V_TYPEOF("typeof", 1, v_typeof),
 	V_PRINT ("print",  1, v_print),
+	II_ADD  ("+",      2, ii_add),
 }
 
-def v_typeof(vals: Array<Value>) -> Value {
+def v_typeof(vals: Range<Value>) -> Value {
 	return Value.Type(vals[0].typeof());
 }
 
-def v_print(vals: Array<Value>) -> Value {
+def v_print(vals: Range<Value>) -> Value {
 	System.puts(vals[0].display());
+	System.ln();
 	return Value.PoopCrap;
 }
 
-def ii_add(vals: Array<Value>) -> Value {
+def ii_add(vals: Range<Value>) -> Value {
 	def int1 = Value.Int.!(vals[0]);
 	def int2 = Value.Int.!(vals[1]);
 	return Value.Int(int1.int_ + int2.int_);

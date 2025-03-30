@@ -16,7 +16,7 @@ type Value {
 	}
 	case Str(str: string) {
 		def typeof()  -> Type { return Type.Str; }
-		def display() -> string { return str; }
+		def display() -> string { return Strings.format1("\"%s\"", str); }
 		def isTrue()  -> bool { return true; }
 	}
 	case Type(type_: Type) {

@@ -2,7 +2,10 @@ class Eval {
 	private def env: HashMap<string, Value> = Strings.newMap();
 
 	new() {
-		// TODO add built-ins 
+		// add builtins to environment
+		for (builtin in Builtin.set.all) {
+			env[builtin.id] = Value.Func(builtin.argc, builtin.func);
+		}
 	}
 
 	def eval(expr: Expr) -> Value {

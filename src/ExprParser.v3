@@ -1,0 +1,141 @@
+class ExprReader extends TextReader {
+	private def lits: HashMap<string, Value> = Strings.newMap();
+	private def exprs: Vector<Expr> = Vector<Expr>.new();
+
+	new(fileName: string) super(fileName, System.fileLoad(fileName)) {
+		lits["true"]  = Value.Bool(true);
+		lits["false"] = Value.Bool(false);
+		lits["int"]   = Value.Type(Type.Int);
+		lits["bool"]  = Value.Type(Type.Bool);
+		lits["func"]  = Value.Type(Type.Func);
+		lits["str"]   = Value.Type(Type.Str);
+		lits["type"]  = Value.Type(Type.Type);
+		lits["poopcrap"] = Value.Type(Type.PoopCrap);
+
+		skipWhitespace();
+		while (pos < limit) {
+			skipWhitespace();
+			System.puts(Strings.format2("%d:%d\n", line, column));
+			def expr = readExpr();
+			exprs.put(expr);
+			if (!ok) break;
+			System.puts(expr.display());
+			System.ln();
+		}
+	}
+
+	private def readExpr() -> Expr {
+		def startPos = pos;
+		def startLine = line, startColumn = column;
+		match (char) {
+			'(' => {
+				req1('(');
+				if (opt1(')') >= 0) {
+					// () case
+					return Expr.new(ExprData.Lit(Value.PoopCrap), FileRange.new(fileName, startLine, startColumn, line, column));
+				}
+
+				// check first word to indicate KW-syntax expression
+				def head = readExpr();
+
+				// XXX A keyword is allowed to be used anywhere. It only takes on special
+				// meaning if it appears as the first identifier in a list.
+				match (head.data) {
+					Id(str) => {
+						// check if this is a keyword
+						if (Strings.equal(str, "if")) {
+							def cond = readExpr();
+							def exprT = readExpr();
+							def exprF = readExpr();
+							req1(')');
+
+							return Expr.new(ExprData.If(cond, exprT, exprF),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						}
+					}
+					_ => ;
+				}
+				def tail: Vector<Expr> = Vector<Expr>.new();
+				while (opt1(')') < 0) {
+					def expr = readExpr();
+					tail.put(expr);
+
+					if (pos >= limit) {
+						failRel(startPos - pos, "unmatched opening parentheses");
+						return null;
+					}
+				}
+				return Expr.new(ExprData.Apply(head, tail.extract()),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
+			')' => {
+				fail("unmatched closing parentheses");
+				return null;
+			}
+			'\"' => {
+				def str = readString();
+				return Expr.new(ExprData.Lit(Value.Str(str)),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
+			_ => {
+				// this is an identifier
+				def str = readIdentifier();
+				def range = FileRange.new(fileName, startLine, startColumn, line, column);
+
+				// lookup keyword identifiers
+				if (lits.has(str)) {
+					return Expr.new(ExprData.Lit(lits[str]));
+				}
+
+				// only parse for decimals at the moment
+				def res = Ints.parseDecimal(str, 0);
+				def status = res.0, value = res.1;
+				if (status > 0) {
+					if (status != str.length) {
+						System.puts(Strings.format3("string is \"%s\", found %d characters and length is %d\n",
+									str, status, str.length));
+						fail("trailing information after integer literal");
+						return null;
+					}
+					// any characters that start an integer literal cannot be part of a valid identifier
+					return Expr.new(ExprData.Lit(Value.Int(value)), range);
+				}
+
+				return Expr.new(ExprData.Id(str), range);
+			}
+		}
+	}
+
+	private def readString() -> string {
+		def a = Strings.parseLiteral(data, pos);
+		def chars = a.0, str = a.1;
+		if (chars < 0) {
+			fail("malformed string literal");
+			return null;
+		}
+		advance(chars);
+		return str;
+	}
+
+	private def readIdentifier() -> string {
+		def len = plus_rel(0, isAtomCharacter) - pos;
+		if (len < 0) {
+			fail("invalid character in identifier name");
+			return null;
+		}
+		def str = readToken(len).image;
+		return str;
+	}
+
+	def getExprs() -> Array<Expr> {
+		return exprs.extract();
+	}
+}
+
+def isAtomCharacter(ch: byte) -> bool {
+	match (ch) {
+		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']' => return false;
+		_ => return true;
+	}
+}
+
