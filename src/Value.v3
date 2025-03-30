@@ -1,4 +1,5 @@
 type Value {
+	case Exn; // XXX not a real value. don't ever treat it as such
 	case Int(int_: int) {
 		def typeof()  -> Type { return Type.Int; }
 		def display() -> string { return Strings.format1("%d", int_); }
@@ -9,7 +10,7 @@ type Value {
 		def display() -> string { return if(bool_, "true", "false"); }
 		def isTrue()  -> bool { return bool_; }
 	}
-	case Func(argc: int, func: Range<Value> -> Value) {
+	case Func(func: Range<Value> -> Value) {
 		def typeof()  -> Type { return Type.Func; }
 		def display() -> string { return "<func>"; }
 		def isTrue()  -> bool { return true; }

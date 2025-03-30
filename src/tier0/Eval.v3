@@ -1,27 +1,141 @@
 class Eval {
 	private def env: HashMap<string, Value> = Strings.newMap();
+	private var ok: bool = true;
+	private var exn: Value; 
 
 	new() {
 		// add builtins to environment
-		for (builtin in Builtin.set.all) {
-			env[builtin.id] = Value.Func(builtin.argc, builtin.func);
-		}
+		env["typeof"]  = Value.Func(v_typeof);
+		env["print"] = Value.Func(v_print);
+		env["+"]  = Value.Func(ii_add);
 	}
 
 	def eval(expr: Expr) -> Value {
+		def val = evalExpr(expr);
+		if (!ok) {
+			System.error("eval error", exn.display());
+		}
+		return val;
+	}
+
+	private def evalExpr(expr: Expr) -> Value {
+		var value: Value;
+
 		match (expr.data) {
-			Lit(val) => return val;
-			Id(id) => return env[id];
+			Lit(val) => value = val;
+			Id(id) => {
+				if (env.has(id))
+					value = env[id];
+				else
+					throw(Value.Str(Strings.format1("unbound identifier: %s", id)));
+			}
 			Apply(tgt, args) => {
-				def func = Value.Func.!(eval(tgt));
-				def argv = Arrays.map(args, eval);
-				Assert.assertArity(argv, func.argc);
-				return func.func(argv);
+				def tgtVal = evalExpr(tgt);
+				if (!ok) return value;
+				assertType(Type.Func, tgtVal);
+				if (!ok) return value;
+				def func = Value.Func.!(tgtVal);
+
+				def argv: Array<Value> = Array.new(args.length);
+				for (i < argv.length) {
+					def arg = evalExpr(args[i]);
+					if (!ok) return value;
+					argv[i] = arg;
+				}
+
+				def ret = func.func(argv);
+				if (!ok) return value;
+				value = ret;
 			}
 			If(exprC, exprT, exprF) => {
-				def cond = eval(exprC);
-				return eval(if(cond.isTrue(), exprT, exprF));
+				def cond = evalExpr(exprC);
+				if (!ok) return value;
+
+				if (cond.isTrue()) {
+					def v = evalExpr(exprT);
+					if (!ok) return value;
+					value = v;
+				} else {
+					def v = evalExpr(exprF);
+					if (!ok) return value;
+					value = v;
+				}
+			}
+			Raise(expr) => {
+				def exn = evalExpr(expr);
+				if (!ok) return value;
+
+				throw(exn);
+			}
+			Catch(try, catch) => {
+				def v = evalExpr(try);
+				if (ok) {
+					value = v;
+				} else {
+					// catch exception
+					ok = true;
+					def e = evalExpr(catch);
+					if (!ok) return value;
+					value = e;
+				}
 			}
 		}
+
+		return value;
+	}
+	
+	/* throwing exceptions */
+
+	private def throw(value: Value) {
+		ok = false;
+		exn = value;
+	}
+
+	private def assertType(exp: Type, val: Value) {
+		if (exp != val.typeof())
+			throw(Value.Str(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display())));
+	}
+
+	private def assertArity(argc: int, vals: Range<Value>) {
+		if (vals.length != argc)
+			throw(Value.Str(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length)));
+	}
+
+	/* built-in functions */
+
+	private def v_typeof(vals: Range<Value>) -> Value {
+		var ret: Value;
+		assertArity(1, vals);
+
+		if (ok) {
+			ret = Value.Type(vals[0].typeof());
+		}
+		return ret;
+	}
+
+	private def v_print(vals: Range<Value>) -> Value {
+		var ret: Value;
+		assertArity(1, vals);
+
+		if (ok) {
+			System.puts(vals[0].display());
+			System.ln();
+			ret = Value.PoopCrap;
+		}
+		return ret;
+	}
+
+	private def ii_add(vals: Range<Value>) -> Value {
+		var ret: Value;
+		assertArity(2, vals);
+		assertType(Type.Int, vals[0]);
+		assertType(Type.Int, vals[1]);
+
+		if (ok) {
+			def int1 = Value.Int.!(vals[0]);
+			def int2 = Value.Int.!(vals[1]);
+			ret = Value.Int(int1.int_ + int2.int_);
+		}
+		return ret;
 	}
 }

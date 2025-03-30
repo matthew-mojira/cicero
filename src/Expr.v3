@@ -34,6 +34,18 @@ type ExprData {
 			return Strings.format3("(IF %s %s %s)", cond.display(), exprT.display(), exprF.display());
 		}
 	}
+	case Raise(exn: Expr) {
+		def display() -> string {
+			return Strings.format1("(RAISE %s)", exn.display());
+		}
+	}
+	// TODO you raise a value as an exception, but when you catch the exception
+	// you cannot catch the value
+	case Catch(try: Expr, catch: Expr) {
+		def display() -> string {
+			return Strings.format2("(TRY-CATCH %s %s)", try.display(), catch.display());
+		}
+	}
 
 	def display() -> string;
 }

@@ -51,6 +51,19 @@ class ExprReader extends TextReader {
 
 							return Expr.new(ExprData.If(cond, exprT, exprF),
 								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "raise")) {
+							def exn = readExpr();
+							req1(')');
+
+							return Expr.new(ExprData.Raise(exn),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "try")) {
+							def try = readExpr();
+							def catch = readExpr();
+							req1(')');
+
+							return Expr.new(ExprData.Catch(try, catch),
+								FileRange.new(fileName, startLine, startColumn, line, column));
 						}
 					}
 					_ => ;
