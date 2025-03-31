@@ -67,7 +67,8 @@ during evaluation.
   `e1` may be a value of any type, not just `bool`. See the note on truthiness.
 * `(raise e)`: evaluates `e` and raises it as an exception.
 * `(try e1 e2)`: evaluates `e1` and returns its value. But if `e1` raises an
-  exception, evaluate `e2` and return that value.
+  exception, evaluate `e2` and return that value. Note that you raise a value
+  (any value!) as an exception but you can't get it back for the catch.
 
 ### Built-ins
 
