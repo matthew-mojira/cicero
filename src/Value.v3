@@ -1,8 +1,8 @@
 type Value {
 	case Exn; // XXX not a real value. don't ever treat it as such
-	case Int(int_: int) {
+	case Int(int_: long) {
 		def typeof()  -> Type { return Type.Int; }
-		def display() -> string { return Strings.format1("%d", int_); }
+		def display() -> string { return Strings.format1("%l", int_); }
 		def isTrue()  -> bool { return true; }
 	}
 	case Bool(bool_: bool) {
@@ -13,7 +13,7 @@ type Value {
 	/* For Func and Builtin, two different cases in Value that have the same
 	 * type, so it does not suffice to use Value.Func.? for typechecking
 	 */
-	case Func(id, params: Array<string>, code: Expr) {
+	case Func(id: string, params: Array<string>, code: Expr) {
 		def typeof()  -> Type { return Type.Func; }
 		def display() -> string { return "<func>"; }
 		def isTrue()  -> bool { return true; }
