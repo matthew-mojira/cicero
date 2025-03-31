@@ -23,11 +23,12 @@ implementers (not so much for the programmers).
 
 Identifiers may be any sequence of characters as long as:
 * it does not contain whitespace, `'`, `"`, `(`, `)`, `[`, or `]`
-* it does not have an integer literal as as a prefix (e.g. `1250xpdsr`)
+* it does not have an integer literal as as a prefix (e.g. `1250xpdsr`) --
+  although this is broken for very large literals, so don't try it
 * it is not a literal (right now it is always parsed as a literal)
 
-An identifier *may* be a keyword. It is allowed but will always fail because I
-haven't added a way for you to assign values to variables yet.
+An identifier *may* be a keyword or literal. This probably causes weird
+behavior so you probably sohuldn't do it (and I should probably disallow it).
 
 ### Literals
 
@@ -69,6 +70,10 @@ during evaluation.
 * `(try e1 e2)`: evaluates `e1` and returns its value. But if `e1` raises an
   exception, evaluate `e2` and return that value. Note that you raise a value
   (any value!) as an exception but you can't get it back for the catch.
+* `(set x e)`: evaluates `e` and binds it to `x` (identifer) local variable.
+  The value of the expression is whatever `e` evaluated to.
+* `(defn ...)`: defines a function, see below
+
 
 ### Built-ins
 
@@ -79,3 +84,24 @@ Some functions are provided as built-ins. They are
 * `+`: takes in two integers and adds them.
 
 These are not literals but are instead variables defined in the environment.
+
+### Defining your own functions.
+
+Use `defn` to define your own functions:
+
+```
+(defn (f ()) 1)
+```
+
+```
+(defn (f (x))
+  x)
+```
+
+```
+(defn (f (x y))
+  (+ x y))
+```
+
+The name of the function (up there, `f`) is bound to a local variable.
+Parameter names can (but should not) be dupliated.

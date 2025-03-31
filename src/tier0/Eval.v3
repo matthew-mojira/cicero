@@ -74,6 +74,8 @@ class Frame {
 			}
 			Apply(tgt, args) => {
 				def tgtVal = evalExpr(tgt);
+				// remember: these are recursive calls within `evalExpr` but
+				// have nothing to do with evaluation frames in the language
 				if (exn) return value;
 				assertType(Type.Func, tgtVal);
 				if (exn) return value;
@@ -156,6 +158,12 @@ class Frame {
 				def f = Value.Func(id, params, body);
 				locals[id] = f;
 				value = f;
+			}
+			Assign(id, expr) => {
+				def v = evalExpr(expr);
+				if (exn) return value;
+				locals[id] = v;
+				value = v;
 			}
 		}
 

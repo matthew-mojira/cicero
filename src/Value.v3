@@ -2,7 +2,7 @@ type Value {
 	case Exn; // XXX not a real value. don't ever treat it as such
 	case Int(int_: long) {
 		def typeof()  -> Type { return Type.Int; }
-		def display() -> string { return Strings.format1("%l", int_); }
+		def display() -> string { return Strings.format1("%d", int_); }
 		def isTrue()  -> bool { return true; }
 	}
 	case Bool(bool_: bool) {
