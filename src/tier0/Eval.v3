@@ -5,9 +5,9 @@ class Eval {
 
 	new() {
 		// add builtins to environment
-		globals["typeof"] = Value.Builtin(Builtins.v_typeof);
-		globals["print"]  = Value.Builtin(Builtins.v_print);
-		globals["+"]      = Value.Builtin(Builtins.ii_add);
+		for (builtin in Builtin.set.all) {
+			globals[builtin.id] = Value.Builtin(builtin.func);
+		}
 		
 		frame = Frame.new(this, [], []);
 	}

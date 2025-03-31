@@ -1,67 +1,153 @@
-component Builtins {
-	/* The type of all Builtin-Functions is
-	 *   Range<Value> -> (Value, bool)
-         * return type:
-         * - bool indicates whether function raised exception
-	 * - Value is either return value or exception
-	 */
+enum Builtin(id: string, func: Range<Value> -> (Value, bool)) {
+	V_TYPEOF("typeof", v_typeof),
+	V_PRINT ("print",  v_print),
+	II_ADD  ("+",      ii_add),
+	II_SUB  ("-",      ii_sub),
+	II_MUL  ("*",      ii_mul),
+	II_DIV  ("/",      ii_div),
+}
 
-	def v_typeof(vals: Range<Value>) -> (Value, bool) {
-		var val: Value;
-		var exn: bool;
-		if (vals.length != 1) {
-			exn = true;
-			val = arityMismatch(1, vals);
-		}
+/* The type of all Builtin-Functions is
+ *   Range<Value> -> (Value, bool)
+ * return type:
+ * - bool indicates whether function raised exception
+ * - Value is either return value or exception
+ */
 
-		if (!exn) {
-			val = Value.Type(vals[0].typeof());
-		}
-
-		return (val, exn);
+def v_typeof(vals: Range<Value>) -> (Value, bool) {
+	var val: Value;
+	var exn: bool;
+	if (vals.length != 1) {
+		exn = true;
+		val = arityMismatch(1, vals);
 	}
 
-	def v_print(vals: Range<Value>) -> (Value, bool) {
-		var val: Value;
-		var exn: bool;
-		if (vals.length != 1) {
-			exn = true;
-			val = arityMismatch(1, vals);
-		}
-
-		if (!exn) {
-			System.puts(vals[0].display());
-			System.ln();
-			val = Value.PoopCrap;
-		}
-
-		return (val, exn);
+	if (!exn) {
+		val = Value.Type(vals[0].typeof());
 	}
 
-	def ii_add(vals: Range<Value>) -> (Value, bool) {
-		var val: Value;
-		var exn: bool;
-		if (vals.length != 2) {
-			exn = true;
-			val = arityMismatch(2, vals);
-		}
-		if (!exn && vals[0].typeof() != Type.Int) {
-			exn = true;
-			val = typeMismatch(Type.Int, vals[0]);
-		}
-		if (!exn && vals[1].typeof() != Type.Int) {
-			exn = true;
-			val = typeMismatch(Type.Int, vals[1]);
-		}
-		
-		if (!exn) {
-			def int1 = Value.Int.!(vals[0]);
-			def int2 = Value.Int.!(vals[1]);
-			val = Value.Int(int1.int_ + int2.int_);
-		}
+	return (val, exn);
+}
 
-		return (val, exn);
+def v_print(vals: Range<Value>) -> (Value, bool) {
+	var val: Value;
+	var exn: bool;
+	if (vals.length != 1) {
+		exn = true;
+		val = arityMismatch(1, vals);
 	}
+
+	if (!exn) {
+		System.puts(vals[0].display());
+		System.ln();
+		val = Value.PoopCrap;
+	}
+
+	return (val, exn);
+}
+
+def ii_add(vals: Range<Value>) -> (Value, bool) {
+	var val: Value;
+	var exn: bool;
+	if (vals.length != 2) {
+		exn = true;
+		val = arityMismatch(2, vals);
+	}
+	if (!exn && vals[0].typeof() != Type.Int) {
+		exn = true;
+		val = typeMismatch(Type.Int, vals[0]);
+	}
+	if (!exn && vals[1].typeof() != Type.Int) {
+		exn = true;
+		val = typeMismatch(Type.Int, vals[1]);
+	}
+	
+	if (!exn) {
+		def int1 = Value.Int.!(vals[0]);
+		def int2 = Value.Int.!(vals[1]);
+		val = Value.Int(int1.int_ + int2.int_);
+	}
+
+	return (val, exn);
+}
+
+def ii_sub(vals: Range<Value>) -> (Value, bool) {
+	var val: Value;
+	var exn: bool;
+	if (vals.length != 2) {
+		exn = true;
+		val = arityMismatch(2, vals);
+	}
+	if (!exn && vals[0].typeof() != Type.Int) {
+		exn = true;
+		val = typeMismatch(Type.Int, vals[0]);
+	}
+	if (!exn && vals[1].typeof() != Type.Int) {
+		exn = true;
+		val = typeMismatch(Type.Int, vals[1]);
+	}
+	
+	if (!exn) {
+		def int1 = Value.Int.!(vals[0]);
+		def int2 = Value.Int.!(vals[1]);
+		val = Value.Int(int1.int_ - int2.int_);
+	}
+
+	return (val, exn);
+}
+
+def ii_mul(vals: Range<Value>) -> (Value, bool) {
+	var val: Value;
+	var exn: bool;
+	if (vals.length != 2) {
+		exn = true;
+		val = arityMismatch(2, vals);
+	}
+	if (!exn && vals[0].typeof() != Type.Int) {
+		exn = true;
+		val = typeMismatch(Type.Int, vals[0]);
+	}
+	if (!exn && vals[1].typeof() != Type.Int) {
+		exn = true;
+		val = typeMismatch(Type.Int, vals[1]);
+	}
+	
+	if (!exn) {
+		def int1 = Value.Int.!(vals[0]);
+		def int2 = Value.Int.!(vals[1]);
+		val = Value.Int(int1.int_ * int2.int_);
+	}
+
+	return (val, exn);
+}
+
+def ii_div(vals: Range<Value>) -> (Value, bool) {
+	var val: Value;
+	var exn: bool;
+	if (vals.length != 2) {
+		exn = true;
+		val = arityMismatch(2, vals);
+	}
+	if (!exn && vals[0].typeof() != Type.Int) {
+		exn = true;
+		val = typeMismatch(Type.Int, vals[0]);
+	}
+	if (!exn && vals[1].typeof() != Type.Int) {
+		exn = true;
+		val = typeMismatch(Type.Int, vals[1]);
+	}
+	if (!exn && (Value.Int.!(vals[1])).int_ == 0) {
+		exn = true;
+		val = Value.Str("arithmetic error: divide by zero");
+	}
+	
+	if (!exn) {
+		def int1 = Value.Int.!(vals[0]);
+		def int2 = Value.Int.!(vals[1]);
+		val = Value.Int(int1.int_ / int2.int_);
+	}
+
+	return (val, exn);
 }
 
 def typeMismatch(exp: Type, val: Value) -> Value {
