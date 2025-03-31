@@ -1,5 +1,4 @@
 class Expr(data: ExprData, range: FileRange) {
-
 	def display() -> string {
 		return data.display();
 	}
@@ -46,7 +45,23 @@ type ExprData {
 			return Strings.format2("(TRY-CATCH %s %s)", try.display(), catch.display());
 		}
 	}
-
+	// this is a function expression (which evaluates to function value)
+	case Func(id: string, params: Array<string>, body: Expr) {
+		def display() -> string {
+			def buf = StringBuilder.new();
+			buf.puts("(FUNC (");
+			buf.puts(id);
+			buf.puts(" (");
+			for (param in params) {
+				buf.puts(param);
+				buf.putc(' '); // FIXME trailing space
+			}
+			buf.puts(") ");
+			buf.puts(body.display());
+			buf.putc(')');
+			return buf.extract();
+		}
+	}
 	def display() -> string;
 }
 

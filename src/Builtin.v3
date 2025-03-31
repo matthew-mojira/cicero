@@ -1,24 +1,73 @@
-/* An operation is built-in if and only if it does not require non-strict
- * evaluation and has an exact number of arguments.
- */
-enum Builtin(id: string, argc: int, func: Range<Value> -> Value) {
-	V_TYPEOF("typeof", 1, v_typeof),
-	V_PRINT ("print",  1, v_print),
-	II_ADD  ("+",      2, ii_add),
+component Builtins {
+	/* The type of all Builtin-Functions is
+	 *   Range<Value> -> (Value, bool)
+         * return type:
+         * - bool indicates whether function raised exception
+	 * - Value is either return value or exception
+	 */
+
+	def v_typeof(vals: Range<Value>) -> (Value, bool) {
+		var val: Value;
+		var exn: bool;
+		if (vals.length != 1) {
+			exn = true;
+			val = arityMismatch(1, vals);
+		}
+
+		if (!exn) {
+			val = Value.Type(vals[0].typeof());
+		}
+
+		return (val, exn);
+	}
+
+	def v_print(vals: Range<Value>) -> (Value, bool) {
+		var val: Value;
+		var exn: bool;
+		if (vals.length != 1) {
+			exn = true;
+			val = arityMismatch(1, vals);
+		}
+
+		if (!exn) {
+			System.puts(vals[0].display());
+			System.ln();
+			val = Value.PoopCrap;
+		}
+
+		return (val, exn);
+	}
+
+	def ii_add(vals: Range<Value>) -> (Value, bool) {
+		var val: Value;
+		var exn: bool;
+		if (vals.length != 2) {
+			exn = true;
+			val = arityMismatch(2, vals);
+		}
+		if (!exn && vals[0].typeof() != Type.Int) {
+			exn = true;
+			val = typeMismatch(Type.Int, vals[0]);
+		}
+		if (!exn && vals[1].typeof() != Type.Int) {
+			exn = true;
+			val = typeMismatch(Type.Int, vals[1]);
+		}
+		
+		if (!exn) {
+			def int1 = Value.Int.!(vals[0]);
+			def int2 = Value.Int.!(vals[1]);
+			val = Value.Int(int1.int_ + int2.int_);
+		}
+
+		return (val, exn);
+	}
 }
 
-def v_typeof(vals: Range<Value>) -> Value {
-	return Value.Type(vals[0].typeof());
+def typeMismatch(exp: Type, val: Value) -> Value {
+	return Value.Str(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display()));
 }
 
-def v_print(vals: Range<Value>) -> Value {
-	System.puts(vals[0].display());
-	System.ln();
-	return Value.PoopCrap;
-}
-
-def ii_add(vals: Range<Value>) -> Value {
-	def int1 = Value.Int.!(vals[0]);
-	def int2 = Value.Int.!(vals[1]);
-	return Value.Int(int1.int_ + int2.int_);
+def arityMismatch(argc: int, vals: Range<Value>) -> Value {
+	return Value.Str(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length));
 }

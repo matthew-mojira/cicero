@@ -10,8 +10,18 @@ type Value {
 		def display() -> string { return if(bool_, "true", "false"); }
 		def isTrue()  -> bool { return bool_; }
 	}
-	case Func(func: Range<Value> -> Value) {
+	/* For Func and Builtin, two different cases in Value that have the same
+	 * type, so it does not suffice to use Value.Func.? for typechecking
+	 */
+	case Func(id, params: Array<string>, code: Expr) {
 		def typeof()  -> Type { return Type.Func; }
+		def display() -> string { return "<func>"; }
+		def isTrue()  -> bool { return true; }
+	}
+	case Builtin(func: Range<Value> -> (Value, bool)) {
+		// same type as above, so user should not observe difference
+		// in internal representation
+		def typeof()  -> Type { return Type.Func; }  
 		def display() -> string { return "<func>"; }
 		def isTrue()  -> bool { return true; }
 	}

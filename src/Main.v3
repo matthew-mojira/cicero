@@ -1,4 +1,6 @@
 def main(args: Array<string>) -> int {
+	def eval = Eval.new();
+
 	match (args.length) {
 		0 => {
 			var scanner = Scanner.new();
@@ -7,11 +9,9 @@ def main(args: Array<string>) -> int {
 				var reader = ExprReader.new("<repl>", scanner.nextLine());
 				if (reader.ok) {
 					def exprs = reader.getExprs();
-					def eval = Eval.new();
 
-					for (expr in exprs) {
-						def val = eval.eval(expr);
-
+					def vals = eval.eval(exprs);
+					for (val in vals) {
 						System.puts("=> ");
 						System.puts(val.display());
 						System.ln();
@@ -25,11 +25,10 @@ def main(args: Array<string>) -> int {
 			var reader = ExprReader.new(args[0], System.fileLoad(args[0]));
 			if (reader.ok) {
 				def exprs = reader.getExprs();
-				def eval = Eval.new();
 
-				for (expr in exprs) {
-					def val = eval.eval(expr);
-
+				def vals = eval.eval(exprs);
+				for (val in vals) {
+					System.puts("=> ");
 					System.puts(val.display());
 					System.ln();
 				}

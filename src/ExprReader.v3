@@ -64,6 +64,35 @@ class ExprReader extends TextReader {
 
 							return Expr.new(ExprData.Catch(try, catch),
 								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "defn")) {
+							/* The syntax of a function is
+							 *   (defn (f (x y z))
+							 *      <expr>
+							 *   )
+							 */
+							req1('(');
+							// name of function
+							def name = readIdentifier();
+							req1('(');
+							// params to function
+							def params: Vector<string> = Vector<string>.new();
+							while (opt1(')') < 0) {
+								def param = readIdentifier();
+								params.put(param);
+
+								if (pos >= limit) {
+									failRel(startPos - pos, "unmatched opening parentheses");
+									return null;
+								}
+							}
+							req1(')');
+							
+							// body expresssion
+							def body = readExpr();
+							req1(')');
+
+							return Expr.new(ExprData.Func(name, params.extract(), body),
+								FileRange.new(fileName, startLine, startColumn, line, column));
 						}
 					}
 					_ => ;
