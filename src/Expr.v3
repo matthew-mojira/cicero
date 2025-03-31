@@ -33,6 +33,7 @@ type ExprData {
 			return Strings.format3("(IF %s %s %s)", cond.display(), exprT.display(), exprF.display());
 		}
 	}
+	case Cond(cases: Array<(Expr, Expr)>);
 	case Raise(exn: Expr) {
 		def display() -> string {
 			return Strings.format1("(RAISE %s)", exn.display());
@@ -66,6 +67,12 @@ type ExprData {
 	case Assign(id: string, assn: Expr) {
 		def display() -> string { return Strings.format2("(ASSIGN %s %s)", id, assn.display()); }
 	}
+	case While(cond: Expr, body: Expr) {
+		def display() -> string {
+			return Strings.format2("(WHILE %s %s)", cond.display(), body.display());
+		}
+	}
+	case Begin(exprs: Array<Expr>);
 
 	def display() -> string;
 }

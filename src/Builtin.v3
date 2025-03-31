@@ -1,6 +1,8 @@
 enum Builtin(id: string, func: Range<Value> -> (Value, bool)) {
 	V_TYPEOF("typeof", v_typeof),
 	V_PRINT ("print",  v_print),
+	VV_EQ   ("=",      vv_eq),
+	VV_NEQ  ("!=",     vv_neq),
 	II_ADD  ("+",      ii_add),
 	II_SUB  ("-",      ii_sub),
 	II_MUL  ("*",      ii_mul),
@@ -41,6 +43,38 @@ def v_print(vals: Range<Value>) -> (Value, bool) {
 		System.puts(vals[0].display());
 		System.ln();
 		val = Value.PoopCrap;
+	}
+
+	return (val, exn);
+}
+
+// FIXME string equality is wrong
+def vv_eq(vals: Range<Value>) -> (Value, bool) {
+	var val: Value;
+	var exn: bool;
+	if (vals.length != 2) {
+		exn = true;
+		val = arityMismatch(2, vals);
+	}
+
+	if (!exn) {
+		val = Value.Bool(vals[0] == vals[1]);
+	}
+
+	return (val, exn);
+}
+
+// FIXME string equality is wrong
+def vv_neq(vals: Range<Value>) -> (Value, bool) {
+	var val: Value;
+	var exn: bool;
+	if (vals.length != 2) {
+		exn = true;
+		val = arityMismatch(2, vals);
+	}
+
+	if (!exn) {
+		val = Value.Bool(vals[0] != vals[1]);
 	}
 
 	return (val, exn);

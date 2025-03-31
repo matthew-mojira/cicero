@@ -165,6 +165,53 @@ class Frame {
 				locals[id] = v;
 				value = v;
 			}
+			Cond(cases) => {
+				var sat = false;
+				for (c in cases) {
+					// case
+					def cond = c.0, expr = c.1;
+
+					// check cond
+					def t = evalExpr(cond);
+					if (exn) return value;
+					if (t.isTrue()) {
+						def v = evalExpr(expr);
+						if (exn) return value;
+						value = v;
+
+						sat = true;
+						break;
+					}
+				}
+
+				if (!sat) {
+					throw(Value.Str("cond error: no true branch"));
+				}
+			}
+			While(cond, body) => {
+				while (true) {
+					def v = evalExpr(cond);
+					if (exn) return value;
+
+					if (!v.isTrue()) {
+						value = v;
+						break;
+					}
+
+					evalExpr(body);
+					if (exn) return value;
+				}
+			}
+			Begin(exprs) => {
+				var last: Value;
+				for (expr in exprs) {
+					def v = evalExpr(expr);
+					if (exn) return value;
+
+					last = v;
+				}
+				value = last;
+			}
 		}
 
 		return value;

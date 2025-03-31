@@ -1,0 +1,8 @@
+(set i 1000)
+(while (!= i 0)
+	(begin
+		(print i)
+		(set i (- i 1))
+	)
+)
+

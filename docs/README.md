@@ -73,7 +73,15 @@ during evaluation.
 * `(set x e)`: evaluates `e` and binds it to `x` (identifer) local variable.
   The value of the expression is whatever `e` evaluated to.
 * `(defn ...)`: defines a function, see below
-
+* `(cond (e1 f1) ... (e2 f2))`: evaluate each condition `e1...en` in order
+  until the first `ei` evaluates to true, then evaluate `fi` (which will be the
+  value of the whole expression). Throws an exception if no cases match
+* `(while e1 e2)`: while loop as you expect where `e1` is the condition and 
+  `e2` is the body. The value of the expression is the value of `e1` during the
+  last evaluation (not so helpful really, just one of two falsy values)
+* `(begin e1 e2 ... en)`: evaluate all expressions in order (given that there's
+  not some exception thrown). As a matter of syntax, the list of expressions
+  must be nonempty
 
 ### Built-ins
 

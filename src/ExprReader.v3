@@ -100,6 +100,50 @@ class ExprReader extends TextReader {
 
 							return Expr.new(ExprData.Assign(id, expr),
 								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "cond")) {
+							def cases: Vector<(Expr, Expr)> = Vector.new();
+							while (opt1(')') < 0) {
+								req1('(');
+								def fst = readExpr();
+								def snd = readExpr();
+								req1(')');
+								cases.put((fst, snd));
+								
+								if (pos >= limit) {
+									failRel(startPos - pos, "unmatched opening parentheses");
+									return null;
+								}
+							}
+							req1(')');
+
+							return Expr.new(ExprData.Cond(cases.extract()),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "while")) {
+							def cond = readExpr();
+							def body = readExpr();
+							req1(')');
+							
+							return Expr.new(ExprData.While(cond, body),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "begin")) {
+							def exprs: Vector<Expr> = Vector.new();
+							// begin must not be non-empty
+							// TODO this does not print a nice error message if it fails
+							def fst = readExpr();
+							exprs.put(fst);
+
+							while (opt1(')') < 0) {
+								def expr = readExpr();
+								exprs.put(expr);
+
+								if (pos >= limit) {
+									failRel(startPos - pos, "unmatched opening parentheses");
+									return null;
+								}
+							}
+							
+							return Expr.new(ExprData.Begin(exprs.extract()),
+								FileRange.new(fileName, startLine, startColumn, line, column));
 						}
 					}
 					_ => ;
