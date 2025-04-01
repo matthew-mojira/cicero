@@ -1,16 +1,18 @@
 class ExprReader extends TextReader {
-	private def lits: HashMap<string, Value> = Strings.newMap();
+//	private def lits: HashMap<string, Value> = Strings.newMap();
 	private def exprs: Vector<Expr> = Vector<Expr>.new();
 
 	new(fileName: string, data: string) super(fileName, data) {
-		lits["true"]  = BoolValues.trueValue;
-		lits["false"] = BoolValues.falseValue;
-		lits["int"]   = TypeValues.getTypeValue(Type.Int);
-		lits["bool"]  = TypeValues.getTypeValue(Type.Bool);
-		lits["func"]  = TypeValues.getTypeValue(Type.Func);
-		lits["str"]   = TypeValues.getTypeValue(Type.Str);
-		lits["type"]  = TypeValues.getTypeValue(Type.Type);
-	     lits["poopcrap"] = TypeValues.getTypeValue(Type.PoopCrap);
+//		lits["true"]  = BoolValues.trueValue;
+//		lits["false"] = BoolValues.falseValue;
+//		lits["int"]   = TypeValues.getTypeValue(Type.Int);
+//		lits["bool"]  = TypeValues.getTypeValue(Type.Bool);
+//		lits["func"]  = TypeValues.getTypeValue(Type.Func);
+//		lits["str"]   = TypeValues.getTypeValue(Type.Str);
+//		lits["type"]  = TypeValues.getTypeValue(Type.Type);
+//	     lits["poopcrap"] = TypeValues.getTypeValue(Type.PoopCrap);
+//		lits["frame"] = TypeValues.getTypeValue(Type.Frame);
+//		lits["expr"]  = TypeValues.getTypeValue(Type.Expr);
 
 		skipWhitespace();
 		while (pos < limit) {
@@ -176,9 +178,9 @@ class ExprReader extends TextReader {
 				def range = FileRange.new(fileName, startLine, startColumn, line, column);
 
 				// lookup keyword identifiers
-				if (lits.has(str)) {
-					return Expr.new(ExprData.Lit(lits[str]), range);
-				}
+// 				if (lits.has(str)) {
+// 					return Expr.new(ExprData.Lit(lits[str]), range);
+// 				}
 
 				// only parse for decimals at the moment
 				def res = Ints.parseDecimal(str, 0);

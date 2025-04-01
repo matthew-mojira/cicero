@@ -1,4 +1,8 @@
 def main(args: Array<string>) -> int {
+	def builtins: Map<string, Value> = Strings.newMap();
+	for (builtin in Builtin.set.all) {
+		builtins[builtin.id] = builtin.val;
+	}
 	def frame = FrameValue.new(null, Strings.newMap(), null);
 
 	match (args.length) {

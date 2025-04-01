@@ -6,6 +6,7 @@ type Type {
 	case Type     { def display() -> string { return "type"; } }
 	case PoopCrap { def display() -> string { return "poopcrap"; } }
 	case Frame    { def display() -> string { return "frame"; } }
+	case Expr     { def display() -> string { return "expr"; } }
 
 	def display() -> string;
 }

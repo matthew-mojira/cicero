@@ -10,7 +10,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 
 	/* Initializing the frame also evaluates it (except for top-level frames). */
 	new() {
-		evalFunc = evalExpr;
+		evalFunc = tier0Eval;
 		if (prev == null) {
 			// this is the top-level frame, where locals = globals
 			globals = locals;
@@ -34,7 +34,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 		// XXX no return value, inspect the frame instead
 	}
 
-	private def evalExpr(expr: Expr) -> Value {
+	private def tier0Eval(expr: Expr) -> Value {
 		var value: Value;
 
 		match (expr.data) {
@@ -49,8 +49,8 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				}
 			}
 			Apply(tgt, args) => {
-				def tgtVal = evalExpr(tgt);
-				// remember: these are recursive calls within `evalExpr` but
+				def tgtVal = tier0Eval(tgt);
+				// remember: these are recursive calls within `tier0Eval` but
 				// have nothing to do with evaluation frames in the language
 				if (exn) return value;
 				assertType(Type.Func, tgtVal);
@@ -58,91 +58,88 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 
 				def argv: Array<Value> = Array.new(args.length);
 				for (i < argv.length) {
-					def arg = evalExpr(args[i]);
+					def arg = tier0Eval(args[i]);
 					if (exn) return value;
 					argv[i] = arg;
 				}
 
 				// function call
-				if (FuncValue.?(tgtVal)) {
-					def fv = FuncValue.!(tgtVal);
-					def id = fv.id, params = fv.params, code = fv.code;
+				def fv = FuncValue.!(tgtVal);
+				def params = fv.params, code = fv.expr;
 
-					// arity check
-					assertArity(params.length, argv);
-					if (exn) return value;
+				// arity check
+				assertArity(params.length, argv);
+				if (exn) return value;
 
-					def newLocals: HashMap<string, Value> = Strings.newMap();
-					for (i < argv.length) {
-						newLocals[params[i]] = argv[i];
-					};
-					
-					// create new frames here!
-					def frame = FrameValue.new(this, newLocals, code);
-					if (frame.exn) {
-						// rethrow
-						throw(frame.val);
-						return value;
+				def newLocals: HashMap<string, Value> = Strings.newMap();
+				for (i < argv.length) {
+					newLocals[params[i]] = argv[i];
+				};
+
+				match (code.impl) {
+					User(expr) => {
+						// create new frames here!
+						def frame = FrameValue.new(this, newLocals, expr);
+						if (frame.exn) {
+							// rethrow
+							throw(frame.val);
+							return value;
+						}
+						value = frame.val;
 					}
-					value = frame.val;
-					
-				} else if (BuiltinValue.?(tgtVal)) {
-					def bv = BuiltinValue.!(tgtVal);
-					def func = bv.func;
+					Builtin(func) => {
+						// function call
+						def ret = func(argv);
+						def val = ret.0, fnExn = ret.1;
 
-					// function call
-					def ret = func(argv); // XXX built-ins check their own arity
-					def val = ret.0, fnExn = ret.1;
-
-					if (fnExn) {
-						throw(val);
-						return value;
-					} else {
-						value = val;
-					}	
-				} else {
-					System.error("eval error", "unreachable case");
+						if (fnExn) {
+							throw(val);
+							return value;
+						} else {
+							value = val;
+						}	
+					}
 				}
 			}
 			If(exprC, exprT, exprF) => {
-				def cond = evalExpr(exprC);
+				def cond = tier0Eval(exprC);
 				if (exn) return value;
 
 				if (cond.isTrue()) {
-					def v = evalExpr(exprT);
+					def v = tier0Eval(exprT);
 					if (exn) return value;
 					value = v;
 				} else {
-					def v = evalExpr(exprF);
+					def v = tier0Eval(exprF);
 					if (exn) return value;
 					value = v;
 				}
 			}
 			Raise(expr) => {
-				def v = evalExpr(expr);
+				def v = tier0Eval(expr);
 				if (exn) return value;
 
 				throw(v);
 			}
 			Catch(try, catch) => {
-				def v = evalExpr(try);
+				def v = tier0Eval(try);
 				if (!exn) {
 					value = v;
 				} else {
 					// catch exception
 					exn = false;
-					def e = evalExpr(catch);
+					def e = tier0Eval(catch);
 					if (exn) return value;
 					value = e;
 				}
 			}
 			Func(id, params, body) => {
-				def f = FuncValue.new(id, params, body);
+				def f = FuncValue.new(params, ExprValue.new(Impl.User(body)));
 				locals[id] = f;
 				value = f;
 			}
 			Assign(id, expr) => {
-				def v = evalExpr(expr);
+				def v = tier0Eval(expr);
 				if (exn) return value;
 				locals[id] = v;
 				value = v;
@@ -154,10 +151,10 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 					def cond = c.0, expr = c.1;
 
 					// check cond
-					def t = evalExpr(cond);
+					def t = tier0Eval(cond);
 					if (exn) return value;
 					if (t.isTrue()) {
-						def v = evalExpr(expr);
+						def v = tier0Eval(expr);
 						if (exn) return value;
 						value = v;
 
@@ -172,7 +169,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 			}
 			While(cond, body) => {
 				while (true) {
-					def v = evalExpr(cond);
+					def v = tier0Eval(cond);
 					if (exn) return value;
 
 					if (!v.isTrue()) {
@@ -180,14 +177,14 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 						break;
 					}
 
-					evalExpr(body);
+					tier0Eval(body);
 					if (exn) return value;
 				}
 			}
 			Begin(exprs) => {
 				var last: Value;
 				for (expr in exprs) {
-					def v = evalExpr(expr);
+					def v = tier0Eval(expr);
 					if (exn) return value;
 
 					last = v;

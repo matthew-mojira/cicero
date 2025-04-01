@@ -1,0 +1,19 @@
+/* First-class expressions, which may allow translation into other forms (e.g.
+ * WebAssembly for other evaluation methods.
+ */
+class ExprValue(impl: Impl) extends Value {
+	def typeof()  -> Type   { return Type.Expr; }
+	def display() -> string { return "<expr>"; }
+	def isTrue()  -> bool   { return true; }
+}
+
+type Impl {
+	case User(expr: Expr);
+	case Builtin(func: Range<Value> -> (Value, bool));
+}
+
+component ExprValues {
+	def fromBuiltin(func: Range<Value> -> (Value, bool)) -> ExprValue {
+		return ExprValue.new(Impl.Builtin(func));
+	}
+}

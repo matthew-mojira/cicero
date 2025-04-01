@@ -1,12 +1,22 @@
-enum Builtin(id: string, func: Range<Value> -> (Value, bool)) {
-	V_TYPEOF("typeof", v_typeof),
-	V_PRINT ("print",  v_print),
-	VV_EQ   ("=",      vv_eq),
-	VV_NEQ  ("!=",     vv_neq),
-	II_ADD  ("+",      ii_add),
-	II_SUB  ("-",      ii_sub),
-	II_MUL  ("*",      ii_mul),
-	II_DIV  ("/",      ii_div),
+enum Builtin(id: string, val: Value) {
+	TRUE    ("true",     BoolValues.trueValue),
+	FALSE   ("false",    BoolValues.falseValue),
+	INT     ("int" ,     TypeValues.getTypeValue(Type.Int)),
+	BOOL    ("bool",     TypeValues.getTypeValue(Type.Bool)),
+	FUNC    ("func",     TypeValues.getTypeValue(Type.Func)),
+	STR     ("str" ,     TypeValues.getTypeValue(Type.Str)),
+	TYPE    ("type",     TypeValues.getTypeValue(Type.Type)),
+	POOPCRAP("poopcrap", TypeValues.getTypeValue(Type.PoopCrap)),
+	FRAME   ("frame",    TypeValues.getTypeValue(Type.Frame)),
+	EXPR    ("expr",     TypeValues.getTypeValue(Type.Expr)),
+	V_TYPEOF("typeof",   FuncValues.fromBuiltin(1, v_typeof)),
+	V_PRINT ("print",    FuncValues.fromBuiltin(1, v_print)), 
+	VV_EQ   ("=",        FuncValues.fromBuiltin(2, vv_eq)), 
+	VV_NEQ  ("!=",       FuncValues.fromBuiltin(2, vv_neq)), 
+	II_ADD  ("+",        FuncValues.fromBuiltin(2, ii_add)), 
+	II_SUB  ("-",        FuncValues.fromBuiltin(2, ii_sub)), 
+	II_MUL  ("*",        FuncValues.fromBuiltin(2, ii_mul)), 
+	II_DIV  ("/",        FuncValues.fromBuiltin(2, ii_div)),
 }
 
 /* The type of all Builtin-Functions is
