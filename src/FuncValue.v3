@@ -10,6 +10,6 @@ component FuncValues {
 		for (i < params) {
 			arr[i] = Strings.format1("arg%d", i);
 		}
-		return FuncValue.new(arr, ExprValue.new(Impl.Builtin(func)));
+		return FuncValue.new(arr, ExprValue.new(Impl.Virgil(func)));
 	}
 }

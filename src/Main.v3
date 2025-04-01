@@ -1,9 +1,9 @@
 def main(args: Array<string>) -> int {
-	def builtins: Map<string, Value> = Strings.newMap();
+	def builtins: HashMap<string, Value> = Strings.newMap();
 	for (builtin in Builtin.set.all) {
 		builtins[builtin.id] = builtin.val;
 	}
-	def frame = FrameValue.new(null, Strings.newMap(), null);
+	def frame = FrameValue.new(null, builtins, null);
 
 	match (args.length) {
 		0 => {
@@ -19,6 +19,7 @@ def main(args: Array<string>) -> int {
 						if (frame.exn) {
 							System.puts(frame.val.display());
 							System.ln();
+							frame.exn = false;
 						} else {
 							System.puts("=> ");
 							System.puts(frame.val.display());

@@ -77,7 +77,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				};
 
 				match (code.impl) {
-					User(expr) => {
+					AST(expr) => {
 						// create new frames here!
 						def frame = FrameValue.new(this, newLocals, expr);
 						if (frame.exn) {
@@ -87,7 +87,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 						}
 						value = frame.val;
 					}
-					Builtin(func) => {
+					Virgil(func) => {
 						// function call
 						def ret = func(argv);
 						def val = ret.0, fnExn = ret.1;
@@ -134,7 +134,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				}
 			}
 			Func(id, params, body) => {
-				def f = FuncValue.new(params, ExprValue.new(Impl.User(body)));
+				def f = FuncValue.new(params, ExprValue.new(Impl.AST(body)));
 				locals[id] = f;
 				value = f;
 			}

@@ -8,12 +8,12 @@ class ExprValue(impl: Impl) extends Value {
 }
 
 type Impl {
-	case User(expr: Expr);
-	case Builtin(func: Range<Value> -> (Value, bool));
+	case AST(expr: Expr);
+	case Virgil(func: Range<Value> -> (Value, bool));
 }
 
 component ExprValues {
 	def fromBuiltin(func: Range<Value> -> (Value, bool)) -> ExprValue {
-		return ExprValue.new(Impl.Builtin(func));
+		return ExprValue.new(Impl.Virgil(func));
 	}
 }
