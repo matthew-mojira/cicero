@@ -1,0 +1,9 @@
+EXTENDED_OPERAND # apply this value to the next op arg
+LOAD_CONSTANT    # index into the constant pool
+LOAD_IDENTIFIER  # index into the identifier pool
+APPLY            # how many values to pop off stack (func + args)
+BRANCH           # offset of pc to branch to
+BRANCH_IF        # offset of pc to (conditionally) branch to
+RAISE
+SET_IDENTIFIER   # index into the identifier pool
+POP		 # number of values to pop from the stack

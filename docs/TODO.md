@@ -16,3 +16,8 @@
 * tier1: bytecode
 * treat top-level expressions better
 * example programs, benchmarks
+* arbitrary precision integers?
+* better parsing for integers
+* clarify rules between syntax objects, literals, and built-in identifiers
+
+* frame and code objects?

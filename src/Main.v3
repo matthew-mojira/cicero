@@ -1,6 +1,5 @@
 def main(args: Array<string>) -> int {
-	def eval = Eval.new();
-
+	def exec = BaseFrame.new();
 	match (args.length) {
 		0 => {
 			var scanner = Scanner.new();
@@ -10,11 +9,9 @@ def main(args: Array<string>) -> int {
 				if (reader.ok) {
 					def exprs = reader.getExprs();
 
-					def vals = eval.eval(exprs);
-					for (val in vals) {
-						System.puts("=> ");
-						System.puts(val.display());
-						System.ln();
+					for (expr in exprs) {
+						def val = exec.eval(expr);
+						System.puts(Strings.format1("=> %s\n", val.display()));
 					}
 				} else {
 					System.puts(Strings.format1("parse error: %s\n", reader.error_msg));
@@ -26,11 +23,9 @@ def main(args: Array<string>) -> int {
 			if (reader.ok) {
 				def exprs = reader.getExprs();
 
-				def vals = eval.eval(exprs);
-				for (val in vals) {
-					System.puts("=> ");
-					System.puts(val.display());
-					System.ln();
+				for (expr in exprs) {
+					def val = exec.eval(expr);
+					System.puts(Strings.format1("=> %s\n", val.display()));
 				}
 			} else {
 				System.puts(reader.fileName);

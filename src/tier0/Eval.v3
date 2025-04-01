@@ -1,35 +1,26 @@
-class Eval {
-	def globals: HashMap<string, Value> = Strings.newMap();
-	private var frame: Frame;
-	// not used?
-
-	new() {
+class BaseFrame extends Frame {
+	// this class inherits locals from `Frame` but these are actually
+	// the globals that all higher frames can read from
+	new() super(null, null, null, null) {
 		// add builtins to environment
 		for (builtin in Builtin.set.all) {
-			globals[builtin.id] = Value.Builtin(builtin.func);
+			locals[builtin.id] = Value.Builtin(builtin.func);
 		}
-		
-		frame = Frame.new(this, [], []);
 	}
 
-	// FIXME refactor this approach
-	def eval(exprs: Array<Expr>) -> Array<Value> {
-		def vals: Vector<Value> = Vector<Value>.new();
-
-		for (expr in exprs) {
-			frame.evalFrame(expr);
-			if (frame.exn) {
-				System.error("eval error", frame.val.display());
-			}
-			vals.put(frame.val);
+	
+	def eval(expr: Expr) -> Value {
+		def v = evalFunc(expr);
+		if (exn) {
+			System.error("uncaught exception", val.display());
 		}
-		return vals.extract();
+		return v;
 	}
 }
 
 // TODO abstract code into CodeObject a la cpython
 class Frame {
-	private var exec: Eval;
+	private var exec: BaseFrame;
 	def locals: HashMap<string, Value> = Strings.newMap();
 
 	// you could replace this with a higher-tier evaluation function
@@ -40,22 +31,24 @@ class Frame {
 	var val: Value;         // result of evaluation or exception value
 
 	/* A frame may fail to initialize in the case of arity mismatch */
-	new(exec: Eval, params: Array<string>, args: Array<Value>) {
+	new(exec: BaseFrame, params: Array<string>, args: Array<Value>, code: Expr) {
 		this.exec = exec;
 		this.evalFunc = evalExpr;
-		assertArity(params.length, args);
-		if (!exn) {
-			for (i < params.length) {
-				locals[params[i]] = args[i];
+
+		// XXX null indicates baseframe
+		if (exec != null) {
+			assertArity(params.length, args);
+			if (!exn) {
+				for (i < params.length) {
+					locals[params[i]] = args[i];
+				}
+			
+				// evaluate the frame
+				def v = evalFunc(code);
+				if (!exn)
+					val = v;
 			}
 		}
-	}
-
-	// XXX not a good way of organizing things
-	def evalFrame(code: Expr) {
-		def v = evalFunc(code);
-		if (!exn)
-			val = v;
 	}
 
 	private def evalExpr(expr: Expr) -> Value {
@@ -66,8 +59,8 @@ class Frame {
 			Id(id) => {
 				if (locals.has(id)) {
 					value = locals[id];
-				} else if (exec.globals.has(id)) {
-					value = exec.globals[id];
+				} else if (exec.locals.has(id)) {
+					value = exec.locals[id];
 				} else {
 					throw(Value.Str(Strings.format1("unbound identifier: %s", id)));
 				}
@@ -91,14 +84,7 @@ class Frame {
 				match (tgtVal) {
 					Func(id, params, code) => {
 						// create new frames here!
-						def frame = Frame.new(exec, params, argv);
-						// exception in creating frame happens only with arity mismatch
-						if (frame.exn) {
-							throw(frame.val);
-							return value;
-						}
-						// eval frame
-						frame.evalFrame(code);
+						def frame = Frame.new(exec, params, argv, code);
 						if (frame.exn) {
 							throw(frame.val);
 							return value;
