@@ -1,3 +1,4 @@
+// TODO generalize code to ExprValue (and maybe rename ExprValue to CodeValue)
 class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) extends Value {
 	var globals: HashMap<string, Value>;
 
