@@ -33,7 +33,22 @@ type ExprData {
 			return Strings.format3("(IF %s %s %s)", cond.display(), exprT.display(), exprF.display());
 		}
 	}
-	case Cond(cases: Array<(Expr, Expr)>);
+	case Cond(cases: Array<(Expr, Expr)>) {
+		def display() -> string  {
+			def buf: StringBuilder = StringBuilder.new();
+			buf.puts("(COND ");
+			for (c in cases) {
+				buf.putc('(');
+				buf.puts(c.0.display());
+				buf.putc(' ');
+				buf.puts(c.1.display());
+				buf.putc(')');
+			}
+			buf.putc(')');
+
+			return buf.extract();
+		}
+	}
 	case Raise(exn: Expr) {
 		def display() -> string {
 			return Strings.format1("(RAISE %s)", exn.display());
@@ -72,13 +87,20 @@ type ExprData {
 			return Strings.format2("(WHILE %s %s)", cond.display(), body.display());
 		}
 	}
-	case Begin(exprs: Array<Expr>);
+	case Begin(exprs: Array<Expr>) {
+		def display() -> string {
+			def buf: StringBuilder = StringBuilder.new();
+			buf.puts("(BEGIN ");
+			for (expr in exprs) {
+				buf.putc(' ');
+				buf.puts(expr.display());
+			}
+			buf.putc(')');
+
+			return buf.extract();
+		}
+	}
 
 	def display() -> string;
 }
 
-// f1 must come before f2
-def addRange(f1: FileRange, f2: FileRange) -> FileRange {
-	if (f1.fileName != f2.fileName) System.error("file range error", "conflicting filenames when adding file ranges");
-	return FileRange.new(f1.fileName, f1.beginLine, f1.beginColumn, f2.endLine, f2.endColumn);
-}
