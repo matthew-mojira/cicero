@@ -1,47 +1,7 @@
-type Value {
-	case Exn; // XXX not a real value. don't ever treat it as such
-	case Int(int_: long) {
-		def typeof()  -> Type { return Type.Int; }
-		def display() -> string { return Strings.format1("%d", int_); }
-		def isTrue()  -> bool { return true; }
-	}
-	case Bool(bool_: bool) {
-		def typeof()  -> Type { return Type.Bool; }
-		def display() -> string { return if(bool_, "true", "false"); }
-		def isTrue()  -> bool { return bool_; }
-	}
-	/* For Func and Builtin, two different cases in Value that have the same
-	 * type, so it does not suffice to use Value.Func.? for typechecking
-	 */
-	case Func(id: string, params: Array<string>, code: Expr) {
-		def typeof()  -> Type { return Type.Func; }
-		def display() -> string { return "<func>"; }
-		def isTrue()  -> bool { return true; }
-	}
-	case Builtin(func: Range<Value> -> (Value, bool)) {
-		// same type as above, so user should not observe difference
-		// in internal representation
-		def typeof()  -> Type { return Type.Func; }  
-		def display() -> string { return "<func>"; }
-		def isTrue()  -> bool { return true; }
-	}
-	case Str(str: string) {
-		def typeof()  -> Type { return Type.Str; }
-		def display() -> string { return Strings.format1("\"%s\"", str); }
-		def isTrue()  -> bool { return true; }
-	}
-	case Type(type_: Type) {
-		def typeof()  -> Type { return Type.Type; }
-		def display() -> string { return type_.display(); }
-		def isTrue()  -> bool { return true; }
-	}
-	case PoopCrap {
-		def typeof()  -> Type { return Type.PoopCrap; }
-		def display() -> string { return "poopcrap"; }
-		def isTrue()  -> bool { return false; }
-	}
+class Value {
+	def fields: HashMap<string, Value> = Strings.newMap();
 
-	def typeof()  -> Type;
+	def typeof() -> Type;
 	def display() -> string;
-	def isTrue()  -> bool;
+	def isTrue() -> bool;
 }

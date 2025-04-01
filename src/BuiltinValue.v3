@@ -1,0 +1,5 @@
+class BuiltinValue(func: Range<Value> -> (Value, bool)) extends Value {
+	def typeof()  -> Type   { return Type.Func; }  
+	def display() -> string { return "<func>"; }
+	def isTrue()  -> bool   { return true; }
+}

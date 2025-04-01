@@ -1,36 +1,5 @@
-class Eval {
-	def globals: HashMap<string, Value> = Strings.newMap();
-	private var frame: Frame;
-	// not used?
-
-	new() {
-		// add builtins to environment
-		for (builtin in Builtin.set.all) {
-			globals[builtin.id] = Value.Builtin(builtin.func);
-		}
-		
-		frame = Frame.new(this, [], []);
-	}
-
-	// FIXME refactor this approach
-	def eval(exprs: Array<Expr>) -> Array<Value> {
-		def vals: Vector<Value> = Vector<Value>.new();
-
-		for (expr in exprs) {
-			frame.evalFrame(expr);
-			if (frame.exn) {
-				System.error("eval error", frame.val.display());
-			}
-			vals.put(frame.val);
-		}
-		return vals.extract();
-	}
-}
-
-// TODO abstract code into CodeObject a la cpython
-class Frame {
-	private var exec: Eval;
-	def locals: HashMap<string, Value> = Strings.newMap();
+class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) extends Value {
+	var globals: HashMap<string, Value>;
 
 	// you could replace this with a higher-tier evaluation function
 	var evalFunc: Expr -> Value;
@@ -39,23 +8,30 @@ class Frame {
 	var exn: bool = false;  // whether evaluation threw uncaught exception
 	var val: Value;         // result of evaluation or exception value
 
-	/* A frame may fail to initialize in the case of arity mismatch */
-	new(exec: Eval, params: Array<string>, args: Array<Value>) {
-		this.exec = exec;
-		this.evalFunc = evalExpr;
-		assertArity(params.length, args);
-		if (!exn) {
-			for (i < params.length) {
-				locals[params[i]] = args[i];
-			}
+	/* Initializing the frame also evaluates it (except for top-level frames). */
+	new() {
+		evalFunc = evalExpr;
+		if (prev == null) {
+			// this is the top-level frame, where locals = globals
+			globals = locals;
+		} else {
+			globals = prev.globals;
+
+			// evaluate the frame
+			def v = evalFunc(code);
+			if (!exn)
+				val = v;
 		}
 	}
 
-	// XXX not a good way of organizing things
-	def evalFrame(code: Expr) {
-		def v = evalFunc(code);
+	// special function for top-level frame to let it evaluate multiple expressions 
+	def eval(expr: Expr) {
+		if (prev != null) System.error("eval error", "attempted to evaluate expression not in top level");
+
+		def v = evalFunc(expr);
 		if (!exn)
 			val = v;
+		// XXX no return value, inspect the frame instead
 	}
 
 	private def evalExpr(expr: Expr) -> Value {
@@ -66,10 +42,10 @@ class Frame {
 			Id(id) => {
 				if (locals.has(id)) {
 					value = locals[id];
-				} else if (exec.globals.has(id)) {
-					value = exec.globals[id];
+				} else if (globals.has(id)) {
+					value = globals[id];
 				} else {
-					throw(Value.Str(Strings.format1("unbound identifier: %s", id)));
+					throw(StrValues.getStrValue(Strings.format1("unbound identifier: %s", id)));
 				}
 			}
 			Apply(tgt, args) => {
@@ -88,38 +64,44 @@ class Frame {
 				}
 
 				// function call
-				match (tgtVal) {
-					Func(id, params, code) => {
-						// create new frames here!
-						def frame = Frame.new(exec, params, argv);
-						// exception in creating frame happens only with arity mismatch
-						if (frame.exn) {
-							throw(frame.val);
-							return value;
-						}
-						// eval frame
-						frame.evalFrame(code);
-						if (frame.exn) {
-							throw(frame.val);
-							return value;
-						}
-						value = frame.val;
-						
-					}
-					Builtin(func) => {
-						// function call
-						def ret = func(argv);
-						def val = ret.0, fnExn = ret.1;
+				if (FuncValue.?(tgtVal)) {
+					def fv = FuncValue.!(tgtVal);
+					def id = fv.id, params = fv.params, code = fv.code;
 
-						if (fnExn) {
-							throw(val);
-							return value;
-						} else {
-							value = val;
-						}
-						
+					// arity check
+					assertArity(params.length, argv);
+					if (exn) return value;
+
+					def newLocals: HashMap<string, Value> = Strings.newMap();
+					for (i < argv.length) {
+						newLocals[params[i]] = argv[i];
+					};
+					
+					// create new frames here!
+					def frame = FrameValue.new(this, newLocals, code);
+					if (frame.exn) {
+						// rethrow
+						throw(frame.val);
+						return value;
 					}
-					_ => /* already typechecked, impossible case */;
+					value = frame.val;
+					
+				} else if (BuiltinValue.?(tgtVal)) {
+					def bv = BuiltinValue.!(tgtVal);
+					def func = bv.func;
+
+					// function call
+					def ret = func(argv); // XXX built-ins check their own arity
+					def val = ret.0, fnExn = ret.1;
+
+					if (fnExn) {
+						throw(val);
+						return value;
+					} else {
+						value = val;
+					}	
+				} else {
+					System.error("eval error", "unreachable case");
 				}
 			}
 			If(exprC, exprT, exprF) => {
@@ -155,7 +137,7 @@ class Frame {
 				}
 			}
 			Func(id, params, body) => {
-				def f = Value.Func(id, params, body);
+				def f = FuncValue.new(id, params, body);
 				locals[id] = f;
 				value = f;
 			}
@@ -185,7 +167,7 @@ class Frame {
 				}
 
 				if (!sat) {
-					throw(Value.Str("cond error: no true branch"));
+					throw(StrValues.getStrValue("cond error: no true branch"));
 				}
 			}
 			While(cond, body) => {
@@ -217,6 +199,10 @@ class Frame {
 		return value;
 	}
 	
+	def typeof()  -> Type   { return Type.Frame; }
+	def display() -> string { return "<frame>"; }
+	def isTrue()  -> bool   { return true; }
+
 	/* throwing exceptions */
 
 	// throw sets the exception value in the frame right away
@@ -227,12 +213,12 @@ class Frame {
 
 	private def assertType(exp: Type, val: Value) {
 		if (exp != val.typeof())
-			throw(Value.Str(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display())));
+			throw(StrValues.getStrValue(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display())));
 	}
 
 	private def assertArity(argc: int, vals: Range<Value>) {
 		if (vals.length != argc)
-			throw(Value.Str(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length)));
+			throw(StrValues.getStrValue(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length)));
 	}
 
 }

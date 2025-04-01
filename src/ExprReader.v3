@@ -3,14 +3,14 @@ class ExprReader extends TextReader {
 	private def exprs: Vector<Expr> = Vector<Expr>.new();
 
 	new(fileName: string, data: string) super(fileName, data) {
-		lits["true"]  = Value.Bool(true);
-		lits["false"] = Value.Bool(false);
-		lits["int"]   = Value.Type(Type.Int);
-		lits["bool"]  = Value.Type(Type.Bool);
-		lits["func"]  = Value.Type(Type.Func);
-		lits["str"]   = Value.Type(Type.Str);
-		lits["type"]  = Value.Type(Type.Type);
-		lits["poopcrap"] = Value.Type(Type.PoopCrap);
+		lits["true"]  = BoolValues.trueValue;
+		lits["false"] = BoolValues.falseValue;
+		lits["int"]   = TypeValues.getTypeValue(Type.Int);
+		lits["bool"]  = TypeValues.getTypeValue(Type.Bool);
+		lits["func"]  = TypeValues.getTypeValue(Type.Func);
+		lits["str"]   = TypeValues.getTypeValue(Type.Str);
+		lits["type"]  = TypeValues.getTypeValue(Type.Type);
+	     lits["poopcrap"] = TypeValues.getTypeValue(Type.PoopCrap);
 
 		skipWhitespace();
 		while (pos < limit) {
@@ -32,7 +32,7 @@ class ExprReader extends TextReader {
 				req1('(');
 				if (opt1(')') >= 0) {
 					// () case
-					return Expr.new(ExprData.Lit(Value.PoopCrap), FileRange.new(fileName, startLine, startColumn, line, column));
+					return Expr.new(ExprData.Lit(PoopCrapValues.instance), FileRange.new(fileName, startLine, startColumn, line, column));
 				}
 
 				// check first word to indicate KW-syntax expression
@@ -167,7 +167,7 @@ class ExprReader extends TextReader {
 			}
 			'\"' => {
 				def str = readString();
-				return Expr.new(ExprData.Lit(Value.Str(str)),
+				return Expr.new(ExprData.Lit(StrValues.getStrValue(str)),
 					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
 			_ => {
@@ -191,7 +191,7 @@ class ExprReader extends TextReader {
 						return null;
 					}
 					// any characters that start an integer literal cannot be part of a valid identifier
-					return Expr.new(ExprData.Lit(Value.Int(value)), range);
+					return Expr.new(ExprData.Lit(IntValues.getIntValue(value)), range);
 				}
 
 				return Expr.new(ExprData.Id(str), range);

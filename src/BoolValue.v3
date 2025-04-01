@@ -1,0 +1,13 @@
+class BoolValue(val: bool) extends Value {
+	private new () {}
+
+	def typeof()  -> Type   { return Type.Bool; }
+	def display() -> string { return if(val, "true", "false"); }
+	def isTrue()  -> bool   { return val; }
+}
+
+component BoolValues {
+	/* canonical instances of bool values */
+	def trueValue  = BoolValue.new(true);
+	def falseValue = BoolValue.new(false);
+}

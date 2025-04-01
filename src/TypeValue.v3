@@ -1,0 +1,20 @@
+class TypeValue(val: Type) extends Value {
+	private new () {}
+
+	def typeof()  -> Type   { return Type.Type; }
+	def display() -> string { return val.display(); }
+	def isTrue()  -> bool   { return true; }
+}
+
+component TypeValues {
+	/* one value per type */
+	def typeValues = HashMap<Type, TypeValue>.new(hash, Type.==);
+	def getTypeValue(val: Type) -> TypeValue {
+		if (typeValues.has(val)) return typeValues[val];
+		def newType = TypeValue.new(val);
+		typeValues[val] = newType;
+		return newType;
+	}
+}
+
+def hash(t: Type) -> int { return int.!(Type.tag(t)); }

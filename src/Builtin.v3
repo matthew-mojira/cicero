@@ -25,7 +25,7 @@ def v_typeof(vals: Range<Value>) -> (Value, bool) {
 	}
 
 	if (!exn) {
-		val = Value.Type(vals[0].typeof());
+		val = TypeValues.getTypeValue(vals[0].typeof());
 	}
 
 	return (val, exn);
@@ -42,7 +42,7 @@ def v_print(vals: Range<Value>) -> (Value, bool) {
 	if (!exn) {
 		System.puts(vals[0].display());
 		System.ln();
-		val = Value.PoopCrap;
+		val = PoopCrapValues.instance;
 	}
 
 	return (val, exn);
@@ -58,7 +58,7 @@ def vv_eq(vals: Range<Value>) -> (Value, bool) {
 	}
 
 	if (!exn) {
-		val = Value.Bool(vals[0] == vals[1]);
+		val = if(vals[0] == vals[1], BoolValues.trueValue, BoolValues.falseValue);
 	}
 
 	return (val, exn);
@@ -74,7 +74,7 @@ def vv_neq(vals: Range<Value>) -> (Value, bool) {
 	}
 
 	if (!exn) {
-		val = Value.Bool(vals[0] != vals[1]);
+		val = if(vals[0] != vals[1], BoolValues.trueValue, BoolValues.falseValue);
 	}
 
 	return (val, exn);
@@ -97,9 +97,7 @@ def ii_add(vals: Range<Value>) -> (Value, bool) {
 	}
 	
 	if (!exn) {
-		def int1 = Value.Int.!(vals[0]);
-		def int2 = Value.Int.!(vals[1]);
-		val = Value.Int(int1.int_ + int2.int_);
+		val = IntValues.add(IntValue.!(vals[0]), IntValue.!(vals[1]));
 	}
 
 	return (val, exn);
@@ -122,9 +120,7 @@ def ii_sub(vals: Range<Value>) -> (Value, bool) {
 	}
 	
 	if (!exn) {
-		def int1 = Value.Int.!(vals[0]);
-		def int2 = Value.Int.!(vals[1]);
-		val = Value.Int(int1.int_ - int2.int_);
+		val = IntValues.sub(IntValue.!(vals[0]), IntValue.!(vals[1]));
 	}
 
 	return (val, exn);
@@ -147,9 +143,7 @@ def ii_mul(vals: Range<Value>) -> (Value, bool) {
 	}
 	
 	if (!exn) {
-		def int1 = Value.Int.!(vals[0]);
-		def int2 = Value.Int.!(vals[1]);
-		val = Value.Int(int1.int_ * int2.int_);
+		val = IntValues.mul(IntValue.!(vals[0]), IntValue.!(vals[1]));
 	}
 
 	return (val, exn);
@@ -170,24 +164,22 @@ def ii_div(vals: Range<Value>) -> (Value, bool) {
 		exn = true;
 		val = typeMismatch(Type.Int, vals[1]);
 	}
-	if (!exn && (Value.Int.!(vals[1])).int_ == 0) {
+	if (!exn && (IntValue.!(vals[1])).val == 0) {
 		exn = true;
-		val = Value.Str("arithmetic error: divide by zero");
+		val = StrValues.getStrValue("arithmetic error: divide by zero");
 	}
 	
 	if (!exn) {
-		def int1 = Value.Int.!(vals[0]);
-		def int2 = Value.Int.!(vals[1]);
-		val = Value.Int(int1.int_ / int2.int_);
+		val = IntValues.div(IntValue.!(vals[0]), IntValue.!(vals[1]));
 	}
 
 	return (val, exn);
 }
 
 def typeMismatch(exp: Type, val: Value) -> Value {
-	return Value.Str(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display()));
+	return StrValues.getStrValue(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display()));
 }
 
 def arityMismatch(argc: int, vals: Range<Value>) -> Value {
-	return Value.Str(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length));
+	return StrValues.getStrValue(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length));
 }

@@ -1,0 +1,5 @@
+class FuncValue(id: string, params: Array<string>, code: Expr) extends Value {
+	def typeof()  -> Type   { return Type.Func; }
+	def display() -> string { return "<func>"; }
+	def isTrue()  -> bool   { return true; }
+}

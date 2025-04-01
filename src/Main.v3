@@ -1,5 +1,5 @@
 def main(args: Array<string>) -> int {
-	def eval = Eval.new();
+	def frame = FrameValue.new(null, Strings.newMap(), null);
 
 	match (args.length) {
 		0 => {
@@ -9,12 +9,17 @@ def main(args: Array<string>) -> int {
 				var reader = ExprReader.new("<repl>", scanner.nextLine());
 				if (reader.ok) {
 					def exprs = reader.getExprs();
-
-					def vals = eval.eval(exprs);
-					for (val in vals) {
-						System.puts("=> ");
-						System.puts(val.display());
-						System.ln();
+					
+					for (expr in exprs) {
+						frame.eval(expr);
+						if (frame.exn) {
+							System.puts(frame.val.display());
+							System.ln();
+						} else {
+							System.puts("=> ");
+							System.puts(frame.val.display());
+							System.ln();
+						}
 					}
 				} else {
 					System.puts(Strings.format1("parse error: %s\n", reader.error_msg));
@@ -26,11 +31,16 @@ def main(args: Array<string>) -> int {
 			if (reader.ok) {
 				def exprs = reader.getExprs();
 
-				def vals = eval.eval(exprs);
-				for (val in vals) {
-					System.puts("=> ");
-					System.puts(val.display());
-					System.ln();
+				for (expr in exprs) {
+					frame.eval(expr);
+					if (frame.exn) {
+						System.puts(frame.val.display());
+						System.ln();
+					} else {
+						System.puts("=> ");
+						System.puts(frame.val.display());
+						System.ln();
+					}
 				}
 			} else {
 				System.puts(reader.fileName);

@@ -1,0 +1,12 @@
+class PoopCrapValue extends Value {
+	private new () {}
+
+	def typeof()  -> Type   { return Type.PoopCrap; }
+	def display() -> string { return "poopcrap"; }
+	def isTrue()  -> bool   { return false; }
+}
+
+component PoopCrapValues {
+	/* only one poop and one crap */
+	def instance = PoopCrapValue.new();
+}

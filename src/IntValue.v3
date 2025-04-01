@@ -1,0 +1,33 @@
+class IntValue(val: long) extends Value {
+	private new () {}
+
+	def typeof()  -> Type   { return Type.Int; }
+	def display() -> string { return Strings.format1("%d", val); }
+	def isTrue()  -> bool   { return true; }
+}
+
+component IntValues {
+	/* canonicalize int value instances */
+	def intValues = HashMap<long, IntValue>.new(int.!, long.==);
+	def getIntValue(val: long) -> IntValue {
+		if (intValues.has(val)) return intValues[val];
+		def newInt = IntValue.new(val);
+		intValues[val] = newInt;
+		return newInt;
+	}
+
+	/* arithmetic operations on int values */
+	def add(int1: IntValue, int2: IntValue) -> IntValue {
+		return getIntValue(int1.val + int2.val);
+	}
+	def sub(int1: IntValue, int2: IntValue) -> IntValue {
+		return getIntValue(int1.val - int2.val);
+	}
+	def mul(int1: IntValue, int2: IntValue) -> IntValue {
+		return getIntValue(int1.val * int2.val);
+	}
+	// TODO what to do if this fails?
+	def div(int1: IntValue, int2: IntValue) -> IntValue {
+		return getIntValue(int1.val / int2.val);
+	}
+}

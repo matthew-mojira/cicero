@@ -1,0 +1,18 @@
+class StrValue(str: string) extends Value {
+	private new () {}
+
+	def typeof()  -> Type   { return Type.Str; }
+	def display() -> string { return Strings.format1("\"%s\"", str); }
+	def isTrue()  -> bool   { return true; }
+}
+
+component StrValues {
+	/* canonical instances of strings */
+	def strValues: HashMap<string, StrValue> = Strings.newMap();
+	def getStrValue(str: string) -> StrValue {
+		if (strValues.has(str)) return strValues[str];
+		def newStr = StrValue.new(str);
+		strValues[str] = newStr;
+		return newStr;
+	}
+}
