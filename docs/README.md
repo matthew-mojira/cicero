@@ -190,7 +190,7 @@ A class consists of
     `self`). Methods are also fields.
 
 A method is a special kind of function which has a reference to the object in
-`self`.
+`self`. Methods are *bound methods* a la Python.
 
 No static members of a class. No inheritance.
 
