@@ -1,4 +1,4 @@
-(defn (f (x))
+(func (f x)
    x
 )
 

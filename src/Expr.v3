@@ -75,12 +75,12 @@ type ExprData {
 	case Begin(exprs: Array<Expr>);
 	case GetField(field: string, obj: Expr);
 	case SetField(field: string, obj: Expr, val: Expr);
+	case Class(id: string, fields: Array<Field>);
 
 	def display() -> string;
 }
 
-// f1 must come before f2
-def addRange(f1: FileRange, f2: FileRange) -> FileRange {
-	if (f1.fileName != f2.fileName) System.error("file range error", "conflicting filenames when adding file ranges");
-	return FileRange.new(f1.fileName, f1.beginLine, f1.beginColumn, f2.endLine, f2.endColumn);
+type Field {
+	case Field(id: string, init: Expr);
+	case Method(id: string, params: Array<string>, body: Expr);
 }

@@ -1,0 +1,5 @@
+class ClassValue(classFields: Array<Field>) extends Value {
+	def typeof()  -> Type   { return Type.Class; }
+	def display() -> string { return "<class>"; }
+	def isTrue()  -> bool   { return true; }
+}

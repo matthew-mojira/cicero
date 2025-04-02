@@ -81,7 +81,7 @@ during evaluation.
   (any value!) as an exception but you can't get it back for the catch.
 * `(set x e)`: evaluates `e` and binds it to `x` (identifer) local variable.
   The value of the expression is whatever `e` evaluated to.
-* `(defn ...)`: defines a function, see below
+* `(func ...)`: defines a function, see below
 * `(cond (e1 f1) ... (e2 f2))`: evaluate each condition `e1...en` in order
   until the first `ei` evaluates to true, then evaluate `fi` (which will be the
   value of the whole expression). Throws an exception if no cases match
@@ -92,7 +92,7 @@ during evaluation.
   not some exception thrown). As a matter of syntax, the list of expressions
   must be nonempty
 * `(get-field f e)`: accesses field `f` of the object evaluated in `e`
-* `(set-field f e1 e2): sets field `f` of the object evaluated in `e1` to the
+* `(set-field f e1 e2)`: sets field `f` of the object evaluated in `e1` to the
   value of `e2`. This value must already be bound to a value otherwise it
   raises an exception.
 
@@ -104,26 +104,29 @@ Some values are provided as built-ins. They are
 * `print`: takes in a single value and prints it. returns PoopCrap
 * `+`: takes in two integers and adds them.
 * `true` and `false`
-* `int`, `bool`, `func`, `str`, `type`, `poopcrap` referring to those types
+* `int`, `bool`, `func`, `str`, `type`, `poopcrap`, `expr`, `frame` referring
+  to those types (note that `func` is overloaded for the syntactic function
+  declaration)
+  
 
 These are not literals but are instead variables defined in the global 
 environment.
 
 ### Defining your own functions.
 
-Use `defn` to define your own functions:
+Use `func` to define your own functions:
 
 ```
-(defn (f ()) 1)
+(func (f ()) 1)
 ```
 
 ```
-(defn (f (x))
+(func (f (x))
   x)
 ```
 
 ```
-(defn (f (x y))
+(func (f (x y))
   (+ x y))
 ```
 
@@ -157,5 +160,6 @@ Values of type
 * string
 * type
 
-have one unique instance for each underlying value. This may make things
-strange if you mess with its fields.
+have one unique instance for each underlying value. The underlying value is
+immutable (i.e. you can't take the integer 1 and make it 2), but the fields
+are mutable. This may make things strange if you mess with the fields.

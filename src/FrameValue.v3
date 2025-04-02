@@ -139,6 +139,11 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				locals[id] = f;
 				value = f;
 			}
+			Class(id, fields) => {
+				def c = ClassValue.new(fields);
+				locals[id] = c;
+				value = c;
+			}
 			Assign(id, expr) => {
 				def v = tier0Eval(expr);
 				if (exn) return value;

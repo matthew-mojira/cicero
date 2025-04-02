@@ -66,16 +66,15 @@ class ExprReader extends TextReader {
 
 							return Expr.new(ExprData.Catch(try, catch),
 								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "defn")) {
+						} else if (Strings.equal(str, "func")) {
 							/* The syntax of a function is
-							 *   (defn (f (x y z))
+							 *   (func (f x y z)
 							 *      <expr>
 							 *   )
 							 */
 							req1('(');
 							// name of function
 							def name = readIdentifier();
-							req1('(');
 							// params to function
 							def params: Vector<string> = Vector<string>.new();
 							while (opt1(')') < 0) {
@@ -87,7 +86,6 @@ class ExprReader extends TextReader {
 									return null;
 								}
 							}
-							req1(')');
 							
 							// body expresssion
 							def body = readExpr();
@@ -160,6 +158,49 @@ class ExprReader extends TextReader {
 							req1(')');
 
 							return Expr.new(ExprData.SetField(field, obj, val),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "class")) {
+							def name = readIdentifier();
+							def fields: Vector<Field> = Vector.new();
+							while (opt1(')') < 0) {
+								req1('(');
+								def word = readIdentifier();
+								if (word == "field") {
+									def fieldName = readIdentifier();
+									def fieldInit = readExpr();
+									
+									fields.put(Field.Field(fieldName, fieldInit));
+								} else if (word == "method") {
+									req1('(');
+									def methodName = readIdentifier();
+									def methodParams = Vector<string>.new();
+									
+									while (opt1(')') < 0) {
+										def paramName = readIdentifier();
+										methodParams.put(paramName);
+
+										if (pos >= limit) {
+											failRel(startPos - pos, "unmatched opening parentheses");
+											return null;
+										}
+									}
+									def methodBody = readExpr();
+
+									fields.put(Field.Method(methodName, methodParams.extract(), methodBody));
+								} else {
+									fail(Strings.format1("unrecognized attribute of class declaration: %s", word));
+									return null;
+								}
+								req1(')');
+
+								if (pos >= limit) {
+									failRel(startPos - pos, "unmatched opening parentheses");
+									return null;
+								}
+							}
+							req1(')');
+
+							return Expr.new(ExprData.Class(name, fields.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						}
 					}
