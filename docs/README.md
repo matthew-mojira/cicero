@@ -9,6 +9,11 @@
 * Type
 * PoopCrap - this is the unit type, what is `null` or `None` in other languages.
   The literal form of PoopCrap is `()`.
+* Frame - execution frames
+* Expr - an abstraction over Virgil code and Cicero AST for function bodies
+
+Right now, there's no way (I think) to access or create frames or expressions
+in the language.
 
 ### Truthiness
 
@@ -22,26 +27,30 @@ implementers (not so much for the programmers).
 ### Identifiers
 
 Identifiers may be any sequence of characters as long as:
-* it does not contain whitespace, `'`, `"`, `(`, `)`, `[`, or `]`
+* it does not contain whitespace, `'`, `"`, `(`, `)`, `[`, `]`, `{', `}', or `.`
 * it does not have an integer literal as as a prefix (e.g. `1250xpdsr`) --
   although this is broken for very large literals, so don't try it
 * it is not a literal (right now it is always parsed as a literal)
 
 An identifier *may* be a keyword or literal. This probably causes weird
-behavior so you probably sohuldn't do it (and I should probably disallow it).
+behavior so you probably shouldn't do it (and I should probably disallow it).
 
 ### Literals
 
 The literals are:
 
 * an integer encoded in base 10
-* `true` and `false`
-* `int`, `bool`, `func`, `str`, `type`, `poopcrap` referring to those types
 * `()` as the PoopCrap literal
 
 ### Comments
 
 No comments supported.
+
+### Syntactic sugar
+
+Some conveniences to reduce the amount of s-expressing:
+* `{ e1 e2 ... en }` is sugar for `(begin e1 e2 ... en)`
+* `e.f` is sugar for `(get-field f e)`. You can chain these: `e.f.g.h`
 
 ## Evaluation
 
@@ -82,16 +91,23 @@ during evaluation.
 * `(begin e1 e2 ... en)`: evaluate all expressions in order (given that there's
   not some exception thrown). As a matter of syntax, the list of expressions
   must be nonempty
+* `(get-field f e)`: accesses field `f` of the object evaluated in `e`
+* `(set-field f e1 e2): sets field `f` of the object evaluated in `e1` to the
+  value of `e2`. This value must already be bound to a value otherwise it
+  raises an exception.
 
 ### Built-ins
 
-Some functions are provided as built-ins. They are
+Some values are provided as built-ins. They are
 
 * `typeof`: takes in a single value and returns its type
 * `print`: takes in a single value and prints it. returns PoopCrap
 * `+`: takes in two integers and adds them.
+* `true` and `false`
+* `int`, `bool`, `func`, `str`, `type`, `poopcrap` referring to those types
 
-These are not literals but are instead variables defined in the environment.
+These are not literals but are instead variables defined in the global 
+environment.
 
 ### Defining your own functions.
 
@@ -113,3 +129,33 @@ Use `defn` to define your own functions:
 
 The name of the function (up there, `f`) is bound to a local variable.
 Parameter names can (but should not) be dupliated.
+
+### Variable scope
+
+Variables set at the top level have global scope (and can irreparably overwrite
+built-ins!). Variables set in functions are always set locally, which may
+shadow a global variable of the same name.
+
+### Fields
+
+All values are objects in that they have fields which can be accessed by
+`get-field` and `set-field`. Except that, as stated above, you cannot set a
+field that is not already bound to a value. And you can't define classes. Thus
+we rely on the built-in value types to have fields we can use. Except they
+don't.
+
+Except they do! All values have a field `test` which is left uninitialized (so
+trying to get the field before setting it will cause the program to crash).
+
+### Canonicalization
+
+Values of type
+
+* bool
+* int
+* poopcrap
+* string
+* type
+
+have one unique instance for each underlying value. This may make things
+strange if you mess with its fields.

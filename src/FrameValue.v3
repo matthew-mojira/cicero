@@ -192,6 +192,33 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				}
 				value = last;
 			}
+			GetField(field, expr) => {
+				var obj = tier0Eval(expr);
+				if (exn) return value;
+
+				if (obj.fields.has(field)) {
+					value = obj.fields[field];
+				} else {
+					throw(StrValues.getStrValue(Strings.format1("name error: unknown field %s", field)));
+					return value;
+				}
+			}
+			SetField(field, expr, newExpr) => {
+				var obj = tier0Eval(expr);
+				if (exn) return value;
+
+				var val = tier0Eval(newExpr);
+				if (exn) return value;
+
+				value = obj.fields[field];
+				if (obj.fields.has(field)) {
+					obj.fields[field] = val;
+					value = val;
+				} else {
+					throw(StrValues.getStrValue(Strings.format1("name error: unknown field %s", field)));
+					return value;
+				}
+			}
 		}
 
 		return value;

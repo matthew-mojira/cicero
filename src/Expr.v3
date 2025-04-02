@@ -73,6 +73,8 @@ type ExprData {
 		}
 	}
 	case Begin(exprs: Array<Expr>);
+	case GetField(field: string, obj: Expr);
+	case SetField(field: string, obj: Expr, val: Expr);
 
 	def display() -> string;
 }

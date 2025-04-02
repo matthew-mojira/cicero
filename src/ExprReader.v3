@@ -127,7 +127,7 @@ class ExprReader extends TextReader {
 							
 							return Expr.new(ExprData.While(cond, body),
 								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "begin")) {
+						} else if (Strings.equal(str, "begin")) { // also has a sugary version
 							def exprs: Vector<Expr> = Vector.new();
 							// begin must not be non-empty
 							// TODO this does not print a nice error message if it fails
@@ -145,6 +145,21 @@ class ExprReader extends TextReader {
 							}
 							
 							return Expr.new(ExprData.Begin(exprs.extract()),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "get-field")) { // also has a sugary version
+							def field = readIdentifier();
+							def obj = readExpr();
+							req1(')');
+
+							return Expr.new(ExprData.GetField(field, obj),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "set-field")) { // also has a sugary version
+							def field = readIdentifier();
+							def obj = readExpr();
+							def val = readExpr();
+							req1(')');
+
+							return Expr.new(ExprData.SetField(field, obj, val),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						}
 					}
@@ -167,6 +182,25 @@ class ExprReader extends TextReader {
 				fail("unmatched closing parentheses");
 				return null;
 			}
+			// { } is a shortcut for `begin`
+			'{' => {
+				def exprs: Vector<Expr> = Vector<Expr>.new();
+				while (opt1('}') < 0) {
+					def expr = readExpr();
+					exprs.put(expr);
+
+					if (pos >= limit) {
+						failRel(startPos - pos, "unmatched opening brace");
+						return null;
+					}
+				}
+				return Expr.new(ExprData.Begin(exprs.extract()),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
+			'}' => {
+				fail("unmatched closing brace");
+				return null;
+			}
 			'\"' => {
 				def str = readString();
 				return Expr.new(ExprData.Lit(StrValues.getStrValue(str)),
@@ -174,15 +208,12 @@ class ExprReader extends TextReader {
 			}
 			_ => {
 				// this is an identifier
-				def str = readIdentifier();
+				def strs = readQualifiedName();
 				def range = FileRange.new(fileName, startLine, startColumn, line, column);
+				var expr: Expr;
 
-				// lookup keyword identifiers
-// 				if (lits.has(str)) {
-// 					return Expr.new(ExprData.Lit(lits[str]), range);
-// 				}
-
-				// only parse for decimals at the moment
+				// parse first identifier for decimal integer literal
+				def str = strs[0];
 				def res = Ints.parseDecimal(str, 0);
 				def status = res.0, value = res.1;
 				if (status > 0) {
@@ -193,10 +224,17 @@ class ExprReader extends TextReader {
 						return null;
 					}
 					// any characters that start an integer literal cannot be part of a valid identifier
-					return Expr.new(ExprData.Lit(IntValues.getIntValue(value)), range);
+					expr = Expr.new(ExprData.Lit(IntValues.getIntValue(value)), range);
+				} else {
+					expr = Expr.new(ExprData.Id(str), range);
 				}
 
-				return Expr.new(ExprData.Id(str), range);
+				// remaining strings are field accesses
+				for (i = 1; i < strs.length; i++) {
+					expr = Expr.new(ExprData.GetField(strs[i], expr), range);
+				}
+
+				return expr;
 			}
 		}
 	}
@@ -212,8 +250,18 @@ class ExprReader extends TextReader {
 		return str;
 	}
 
+	private def readQualifiedName() -> Array<string> {
+		def len = plus_rel(0, isFullQualCharacter) - pos;
+		if (len < 0) {
+			fail("invalid character in identifier name");
+			return null;
+		}
+		def str = readToken(len).image;
+		return Strings.split(str, ".", -1);
+	}
+
 	private def readIdentifier() -> string {
-		def len = plus_rel(0, isAtomCharacter) - pos;
+		def len = plus_rel(0, isIdentCharacter) - pos;
 		if (len < 0) {
 			fail("invalid character in identifier name");
 			return null;
@@ -227,10 +275,16 @@ class ExprReader extends TextReader {
 	}
 }
 
-def isAtomCharacter(ch: byte) -> bool {
+def isIdentCharacter(ch: byte) -> bool {
+	match (ch) {
+		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']', '.' => return false;
+		_ => return true;
+	}
+}
+
+def isFullQualCharacter(ch: byte) -> bool {
 	match (ch) {
 		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']' => return false;
 		_ => return true;
 	}
 }
-

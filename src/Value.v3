@@ -1,5 +1,9 @@
 class Value {
-	def fields: HashMap<string, Value> = Strings.newMap();
+	def var fields: HashMap<string, Value> = Strings.newMap();
+
+	new() {
+		fields["test"] = null;
+	}
 
 	def typeof() -> Type;
 	def display() -> string;
