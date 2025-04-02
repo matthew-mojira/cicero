@@ -1,0 +1,12 @@
+(class Counter
+  (field value 0)
+  (method (increment)
+    (set-field value self (+ self.value 1))))
+
+(new Counter)
+(set c (new Counter))
+c.value
+
+c.increment
+(c.increment)
+c.value

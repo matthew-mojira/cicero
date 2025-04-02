@@ -8,6 +8,8 @@ type Type {
 	case Frame    { def display() -> string { return "frame"; } }
 	case Expr     { def display() -> string { return "expr"; } }
 	case Class    { def display() -> string { return "class"; } }
+	case Object   { def display() -> string { return "object"; } }
+	case Method   { def display() -> string { return "method"; } }
 
 	def display() -> string;
 }

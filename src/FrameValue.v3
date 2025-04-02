@@ -54,8 +54,11 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				// remember: these are recursive calls within `tier0Eval` but
 				// have nothing to do with evaluation frames in the language
 				if (exn) return value;
-				assertType(Type.Func, tgtVal);
-				if (exn) return value;
+				// FIXME improve type checking
+				if (!FuncValue.?(tgtVal)) {
+					assertType(Type.Func, tgtVal);
+					return value;
+				}
 
 				def argv: Array<Value> = Array.new(args.length);
 				for (i < argv.length) {
@@ -73,9 +76,15 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				if (exn) return value;
 
 				def newLocals: HashMap<string, Value> = Strings.newMap();
+				// method info
+				if (MethodValue.?(fv)) {
+					// FIXME magic string
+					newLocals["self"] = MethodValue.!(fv).obj;
+				}
+				// arguments
 				for (i < argv.length) {
 					newLocals[params[i]] = argv[i];
-				};
+				}
 
 				match (code.impl) {
 					AST(expr) => {
@@ -223,6 +232,29 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 					throw(StrValues.getStrValue(Strings.format1("name error: unknown field %s", field)));
 					return value;
 				}
+			}
+			New(expr) => {
+				var cls = tier0Eval(expr);
+				if (exn) return value;
+
+				assertType(Type.Class, cls);
+				if (exn) return value;
+
+				var obj = ObjectValue.new();
+				for (field in ClassValue.!(cls).classFields) {
+					match (field) {
+						Field(name, expr) => {
+							var v = tier0Eval(expr);
+							if (exn) return value;
+							obj.fields[name] = v;
+						}
+						Method(name, params, body) => {
+							def m = MethodValue.new(obj, params, ExprValue.new(Impl.AST(body)));
+							obj.fields[name] = m;
+						}
+					}
+				}
+				return obj;
 			}
 		}
 

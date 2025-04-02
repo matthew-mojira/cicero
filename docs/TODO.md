@@ -9,8 +9,9 @@
   - list
   - set
   - map
-* variables
-  - scope rules: LG (to simplify python's LEGB: remove E, combine G+B)
-* classes (lazy records)
+* classes
+  - intrinsify built-in classes (make fields and methods out of its internal
+    components and expose to user)
+  - clarify difference between class and type (improve type checking)
 * tier1: bytecode
   - generalize frame evaluator

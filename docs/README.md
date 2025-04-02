@@ -11,6 +11,9 @@
   The literal form of PoopCrap is `()`.
 * Frame - execution frames
 * Expr - an abstraction over Virgil code and Cicero AST for function bodies
+* Class - user-defined class
+* Object - an instantiated version of a Class
+* Method - a function bound to an object (as `self`)
 
 Right now, there's no way (I think) to access or create frames or expressions
 in the language.
@@ -27,7 +30,7 @@ implementers (not so much for the programmers).
 ### Identifiers
 
 Identifiers may be any sequence of characters as long as:
-* it does not contain whitespace, `'`, `"`, `(`, `)`, `[`, `]`, `{', `}', or `.`
+* it does not contain whitespace, `'`, `"`, `(`, `)`, `[`, `]`, `{`, `}`, or `.`
 * it does not have an integer literal as as a prefix (e.g. `1250xpdsr`) --
   although this is broken for very large literals, so don't try it
 * it is not a literal (right now it is always parsed as a literal)
@@ -95,6 +98,8 @@ during evaluation.
 * `(set-field f e1 e2)`: sets field `f` of the object evaluated in `e1` to the
   value of `e2`. This value must already be bound to a value otherwise it
   raises an exception.
+* `(class id f/m*)`: declares a new Class, see below
+* `(new e)`: instantiate a new Object, given that `e` evaluates to a Class
 
 ### Built-ins
 
@@ -117,16 +122,16 @@ environment.
 Use `func` to define your own functions:
 
 ```
-(func (f ()) 1)
+(func (f) 1)
 ```
 
 ```
-(func (f (x))
+(func (f x)
   x)
 ```
 
 ```
-(func (f (x y))
+(func (f x y)
   (+ x y))
 ```
 
@@ -143,12 +148,7 @@ shadow a global variable of the same name.
 
 All values are objects in that they have fields which can be accessed by
 `get-field` and `set-field`. Except that, as stated above, you cannot set a
-field that is not already bound to a value. And you can't define classes. Thus
-we rely on the built-in value types to have fields we can use. Except they
-don't.
-
-Except they do! All values have a field `test` which is left uninitialized (so
-trying to get the field before setting it will cause the program to crash).
+field that is not already bound to a value.
 
 ### Canonicalization
 
@@ -163,3 +163,60 @@ Values of type
 have one unique instance for each underlying value. The underlying value is
 immutable (i.e. you can't take the integer 1 and make it 2), but the fields
 are mutable. This may make things strange if you mess with the fields.
+
+## User-defined classes
+
+You can define custom classes like this:
+
+```
+(class Counter
+  (field value 0)
+  (method (increment)
+    (set-field value self (+ self.value 1))
+  )
+)
+=> <class>
+```
+
+This evaluates to a Class value, which allows it to be instantiated with `new`
+
+A class consists of
+* a name: the resulting Class is bound to name as a local variable
+* field and method declarations (they may be mixed)
+  - a field consists of a name and an initial value
+  - a method has the same syntax as a function declaration, except it also has
+    a reference to an object in `self`. Note that there isn't an implicit
+    lookup when you reference another field (i.e. you must access through
+    `self`). Methods are also fields.
+
+A method is a special kind of function which has a reference to the object in
+`self`.
+
+No static members of a class. No inheritance.
+
+Create a new object using the `new` syntax:
+
+```
+(new Counter)
+=> <object>
+```
+
+Access fields using `get-field` or the `.` sugar:
+
+```
+(set c (new Counter))
+=> object
+c.value
+=> 0
+```
+
+Calling methods are like calling functions:
+
+```
+c.increment
+=> <method>
+(c.increment)
+=> 1
+c.value
+=> 1
+```

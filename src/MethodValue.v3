@@ -1,0 +1,5 @@
+class MethodValue(obj: ObjectValue, params_: Array<string>, body_: ExprValue) extends FuncValue(params_, body_) {
+	def typeof()  -> Type   { return Type.Method; }
+	def display() -> string { return "<method>"; }
+	def isTrue()  -> bool   { return true; }
+}

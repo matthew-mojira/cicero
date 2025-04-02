@@ -162,15 +162,16 @@ class ExprReader extends TextReader {
 						} else if (Strings.equal(str, "class")) {
 							def name = readIdentifier();
 							def fields: Vector<Field> = Vector.new();
+
 							while (opt1(')') < 0) {
 								req1('(');
 								def word = readIdentifier();
-								if (word == "field") {
+								if (Strings.equal(word, "field")) {
 									def fieldName = readIdentifier();
 									def fieldInit = readExpr();
 									
 									fields.put(Field.Field(fieldName, fieldInit));
-								} else if (word == "method") {
+								} else if (Strings.equal(word, "method")) {
 									req1('(');
 									def methodName = readIdentifier();
 									def methodParams = Vector<string>.new();
@@ -198,9 +199,14 @@ class ExprReader extends TextReader {
 									return null;
 								}
 							}
-							req1(')');
 
 							return Expr.new(ExprData.Class(name, fields.extract()),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "new")) {
+							def expr = readExpr();
+							req1(')');
+
+							return Expr.new(ExprData.New(expr),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						}
 					}

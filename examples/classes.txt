@@ -1,0 +1,19 @@
+(class Poop
+  (field x 1)
+  (field y 2)
+  (method (both)
+    (+ self.x self.y)
+  )
+)
+
+(new Poop)
+(set x (new Poop))
+
+x.x
+x.y
+
+(set-field x x 3)
+x.x
+
+x.both
+(x.both)
