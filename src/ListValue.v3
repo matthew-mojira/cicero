@@ -1,0 +1,7 @@
+class ListValue extends Value {
+	def list: Vector<Value> = Vector.new();
+
+	def typeof()  -> Type   { return Type.List; }
+	def display() -> string { return "list"; }
+	def isTrue()  -> bool   { return true; }
+}

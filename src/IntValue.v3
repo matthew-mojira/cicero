@@ -1,9 +1,21 @@
 class IntValue(val: long) extends Value {
-	private new () {}
+	private new () {
+		fields["typeof"]  = TypeValues.getTypeValue(Type.Int);
+		fields["display"] = MethodValues.fromBuiltin(this, 0, i_display);
+		fields["istrue"]  = MethodValues.fromBuiltin(this, 0, i_istrue);
+	}
 
 	def typeof()  -> Type   { return Type.Int; }
 	def display() -> string { return Strings.format1("%d", val); }
 	def isTrue()  -> bool   { return true; }
+}
+
+def i_display(vals: Range<Value>) -> (Value, bool) {
+	return (StrValues.getStrValue(Strings.format1("%d", IntValue.!(vals[0]).val)), false);
+}
+
+def i_istrue(vals: Range<Value>) -> (Value, bool) {
+	return (BoolValues.trueValue, false);
 }
 
 component IntValues {

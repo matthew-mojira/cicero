@@ -1,0 +1,7 @@
+class MapValue extends Value {
+	def map: Map<string, Value> = Strings.newMap();
+
+	def typeof()  -> Type   { return Type.Map; }
+	def display() -> string { return "map"; }
+	def isTrue()  -> bool   { return true; }
+}
