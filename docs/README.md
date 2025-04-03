@@ -47,7 +47,7 @@ The literals are:
 
 ### Comments
 
-No comments supported.
+`;` for single-line comments. No block comments supported.
 
 ### Syntactic sugar
 
