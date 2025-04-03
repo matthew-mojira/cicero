@@ -14,17 +14,9 @@
   - stacktraces (catch values! built-in exception classes?)
   - return
 * new types
-  - list
+  - list (done: need functions for these)
   - set
-  - map
-* classes
-  - real initializers?
-  - intrinsify built-in classes (make fields and methods out of its internal
-    components and expose to user)
-  - inheritance (would allow general things like Callables and Exceptions) and
-    superclass references (call it `dad`)
-  - clarify difference between class and type (improve type checking)
-  - (?) allow methods to be added dynamically to a class ([Section 12.5](https://craftinginterpreters.com/classes.html#methods-on-classes))
+  - map (exists, but cannot be created)
 * tier1: bytecode
   - generalize frame evaluator
 
@@ -90,30 +82,3 @@ initializer) and also specifying mutability:
 
 This also means we could check references to undefined variables at parse time.
 
-## Initializing classes
-
-Right now you use `(new Class)` to create a class. This also initializes it,
-since all fields have initializers attached to them and all methods (also a
-field) have definitions.
-
-So if you wanted to customize what those initial values are (say, parameterize
-them), then you would need a function (outside the class!) that initializes
-it:
-
-```
-(class Counter
-  (field count 0)
-  (method (increment) (set-field count (+ self.count 1)))
-  (method (reset) (set-field count 0)))
-
-(func (new-counter init) {
-  (set c (new Counter))
-  (set-field count c init)
-  c
-})
-```
-
-
-
-But that may complicate things if you want immutable fields and to change what
-that initial (final) value is based on multiple initializers.
