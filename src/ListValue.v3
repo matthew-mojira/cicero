@@ -2,6 +2,18 @@ class ListValue extends Value {
 	def list: Vector<Value> = Vector.new();
 
 	def typeof()  -> Type   { return Type.List; }
-	def display() -> string { return "list"; }
+	def display() -> string {
+		def buf = StringBuilder.new();
+		buf.putc('[');
+		if (list.length > 0) {
+			buf.puts(list[0].display());
+		}
+		for (i = 1; i < list.length; i++) {
+			buf.csp();
+			buf.puts(list[i].display());
+		}
+		buf.putc(']');
+		return buf.extract();
+	}
 	def isTrue()  -> bool   { return true; }
 }

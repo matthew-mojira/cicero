@@ -15,4 +15,10 @@ component StrValues {
 		strValues[str] = newStr;
 		return newStr;
 	}
+
+	def concat(args: Range<Value>) -> (Value, bool) {
+		def str1 = StrValue.!(args[0]);
+		def str2 = StrValue.!(args[1]);
+		return (getStrValue(Arrays.concat(str1.str, str2.str)), false);
+	}
 }

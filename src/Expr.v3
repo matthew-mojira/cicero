@@ -73,6 +73,7 @@ type ExprData {
 		}
 	}
 	case Begin(exprs: Array<Expr>);
+	case List(exprs: Array<Expr>);
 
 	def display() -> string;
 }

@@ -169,7 +169,10 @@ class ExprReader extends TextReader {
 			}
 			// { } is a shortcut for `begin`
 			'{' => {
+				req1('{');
 				def exprs: Vector<Expr> = Vector<Expr>.new();
+				def fst = readExpr();
+				exprs.put(fst);
 				while (opt1('}') < 0) {
 					def expr = readExpr();
 					exprs.put(expr);
@@ -184,6 +187,26 @@ class ExprReader extends TextReader {
 			}
 			'}' => {
 				fail("unmatched closing brace");
+				return null;
+			}
+			// list stuff
+			'[' => {
+				req1('[');
+				def exprs: Vector<Expr> = Vector<Expr>.new();
+				while (opt1(']') < 0) {
+					def expr = readExpr();
+					exprs.put(expr);
+
+					if (pos >= limit) {
+						failRel(startPos - pos, "unmatched opening bracket");
+						return null;
+					}
+				}
+				return Expr.new(ExprData.List(exprs.extract()),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
+			']' => {
+				fail("unmatched closing bracket");
 				return null;
 			}
 			'\"' => {
@@ -255,14 +278,14 @@ class ExprReader extends TextReader {
 
 def isIdentCharacter(ch: byte) -> bool {
 	match (ch) {
-		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']', ';', '.' => return false;
+		' ', '\t', '\n', '\'', '\"', '(', ')', '{', '}', '[', ']', ';', '.' => return false;
 		_ => return true;
 	}
 }
 
 def isFullQualCharacter(ch: byte) -> bool {
 	match (ch) {
-		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']', ';' => return false;
+		' ', '\t', '\n', '\'', '\"', '(', ')', '{', '}', '[', ']', ';' => return false;
 		_ => return true;
 	}
 }

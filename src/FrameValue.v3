@@ -71,14 +71,17 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				def fv = FuncValue.!(tgtVal);
 				def params = fv.params, code = fv.expr;
 
-				// arity check
-				assertArity(params.length, argv);
-				if (exn) return value;
-
+				// XXX native functions check their own arity and don't need bindings
 				def newLocals: HashMap<string, Value> = Strings.newMap();
-				// arguments
-				for (i < argv.length) {
-					newLocals[params[i]] = argv[i];
+				if (Impl.AST.?(code.impl)) {
+					// arity check
+					assertArity(params.length, argv);
+					if (exn) return value;
+
+					// arguments
+					for (i < argv.length) {
+						newLocals[params[i]] = argv[i];
+					}
 				}
 
 				match (code.impl) {
@@ -195,6 +198,16 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 					last = v;
 				}
 				value = last;
+			}
+			List(exprs) => {
+				def list = ListValue.new();
+				for (expr in exprs) {
+					def v = tier0Eval(expr);
+					if (exn) return value;
+
+					list.list.put(v);
+				}
+				value = list;
 			}
 		}
 

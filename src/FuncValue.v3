@@ -5,11 +5,48 @@ class FuncValue(params: Array<string>, expr: ExprValue) extends Value {
 }
 
 component FuncValues {
-	def fromBuiltin(params: int, func: Range<Value> -> (Value, bool)) -> FuncValue {
-		def arr: Array<string> = Array.new(params);
-		for (i < params) {
-			arr[i] = Strings.format1("arg%d", i);
+	def fromBuiltin(params: Array<Type>, func: Range<Value> -> (Value, bool)) -> FuncValue {
+		var arr: Array<string>;
+		if (params != null) {
+			arr = Array.new(params.length);
+			for (i < params.length) {
+				def param = params[i];
+				arr[i] = Strings.format2("%s%d", param.display(), i);
+			}
 		}
-		return FuncValue.new(arr, ExprValue.new(Impl.Virgil(func)));
+		return FuncValue.new(arr, ExprValue.new(Impl.Virgil(wrapFunc(params, func, _))));
 	}
 }
+
+
+def wrapFunc(params: Array<Type>, func: Range<Value> -> (Value, bool), args: Range<Value>) -> (Value, bool) {
+	var val: Value;
+	var exn: bool;
+
+	/* if params == null, `func` will do its own typechecking, for the cases
+	 * when the function may take multiple types or variadic arguments
+	 */
+	if (params != null) {
+		if (params.length != args.length) {
+			exn = true;
+			val = StrValues.getStrValue(Strings.format2("arity mismatch: expected %d, got %d", params.length, args.length));
+		} else for (i < params.length) {
+			def param = params[i], arg = args[i];
+
+			if (param != arg.typeof()) {
+				exn = true;
+				val = StrValues.getStrValue(Strings.format2("type mismatch: expected %s, got %s", param.display(), arg.typeof().display()));
+			}
+		}
+	}
+
+	// ok = call underlying func
+	if (!exn) {
+		def ret = func(args);
+		val = ret.0;
+		exn = ret.1;
+	}
+
+	return (val, exn);
+}
+

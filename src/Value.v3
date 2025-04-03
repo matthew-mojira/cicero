@@ -3,3 +3,27 @@ class Value {
 	def display() -> string;
 	def isTrue() -> bool;
 }
+
+component Values {
+	def typeof(args: Range<Value>) -> (Value, bool) {
+		if (args.length != 1)
+			return (StrValues.getStrValue(Strings.format1("arity mismatch: expected 1, got %d", args.length)), true);
+		return (TypeValues.getTypeValue(args[0].typeof()), false);
+	}
+	def print(args: Range<Value>) -> (Value, bool) {
+		if (args.length != 1)
+			return (StrValues.getStrValue(Strings.format1("arity mismatch: expected 1, got %d", args.length)), true);
+		System.puts(args[0].display());
+		return (PoopCrapValues.instance, false);
+	}
+	def eq(args: Range<Value>) -> (Value, bool) {
+		if (args.length != 2)
+			return (StrValues.getStrValue(Strings.format1("arity mismatch: expected 2, got %d", args.length)), true);
+		return (BoolValues.getBoolValue(args[0] == args[1]), false);
+	}
+	def neq(args: Range<Value>) -> (Value, bool) {
+		if (args.length != 2)
+			return (StrValues.getStrValue(Strings.format1("arity mismatch: expected 2, got %d", args.length)), true);
+		return (BoolValues.getBoolValue(args[0] != args[1]), false);
+	}
+}

@@ -6,13 +6,6 @@ class IntValue(val: long) extends Value {
 	def isTrue()  -> bool   { return true; }
 }
 
-def i_display(vals: Range<Value>) -> (Value, bool) {
-	return (StrValues.getStrValue(Strings.format1("%d", IntValue.!(vals[0]).val)), false);
-}
-
-def i_istrue(vals: Range<Value>) -> (Value, bool) {
-	return (BoolValues.trueValue, false);
-}
 
 component IntValues {
 	/* canonicalize int value instances */
@@ -24,18 +17,28 @@ component IntValues {
 		return newInt;
 	}
 
-	/* arithmetic operations on int values */
-	def add(int1: IntValue, int2: IntValue) -> IntValue {
-		return getIntValue(int1.val + int2.val);
+	def add(args: Range<Value>) -> (Value, bool) {
+		def int1 = IntValue.!(args[0]);
+		def int2 = IntValue.!(args[1]);
+		return (getIntValue(int1.val + int2.val), false);
 	}
-	def sub(int1: IntValue, int2: IntValue) -> IntValue {
-		return getIntValue(int1.val - int2.val);
+	def sub(args: Range<Value>) -> (Value, bool) {
+		def int1 = IntValue.!(args[0]);
+		def int2 = IntValue.!(args[1]);
+		return (getIntValue(int1.val - int2.val), false);
 	}
-	def mul(int1: IntValue, int2: IntValue) -> IntValue {
-		return getIntValue(int1.val * int2.val);
+	def mul(args: Range<Value>) -> (Value, bool) {
+		def int1 = IntValue.!(args[0]);
+		def int2 = IntValue.!(args[1]);
+		return (getIntValue(int1.val * int2.val), false);
 	}
-	// TODO what to do if this fails?
-	def div(int1: IntValue, int2: IntValue) -> IntValue {
-		return getIntValue(int1.val / int2.val);
+	def div(args: Range<Value>) -> (Value, bool) {
+		def int1 = IntValue.!(args[0]);
+		def int2 = IntValue.!(args[1]);
+		if (int2.val == 0) {
+			return (StrValues.getStrValue("arithmetic error: divide by zero"), true);
+		} else {
+			return (getIntValue(int1.val / int2.val), false);
+		}
 	}
 }
