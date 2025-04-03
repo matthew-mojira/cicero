@@ -14,9 +14,11 @@ class ExprReader extends TextReader {
 //		lits["frame"] = TypeValues.getTypeValue(Type.Frame);
 //		lits["expr"]  = TypeValues.getTypeValue(Type.Expr);
 
-		skipWhitespace();
+		skipWs = skipWhitespaceAndComments;
+
+		skipWs(this);
 		while (pos < limit) {
-			skipWhitespace();
+			skipWs(this);
 //			System.puts(Strings.format2("%d:%d\n", line, column));
 			def expr = readExpr();
 			exprs.put(expr);
@@ -324,14 +326,42 @@ class ExprReader extends TextReader {
 
 def isIdentCharacter(ch: byte) -> bool {
 	match (ch) {
-		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']', '.' => return false;
+		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']', ';', '.' => return false;
 		_ => return true;
 	}
 }
 
 def isFullQualCharacter(ch: byte) -> bool {
 	match (ch) {
-		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']' => return false;
+		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']', ';' => return false;
 		_ => return true;
 	}
 }
+
+def skipWhitespaceAndComments(tr: TextReader) {
+	var pos = tr.pos, line = tr.line, column = tr.column;
+	var data = tr.data, max = tr.limit;
+	var comment = false;
+	while (pos < max) {
+		var ch = data[pos];
+		match (ch) {
+			';' => {
+				comment = true;
+				column++;
+			}
+			' ' => column++;
+			'\t' => column = tr.nextTabStop(column);
+			'\n' => {
+				tr.lineEnds.put(pos);
+				column = 1;
+				line++;
+				comment = false;
+			}
+			_ => if (!comment) break; // not whitespace
+		}
+		pos++;
+	}
+	// reached the end or a non-whitespace byte
+	tr.at(pos, line, column);
+}
+
