@@ -1,9 +1,5 @@
 class IntValue(val: long) extends Value {
-	private new () {
-		fields["typeof"]  = TypeValues.getTypeValue(Type.Int);
-		fields["display"] = MethodValues.fromBuiltin(this, 0, i_display);
-		fields["istrue"]  = MethodValues.fromBuiltin(this, 0, i_istrue);
-	}
+	private new () {}
 
 	def typeof()  -> Type   { return Type.Int; }
 	def display() -> string { return Strings.format1("%d", val); }

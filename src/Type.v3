@@ -7,11 +7,8 @@ type Type {
 	case PoopCrap { def display() -> string { return "poopcrap"; } }
 	case Frame    { def display() -> string { return "frame"; } }
 	case Expr     { def display() -> string { return "expr"; } }
-	case Class    { def display() -> string { return "class"; } }
-	case Object   { def display() -> string { return "object"; } }
-	case Method   { def display() -> string { return "method"; } }
-	case List     { def display() -> string { return "method"; } }
-	case Map      { def display() -> string { return "method"; } }
+	case List     { def display() -> string { return "list"; } }
+	case Map      { def display() -> string { return "map"; } }
 
 	def display() -> string;
 }

@@ -1,9 +1,4 @@
 class Value {
-	def var fields: HashMap<string, Value> = Strings.newMap();
-
-	new() {
-	}
-
 	def typeof() -> Type;
 	def display() -> string;
 	def isTrue() -> bool;

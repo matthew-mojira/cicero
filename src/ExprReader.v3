@@ -146,72 +146,8 @@ class ExprReader extends TextReader {
 							
 							return Expr.new(ExprData.Begin(exprs.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "get-field")) { // also has a sugary version
-							def field = readIdentifier();
-							def obj = readExpr();
-							req1(')');
-
-							return Expr.new(ExprData.GetField(field, obj),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "set-field")) { // also has a sugary version
-							def field = readIdentifier();
-							def obj = readExpr();
-							def val = readExpr();
-							req1(')');
-
-							return Expr.new(ExprData.SetField(field, obj, val),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "class")) {
-							def name = readIdentifier();
-							def fields: Vector<Field> = Vector.new();
-
-							while (opt1(')') < 0) {
-								req1('(');
-								def word = readIdentifier();
-								if (Strings.equal(word, "field")) {
-									def fieldName = readIdentifier();
-									def fieldInit = readExpr();
-									
-									fields.put(Field.Field(fieldName, fieldInit));
-								} else if (Strings.equal(word, "method")) {
-									req1('(');
-									def methodName = readIdentifier();
-									def methodParams = Vector<string>.new();
-									
-									while (opt1(')') < 0) {
-										def paramName = readIdentifier();
-										methodParams.put(paramName);
-
-										if (pos >= limit) {
-											failRel(startPos - pos, "unmatched opening parentheses");
-											return null;
-										}
-									}
-									def methodBody = readExpr();
-
-									fields.put(Field.Method(methodName, methodParams.extract(), methodBody));
-								} else {
-									fail(Strings.format1("unrecognized attribute of class declaration: %s", word));
-									return null;
-								}
-								req1(')');
-
-								if (pos >= limit) {
-									failRel(startPos - pos, "unmatched opening parentheses");
-									return null;
-								}
 							}
-
-							return Expr.new(ExprData.Class(name, fields.extract()),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "new")) {
-							def expr = readExpr();
-							req1(')');
-
-							return Expr.new(ExprData.New(expr),
-								FileRange.new(fileName, startLine, startColumn, line, column));
 						}
-					}
 					_ => ;
 				}
 				def tail: Vector<Expr> = Vector<Expr>.new();
@@ -257,12 +193,11 @@ class ExprReader extends TextReader {
 			}
 			_ => {
 				// this is an identifier
-				def strs = readQualifiedName();
+				def str = readIdentifier();
 				def range = FileRange.new(fileName, startLine, startColumn, line, column);
 				var expr: Expr;
 
 				// parse first identifier for decimal integer literal
-				def str = strs[0];
 				def res = Ints.parseDecimal(str, 0);
 				def status = res.0, value = res.1;
 				if (status > 0) {
@@ -277,12 +212,6 @@ class ExprReader extends TextReader {
 				} else {
 					expr = Expr.new(ExprData.Id(str), range);
 				}
-
-				// remaining strings are field accesses
-				for (i = 1; i < strs.length; i++) {
-					expr = Expr.new(ExprData.GetField(strs[i], expr), range);
-				}
-
 				return expr;
 			}
 		}
