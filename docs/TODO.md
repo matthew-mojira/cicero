@@ -21,10 +21,12 @@
   - real initializers?
   - intrinsify built-in classes (make fields and methods out of its internal
     components and expose to user)
+  - make classes for builtin types and remove Type
   - inheritance (would allow general things like Callables and Exceptions) and
     superclass references (call it `dad`)
   - clarify difference between class and type (improve type checking)
   - (?) allow methods to be added dynamically to a class ([Section 12.5](https://craftinginterpreters.com/classes.html#methods-on-classes))
+  - unify Field (in `Expr.v3`) and base ClassObject
 * tier1: bytecode
   - generalize frame evaluator
 
