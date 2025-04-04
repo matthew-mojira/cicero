@@ -27,6 +27,8 @@
   - clarify difference between class and type (improve type checking)
   - (?) allow methods to be added dynamically to a class ([Section 12.5](https://craftinginterpreters.com/classes.html#methods-on-classes))
   - unify Field (in `Expr.v3`) and base ClassObject
+  - should lookups be helped by the class? isn't that the whole point of class-
+    based objects?
 * tier1: bytecode
   - generalize frame evaluator
 
