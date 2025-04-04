@@ -53,7 +53,8 @@ The literals are:
 
 Some conveniences to reduce the amount of s-expressing:
 * `{ e1 e2 ... en }` is sugar for `(begin e1 e2 ... en)`
-* `e.f` is sugar for `(get-field f e)`. You can chain these: `e.f.g.h`
+* `x.f` is sugar for `(get-field f x)`. You can chain these: `x.f.g.h`. Note
+  that `x` must be an identifier (not some other expression)
 
 ## Evaluation
 

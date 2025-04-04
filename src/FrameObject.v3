@@ -210,8 +210,8 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 				var obj = tier0Eval(expr);
 				if (exn) return value;
 
-				if (obj.fields.has(field)) {
-					value = obj.fields[field];
+				match (obj.getField(field)) {
+					Just(v) => value = v;
 				} else {
 					throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
 					return value;

@@ -4,7 +4,38 @@ class Object {
 	new() {
 	}
 
+	/* Some fields are lazily bound.
+	 */
+	def getField(name: string) -> Maybe<Object> {
+		if (fields.has(name)) return Maybe.Just(fields[name]);
+		// Some fields are lazily bound.
+		if (Strings.equal(name, "fields")) {
+			def obj = MethodObjects.fromBuiltin(this, 0, o_fields);
+			fields["fields"] = obj;
+			return Maybe.Just(obj);
+		}
+		return Maybe.Nothing;
+	}
+
 	def typeof() -> Type;
 	def display() -> string;
 	def isTrue() -> bool;
+
+	def o_fields(args: Range<Object>) -> (Object, bool) {
+		def list = ListObject.new();
+		def fList = Maps.keyList(fields);
+		// FIXME add lazy fields
+		Lists.apply(fList, putList(list, _));
+		return (list, false);
+	}
+}
+
+//                                             this
+enum LazyFields(id: string, argc: int, func: (Object, Range<Object>) -> (Object, bool)) {
+	FIELDS("fields", 0, Object.o_fields)
+}
+
+def putList(list: ListObject, str: string) {
+	def obj = StrObjects.getStrObject(str);
+	list.list.put(obj);
 }
