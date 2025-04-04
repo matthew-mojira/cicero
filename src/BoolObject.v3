@@ -1,4 +1,4 @@
-class BoolValue(val: bool) extends Value {
+class BoolObject(val: bool) extends Object {
 	private new () {}
 
 	def typeof()  -> Type   { return Type.Bool; }
@@ -6,8 +6,8 @@ class BoolValue(val: bool) extends Value {
 	def isTrue()  -> bool   { return val; }
 }
 
-component BoolValues {
+component BoolObjects {
 	/* canonical instances of bool values */
-	def trueValue  = BoolValue.new(true);
-	def falseValue = BoolValue.new(false);
+	def trueObject  = BoolObject.new(true);
+	def falseObject = BoolObject.new(false);
 }

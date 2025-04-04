@@ -5,7 +5,7 @@ class Expr(data: ExprData, range: FileRange) {
 }
 
 type ExprData {
-	case Lit(val: Value) {
+	case Lit(val: Object) {
 		def display() -> string {
 			return val.display();
 		}

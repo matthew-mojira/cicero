@@ -1,18 +1,18 @@
 class ExprReader extends TextReader {
-//	private def lits: HashMap<string, Value> = Strings.newMap();
+//	private def lits: HashMap<string, Object> = Strings.newMap();
 	private def exprs: Vector<Expr> = Vector<Expr>.new();
 
 	new(fileName: string, data: string) super(fileName, data) {
-//		lits["true"]  = BoolValues.trueValue;
-//		lits["false"] = BoolValues.falseValue;
-//		lits["int"]   = TypeValues.getTypeValue(Type.Int);
-//		lits["bool"]  = TypeValues.getTypeValue(Type.Bool);
-//		lits["func"]  = TypeValues.getTypeValue(Type.Func);
-//		lits["str"]   = TypeValues.getTypeValue(Type.Str);
-//		lits["type"]  = TypeValues.getTypeValue(Type.Type);
-//	     lits["poopcrap"] = TypeValues.getTypeValue(Type.PoopCrap);
-//		lits["frame"] = TypeValues.getTypeValue(Type.Frame);
-//		lits["expr"]  = TypeValues.getTypeValue(Type.Expr);
+//		lits["true"]  = BoolObjects.trueObject;
+//		lits["false"] = BoolObjects.falseObject;
+//		lits["int"]   = TypeObjects.getTypeObject(Type.Int);
+//		lits["bool"]  = TypeObjects.getTypeObject(Type.Bool);
+//		lits["func"]  = TypeObjects.getTypeObject(Type.Func);
+//		lits["str"]   = TypeObjects.getTypeObject(Type.Str);
+//		lits["type"]  = TypeObjects.getTypeObject(Type.Type);
+//	     lits["poopcrap"] = TypeObjects.getTypeObject(Type.PoopCrap);
+//		lits["frame"] = TypeObjects.getTypeObject(Type.Frame);
+//		lits["expr"]  = TypeObjects.getTypeObject(Type.Expr);
 
 		skipWs = skipWhitespaceAndComments;
 
@@ -36,7 +36,7 @@ class ExprReader extends TextReader {
 				req1('(');
 				if (opt1(')') >= 0) {
 					// () case
-					return Expr.new(ExprData.Lit(PoopCrapValues.instance), FileRange.new(fileName, startLine, startColumn, line, column));
+					return Expr.new(ExprData.Lit(PoopCrapObjects.instance), FileRange.new(fileName, startLine, startColumn, line, column));
 				}
 
 				// check first word to indicate KW-syntax expression
@@ -252,7 +252,7 @@ class ExprReader extends TextReader {
 			}
 			'\"' => {
 				def str = readString();
-				return Expr.new(ExprData.Lit(StrValues.getStrValue(str)),
+				return Expr.new(ExprData.Lit(StrObjects.getStrObject(str)),
 					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
 			_ => {
@@ -273,7 +273,7 @@ class ExprReader extends TextReader {
 						return null;
 					}
 					// any characters that start an integer literal cannot be part of a valid identifier
-					expr = Expr.new(ExprData.Lit(IntValues.getIntValue(value)), range);
+					expr = Expr.new(ExprData.Lit(IntObjects.getIntObject(value)), range);
 				} else {
 					expr = Expr.new(ExprData.Id(str), range);
 				}

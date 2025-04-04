@@ -1,4 +1,4 @@
-class PoopCrapValue extends Value {
+class PoopCrapObject extends Object {
 	private new () {}
 
 	def typeof()  -> Type   { return Type.PoopCrap; }
@@ -6,7 +6,7 @@ class PoopCrapValue extends Value {
 	def isTrue()  -> bool   { return false; }
 }
 
-component PoopCrapValues {
+component PoopCrapObjects {
 	/* only one poop and one crap */
-	def instance = PoopCrapValue.new();
+	def instance = PoopCrapObject.new();
 }

@@ -1,15 +1,15 @@
-class FuncValue(params: Array<string>, expr: ExprValue) extends Value {
+class FuncObject(params: Array<string>, expr: ExprObject) extends Object {
 	def typeof()  -> Type   { return Type.Func; }
 	def display() -> string { return "<func>"; }
 	def isTrue()  -> bool   { return true; }
 }
 
-component FuncValues {
-	def fromBuiltin(params: int, func: Range<Value> -> (Value, bool)) -> FuncValue {
+component FuncObjects {
+	def fromBuiltin(params: int, func: Range<Object> -> (Object, bool)) -> FuncObject {
 		def arr: Array<string> = Array.new(params);
 		for (i < params) {
 			arr[i] = Strings.format1("arg%d", i);
 		}
-		return FuncValue.new(arr, ExprValue.new(Impl.Virgil(func)));
+		return FuncObject.new(arr, ExprObject.new(Impl.Virgil(func)));
 	}
 }

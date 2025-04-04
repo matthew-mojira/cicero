@@ -1,5 +1,5 @@
-class ListValue extends Value {
-	def list: Vector<Value> = Vector.new();
+class ListObject extends Object {
+	def list: Vector<Object> = Vector.new();
 
 	def typeof()  -> Type   { return Type.List; }
 	def display() -> string { return "list"; }

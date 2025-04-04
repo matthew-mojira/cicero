@@ -1,7 +1,7 @@
 /* First-class expressions, which may allow translation into other forms (e.g.
  * WebAssembly for other evaluation methods.
  */
-class ExprValue(impl: Impl) extends Value {
+class ExprObject(impl: Impl) extends Object {
 	def typeof()  -> Type   { return Type.Expr; }
 	def display() -> string { return "<expr>"; }
 	def isTrue()  -> bool   { return true; }
@@ -9,11 +9,11 @@ class ExprValue(impl: Impl) extends Value {
 
 type Impl {
 	case AST(expr: Expr);
-	case Virgil(func: Range<Value> -> (Value, bool));
+	case Virgil(func: Range<Object> -> (Object, bool));
 }
 
-component ExprValues {
-	def fromBuiltin(func: Range<Value> -> (Value, bool)) -> ExprValue {
-		return ExprValue.new(Impl.Virgil(func));
+component ExprObjects {
+	def fromBuiltin(func: Range<Object> -> (Object, bool)) -> ExprObject {
+		return ExprObject.new(Impl.Virgil(func));
 	}
 }

@@ -1,16 +1,16 @@
-class MethodValue(obj: Value, params_: Array<string>, body_: ExprValue) extends FuncValue(params_, body_) {
+class MethodObject(obj: Object, params_: Array<string>, body_: ExprObject) extends FuncObject(params_, body_) {
 	def typeof()  -> Type   { return Type.Method; }
 	def display() -> string { return "<method>"; }
 	def isTrue()  -> bool   { return true; }
 }
 
-component MethodValues {
+component MethodObjects {
 	// the params does not include the implicit obj
-	def fromBuiltin(obj: Value, params: int, func: Range<Value> -> (Value, bool)) -> MethodValue {
+	def fromBuiltin(obj: Object, params: int, func: Range<Object> -> (Object, bool)) -> MethodObject {
 		def arr: Array<string> = Array.new(params);
 		for (i < params) {
 			arr[i] = Strings.format1("arg%d", i);
 		}
-		return MethodValue.new(obj, arr, ExprValue.new(Impl.Virgil(func)));
+		return MethodObject.new(obj, arr, ExprObject.new(Impl.Virgil(func)));
 	}
 }

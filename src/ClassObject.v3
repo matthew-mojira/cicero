@@ -1,9 +1,9 @@
-class ClassValue(classFields: Array<Field>) extends Value {
+class ClassObject(classFields: Array<Field>) extends Object {
 /*
 	new() {
-		fields["class"]  = TypeValues.getTypeValue(Type.Int);
-		fields["display"] = MethodValues.fromBuiltin(this, 0, i_display);
-		fields["istrue"]  = MethodValues.fromBuiltin(this, 0, i_istrue);
+		fields["class"]  = TypeObjects.getTypeObject(Type.Int);
+		fields["display"] = MethodObjects.fromBuiltin(this, 0, i_display);
+		fields["istrue"]  = MethodObjects.fromBuiltin(this, 0, i_istrue);
 	}
 	*/
 
@@ -13,15 +13,15 @@ class ClassValue(classFields: Array<Field>) extends Value {
 }
 
 /*
-def c_display(vals: Array<Value>) -> (Value, bool) {
-	return (StrValues.getStrValue("<class>", 
+def c_display(vals: Array<Object>) -> (Object, bool) {
+	return (StrObjects.getStrObject("<class>", 
 }
 
 def buildBuiltinClasses() -> Map<>
 
 component BuiltinClasses {
 	def builtinClasses = buildBuiltInClasses
-	def classClass = ClassValue.new(null);
+	def classClass = ClassObject.new(null);
 	def classInt = 
 }
 */

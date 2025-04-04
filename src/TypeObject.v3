@@ -1,4 +1,4 @@
-class TypeValue(val: Type) extends Value {
+class TypeObject(val: Type) extends Object {
 	private new () {}
 
 	def typeof()  -> Type   { return Type.Type; }
@@ -6,13 +6,13 @@ class TypeValue(val: Type) extends Value {
 	def isTrue()  -> bool   { return true; }
 }
 
-component TypeValues {
+component TypeObjects {
 	/* one value per type */
-	def typeValues = HashMap<Type, TypeValue>.new(hash, Type.==);
-	def getTypeValue(val: Type) -> TypeValue {
-		if (typeValues.has(val)) return typeValues[val];
-		def newType = TypeValue.new(val);
-		typeValues[val] = newType;
+	def typeObjects = HashMap<Type, TypeObject>.new(hash, Type.==);
+	def getTypeObject(val: Type) -> TypeObject {
+		if (typeObjects.has(val)) return typeObjects[val];
+		def newType = TypeObject.new(val);
+		typeObjects[val] = newType;
 		return newType;
 	}
 }

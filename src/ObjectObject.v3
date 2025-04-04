@@ -1,4 +1,4 @@
-class ObjectValue extends Value {
+class ObjectObject extends Object {
 	def typeof()  -> Type   { return Type.Object; }
 	def display() -> string { return "<object>"; }
 	def isTrue()  -> bool   { return true; }

@@ -1,4 +1,4 @@
-class StrValue(str: string) extends Value {
+class StrObject(str: string) extends Object {
 	private new () {}
 
 	def typeof()  -> Type   { return Type.Str; }
@@ -6,13 +6,13 @@ class StrValue(str: string) extends Value {
 	def isTrue()  -> bool   { return true; }
 }
 
-component StrValues {
+component StrObjects {
 	/* canonical instances of strings */
-	def strValues: HashMap<string, StrValue> = Strings.newMap();
-	def getStrValue(str: string) -> StrValue {
-		if (strValues.has(str)) return strValues[str];
-		def newStr = StrValue.new(str);
-		strValues[str] = newStr;
+	def strObjects: HashMap<string, StrObject> = Strings.newMap();
+	def getStrObject(str: string) -> StrObject {
+		if (strObjects.has(str)) return strObjects[str];
+		def newStr = StrObject.new(str);
+		strObjects[str] = newStr;
 		return newStr;
 	}
 }

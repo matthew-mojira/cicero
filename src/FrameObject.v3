@@ -1,13 +1,13 @@
-// TODO generalize code to ExprValue (and maybe rename ExprValue to CodeValue)
-class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) extends Value {
-	var globals: HashMap<string, Value>;
+// TODO generalize code to ExprObject (and maybe rename ExprObject to CodeObject)
+class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr) extends Object {
+	var globals: HashMap<string, Object>;
 
 	// you could replace this with a higher-tier evaluation function
-	var evalFunc: Expr -> Value;
+	var evalFunc: Expr -> Object;
 
 	// status flags as the result of evaluation
 	var exn: bool = false;  // whether evaluation threw uncaught exception
-	var val: Value;         // result of evaluation or exception value
+	var val: Object;         // result of evaluation or exception value
 
 	/* Initializing the frame also evaluates it (except for top-level frames). */
 	new() {
@@ -35,8 +35,8 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 		// XXX no return value, inspect the frame instead
 	}
 
-	private def tier0Eval(expr: Expr) -> Value {
-		var value: Value;
+	private def tier0Eval(expr: Expr) -> Object {
+		var value: Object;
 
 		match (expr.data) {
 			Lit(val) => value = val;
@@ -46,7 +46,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				} else if (globals.has(id)) {
 					value = globals[id];
 				} else {
-					throw(StrValues.getStrValue(Strings.format1("unbound identifier: %s", id)));
+					throw(StrObjects.getStrObject(Strings.format1("unbound identifier: %s", id)));
 				}
 			}
 			Apply(tgt, args) => {
@@ -55,12 +55,12 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				// have nothing to do with evaluation frames in the language
 				if (exn) return value;
 				// FIXME improve type checking
-				if (!FuncValue.?(tgtVal)) {
+				if (!FuncObject.?(tgtVal)) {
 					assertType(Type.Func, tgtVal);
 					return value;
 				}
 
-				def argv: Array<Value> = Array.new(args.length);
+				def argv: Array<Object> = Array.new(args.length);
 				for (i < argv.length) {
 					def arg = tier0Eval(args[i]);
 					if (exn) return value;
@@ -68,18 +68,18 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				}
 
 				// function call
-				def fv = FuncValue.!(tgtVal);
+				def fv = FuncObject.!(tgtVal);
 				def params = fv.params, code = fv.expr;
 
 				// arity check
 				assertArity(params.length, argv);
 				if (exn) return value;
 
-				def newLocals: HashMap<string, Value> = Strings.newMap();
+				def newLocals: HashMap<string, Object> = Strings.newMap();
 				// method info
-				if (MethodValue.?(fv)) {
+				if (MethodObject.?(fv)) {
 					// FIXME magic string
-					newLocals["self"] = MethodValue.!(fv).obj;
+					newLocals["self"] = MethodObject.!(fv).obj;
 				}
 				// arguments
 				for (i < argv.length) {
@@ -89,7 +89,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				match (code.impl) {
 					AST(expr) => {
 						// create new frames here!
-						def frame = FrameValue.new(this, newLocals, expr);
+						def frame = FrameObject.new(this, newLocals, expr);
 						if (frame.exn) {
 							// rethrow
 							throw(frame.val);
@@ -144,12 +144,12 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				}
 			}
 			Func(id, params, body) => {
-				def f = FuncValue.new(params, ExprValue.new(Impl.AST(body)));
+				def f = FuncObject.new(params, ExprObject.new(Impl.AST(body)));
 				locals[id] = f;
 				value = f;
 			}
 			Class(id, fields) => {
-				def c = ClassValue.new(fields);
+				def c = ClassObject.new(fields);
 				locals[id] = c;
 				value = c;
 			}
@@ -179,7 +179,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				}
 
 				if (!sat) {
-					throw(StrValues.getStrValue("cond error: no true branch"));
+					throw(StrObjects.getStrObject("cond error: no true branch"));
 				}
 			}
 			While(cond, body) => {
@@ -197,7 +197,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				}
 			}
 			Begin(exprs) => {
-				var last: Value;
+				var last: Object;
 				for (expr in exprs) {
 					def v = tier0Eval(expr);
 					if (exn) return value;
@@ -213,7 +213,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				if (obj.fields.has(field)) {
 					value = obj.fields[field];
 				} else {
-					throw(StrValues.getStrValue(Strings.format1("name error: unknown field %s", field)));
+					throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
 					return value;
 				}
 			}
@@ -229,7 +229,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 					obj.fields[field] = val;
 					value = val;
 				} else {
-					throw(StrValues.getStrValue(Strings.format1("name error: unknown field %s", field)));
+					throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
 					return value;
 				}
 			}
@@ -240,8 +240,8 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 				assertType(Type.Class, cls);
 				if (exn) return value;
 
-				var obj = ObjectValue.new();
-				for (field in ClassValue.!(cls).classFields) {
+				var obj = ObjectObject.new();
+				for (field in ClassObject.!(cls).classFields) {
 					match (field) {
 						Field(name, expr) => {
 							var v = tier0Eval(expr);
@@ -249,7 +249,7 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 							obj.fields[name] = v;
 						}
 						Method(name, params, body) => {
-							def m = MethodValue.new(obj, params, ExprValue.new(Impl.AST(body)));
+							def m = MethodObject.new(obj, params, ExprObject.new(Impl.AST(body)));
 							obj.fields[name] = m;
 						}
 					}
@@ -268,19 +268,19 @@ class FrameValue(prev: FrameValue, locals: HashMap<string, Value>, code: Expr) e
 	/* throwing exceptions */
 
 	// throw sets the exception value in the frame right away
-	private def throw(value: Value) {
+	private def throw(value: Object) {
 		exn = true;
 		val = value;
 	}
 
-	private def assertType(exp: Type, val: Value) {
+	private def assertType(exp: Type, val: Object) {
 		if (exp != val.typeof())
-			throw(StrValues.getStrValue(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display())));
+			throw(StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display())));
 	}
 
-	private def assertArity(argc: int, vals: Range<Value>) {
+	private def assertArity(argc: int, vals: Range<Object>) {
 		if (vals.length != argc)
-			throw(StrValues.getStrValue(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length)));
+			throw(StrObjects.getStrObject(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length)));
 	}
 
 }

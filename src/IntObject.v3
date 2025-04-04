@@ -1,8 +1,8 @@
-class IntValue(val: long) extends Value {
+class IntObject(val: long) extends Object {
 	private new () {
-		fields["typeof"]  = TypeValues.getTypeValue(Type.Int);
-		fields["display"] = MethodValues.fromBuiltin(this, 0, i_display);
-		fields["istrue"]  = MethodValues.fromBuiltin(this, 0, i_istrue);
+		fields["typeof"]  = TypeObjects.getTypeObject(Type.Int);
+		fields["display"] = MethodObjects.fromBuiltin(this, 0, i_display);
+		fields["istrue"]  = MethodObjects.fromBuiltin(this, 0, i_istrue);
 	}
 
 	def typeof()  -> Type   { return Type.Int; }
@@ -10,36 +10,36 @@ class IntValue(val: long) extends Value {
 	def isTrue()  -> bool   { return true; }
 }
 
-def i_display(vals: Range<Value>) -> (Value, bool) {
-	return (StrValues.getStrValue(Strings.format1("%d", IntValue.!(vals[0]).val)), false);
+def i_display(vals: Range<Object>) -> (Object, bool) {
+	return (StrObjects.getStrObject(Strings.format1("%d", IntObject.!(vals[0]).val)), false);
 }
 
-def i_istrue(vals: Range<Value>) -> (Value, bool) {
-	return (BoolValues.trueValue, false);
+def i_istrue(vals: Range<Object>) -> (Object, bool) {
+	return (BoolObjects.trueObject, false);
 }
 
-component IntValues {
+component IntObjects {
 	/* canonicalize int value instances */
-	def intValues = HashMap<long, IntValue>.new(int.!, long.==);
-	def getIntValue(val: long) -> IntValue {
-		if (intValues.has(val)) return intValues[val];
-		def newInt = IntValue.new(val);
-		intValues[val] = newInt;
+	def intObjects = HashMap<long, IntObject>.new(int.!, long.==);
+	def getIntObject(val: long) -> IntObject {
+		if (intObjects.has(val)) return intObjects[val];
+		def newInt = IntObject.new(val);
+		intObjects[val] = newInt;
 		return newInt;
 	}
 
 	/* arithmetic operations on int values */
-	def add(int1: IntValue, int2: IntValue) -> IntValue {
-		return getIntValue(int1.val + int2.val);
+	def add(int1: IntObject, int2: IntObject) -> IntObject {
+		return getIntObject(int1.val + int2.val);
 	}
-	def sub(int1: IntValue, int2: IntValue) -> IntValue {
-		return getIntValue(int1.val - int2.val);
+	def sub(int1: IntObject, int2: IntObject) -> IntObject {
+		return getIntObject(int1.val - int2.val);
 	}
-	def mul(int1: IntValue, int2: IntValue) -> IntValue {
-		return getIntValue(int1.val * int2.val);
+	def mul(int1: IntObject, int2: IntObject) -> IntObject {
+		return getIntObject(int1.val * int2.val);
 	}
 	// TODO what to do if this fails?
-	def div(int1: IntValue, int2: IntValue) -> IntValue {
-		return getIntValue(int1.val / int2.val);
+	def div(int1: IntObject, int2: IntObject) -> IntObject {
+		return getIntObject(int1.val / int2.val);
 	}
 }
