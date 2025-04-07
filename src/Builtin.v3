@@ -1,6 +1,7 @@
 enum Builtin(id: string, val: Object) {
 	TRUE    ("true",     BoolObjects.trueObject),
 	FALSE   ("false",    BoolObjects.falseObject),
+	CLASS   ("class",    ClassObjects.classClass),
 //	INT     ("int" ,     TypeObjects.getTypeObject(Type.Int)),
 //	BOOL    ("bool",     TypeObjects.getTypeObject(Type.Bool)),
 //	FUNC    ("func",     TypeObjects.getTypeObject(Type.Func)),

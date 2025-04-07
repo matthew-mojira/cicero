@@ -117,3 +117,13 @@ it:
 
 But that may complicate things if you want immutable fields and to change what
 that initial (final) value is based on multiple initializers.
+
+## circular definitions
+
+class appears to be circularly defined (for builtin methods, we needed to have
+lazy methods). I think we could solve this by removing the base class, and
+have the Object class assume the base class properties
+
+Other new problem: this allows users to instantiate objects of the built-in
+class, but these are not backed by the true virgil class that is needed to
+encode the internal information.
