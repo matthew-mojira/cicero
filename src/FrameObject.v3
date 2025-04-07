@@ -98,8 +98,13 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 						value = frame.val;
 					}
 					Virgil(func) => {
+						// if this is a method, add the object as the first argument
+						var vArgv = argv;
+						if (MethodObject.?(fv)) {
+							vArgv = Arrays.prepend(MethodObject.!(fv).obj, argv);							
+						}
 						// function call
-						def ret = func(argv);
+						def ret = func(vArgv);
 						def val = ret.0, fnExn = ret.1;
 
 						if (fnExn) {
@@ -241,20 +246,38 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 				if (exn) return value;
 
 				def clsObj = ClassObject.!(cls);
-				var obj = ObjectObject.new(clsObj);
-				for (field in clsObj.classFields) {
-					match (field) {
-						Field(name, expr) => {
-							var v = tier0Eval(expr);
-							if (exn) return value;
-							obj.fields[name] = v;
-						}
-						Method(name, params, body) => {
-							def m = MethodObject.new(obj, params, ExprObject.new(Impl.AST(body)));
-							obj.fields[name] = m;
-						}
-						LazyMethod(name, _, _) => {
-							obj.lazyFields[name] = Field.LazyMethod.!(field);
+				def obj = ObjectObject.new(clsObj);
+
+				// superclass order
+				for (cls = clsObj; cls != null; cls = cls.superclass) {
+					System.puts(cls.name);
+					System.ln();
+					for (field in cls.classFields) {
+						match (field) {
+							Field(name, expr) => {
+								// check if subclass has already defined field
+								if (obj.fields.has(name)) continue;
+								if (obj.lazyFields.has(name)) continue;
+
+								var v = tier0Eval(expr);
+								if (exn) return value;
+								obj.fields[name] = v;
+							}
+							Method(name, params, body) => {
+								// check if subclass has already defined field
+								if (obj.fields.has(name)) continue;
+								if (obj.lazyFields.has(name)) continue;
+
+								def m = MethodObject.new(obj, params, ExprObject.new(Impl.AST(body)));
+								obj.fields[name] = m;
+							}
+							/* Lazy methods are initialized in the Object class, since it does not require
+							 * evaluation and the user cannot define them.
+							 * 
+							 * This decoupling complicates override order if a subclass of the base
+							 * class also has a lazy method. (Right now, it doesn't)
+							 */
+							LazyMethod(name, _, _) => ;
 						}
 					}
 				}

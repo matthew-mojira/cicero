@@ -1,12 +1,20 @@
-class Object {
-	def var cls: ClassObject;
+class Object(cls: ClassObject) {
 	def var fields: HashMap<string, Object> = Strings.newMap();
 	def var lazyFields: HashMap<string, Field.LazyMethod> = Strings.newMap();
 
-	new(cls: ClassObject) {
-		this.cls = cls;
-		for (c = cls; c != null; c = cls.superclass) {
-			
+	new() {
+		// Object initializes lazy fields (methods)
+		for (cls = this.cls; cls != null; cls = cls.superclass) {
+			for (field in cls.classFields) {
+				match (field) {
+					LazyMethod(name, _, _) => {
+						if (lazyFields.has(name)) continue;
+						lazyFields[name] = Field.LazyMethod.!(field);
+					}
+					_ => ;
+				}
+			}
+
 		}
 	}
 
