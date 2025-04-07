@@ -2,6 +2,8 @@
  * WebAssembly for other evaluation methods.
  */
 class ExprObject(impl: Impl) extends Object {
+	new() super(ExprObjects.classExpr) {}
+
 	def typeof()  -> Type   { return Type.Expr; }
 	def display() -> string { return "<expr>"; }
 	def isTrue()  -> bool   { return true; }
@@ -16,4 +18,5 @@ component ExprObjects {
 	def fromBuiltin(func: Range<Object> -> (Object, bool)) -> ExprObject {
 		return ExprObject.new(Impl.Virgil(func));
 	}
+	def classExpr = ClassObject.new(Objects.classBase, "expr", []);
 }

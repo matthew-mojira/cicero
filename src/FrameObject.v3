@@ -10,7 +10,7 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 	var val: Object;         // result of evaluation or exception value
 
 	/* Initializing the frame also evaluates it (except for top-level frames). */
-	new() {
+	new() super(FrameObjects.classFrame) {
 		evalFunc = tier0Eval;
 		if (prev == null) {
 			// this is the top-level frame, where locals = globals
@@ -149,7 +149,7 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 				value = f;
 			}
 			Class(id, fields) => {
-				def c = ClassObject.new(fields);
+				def c = ClassObject.new(Objects.classBase, id, fields);
 				locals[id] = c;
 				value = c;
 			}
@@ -240,8 +240,9 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 				assertType(Type.Class, cls);
 				if (exn) return value;
 
-				var obj = ObjectObject.new();
-				for (field in ClassObject.!(cls).classFields) {
+				def clsObj = ClassObject.!(cls);
+				var obj = ObjectObject.new(clsObj);
+				for (field in clsObj.classFields) {
 					match (field) {
 						Field(name, expr) => {
 							var v = tier0Eval(expr);
@@ -251,6 +252,9 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 						Method(name, params, body) => {
 							def m = MethodObject.new(obj, params, ExprObject.new(Impl.AST(body)));
 							obj.fields[name] = m;
+						}
+						LazyMethod(name, _, _) => {
+							obj.lazyFields[name] = Field.LazyMethod.!(field);
 						}
 					}
 				}
@@ -283,4 +287,8 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 			throw(StrObjects.getStrObject(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length)));
 	}
 
+}
+
+component FrameObjects {
+	def classFrame = ClassObject.new(Objects.classBase, "frame", []);
 }

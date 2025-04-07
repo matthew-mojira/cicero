@@ -1,5 +1,5 @@
 class StrObject(str: string) extends Object {
-	private new () {}
+	private new() super(StrObjects.classStr) {}
 
 	def typeof()  -> Type   { return Type.Str; }
 	def display() -> string { return Strings.format1("\"%s\"", str); }
@@ -15,4 +15,5 @@ component StrObjects {
 		strObjects[str] = newStr;
 		return newStr;
 	}
+	def classStr = ClassObject.new(Objects.classBase, "str", []);
 }

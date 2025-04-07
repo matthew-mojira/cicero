@@ -13,4 +13,6 @@ component MethodObjects {
 		}
 		return MethodObject.new(obj, arr, ExprObject.new(Impl.Virgil(func)));
 	}
+	
+	def classMethod = ClassObject.new(Objects.classBase, "method", []);
 }

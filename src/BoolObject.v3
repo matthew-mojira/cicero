@@ -1,5 +1,5 @@
 class BoolObject(val: bool) extends Object {
-	private new () {}
+	private new () super(BoolObjects.classBool) {}
 
 	def typeof()  -> Type   { return Type.Bool; }
 	def display() -> string { return if(val, "true", "false"); }
@@ -10,4 +10,6 @@ component BoolObjects {
 	/* canonical instances of bool values */
 	def trueObject  = BoolObject.new(true);
 	def falseObject = BoolObject.new(false);
+
+	def classBool = ClassObject.new(Objects.classBase, "bool", []);
 }

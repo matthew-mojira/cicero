@@ -1,4 +1,6 @@
 class FuncObject(params: Array<string>, expr: ExprObject) extends Object {
+	new() super(FuncObjects.classFunc) {}
+
 	def typeof()  -> Type   { return Type.Func; }
 	def display() -> string { return "<func>"; }
 	def isTrue()  -> bool   { return true; }
@@ -12,4 +14,5 @@ component FuncObjects {
 		}
 		return FuncObject.new(arr, ExprObject.new(Impl.Virgil(func)));
 	}
+	def classFunc = ClassObject.new(Objects.classBase, "func", []);
 }

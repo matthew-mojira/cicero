@@ -1,7 +1,13 @@
 class Object {
+	def var cls: ClassObject;
 	def var fields: HashMap<string, Object> = Strings.newMap();
+	def var lazyFields: HashMap<string, Field.LazyMethod> = Strings.newMap();
 
-	new() {
+	new(cls: ClassObject) {
+		this.cls = cls;
+		for (c = cls; c != null; c = cls.superclass) {
+			
+		}
 	}
 
 	/* Some fields are lazily bound.
@@ -9,8 +15,9 @@ class Object {
 	def getField(name: string) -> Maybe<Object> {
 		if (fields.has(name)) return Maybe.Just(fields[name]);
 		// Some fields are lazily bound.
-		if (Strings.equal(name, "fields")) {
-			def obj = MethodObjects.fromBuiltin(this, 0, o_fields);
+		if (lazyFields.has(name)) {
+			def field = lazyFields[name];
+			def obj = MethodObjects.fromBuiltin(this, field.paramc, field.method);
 			fields["fields"] = obj;
 			return Maybe.Just(obj);
 		}
@@ -21,18 +28,19 @@ class Object {
 	def display() -> string;
 	def isTrue() -> bool;
 
-	def o_fields(args: Range<Object>) -> (Object, bool) {
-		def list = ListObject.new();
-		def fList = Maps.keyList(fields);
-		// FIXME add lazy fields
-		Lists.apply(fList, putList(list, _));
-		return (list, false);
-	}
 }
 
-//                                             this
-enum LazyFields(id: string, argc: int, func: (Object, Range<Object>) -> (Object, bool)) {
-	FIELDS("fields", 0, Object.o_fields)
+component Objects {
+	def classBase = ClassObject.new(null, "base", [Field.LazyMethod("fields", 0, o_fields)]);
+}
+
+def o_fields(args: Range<Object>) -> (Object, bool) {
+	def obj = args[0];
+	def list = ListObject.new();
+	def fList = Maps.keyList(obj.fields);
+	// FIXME add lazy fields
+	Lists.apply(fList, putList(list, _));
+	return (list, false);
 }
 
 def putList(list: ListObject, str: string) {

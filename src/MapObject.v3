@@ -1,7 +1,13 @@
 class MapObject extends Object {
+	new() super(MapObjects.classMap) {}
+
 	def map: Map<string, Object> = Strings.newMap();
 
 	def typeof()  -> Type   { return Type.Map; }
 	def display() -> string { return "map"; }
 	def isTrue()  -> bool   { return true; }
+}
+
+component MapObjects {
+	def classMap = ClassObject.new(Objects.classBase, "map", []);
 }

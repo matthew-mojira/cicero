@@ -1,0 +1,28 @@
+//component BuiltinClasses {
+//	def classBase     = ClassObject.new(null, "base", [Field.LazyMethod("fields", 0, o_fields)]);
+//	def classBool     = ClassObject.new(classBase, "bool", []);
+//	def classExpr     = ClassObject.new(classBase, "expr", []);
+//	def classFrame    = ClassObject.new(classBase, "frame", []);
+//	def classFunc     = ClassObject.new(classBase, "func", []);
+//	def classInt      = ClassObject.new(classBase, "int", []);
+//	def classList     = ClassObject.new(classBase, "list", []);
+//	def classMap      = ClassObject.new(classBase, "map", []);
+//	def classMethod   = ClassObject.new(classBase, "method", []);
+//	def classObject   = ClassObject.new(classBase, "object", []);
+//	def classPoopCrap = ClassObject.new(classBase, "poopcrap", []);
+//	def classStr      = ClassObject.new(classBase, "str", []);
+//}
+//
+//def o_fields(args: Range<Object>) -> (Object, bool) {
+//	def obj = args[0];
+//	def list = ListObject.new();
+//	def fList = Maps.keyList(obj.fields);
+//	// FIXME add lazy fields
+//	Lists.apply(fList, putList(list, _));
+//	return (list, false);
+//}
+//
+//def putList(list: ListObject, str: string) {
+//	def obj = StrObjects.getStrObject(str);
+//	list.list.put(obj);
+//}

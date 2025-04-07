@@ -1,22 +1,22 @@
 enum Builtin(id: string, val: Object) {
 	TRUE    ("true",     BoolObjects.trueObject),
 	FALSE   ("false",    BoolObjects.falseObject),
-	INT     ("int" ,     TypeObjects.getTypeObject(Type.Int)),
-	BOOL    ("bool",     TypeObjects.getTypeObject(Type.Bool)),
-	FUNC    ("func",     TypeObjects.getTypeObject(Type.Func)),
-	STR     ("str" ,     TypeObjects.getTypeObject(Type.Str)),
-	TYPE    ("type",     TypeObjects.getTypeObject(Type.Type)),
-	POOPCRAP("poopcrap", TypeObjects.getTypeObject(Type.PoopCrap)),
-	FRAME   ("frame",    TypeObjects.getTypeObject(Type.Frame)),
-	EXPR    ("expr",     TypeObjects.getTypeObject(Type.Expr)),
-	V_TYPEOF("typeof",   FuncObjects.fromBuiltin(1, v_typeof)),
-	V_PRINT ("print",    FuncObjects.fromBuiltin(1, v_print)), 
-	VV_EQ   ("=",        FuncObjects.fromBuiltin(2, vv_eq)), 
-	VV_NEQ  ("!=",       FuncObjects.fromBuiltin(2, vv_neq)), 
-	II_ADD  ("+",        FuncObjects.fromBuiltin(2, ii_add)), 
-	II_SUB  ("-",        FuncObjects.fromBuiltin(2, ii_sub)), 
-	II_MUL  ("*",        FuncObjects.fromBuiltin(2, ii_mul)), 
-	II_DIV  ("/",        FuncObjects.fromBuiltin(2, ii_div)),
+//	INT     ("int" ,     TypeObjects.getTypeObject(Type.Int)),
+//	BOOL    ("bool",     TypeObjects.getTypeObject(Type.Bool)),
+//	FUNC    ("func",     TypeObjects.getTypeObject(Type.Func)),
+//	STR     ("str" ,     TypeObjects.getTypeObject(Type.Str)),
+//	TYPE    ("type",     TypeObjects.getTypeObject(Type.Type)),
+//	POOPCRAP("poopcrap", TypeObjects.getTypeObject(Type.PoopCrap)),
+//	FRAME   ("frame",    TypeObjects.getTypeObject(Type.Frame)),
+//	EXPR    ("expr",     TypeObjects.getTypeObject(Type.Expr)),
+//	V_TYPEOF("typeof",   FuncObjects.fromBuiltin(1, v_typeof)),
+//	V_PRINT ("print",    FuncObjects.fromBuiltin(1, v_print)), 
+//	VV_EQ   ("=",        FuncObjects.fromBuiltin(2, vv_eq)), 
+//	VV_NEQ  ("!=",       FuncObjects.fromBuiltin(2, vv_neq)), 
+//	II_ADD  ("+",        FuncObjects.fromBuiltin(2, ii_add)), 
+//	II_SUB  ("-",        FuncObjects.fromBuiltin(2, ii_sub)), 
+//	II_MUL  ("*",        FuncObjects.fromBuiltin(2, ii_mul)), 
+//	II_DIV  ("/",        FuncObjects.fromBuiltin(2, ii_div)),
 }
 
 /* The type of all Builtin-Functions is
@@ -26,170 +26,170 @@ enum Builtin(id: string, val: Object) {
  * - Object is either return value or exception
  */
 
-def v_typeof(vals: Range<Object>) -> (Object, bool) {
-	var val: Object;
-	var exn: bool;
-	if (vals.length != 1) {
-		exn = true;
-		val = arityMismatch(1, vals);
-	}
-
-	if (!exn) {
-		val = TypeObjects.getTypeObject(vals[0].typeof());
-	}
-
-	return (val, exn);
-}
-
-def v_print(vals: Range<Object>) -> (Object, bool) {
-	var val: Object;
-	var exn: bool;
-	if (vals.length != 1) {
-		exn = true;
-		val = arityMismatch(1, vals);
-	}
-
-	if (!exn) {
-		System.puts(vals[0].display());
-		System.ln();
-		val = PoopCrapObjects.instance;
-	}
-
-	return (val, exn);
-}
-
-// FIXME string equality is wrong
-def vv_eq(vals: Range<Object>) -> (Object, bool) {
-	var val: Object;
-	var exn: bool;
-	if (vals.length != 2) {
-		exn = true;
-		val = arityMismatch(2, vals);
-	}
-
-	if (!exn) {
-		val = if(vals[0] == vals[1], BoolObjects.trueObject, BoolObjects.falseObject);
-	}
-
-	return (val, exn);
-}
-
-// FIXME string equality is wrong
-def vv_neq(vals: Range<Object>) -> (Object, bool) {
-	var val: Object;
-	var exn: bool;
-	if (vals.length != 2) {
-		exn = true;
-		val = arityMismatch(2, vals);
-	}
-
-	if (!exn) {
-		val = if(vals[0] != vals[1], BoolObjects.trueObject, BoolObjects.falseObject);
-	}
-
-	return (val, exn);
-}
-
-def ii_add(vals: Range<Object>) -> (Object, bool) {
-	var val: Object;
-	var exn: bool;
-	if (vals.length != 2) {
-		exn = true;
-		val = arityMismatch(2, vals);
-	}
-	if (!exn && vals[0].typeof() != Type.Int) {
-		exn = true;
-		val = typeMismatch(Type.Int, vals[0]);
-	}
-	if (!exn && vals[1].typeof() != Type.Int) {
-		exn = true;
-		val = typeMismatch(Type.Int, vals[1]);
-	}
-	
-	if (!exn) {
-		val = IntObjects.add(IntObject.!(vals[0]), IntObject.!(vals[1]));
-	}
-
-	return (val, exn);
-}
-
-def ii_sub(vals: Range<Object>) -> (Object, bool) {
-	var val: Object;
-	var exn: bool;
-	if (vals.length != 2) {
-		exn = true;
-		val = arityMismatch(2, vals);
-	}
-	if (!exn && vals[0].typeof() != Type.Int) {
-		exn = true;
-		val = typeMismatch(Type.Int, vals[0]);
-	}
-	if (!exn && vals[1].typeof() != Type.Int) {
-		exn = true;
-		val = typeMismatch(Type.Int, vals[1]);
-	}
-	
-	if (!exn) {
-		val = IntObjects.sub(IntObject.!(vals[0]), IntObject.!(vals[1]));
-	}
-
-	return (val, exn);
-}
-
-def ii_mul(vals: Range<Object>) -> (Object, bool) {
-	var val: Object;
-	var exn: bool;
-	if (vals.length != 2) {
-		exn = true;
-		val = arityMismatch(2, vals);
-	}
-	if (!exn && vals[0].typeof() != Type.Int) {
-		exn = true;
-		val = typeMismatch(Type.Int, vals[0]);
-	}
-	if (!exn && vals[1].typeof() != Type.Int) {
-		exn = true;
-		val = typeMismatch(Type.Int, vals[1]);
-	}
-	
-	if (!exn) {
-		val = IntObjects.mul(IntObject.!(vals[0]), IntObject.!(vals[1]));
-	}
-
-	return (val, exn);
-}
-
-def ii_div(vals: Range<Object>) -> (Object, bool) {
-	var val: Object;
-	var exn: bool;
-	if (vals.length != 2) {
-		exn = true;
-		val = arityMismatch(2, vals);
-	}
-	if (!exn && vals[0].typeof() != Type.Int) {
-		exn = true;
-		val = typeMismatch(Type.Int, vals[0]);
-	}
-	if (!exn && vals[1].typeof() != Type.Int) {
-		exn = true;
-		val = typeMismatch(Type.Int, vals[1]);
-	}
-	if (!exn && (IntObject.!(vals[1])).val == 0) {
-		exn = true;
-		val = StrObjects.getStrObject("arithmetic error: divide by zero");
-	}
-	
-	if (!exn) {
-		val = IntObjects.div(IntObject.!(vals[0]), IntObject.!(vals[1]));
-	}
-
-	return (val, exn);
-}
-
-def typeMismatch(exp: Type, val: Object) -> Object {
-	return StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display()));
-}
-
-def arityMismatch(argc: int, vals: Range<Object>) -> Object {
-	return StrObjects.getStrObject(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length));
-}
+//def v_typeof(vals: Range<Object>) -> (Object, bool) {
+//	var val: Object;
+//	var exn: bool;
+//	if (vals.length != 1) {
+//		exn = true;
+//		val = arityMismatch(1, vals);
+//	}
+//
+//	if (!exn) {
+//		val = TypeObjects.getTypeObject(vals[0].typeof());
+//	}
+//
+//	return (val, exn);
+//}
+//
+//def v_print(vals: Range<Object>) -> (Object, bool) {
+//	var val: Object;
+//	var exn: bool;
+//	if (vals.length != 1) {
+//		exn = true;
+//		val = arityMismatch(1, vals);
+//	}
+//
+//	if (!exn) {
+//		System.puts(vals[0].display());
+//		System.ln();
+//		val = PoopCrapObjects.instance;
+//	}
+//
+//	return (val, exn);
+//}
+//
+//// FIXME string equality is wrong
+//def vv_eq(vals: Range<Object>) -> (Object, bool) {
+//	var val: Object;
+//	var exn: bool;
+//	if (vals.length != 2) {
+//		exn = true;
+//		val = arityMismatch(2, vals);
+//	}
+//
+//	if (!exn) {
+//		val = if(vals[0] == vals[1], BoolObjects.trueObject, BoolObjects.falseObject);
+//	}
+//
+//	return (val, exn);
+//}
+//
+//// FIXME string equality is wrong
+//def vv_neq(vals: Range<Object>) -> (Object, bool) {
+//	var val: Object;
+//	var exn: bool;
+//	if (vals.length != 2) {
+//		exn = true;
+//		val = arityMismatch(2, vals);
+//	}
+//
+//	if (!exn) {
+//		val = if(vals[0] != vals[1], BoolObjects.trueObject, BoolObjects.falseObject);
+//	}
+//
+//	return (val, exn);
+//}
+//
+//def ii_add(vals: Range<Object>) -> (Object, bool) {
+//	var val: Object;
+//	var exn: bool;
+//	if (vals.length != 2) {
+//		exn = true;
+//		val = arityMismatch(2, vals);
+//	}
+//	if (!exn && vals[0].typeof() != Type.Int) {
+//		exn = true;
+//		val = typeMismatch(Type.Int, vals[0]);
+//	}
+//	if (!exn && vals[1].typeof() != Type.Int) {
+//		exn = true;
+//		val = typeMismatch(Type.Int, vals[1]);
+//	}
+//	
+//	if (!exn) {
+//		val = IntObjects.add(IntObject.!(vals[0]), IntObject.!(vals[1]));
+//	}
+//
+//	return (val, exn);
+//}
+//
+//def ii_sub(vals: Range<Object>) -> (Object, bool) {
+//	var val: Object;
+//	var exn: bool;
+//	if (vals.length != 2) {
+//		exn = true;
+//		val = arityMismatch(2, vals);
+//	}
+//	if (!exn && vals[0].typeof() != Type.Int) {
+//		exn = true;
+//		val = typeMismatch(Type.Int, vals[0]);
+//	}
+//	if (!exn && vals[1].typeof() != Type.Int) {
+//		exn = true;
+//		val = typeMismatch(Type.Int, vals[1]);
+//	}
+//	
+//	if (!exn) {
+//		val = IntObjects.sub(IntObject.!(vals[0]), IntObject.!(vals[1]));
+//	}
+//
+//	return (val, exn);
+//}
+//
+//def ii_mul(vals: Range<Object>) -> (Object, bool) {
+//	var val: Object;
+//	var exn: bool;
+//	if (vals.length != 2) {
+//		exn = true;
+//		val = arityMismatch(2, vals);
+//	}
+//	if (!exn && vals[0].typeof() != Type.Int) {
+//		exn = true;
+//		val = typeMismatch(Type.Int, vals[0]);
+//	}
+//	if (!exn && vals[1].typeof() != Type.Int) {
+//		exn = true;
+//		val = typeMismatch(Type.Int, vals[1]);
+//	}
+//	
+//	if (!exn) {
+//		val = IntObjects.mul(IntObject.!(vals[0]), IntObject.!(vals[1]));
+//	}
+//
+//	return (val, exn);
+//}
+//
+//def ii_div(vals: Range<Object>) -> (Object, bool) {
+//	var val: Object;
+//	var exn: bool;
+//	if (vals.length != 2) {
+//		exn = true;
+//		val = arityMismatch(2, vals);
+//	}
+//	if (!exn && vals[0].typeof() != Type.Int) {
+//		exn = true;
+//		val = typeMismatch(Type.Int, vals[0]);
+//	}
+//	if (!exn && vals[1].typeof() != Type.Int) {
+//		exn = true;
+//		val = typeMismatch(Type.Int, vals[1]);
+//	}
+//	if (!exn && (IntObject.!(vals[1])).val == 0) {
+//		exn = true;
+//		val = StrObjects.getStrObject("arithmetic error: divide by zero");
+//	}
+//	
+//	if (!exn) {
+//		val = IntObjects.div(IntObject.!(vals[0]), IntObject.!(vals[1]));
+//	}
+//
+//	return (val, exn);
+//}
+//
+//def typeMismatch(exp: Type, val: Object) -> Object {
+//	return StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display()));
+//}
+//
+//def arityMismatch(argc: int, vals: Range<Object>) -> Object {
+//	return StrObjects.getStrObject(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length));
+//}

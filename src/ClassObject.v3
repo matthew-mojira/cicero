@@ -1,28 +1,12 @@
-class ClassObject(classFields: Array<Field>) extends Object {
-/*
-	new() {
-		fields["class"]  = TypeObjects.getTypeObject(Type.Int);
-		fields["display"] = MethodObjects.fromBuiltin(this, 0, i_display);
-		fields["istrue"]  = MethodObjects.fromBuiltin(this, 0, i_istrue);
-	}
-	*/
+class ClassObject(superclass: ClassObject, name: string, classFields: Array<Field>) extends Object {
+	new() super(ClassObjects.classClass) {}
 
 	def typeof()  -> Type   { return Type.Class; }
-	def display() -> string { return "<class>"; }
+	def display() -> string { return Strings.format1("<class '%s'>", name); }
 	def isTrue()  -> bool   { return true; }
 }
 
-/*
-def c_display(vals: Array<Object>) -> (Object, bool) {
-	return (StrObjects.getStrObject("<class>", 
+component ClassObjects {
+	def classClass = ClassObject.new(Objects.classBase, "class", []);
 }
-
-def buildBuiltinClasses() -> Map<>
-
-component BuiltinClasses {
-	def builtinClasses = buildBuiltInClasses
-	def classClass = ClassObject.new(null);
-	def classInt = 
-}
-*/
 

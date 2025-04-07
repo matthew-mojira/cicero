@@ -1,4 +1,6 @@
 class ListObject extends Object {
+	new() super(ListObjects.classList) {}
+
 	def list: Vector<Object> = Vector.new();
 
 	def typeof()  -> Type   { return Type.List; }
@@ -16,4 +18,8 @@ class ListObject extends Object {
 		return buf.extract();
 	}
 	def isTrue()  -> bool   { return true; }
+}
+
+component ListObjects {
+	def classList = ClassObject.new(Objects.classBase, "list", []);
 }

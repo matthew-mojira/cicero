@@ -1,5 +1,5 @@
 class PoopCrapObject extends Object {
-	private new () {}
+	private new() super(PoopCrapObjects.classPoopCrap) {}
 
 	def typeof()  -> Type   { return Type.PoopCrap; }
 	def display() -> string { return "poopcrap"; }
@@ -9,4 +9,6 @@ class PoopCrapObject extends Object {
 component PoopCrapObjects {
 	/* only one poop and one crap */
 	def instance = PoopCrapObject.new();
+
+	def classPoopCrap = ClassObject.new(Objects.classBase, "poopcrap", []);
 }

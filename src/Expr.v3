@@ -81,7 +81,14 @@ type ExprData {
 	def display() -> string;
 }
 
+/* Methods and LazyMethods are also fields
+ * LazyMethod is a special kind of method which is not created until it is
+ * requested. This prevents infinite loops because methods are objects (and
+ * thus might have other methods as fields which in turn allocate other
+ * objects).
+ */
 type Field {
 	case Field(id: string, init: Expr);
 	case Method(id: string, params: Array<string>, body: Expr);
+	case LazyMethod(id: string, paramc: int, method: Range<Object> -> (Object, bool));
 }

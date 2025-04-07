@@ -1,4 +1,6 @@
 class ObjectObject extends Object {
+	new(cls: ClassObject) super(cls) {}
+
 	def typeof()  -> Type   { return Type.Object; }
 	def display() -> string { return "<object>"; }
 	def isTrue()  -> bool   { return true; }
