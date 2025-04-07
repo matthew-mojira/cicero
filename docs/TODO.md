@@ -13,20 +13,16 @@
 * frames
   - stacktraces (catch values! built-in exception classes?)
   - return
-* new types
-  - list
-  - set
-  - map
 * classes
-  - real initializers?
-  - intrinsify built-in classes (make fields and methods out of its internal
-    components and expose to user)
-  - make classes for builtin types and remove Type
+  - define initialization semantics, especially when inheritance is involved
+  - make fields and methods out of its internal components of class and expose
+    to user
+  - remove Type
   - inheritance (would allow general things like Callables and Exceptions) and
-    superclass references (call it `dad`)
-  - clarify difference between class and type (improve type checking)
+    superclass references. right now, inheritance can be done internally (not
+    specifiable in user classes) and you can't access super things
+  - remove type
   - (?) allow methods to be added dynamically to a class ([Section 12.5](https://craftinginterpreters.com/classes.html#methods-on-classes))
-  - unify Field (in `Expr.v3`) and base ClassObject
   - should lookups be helped by the class? isn't that the whole point of class-
     based objects?
 * tier1: bytecode
