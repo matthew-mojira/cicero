@@ -116,7 +116,6 @@ class ExprReader extends TextReader {
 									return null;
 								}
 							}
-							req1(')');
 
 							return Expr.new(ExprData.Cond(cases.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
