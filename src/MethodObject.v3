@@ -1,18 +1,9 @@
-class MethodObject(obj: Object, params_: Array<string>, body_: ExprObject) extends FuncObject(params_, body_) {
+class MethodObject(obj: Object, id_: string, params_: Array<string>, code_: CodeObject) extends FuncObject(id_, params_, code_) {
 	def typeof()  -> Type   { return Type.Method; }
 	def display() -> string { return "<method>"; }
 	def isTrue()  -> bool   { return true; }
 }
 
 component MethodObjects {
-	// the params does not include the implicit obj
-	def fromBuiltin(obj: Object, params: int, func: Range<Object> -> (Object, bool)) -> MethodObject {
-		def arr: Array<string> = Array.new(params);
-		for (i < params) {
-			arr[i] = Strings.format1("arg%d", i);
-		}
-		return MethodObject.new(obj, arr, ExprObject.new(Impl.Virgil(func)));
-	}
-	
-	def classMethod = ClassObject.new(Objects.classBase, "method", []);
+	def classMethod = ClassObject.new("method", FuncObjects.classFunc, null, [], []);
 }

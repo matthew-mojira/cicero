@@ -1,4 +1,8 @@
-class ClassObject(superclass: ClassObject, name: string, classFields: Array<Field>) extends Object {
+class ClassObject(name: string, 
+		superclass: ClassObject, 
+		init: CodeObject,
+		classFields: Array<(string, CodeObject)>, 
+		classMethods: Array<FuncObject>) extends Object {
 	new() super(ClassObjects.classClass) {}
 
 	def typeof()  -> Type   { return Type.Class; }
@@ -7,6 +11,6 @@ class ClassObject(superclass: ClassObject, name: string, classFields: Array<Fiel
 }
 
 component ClassObjects {
-	def classClass = ClassObject.new(Objects.classBase, "class", []);
+	def classClass = ClassObject.new("class", Objects.classBase, null, [], []);
 }
 

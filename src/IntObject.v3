@@ -24,7 +24,7 @@ component IntObjects {
 		return newInt;
 	}
 
-	def classInt = ClassObject.new(Objects.classBase, "func", []);
+	def classInt = ClassObject.new("int", Objects.classBase, null, [], []);
 
 	/* arithmetic operations on int values */
 	def add(int1: IntObject, int2: IntObject) -> IntObject {

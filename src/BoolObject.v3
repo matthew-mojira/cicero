@@ -11,5 +11,5 @@ component BoolObjects {
 	def trueObject  = BoolObject.new(true);
 	def falseObject = BoolObject.new(false);
 
-	def classBool = ClassObject.new(Objects.classBase, "bool", []);
+	def classBool = ClassObject.new("bool", Objects.classBase, null, [], []);
 }

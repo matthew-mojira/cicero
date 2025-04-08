@@ -1,4 +1,4 @@
-class FuncObject(params: Array<string>, expr: ExprObject) extends Object {
+class FuncObject(id: string, params: Array<string>, code: CodeObject) extends Object {
 	new() super(FuncObjects.classFunc) {}
 
 	def typeof()  -> Type   { return Type.Func; }
@@ -7,12 +7,5 @@ class FuncObject(params: Array<string>, expr: ExprObject) extends Object {
 }
 
 component FuncObjects {
-	def fromBuiltin(params: int, func: Range<Object> -> (Object, bool)) -> FuncObject {
-		def arr: Array<string> = Array.new(params);
-		for (i < params) {
-			arr[i] = Strings.format1("arg%d", i);
-		}
-		return FuncObject.new(arr, ExprObject.new(Impl.Virgil(func)));
-	}
-	def classFunc = ClassObject.new(Objects.classBase, "func", []);
+	def classFunc = ClassObject.new("func", Objects.classBase, null, [], []);
 }

@@ -21,5 +21,5 @@ class ListObject extends Object {
 }
 
 component ListObjects {
-	def classList = ClassObject.new(Objects.classBase, "list", []);
+	def classList = ClassObject.new("list", Objects.classBase, null, [], []);
 }

@@ -1,4 +1,21 @@
-type Maybe<T> {
-	case Just(elt: T);
-	case Nothing;
+type Maybe<T> #unboxed {
+	case Just(elt: T) {
+		def maybe<U>(u: U, f: T -> U) -> U { return f(elt); }
+		def isJust() -> bool { return true; }
+		def isNothing() -> bool { return false; }
+		def fromMaybe(other: T) -> T { return elt; }
+		def fromJust() -> T { return elt; }
+	}
+	case Nothing {
+		def maybe<U>(u: U, f: T -> U) -> U { return u; }
+		def isJust() -> bool { return false; }
+		def isNothing() -> bool { return true; }
+		def fromMaybe(other: T) -> T { return other; }
+	}
+
+	def maybe<U>(u: U, f: T -> U) -> U;
+	def isJust() -> bool;
+	def isNothing() -> bool;
+	def fromMaybe(other: T) -> T;
+	def fromJust() -> T;
 }

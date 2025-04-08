@@ -1,39 +1,25 @@
 class Object(cls: ClassObject) {
+	// who is responsible for initializing fields?
 	def var fields: HashMap<string, Object> = Strings.newMap();
-	def var lazyFields: HashMap<string, Field.LazyMethod> = Strings.newMap();
 
 	new() {
-		System.puts("new :");
+		// System.puts("new :");
 		// Object initializes lazy fields (methods)
+	}
+
+	def getField(name: string) -> Maybe<Object> {
+		if (fields.has(name)) return Maybe.Just(fields[name]);
+		// Methods are lazily bound, that is, they are not initialized until
+		// it is requested for the first time.
 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
-			System.puts(clazz.name);
-			System.ln();
-			for (field in clazz.classFields) {
-				match (field) {
-					LazyMethod(name, _, _) => {
-						System.puts(name);
-						if (lazyFields.has(name)) { System.ln(); continue; }
-						System.puts(name);
-						System.ln();
-						lazyFields[name] = Field.LazyMethod.!(field);
-					}
-					_ => ;
+			for (func in clazz.classMethods) {
+				if (Strings.equal(func.id, name)) {
+					def m = MethodObject.new(this, func.id, func.params, func.code);
+					fields[name] = m;
+					return Maybe.Just(m);
 				}
 			}
 
-		}
-	}
-
-	/* Some fields are lazily bound.
-	 */
-	def getField(name: string) -> Maybe<Object> {
-		if (fields.has(name)) return Maybe.Just(fields[name]);
-		// Some fields are lazily bound.
-		if (lazyFields.has(name)) {
-			def field = lazyFields[name];
-			def obj = MethodObjects.fromBuiltin(this, field.paramc, field.method);
-			fields[name] = obj;
-			return Maybe.Just(obj);
 		}
 		return Maybe.Nothing;
 	}
@@ -45,8 +31,8 @@ class Object(cls: ClassObject) {
 }
 
 component Objects {
-	def classBase = ClassObject.new(null, "base", [Field.LazyMethod("fields", 0, o_fields),
-							Field.LazyMethod("display", 0, o_display)]);
+	def classBase = ClassObject.new("base", null, null, [], []);
+			// [Field.LazyMethod("fields", 0, o_fields), Field.LazyMethod("display", 0, o_display)]);
 }
 
 def o_fields(args: Range<Object>) -> (Object, bool) {

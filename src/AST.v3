@@ -1,0 +1,20 @@
+type AST {
+	case Lit(val: Object);
+	case Id(id: string);
+	case Apply(tgt: Code, args: Array<Code>);
+	case If(cond: Code, exprT: Code, exprF: Code);
+	case Cond(cases: Array<(Code, Code)>);
+	case Raise(exn: Code);
+	// TODO you raise a value as an exception, but when you catch the exception
+	// you cannot catch the value
+	case Catch(try: Code, catch: Code);
+	// this is a function expression (which evaluates to function value)
+	case Func(id: string, params: Array<string>, body: Code);
+	case Assign(id: string, assn: Code);
+	case While(cond: Code, body: Code);
+	case Begin(exprs: Array<Code>);
+	case GetField(field: string, obj: Code);
+	case SetField(field: string, obj: Code, val: Code);
+	case Class(id: string, superclass: Maybe<Code>, init: Maybe<Code>, fields: Array<(string, Code)>, methods: Array<AST.Func>);
+	case New(expr: Code);
+}

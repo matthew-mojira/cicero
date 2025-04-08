@@ -10,7 +10,7 @@ def main(args: Array<string>) -> int {
 			var scanner = Scanner.new();
 			while (true) {
 				System.puts("cicero> ");
-				var reader = ExprReader.new("<repl>", scanner.nextLine());
+				var reader = Parser.new("<repl>", scanner.nextLine());
 				if (reader.ok) {
 					def exprs = reader.getExprs();
 					
@@ -32,7 +32,7 @@ def main(args: Array<string>) -> int {
 			}
 		}
 		1 => {
-			var reader = ExprReader.new(args[0], System.fileLoad(args[0]));
+			var reader = Parser.new(args[0], System.fileLoad(args[0]));
 			if (reader.ok) {
 				def exprs = reader.getExprs();
 

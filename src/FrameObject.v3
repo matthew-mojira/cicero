@@ -1,9 +1,9 @@
-// TODO generalize code to ExprObject (and maybe rename ExprObject to CodeObject)
-class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr) extends Object {
+class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: CodeObject) extends Object {
 	var globals: HashMap<string, Object>;
 
 	// you could replace this with a higher-tier evaluation function
-	var evalFunc: Expr -> Object;
+	// TODO code doesn't have to be AST
+	var evalFunc: Code -> Object;
 
 	// status flags as the result of evaluation
 	var exn: bool = false;  // whether evaluation threw uncaught exception
@@ -19,14 +19,14 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 			globals = prev.globals;
 
 			// evaluate the frame
-			def v = evalFunc(code);
+			def v = evalFunc(code.code);
 			if (!exn)
 				val = v;
 		}
 	}
 
 	// special function for top-level frame to let it evaluate multiple expressions 
-	def eval(expr: Expr) {
+	def eval(expr: Code) {
 		if (prev != null) System.error("eval error", "attempted to evaluate expression not in top level");
 
 		def v = evalFunc(expr);
@@ -35,10 +35,10 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 		// XXX no return value, inspect the frame instead
 	}
 
-	private def tier0Eval(expr: Expr) -> Object {
+	private def tier0Eval(code: Code) -> Object {
 		var value: Object;
 
-		match (expr.data) {
+		match (code.ast) {
 			Lit(val) => value = val;
 			Id(id) => {
 				if (locals.has(id)) {
@@ -69,7 +69,7 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 
 				// function call
 				def fv = FuncObject.!(tgtVal);
-				def params = fv.params, code = fv.expr;
+				def params = fv.params, code = fv.code;
 
 				// arity check
 				assertArity(params.length, argv);
@@ -86,34 +86,33 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 					newLocals[params[i]] = argv[i];
 				}
 
-				match (code.impl) {
-					AST(expr) => {
-						// create new frames here!
-						def frame = FrameObject.new(this, newLocals, expr);
-						if (frame.exn) {
-							// rethrow
-							throw(frame.val);
-							return value;
-						}
-						value = frame.val;
+				if (code.code.tier < 0) {
+					// create new frames here!
+					def frame = FrameObject.new(this, newLocals, code);
+					if (frame.exn) {
+						// rethrow
+						throw(frame.val);
+						return value;
 					}
-					Virgil(func) => {
-						// if this is a method, add the object as the first argument
-						var vArgv = argv;
-						if (MethodObject.?(fv)) {
-							vArgv = Arrays.prepend(MethodObject.!(fv).obj, argv);							
-						}
-						// function call
-						def ret = func(vArgv);
-						def val = ret.0, fnExn = ret.1;
+					value = frame.val;
+				} else {
+					// virgil source
+					// if this is a method, add the object as the first argument
+					var vArgv = argv;
+					if (MethodObject.?(fv)) {
+						vArgv = Arrays.prepend(MethodObject.!(fv).obj, argv);					
+					}
+					// function call
+					def func = code.code.virgil;
+					def ret = func(vArgv);
+					def val = ret.0, fnExn = ret.1;
 
-						if (fnExn) {
-							throw(val);
-							return value;
-						} else {
-							value = val;
-						}	
-					}
+					if (fnExn) {
+						throw(val);
+						return value;
+					} else {
+						value = val;
+					}	
 				}
 			}
 			If(exprC, exprT, exprF) => {
@@ -148,13 +147,19 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 					value = e;
 				}
 			}
-			Func(id, params, body) => {
-				def f = FuncObject.new(params, ExprObject.new(Impl.AST(body)));
+			Func(id, params, code) => {
+				def c = CodeObject.new(code);
+				def f = FuncObject.new(id, params, c);
 				locals[id] = f;
 				value = f;
 			}
-			Class(id, fields) => {
-				def c = ClassObject.new(Objects.classBase, id, fields);
+			Class(id, superclass, init, fields, methods) => {
+				var i: CodeObject = if(init.isJust(), CodeObject.new(init.fromJust()), null);
+				var s: ClassObject = Objects.classBase;
+				// TODO match on {superclass} and evaluate expression
+				def f: Array<(string, CodeObject)> = Arrays.map(fields, codeToCodeObject);
+				def m: Array<FuncObject> = Arrays.map(methods, funcToFuncObject);
+				def c = ClassObject.new(id, s, i, f, m);
 				locals[id] = c;
 				value = c;
 			}
@@ -222,11 +227,11 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 					return value;
 				}
 			}
-			SetField(field, expr, newExpr) => {
+			SetField(field, expr, newCode) => {
 				var obj = tier0Eval(expr);
 				if (exn) return value;
 
-				var val = tier0Eval(newExpr);
+				var val = tier0Eval(newCode);
 				if (exn) return value;
 
 				value = obj.fields[field];
@@ -248,37 +253,16 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 				def clsObj = ClassObject.!(cls);
 				def obj = ObjectObject.new(clsObj);
 
-				// superclass order
+				// initialize fields in superclass order
 				for (cls = clsObj; cls != null; cls = cls.superclass) {
-					System.puts(cls.name);
-					System.ln();
 					for (field in cls.classFields) {
-						match (field) {
-							Field(name, expr) => {
-								// check if subclass has already defined field
-								if (obj.fields.has(name)) continue;
-								if (obj.lazyFields.has(name)) continue;
+						def name = field.0, expr = field.1;
+						// FIXME this is incorrect if a child class overrides a field with a method
+						if (obj.fields.has(name)) continue;
 
-								var v = tier0Eval(expr);
-								if (exn) return value;
-								obj.fields[name] = v;
-							}
-							Method(name, params, body) => {
-								// check if subclass has already defined field
-								if (obj.fields.has(name)) continue;
-								if (obj.lazyFields.has(name)) continue;
-
-								def m = MethodObject.new(obj, params, ExprObject.new(Impl.AST(body)));
-								obj.fields[name] = m;
-							}
-							/* Lazy methods are initialized in the Object class, since it does not require
-							 * evaluation and the user cannot define them.
-							 * 
-							 * This decoupling complicates override order if a subclass of the base
-							 * class also has a lazy method. (Right now, it doesn't)
-							 */
-							LazyMethod(name, _, _) => ;
-						}
+						var v = tier0Eval(expr.code);
+						if (exn) return value;
+						obj.fields[name] = v;
 					}
 				}
 				return obj;
@@ -313,5 +297,15 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Expr
 }
 
 component FrameObjects {
-	def classFrame = ClassObject.new(Objects.classBase, "frame", []);
+	def classFrame = ClassObject.new("frame", Objects.classBase, null, [], []);
 }
+
+def codeToCodeObject(p: (string, Code)) -> (string, CodeObject) {
+	return (p.0, CodeObject.new(p.1));
+}
+
+def funcToFuncObject(f: AST.Func) -> FuncObject {
+	return FuncObject.new(f.id, f.params, CodeObject.new(f.body));	
+}
+
+

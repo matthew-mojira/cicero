@@ -1,0 +1,21 @@
+class Code(range: FileRange) {
+	private new() {}
+	def var virgil: Range<Object> -> (Object, bool);
+	def var ast: AST;
+	def var tier: int;
+}
+
+component Codes {
+	def fromVirgil(fn: Range<Object> -> (Object, bool)) -> Code {
+		def code = Code.new(null);
+		code.virgil = fn;
+		code.tier = -1;
+		return code;
+	}
+	def fromAST(ast: AST, range: FileRange) -> Code {
+		def code = Code.new(range);
+		code.ast = ast;
+		code.tier = 0;
+		return code;
+	}
+}

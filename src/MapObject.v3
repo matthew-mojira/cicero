@@ -9,5 +9,5 @@ class MapObject extends Object {
 }
 
 component MapObjects {
-	def classMap = ClassObject.new(Objects.classBase, "map", []);
+	def classMap = ClassObject.new("map", Objects.classBase, null, [], []);
 }
