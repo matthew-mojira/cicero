@@ -2,25 +2,27 @@ class Object(cls: ClassObject) {
 	// who is responsible for initializing fields?
 	def var fields: HashMap<string, Object> = Strings.newMap();
 
+	// Builtin objects that are instantiated within the runtime need this
+	// constructor to be implemented so that the fields are initialized
+	// properly
 	new() {
-		// System.puts("new :");
-		// Object initializes lazy fields (methods)
+		fields["class"] = cls;
 	}
 
 	def getField(name: string) -> Maybe<Object> {
 		if (fields.has(name)) return Maybe.Just(fields[name]);
 		// Methods are lazily bound, that is, they are not initialized until
 		// it is requested for the first time.
-		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
-			for (func in clazz.classMethods) {
-				if (Strings.equal(func.id, name)) {
-					def m = MethodObject.new(this, func.id, func.params, func.code);
-					fields[name] = m;
-					return Maybe.Just(m);
-				}
-			}
-
-		}
+ 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
+ 			for (func in clazz.classMethods) {
+ 				if (Strings.equal(func.id, name)) {
+ 					def m = MethodObject.new(this, func.id, func.params, func.code);
+ 					fields[name] = m;
+ 					return Maybe.Just(m);
+ 				}
+ 			}
+ 
+ 		}
 		return Maybe.Nothing;
 	}
 
@@ -31,8 +33,24 @@ class Object(cls: ClassObject) {
 }
 
 component Objects {
-	def classBase = ClassObject.new("base", null, null, [], []);
-			// [Field.LazyMethod("fields", 0, o_fields), Field.LazyMethod("display", 0, o_display)]);
+	def classBase = ClassObject.new("base", null,
+			// init
+			CodeObjects.fromVirgil(o_init),
+			// fields
+			[("class", poopcrap)], 
+			// methods
+			[FuncObject.new("fields", [], CodeObjects.fromVirgil(o_fields)),
+			 FuncObject.new("display", [], CodeObjects.fromVirgil(o_display))]
+			);
+}
+
+def poopcrap = CodeObjects.fromVirgil(PoopCrapObjects.virgilPoopCrap);
+
+def o_init(args: Range<Object>) -> (Object, bool) {
+	System.puts("init\n");
+	def obj = args[0];
+	obj.fields["class"] = obj.cls;
+	return (PoopCrapObjects.instance, false);
 }
 
 def o_fields(args: Range<Object>) -> (Object, bool) {

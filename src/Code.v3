@@ -1,7 +1,10 @@
+// TODO combine Code and CodeObject
 class Code(range: FileRange) {
 	private new() {}
+	
 	def var virgil: Range<Object> -> (Object, bool);
 	def var ast: AST;
+
 	def var tier: int;
 }
 

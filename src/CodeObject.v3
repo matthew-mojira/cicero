@@ -7,7 +7,7 @@ class CodeObject(code: Code) extends Object {
 }
 
 component CodeObjects {
-	def fromBuiltin(func: Range<Object> -> (Object, bool)) -> CodeObject {
+	def fromVirgil(func: Range<Object> -> (Object, bool)) -> CodeObject {
 		return CodeObject.new(Codes.fromVirgil(func));
 	}
 	def classCode = ClassObject.new("code", Objects.classBase, null, [], []);
