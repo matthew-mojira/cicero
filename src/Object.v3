@@ -4,7 +4,8 @@ class Object(cls: ClassObject) {
 
 	// Builtin objects that are instantiated within the runtime need this
 	// constructor to be implemented so that the fields are initialized
-	// properly
+	// properly, but it means the field is re-initialized when instantiating
+	// objects of a user-defined class
 	new() {
 		fields["class"] = cls;
 	}
@@ -21,7 +22,6 @@ class Object(cls: ClassObject) {
  					return Maybe.Just(m);
  				}
  			}
- 
  		}
 		return Maybe.Nothing;
 	}
@@ -47,7 +47,6 @@ component Objects {
 def poopcrap = CodeObjects.fromVirgil(PoopCrapObjects.virgilPoopCrap);
 
 def o_init(args: Range<Object>) -> (Object, bool) {
-	System.puts("init\n");
 	def obj = args[0];
 	obj.fields["class"] = obj.cls;
 	return (PoopCrapObjects.instance, false);

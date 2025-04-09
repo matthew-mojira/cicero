@@ -5,7 +5,7 @@ class Code(range: FileRange) {
 	def var virgil: Range<Object> -> (Object, bool);
 	def var ast: AST;
 
-	def var tier: int;
+	def var tier: i2;
 }
 
 component Codes {

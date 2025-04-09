@@ -1,17 +1,15 @@
-class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: CodeObject) extends Object {
+class FrameObject(prev: FrameObject, 
+		locals: HashMap<string, Object>, //  \
+		args: Array<Object>,             //  / XXX combine these together
+		code: CodeObject) extends Object {
 	var globals: HashMap<string, Object>;
-
-	// you could replace this with a higher-tier evaluation function
-	// TODO code doesn't have to be AST
-	var evalFunc: Code -> Object;
 
 	// status flags as the result of evaluation
 	var exn: bool = false;  // whether evaluation threw uncaught exception
-	var val: Object;         // result of evaluation or exception value
+	var val: Object;        // result of evaluation or exception value
 
 	/* Initializing the frame also evaluates it (except for top-level frames). */
 	new() super(FrameObjects.classFrame) {
-		evalFunc = tier0Eval;
 		if (prev == null) {
 			// this is the top-level frame, where locals = globals
 			globals = locals;
@@ -19,20 +17,29 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 			globals = prev.globals;
 
 			// evaluate the frame
-			def v = evalFunc(code.code);
-			if (!exn)
-				val = v;
+			eval(code.code);
 		}
 	}
 
-	// special function for top-level frame to let it evaluate multiple expressions 
-	def eval(expr: Code) {
-		if (prev != null) System.error("eval error", "attempted to evaluate expression not in top level");
-
-		def v = evalFunc(expr);
+	/* You should inspect the frame to determine if the frame is meaningful. If
+	 * there is no exception in the frame, then you can accept the value.
+	 * Otherwise, ignore the return value. It is usually, but not guaranteed, to
+	 * be null.
+	 */
+	def eval(code: Code) -> Object {
+		// dispatch on the code tier
+		def evalFuncs = [virgilEval, tier0Eval];
+		def v = evalFuncs[code.tier + 1](code);
 		if (!exn)
 			val = v;
-		// XXX no return value, inspect the frame instead
+		return v;
+	}
+
+	private def virgilEval(code: Code) -> Object {
+		def ret = code.virgil(args);
+		val = ret.0;
+		exn = ret.1;
+		return val;
 	}
 
 	private def tier0Eval(code: Code) -> Object {
@@ -50,99 +57,78 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 				}
 			}
 			Apply(tgt, args) => {
-				def tgtVal = tier0Eval(tgt);
-				// remember: these are recursive calls within `tier0Eval` but
-				// have nothing to do with evaluation frames in the language
+				def tgtVal = eval(tgt);
 				if (exn) return value;
 				// FIXME improve type checking
 				if (!FuncObject.?(tgtVal)) {
 					assertType(Type.Func, tgtVal);
 					return value;
 				}
+				// function code
+				def fv = FuncObject.!(tgtVal);
+				def params = fv.params, code = fv.code;
 
-				def argv: Array<Object> = Array.new(args.length);
+				// evaluate argument values
+				var argv: Array<Object> = Array.new(args.length);
 				for (i < argv.length) {
-					def arg = tier0Eval(args[i]);
+					def arg = eval(args[i]);
 					if (exn) return value;
 					argv[i] = arg;
 				}
-
-				// function call
-				def fv = FuncObject.!(tgtVal);
-				def params = fv.params, code = fv.code;
 
 				// arity check
 				assertArity(params.length, argv);
 				if (exn) return value;
 
+				// create locals
 				def newLocals: HashMap<string, Object> = Strings.newMap();
-				// method info
-				if (MethodObject.?(fv)) {
-					// FIXME magic string
-					newLocals["self"] = MethodObject.!(fv).obj;
-				}
-				// arguments
 				for (i < argv.length) {
 					newLocals[params[i]] = argv[i];
 				}
 
-				if (code.code.tier >= 0) {
-					// create new frames here!
-					def frame = FrameObject.new(this, newLocals, code);
-					if (frame.exn) {
-						// rethrow
-						throw(frame.val);
-						return value;
-					}
-					value = frame.val;
-				} else {
-					// virgil source
-					// if this is a method, add the object as the first argument
-					var vArgv = argv;
-					if (MethodObject.?(fv)) {
-						vArgv = Arrays.prepend(MethodObject.!(fv).obj, argv);					
-					}
-					// function call
-					def func = code.code.virgil;
-					def ret = func(vArgv);
-					def val = ret.0, fnExn = ret.1;
-
-					if (fnExn) {
-						throw(val);
-						return value;
-					} else {
-						value = val;
-					}	
+				// if this is a method, insert extra locals or arguments
+				if (MethodObject.?(fv)) {
+					newLocals["self"] = MethodObject.!(fv).obj;
+					argv = Arrays.prepend(MethodObject.!(fv).obj, argv);					
 				}
+
+				// create new frame (and evaluate)
+				def frame = FrameObject.new(this, newLocals, argv, code);
+				if (frame.exn) {
+					// rethrow
+					throw(frame.val);
+					return value;
+				}
+				value = frame.val;
 			}
 			If(exprC, exprT, exprF) => {
-				def cond = tier0Eval(exprC);
+				def cond = eval(exprC);
 				if (exn) return value;
 
 				if (cond.isTrue()) {
-					def v = tier0Eval(exprT);
+					def v = eval(exprT);
 					if (exn) return value;
 					value = v;
 				} else {
-					def v = tier0Eval(exprF);
+					def v = eval(exprF);
 					if (exn) return value;
 					value = v;
 				}
 			}
 			Raise(expr) => {
-				def v = tier0Eval(expr);
+				def v = eval(expr);
 				if (exn) return value;
 
 				throw(v);
 			}
 			Catch(try, catch) => {
-				def v = tier0Eval(try);
+				def v = eval(try);
 				if (!exn) {
 					value = v;
 				} else {
 					// catch exception
 					exn = false;
-					def e = tier0Eval(catch);
+					def e = eval(catch);
 					if (exn) return value;
 					value = e;
 				}
@@ -164,7 +150,7 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 				value = c;
 			}
 			Assign(id, expr) => {
-				def v = tier0Eval(expr);
+				def v = eval(expr);
 				if (exn) return value;
 				locals[id] = v;
 				value = v;
@@ -176,10 +162,10 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 					def cond = c.0, expr = c.1;
 
 					// check cond
-					def t = tier0Eval(cond);
+					def t = eval(cond);
 					if (exn) return value;
 					if (t.isTrue()) {
-						def v = tier0Eval(expr);
+						def v = eval(expr);
 						if (exn) return value;
 						value = v;
 
@@ -194,7 +180,7 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 			}
 			While(cond, body) => {
 				while (true) {
-					def v = tier0Eval(cond);
+					def v = eval(cond);
 					if (exn) return value;
 
 					if (!v.isTrue()) {
@@ -202,14 +188,14 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 						break;
 					}
 
-					tier0Eval(body);
+					eval(body);
 					if (exn) return value;
 				}
 			}
 			Begin(exprs) => {
 				var last: Object;
 				for (expr in exprs) {
-					def v = tier0Eval(expr);
+					def v = eval(expr);
 					if (exn) return value;
 
 					last = v;
@@ -217,7 +203,7 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 				value = last;
 			}
 			GetField(field, expr) => {
-				var obj = tier0Eval(expr);
+				var obj = eval(expr);
 				if (exn) return value;
 
 				match (obj.getField(field)) {
@@ -228,10 +214,10 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 				}
 			}
 			SetField(field, expr, newCode) => {
-				var obj = tier0Eval(expr);
+				var obj = eval(expr);
 				if (exn) return value;
 
-				var val = tier0Eval(newCode);
+				var val = eval(newCode);
 				if (exn) return value;
 
 				value = obj.fields[field];
@@ -244,7 +230,7 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 				}
 			}
 			New(expr) => {
-				var cls = tier0Eval(expr);
+				var cls = eval(expr);
 				if (exn) return value;
 
 				assertType(Type.Class, cls);
@@ -267,7 +253,7 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 
 						// XXX hackfix
 						if (expr == null) continue;
-						var v = tier0Eval(expr.code);
+						var v = eval(expr.code);
 						if (exn) return value;
 						obj.fields[name] = v;
 					}
@@ -280,33 +266,20 @@ class FrameObject(prev: FrameObject, locals: HashMap<string, Object>, code: Code
 					// call initializer
 					if (cls.init != null) {
 						def code = cls.init;
-						if (code.code.tier >= 0) {
-							// create new frames here!
-							def newLocals: HashMap<string, Object> = Strings.newMap();
-							newLocals["self"] = obj;
 
-							def frame = FrameObject.new(this, newLocals, code);
-							if (frame.exn) {
-								// rethrow
-								throw(frame.val);
-								return value;
-							}
-							value = frame.val;
-						} else {
-							// function call
-							def func = code.code.virgil;
-							def ret = func([obj]);
-							def val = ret.0, fnExn = ret.1;
+						def newLocals: HashMap<string, Object> = Strings.newMap();
+						newLocals["self"] = obj;
+						def argv: Array<Object> = [obj];
 
-							if (fnExn) {
-								throw(val);
-								return value;
-							} else {
-								value = val;
-							}	
+						// create new frames here!
+						def frame = FrameObject.new(this, newLocals, argv, code);
+						if (frame.exn) {
+							// rethrow
+							throw(frame.val);
+							return value;
 						}
+						value = frame.val;
 					}
-					System.ln();
 				}
 
 				return obj;

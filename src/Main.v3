@@ -3,7 +3,7 @@ def main(args: Array<string>) -> int {
 	for (builtin in Builtin.set.all) {
 		builtins[builtin.id] = builtin.val;
 	}
-	def frame = FrameObject.new(null, builtins, null);
+	def frame = FrameObject.new(null, builtins, null, null);
 
 	match (args.length) {
 		0 => {
