@@ -1,0 +1,16 @@
+0
+1
+2
+3
+45
+6
+7
+-234234
+; if a number is too big to be parsed as an integer, it is parsed as an
+; identifier, which is not good
+-234809238
+129038123
+()()()()
+(;i put a comment inside your poopcrap
+          )
+

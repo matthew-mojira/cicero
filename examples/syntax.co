@@ -1,0 +1,6 @@
+(func (f x y) {
+  (set z (+ x y))
+  (+ x z)
+})
+
+(f 1 2)
