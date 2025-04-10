@@ -10,21 +10,28 @@
   - recursive functions (this might work already? but you must know one way or
     the other!)
   - coroutines (for loop)
+  - optional, variadic, and keyword arguments
 * frames
   - stacktraces (catch values! built-in exception classes?)
   - return
 * classes
   - define initialization semantics, especially when inheritance is involved
   - make fields and methods out of its internal components of class and expose
-    to user
-  - remove Type
+    to user (but how might this work when a user can change the internal
+    properties of a class?)
   - inheritance (would allow general things like Callables and Exceptions) and
     superclass references. right now, inheritance can be done internally (not
     specifiable in user classes) and you can't access super things
-  - remove type
-  - (?) allow methods to be added dynamically to a class ([Section 12.5](https://craftinginterpreters.com/classes.html#methods-on-classes))
+  - (?) allow methods to be added dynamically to a class ([Section 12.5](https://craftinginterpreters.com/classes.html#methods-on-classes)) perhaps by allowing them
+    to be created arbitarily
   - should lookups be helped by the class? isn't that the whole point of class-
     based objects?
+  - casting? (not necessary because of duck typing?)
+  - document your final decisions about class semantics!
+  - idea: anything that's not necessary to back up the internal structure of an
+    object (i.e. the `int` field of IntObject) should be a field and everything
+    should access this field (allowing the user to change things)
+  - init syntax, better constructors
 * tier1: bytecode
   - generalize frame evaluator
 
@@ -117,13 +124,3 @@ it:
 
 But that may complicate things if you want immutable fields and to change what
 that initial (final) value is based on multiple initializers.
-
-## circular definitions
-
-class appears to be circularly defined (for builtin methods, we needed to have
-lazy methods). I think we could solve this by removing the base class, and
-have the Object class assume the base class properties
-
-Other new problem: this allows users to instantiate objects of the built-in
-class, but these are not backed by the true virgil class that is needed to
-encode the internal information.

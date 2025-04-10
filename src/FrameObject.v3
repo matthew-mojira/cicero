@@ -21,7 +21,7 @@ class FrameObject(prev: FrameObject,
 		}
 	}
 
-	/* You should inspect the frame to determine if the frame is meaningful. If
+	/* You should inspect the frame to determine if the value is meaningful. If
 	 * there is no exception in the frame, then you can accept the value.
 	 * Otherwise, ignore the return value. It is usually, but not guaranteed, to
 	 * be null.
