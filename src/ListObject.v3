@@ -3,7 +3,6 @@ class ListObject extends Object {
 
 	def list: Vector<Object> = Vector.new();
 
-	def typeof()  -> Type   { return Type.List; }
 	def display() -> string {
 		def buf = StringBuilder.new();
 		buf.putc('[');

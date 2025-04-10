@@ -1,7 +1,6 @@
 class BoolObject(val: bool) extends Object {
 	private new () super(BoolObjects.classBool) {}
-
-	def typeof()  -> Type   { return Type.Bool; }
+	
 	def display() -> string { return if(val, "true", "false"); }
 	def isTrue()  -> bool   { return val; }
 }

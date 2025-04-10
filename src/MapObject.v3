@@ -3,7 +3,6 @@ class MapObject extends Object {
 
 	def map: Map<string, Object> = Strings.newMap();
 
-	def typeof()  -> Type   { return Type.Map; }
 	def display() -> string { return "map"; }
 	def isTrue()  -> bool   { return true; }
 }

@@ -1,7 +1,6 @@
 class IntObject(val: long) extends Object {
 	private new() super(IntObjects.classInt) {}
 
-	def typeof()  -> Type   { return Type.Int; }
 	def display() -> string { return Strings.format1("%d", val); }
 	def isTrue()  -> bool   { return true; }
 }

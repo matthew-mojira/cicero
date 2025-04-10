@@ -1,7 +1,6 @@
 class CodeObject(code: Code) extends Object {
 	new() super(CodeObjects.classCode) {}
 
-	def typeof()  -> Type   { return Type.Expr; }
 	def display() -> string { return "<code>"; }
 	def isTrue()  -> bool   { return true; }
 }

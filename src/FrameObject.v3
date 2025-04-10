@@ -59,11 +59,9 @@ class FrameObject(prev: FrameObject,
 			Apply(tgt, args) => {
 				def tgtVal = eval(tgt);
 				if (exn) return value;
-				// FIXME improve type checking
-				if (!FuncObject.?(tgtVal)) {
-					assertType(Type.Func, tgtVal);
-					return value;
-				}
+				assertType(FuncObjects.classFunc, tgtVal);
+				if (exn) return value;
+
 				// function code
 				def fv = FuncObject.!(tgtVal);
 				def params = fv.params, code = fv.code;
@@ -87,7 +85,7 @@ class FrameObject(prev: FrameObject,
 				}
 
 				// if this is a method, insert extra locals or arguments
-				if (MethodObject.?(fv)) {
+				if (fv.instanceOf(MethodObjects.classMethod)) {
 					newLocals["self"] = MethodObject.!(fv).obj;
 					argv = Arrays.prepend(MethodObject.!(fv).obj, argv);					
 				}
@@ -233,7 +231,7 @@ class FrameObject(prev: FrameObject,
 				var cls = eval(expr);
 				if (exn) return value;
 
-				assertType(Type.Class, cls);
+				assertType(ClassObjects.classClass, cls);
 				if (exn) return value;
 
 				def clsObj = ClassObject.!(cls);
@@ -289,7 +287,6 @@ class FrameObject(prev: FrameObject,
 		return value;
 	}
 	
-	def typeof()  -> Type   { return Type.Frame; }
 	def display() -> string { return "<frame>"; }
 	def isTrue()  -> bool   { return true; }
 
@@ -301,9 +298,9 @@ class FrameObject(prev: FrameObject,
 		val = value;
 	}
 
-	private def assertType(exp: Type, val: Object) {
-		if (exp != val.typeof())
-			throw(StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.typeof().display())));
+	private def assertType(exp: ClassObject, val: Object) {
+		if (!val.instanceOf(exp))
+			throw(StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.cls.display())));
 	}
 
 	private def assertArity(argc: int, vals: Range<Object>) {

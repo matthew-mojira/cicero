@@ -1,7 +1,6 @@
 class FuncObject(id: string, params: Array<string>, code: CodeObject) extends Object {
 	new() super(FuncObjects.classFunc) {}
 
-	def typeof()  -> Type   { return Type.Func; }
 	def display() -> string { return "<func>"; }
 	def isTrue()  -> bool   { return true; }
 }

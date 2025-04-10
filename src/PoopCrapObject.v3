@@ -1,7 +1,6 @@
 class PoopCrapObject extends Object {
 	private new() super(PoopCrapObjects.classPoopCrap) {}
 
-	def typeof()  -> Type   { return Type.PoopCrap; }
 	def display() -> string { return "poopcrap"; }
 	def isTrue()  -> bool   { return false; }
 }

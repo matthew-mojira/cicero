@@ -1,6 +1,9 @@
 class Object(cls: ClassObject) {
 	// who is responsible for initializing fields?
 	def var fields: HashMap<string, Object> = Strings.newMap();
+	// TODO make sense of built-in fields. For example, one can modify
+	// the class of an object by changing the class field, but does that
+	// really change the behavior? Should it even be allowed?
 
 	// Builtin objects that are instantiated within the runtime need this
 	// constructor to be implemented so that the fields are initialized
@@ -26,7 +29,12 @@ class Object(cls: ClassObject) {
 		return Maybe.Nothing;
 	}
 
-	def typeof() -> Type;
+	def instanceOf(otherCls: ClassObject) -> bool {
+ 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass)
+			if (clazz == otherCls) return true;
+		return false;
+	}
+
 	def display() -> string;
 	def isTrue() -> bool;
 

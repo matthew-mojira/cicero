@@ -1,7 +1,6 @@
 class StrObject(str: string) extends Object {
 	private new() super(StrObjects.classStr) {}
 
-	def typeof()  -> Type   { return Type.Str; }
 	def display() -> string { return Strings.format1("\"%s\"", str); }
 	def isTrue()  -> bool   { return true; }
 }

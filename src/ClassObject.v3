@@ -5,7 +5,6 @@ class ClassObject(name: string,
 		classMethods: Array<FuncObject>) extends Object {
 	new() super(ClassObjects.classClass) {}
 
-	def typeof()  -> Type   { return Type.Class; }
 	def display() -> string { return Strings.format1("<class '%s'>", name); }
 	def isTrue()  -> bool   { return true; }
 }
