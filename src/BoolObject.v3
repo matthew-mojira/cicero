@@ -3,21 +3,39 @@ class BoolObject(val: bool) extends Object {
 	
 	def display() -> string { return if(val, "true", "false"); }
 	def isTrue()  -> bool   { return val; }
+
+	def not() -> (Object, bool) { 
+		def b = if(val, BoolObjects.falseObject, BoolObjects.trueObject); 
+		return (b, false);
+	}
+	def and(b: BoolObject) -> (Object, bool) {
+		def a = if(val && b.val, BoolObjects.trueObject, BoolObjects.falseObject);
+		return (a, false);
+	}
+	def or(b: BoolObject) -> (Object, bool) {
+		def a = if(val || b.val, BoolObjects.trueObject, BoolObjects.falseObject);
+		return (a, false);
+	}
 }
 
+// XXX fix this
+def b: Array<ClassObject> = Array.new(1);
+
 component BoolObjects {
-	def classBool = ClassObject.new("bool", 
+	def classBool: ClassObject = 
+		ClassObject.new("bool", 
 				Objects.classBase, 
 				CodeObjects.virgilFail, 
 				[], 
-				[FuncObjects.fromVirgil("not", [], b_not)]);
+				[FuncObjects.fromVirgilMethod0("not", BoolObject.not),
+				 FuncObjects.fromVirgilMethod1("and", b, BoolObject.and),
+				 FuncObjects.fromVirgilMethod1("or", b, BoolObject.or)
+				]);
 
 	/* canonical instances of bool values */
 	def trueObject  = BoolObject.new(true);
 	def falseObject = BoolObject.new(false);
 }
 
-def b_not(args: Range<Object>) -> (Object, bool) {
-	return (if(BoolObject.!(args[0]).val, BoolObjects.falseObject, BoolObjects.trueObject), false);
-}
-
+// XXX and this 
+def thing = b[0] = BoolObjects.classBool;

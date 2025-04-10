@@ -56,16 +56,17 @@ class Object(cls: ClassObject) {
 component Objects {
 	def classBase = ClassObject.new("base", null,
 			// init
-			CodeObjects.fromVirgil(o_init),
+			null,
 			// fields
-			[("class", CodeObjects.virgilPoopCrap)],
+			[],
 			// methods
-			[FuncObjects.fromVirgil("fields", [], o_fields),
+			[FuncObjects.fromVirgil("class", [], o_getclass),
+			 FuncObjects.fromVirgil("fields", [], o_fields),
 			 FuncObjects.fromVirgil("display", [], o_display)]
 			);
 }
 
-def o_init(args: Range<Object>) -> (Object, bool) {
+def o_getclass(args: Range<Object>) -> (Object, bool) {
 	def obj = args[0];
 	obj.fields["class"] = obj.cls;
 	return (PoopCrapObjects.instance, false);
