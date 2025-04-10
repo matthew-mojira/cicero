@@ -6,9 +6,18 @@ class BoolObject(val: bool) extends Object {
 }
 
 component BoolObjects {
+	def classBool = ClassObject.new("bool", 
+				Objects.classBase, 
+				CodeObjects.virgilFail, 
+				[], 
+				[FuncObjects.fromVirgil("not", [], b_not)]);
+
 	/* canonical instances of bool values */
 	def trueObject  = BoolObject.new(true);
 	def falseObject = BoolObject.new(false);
-
-	def classBool = ClassObject.new("bool", Objects.classBase, null, [], []);
 }
+
+def b_not(args: Range<Object>) -> (Object, bool) {
+	return (if(BoolObject.!(args[0]).val, BoolObjects.falseObject, BoolObjects.trueObject), false);
+}
+

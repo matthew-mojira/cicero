@@ -1,10 +1,15 @@
-class FuncObject(id: string, params: Array<string>, code: CodeObject) extends Object {
-	new() super(FuncObjects.classFunc) {}
-
+class FuncObject(id: string, params: Array<string>, code: CodeObject, clz: ClassObject) extends Object(clz) {
 	def display() -> string { return "<func>"; }
 	def isTrue()  -> bool   { return true; }
 }
 
 component FuncObjects {
 	def classFunc = ClassObject.new("func", Objects.classBase, null, [], []);
+	// XXX must use this function to create functions
+	def newFunc(id: string, params: Array<string>, code: CodeObject) -> FuncObject {
+		return FuncObject.new(id, params, code, classFunc);
+	}
+	def fromVirgil(id: string, params: Array<string>, fn: Range<Object> -> (Object, bool)) -> FuncObject {
+		return newFunc(id, params, CodeObjects.fromVirgil(fn));
+	}
 }

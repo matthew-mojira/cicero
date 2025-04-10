@@ -18,20 +18,33 @@ class Object(cls: ClassObject) {
 		// Methods are lazily bound, that is, they are not initialized until
 		// it is requested for the first time.
  		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
+			// System.puts(clazz.name);
+			// System.puts(": ");
  			for (func in clazz.classMethods) {
+				// System.puts(func.id);
+				// System.puts(" ");
  				if (Strings.equal(func.id, name)) {
  					def m = MethodObject.new(this, func.id, func.params, func.code);
  					fields[name] = m;
  					return Maybe.Just(m);
  				}
  			}
+			System.ln();
  		}
 		return Maybe.Nothing;
 	}
 
 	def instanceOf(otherCls: ClassObject) -> bool {
- 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass)
-			if (clazz == otherCls) return true;
+		// System.puts(Strings.format1("This class is %s\n", this.cls.name));
+		// System.puts(Strings.format1("That class is %s\n", otherCls.name));
+ 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
+			// System.puts(Strings.format2("-> compare: %s == %s\n", clazz.name, otherCls.name));
+			if (clazz == otherCls) {
+				// System.puts("true\n");
+				return true;
+			}
+		}
+		// System.puts("false\n");
 		return false;
 	}
 
@@ -45,14 +58,12 @@ component Objects {
 			// init
 			CodeObjects.fromVirgil(o_init),
 			// fields
-			[("class", poopcrap)], 
+			[("class", CodeObjects.virgilPoopCrap)],
 			// methods
-			[FuncObject.new("fields", [], CodeObjects.fromVirgil(o_fields)),
-			 FuncObject.new("display", [], CodeObjects.fromVirgil(o_display))]
+			[FuncObjects.fromVirgil("fields", [], o_fields),
+			 FuncObjects.fromVirgil("display", [], o_display)]
 			);
 }
-
-def poopcrap = CodeObjects.fromVirgil(PoopCrapObjects.virgilPoopCrap);
 
 def o_init(args: Range<Object>) -> (Object, bool) {
 	def obj = args[0];

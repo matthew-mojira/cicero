@@ -10,9 +10,4 @@ component PoopCrapObjects {
 	def instance = PoopCrapObject.new();
 
 	def classPoopCrap = ClassObject.new("poopcrap", Objects.classBase, null, [], []);
-	
-	def virgilPoopCrap(range: Range<Object>) -> (Object, bool) {
-		if (range.length > 0) System.error("internal error", "poopcrap virgil > 0");
-		return (instance, false);
-	}
 }

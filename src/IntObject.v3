@@ -14,6 +14,8 @@ def i_istrue(vals: Range<Object>) -> (Object, bool) {
 }
 
 component IntObjects {
+	def classInt = ClassObject.new("int", Objects.classBase, null, [], []);
+
 	/* canonicalize int value instances */
 	def intObjects = HashMap<long, IntObject>.new(int.!, long.==);
 	def getIntObject(val: long) -> IntObject {
@@ -22,8 +24,6 @@ component IntObjects {
 		intObjects[val] = newInt;
 		return newInt;
 	}
-
-	def classInt = ClassObject.new("int", Objects.classBase, null, [], []);
 
 	/* arithmetic operations on int values */
 	def add(int1: IntObject, int2: IntObject) -> IntObject {

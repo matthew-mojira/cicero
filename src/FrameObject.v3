@@ -133,7 +133,7 @@ class FrameObject(prev: FrameObject,
 			}
 			Func(id, params, code) => {
 				def c = CodeObject.new(code);
-				def f = FuncObject.new(id, params, c);
+				def f = FuncObjects.newFunc(id, params, c);
 				locals[id] = f;
 				value = f;
 			}
@@ -319,7 +319,7 @@ def codeToCodeObject(p: (string, Code)) -> (string, CodeObject) {
 }
 
 def funcToFuncObject(f: AST.Func) -> FuncObject {
-	return FuncObject.new(f.id, f.params, CodeObject.new(f.body));	
+	return FuncObjects.newFunc(f.id, f.params, CodeObject.new(f.body));	
 }
 
 
