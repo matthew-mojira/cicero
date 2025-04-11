@@ -5,37 +5,36 @@ class BoolObject(val: bool) extends Object {
 	def isTrue()  -> bool   { return val; }
 
 	def not() -> (Object, bool) { 
-		def b = if(val, BoolObjects.falseObject, BoolObjects.trueObject); 
-		return (b, false);
+		return (BoolObjects.getBoolObject(!val), false);
 	}
-	def and(b: BoolObject) -> (Object, bool) {
-		def a = if(val && b.val, BoolObjects.trueObject, BoolObjects.falseObject);
-		return (a, false);
+	def and(that: BoolObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val && that.val), false);
 	}
-	def or(b: BoolObject) -> (Object, bool) {
-		def a = if(val || b.val, BoolObjects.trueObject, BoolObjects.falseObject);
-		return (a, false);
+	def or(that: BoolObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val || that.val), false);
 	}
 }
 
-// XXX fix this
-def b: Array<ClassObject> = Array.new(1);
+def b: Array<Class> = Array.new(1);
 
 component BoolObjects {
-	def classBool: ClassObject = 
-		ClassObject.new("bool", 
+	def classBool: Class = 
+		Class.new("bool", 
 				Objects.classBase, 
-				CodeObjects.virgilFail, 
+				Codes.virgilFail, 
 				[], 
-				[FuncObjects.fromVirgilMethod0("not", BoolObject.not),
-				 FuncObjects.fromVirgilMethod1("and", b, BoolObject.and),
-				 FuncObjects.fromVirgilMethod1("or", b, BoolObject.or)
+				[Funcs.fromVirgilMethod0("not", BoolObject.not),
+				 Funcs.fromVirgilMethod1("and", b, BoolObject.and),
+				 Funcs.fromVirgilMethod1("or", b, BoolObject.or)
 				]);
 
 	/* canonical instances of bool values */
 	def trueObject  = BoolObject.new(true);
 	def falseObject = BoolObject.new(false);
+
+	def getBoolObject(b: bool) -> BoolObject {
+		return if(b, trueObject, falseObject);
+	}
 }
 
-// XXX and this 
-def thing = b[0] = BoolObjects.classBool;
+def stuff = b[0] = BoolObjects.classBool;

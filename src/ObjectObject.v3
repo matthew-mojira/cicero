@@ -1,6 +1,0 @@
-class ObjectObject extends Object {
-	new(cls: ClassObject) super(cls) {}
-
-	def display() -> string { return "<object>"; }
-	def isTrue()  -> bool   { return true; }
-}

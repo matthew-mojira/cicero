@@ -9,17 +9,6 @@ component CodeObjects {
 	def fromVirgil(func: Range<Object> -> (Object, bool)) -> CodeObject {
 		return CodeObject.new(Codes.fromVirgil(func));
 	}
-	def classCode = ClassObject.new("code", Objects.classBase, null, [], []);
-
-	def virgilFail: CodeObject = CodeObjects.fromVirgil(doNotInstantiateThisClass);
-	def virgilPoopCrap: CodeObject = CodeObjects.fromVirgil(justReturnPoopCrap);
+	def classCode = Class.new("code", Objects.classBase, Codes.virgilFail, [], []);
 }
 
-def doNotInstantiateThisClass(range: Range<Object>) -> (Object, bool) {
-	return (StrObjects.getStrObject("do not use `new` to instantiate this class"), true);
-}
-
-def justReturnPoopCrap(range: Range<Object>) -> (Object, bool) {
-	if (range.length > 0) System.error("internal error", "poopcrap virgil > 0");
-	return (PoopCrapObjects.instance, false);
-}

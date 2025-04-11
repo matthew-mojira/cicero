@@ -1,17 +1,7 @@
-class Object(cls: ClassObject) {
+class Object(cls: Class) {
 	// who is responsible for initializing fields?
 	def var fields: HashMap<string, Object> = Strings.newMap();
-	// TODO make sense of built-in fields. For example, one can modify
-	// the class of an object by changing the class field, but does that
-	// really change the behavior? Should it even be allowed?
-
-	// Builtin objects that are instantiated within the runtime need this
-	// constructor to be implemented so that the fields are initialized
-	// properly, but it means the field is re-initialized when instantiating
-	// objects of a user-defined class
-	new() {
-		fields["class"] = cls;
-	}
+	new() {}
 
 	def getField(name: string) -> Maybe<Object> {
 		if (fields.has(name)) return Maybe.Just(fields[name]);
@@ -24,7 +14,7 @@ class Object(cls: ClassObject) {
 				// System.puts(func.id);
 				// System.puts(" ");
  				if (Strings.equal(func.id, name)) {
- 					def m = MethodObject.new(this, func.id, func.params, func.code);
+ 					def m = MethodObject.new(this, func);
  					fields[name] = m;
  					return Maybe.Just(m);
  				}
@@ -34,41 +24,37 @@ class Object(cls: ClassObject) {
 		return Maybe.Nothing;
 	}
 
-	def instanceOf(otherCls: ClassObject) -> bool {
-		// System.puts(Strings.format1("This class is %s\n", this.cls.name));
-		// System.puts(Strings.format1("That class is %s\n", otherCls.name));
+	def instanceOf(otherCls: Class) -> bool {
  		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
-			// System.puts(Strings.format2("-> compare: %s == %s\n", clazz.name, otherCls.name));
 			if (clazz == otherCls) {
-				// System.puts("true\n");
 				return true;
 			}
 		}
-		// System.puts("false\n");
 		return false;
 	}
 
+	def getClass() -> ClassObject;
 	def display() -> string;
 	def isTrue() -> bool;
 
 }
 
 component Objects {
-	def classBase = ClassObject.new("base", null,
+	def classBase = Class.new("base", null,
 			// init
 			null,
 			// fields
 			[],
 			// methods
-			[FuncObjects.fromVirgil("class", [], o_getclass),
-			 FuncObjects.fromVirgil("fields", [], o_fields),
-			 FuncObjects.fromVirgil("display", [], o_display)]
+			[Funcs.fromVirgil("class", [], o_getclass),
+			 Funcs.fromVirgil("fields", [], o_fields),
+			 Funcs.fromVirgil("display", [], o_display)]
 			);
 }
 
 def o_getclass(args: Range<Object>) -> (Object, bool) {
 	def obj = args[0];
-	obj.fields["class"] = obj.cls;
+	obj.fields["class"] = ClassObject.new(obj.cls);
 	return (PoopCrapObjects.instance, false);
 }
 

@@ -1,7 +1,10 @@
-class FrameObject(prev: FrameObject, 
+class FrameObject(frame: Frame) extends Object {
+	new() super(FrameObjects.classFrame) {}
+}
+class Frame(prev: Frame, 
 		locals: HashMap<string, Object>, //  \
 		args: Array<Object>,             //  / XXX combine these together
-		code: CodeObject) extends Object {
+		code: Code) {
 	var globals: HashMap<string, Object>;
 
 	// status flags as the result of evaluation
@@ -9,7 +12,7 @@ class FrameObject(prev: FrameObject,
 	var val: Object;        // result of evaluation or exception value
 
 	/* Initializing the frame also evaluates it (except for top-level frames). */
-	new() super(FrameObjects.classFrame) {
+	new() {
 		if (prev == null) {
 			// this is the top-level frame, where locals = globals
 			globals = locals;
@@ -17,7 +20,7 @@ class FrameObject(prev: FrameObject,
 			globals = prev.globals;
 
 			// evaluate the frame
-			eval(code.code);
+			eval(code);
 		}
 	}
 
@@ -64,7 +67,7 @@ class FrameObject(prev: FrameObject,
 
 				// function code
 				def fv = FuncObject.!(tgtVal);
-				def params = fv.params, code = fv.code;
+				def params = fv.func.params, code = fv.func.code;
 
 				// evaluate argument values
 				var argv: Array<Object> = Array.new(args.length);
@@ -91,7 +94,7 @@ class FrameObject(prev: FrameObject,
 				}
 
 				// create new frame (and evaluate)
-				def frame = FrameObject.new(this, newLocals, argv, code);
+				def frame = Frame.new(this, newLocals, argv, code);
 				if (frame.exn) {
 					// rethrow
 					throw(frame.val);
@@ -133,17 +136,17 @@ class FrameObject(prev: FrameObject,
 			}
 			Func(id, params, code) => {
 				def c = CodeObject.new(code);
-				def f = FuncObjects.newFunc(id, params, c);
+				def f = FuncObject.new(Func.new(id, params, c.code));
 				locals[id] = f;
 				value = f;
 			}
 			Class(id, superclass, init, fields, methods) => {
-				var i: CodeObject = if(init.isJust(), CodeObject.new(init.fromJust()), null);
-				var s: ClassObject = Objects.classBase;
+				var i: Code = if(init.isJust(), init.fromJust(), null);
+				var s: Class = Objects.classBase;
 				// TODO match on {superclass} and evaluate expression
-				def f: Array<(string, CodeObject)> = Arrays.map(fields, codeToCodeObject);
-				def m: Array<FuncObject> = Arrays.map(methods, funcToFuncObject);
-				def c = ClassObject.new(id, s, i, f, m);
+				def f: Array<(string, Code)> = fields;
+				def m: Array<Func> = Arrays.map(methods, funcToFunc);
+				def c = ClassObject.new(Class.new(id, s, i, f, m));
 				locals[id] = c;
 				value = c;
 			}
@@ -235,11 +238,11 @@ class FrameObject(prev: FrameObject,
 				if (exn) return value;
 
 				def clsObj = ClassObject.!(cls);
-				def obj = ObjectObject.new(clsObj);
+				def obj = Object.new(clsObj.cls);
 
 				// initialize fields in superclass order
-				def classes: Vector<ClassObject> = Vector.new();
-				for (cls = clsObj; cls != null; cls = cls.superclass)
+				def classes: Vector<Class> = Vector.new();
+				for (cls = clsObj.cls; cls != null; cls = cls.superclass)
 					classes.put(cls);
 				
 				for (cls in classes.extract()) {
@@ -251,7 +254,7 @@ class FrameObject(prev: FrameObject,
 
 						// XXX hackfix
 						if (expr == null) continue;
-						var v = eval(expr.code);
+						var v = eval(expr);
 						if (exn) return value;
 						obj.fields[name] = v;
 					}
@@ -270,7 +273,7 @@ class FrameObject(prev: FrameObject,
 						def argv: Array<Object> = [obj];
 
 						// create new frames here!
-						def frame = FrameObject.new(this, newLocals, argv, code);
+						def frame = Frame.new(this, newLocals, argv, code);
 						if (frame.exn) {
 							// rethrow
 							throw(frame.val);
@@ -298,7 +301,7 @@ class FrameObject(prev: FrameObject,
 		val = value;
 	}
 
-	private def assertType(exp: ClassObject, val: Object) {
+	private def assertType(exp: Class, val: Object) {
 		if (!val.instanceOf(exp))
 			throw(StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.cls.display())));
 	}
@@ -311,15 +314,12 @@ class FrameObject(prev: FrameObject,
 }
 
 component FrameObjects {
-	def classFrame = ClassObject.new("frame", Objects.classBase, null, [], []);
+	def classFrame = Class.new("frame", Objects.classBase, Codes.virgilFail, [], []);
 }
 
-def codeToCodeObject(p: (string, Code)) -> (string, CodeObject) {
-	return (p.0, CodeObject.new(p.1));
-}
-
-def funcToFuncObject(f: AST.Func) -> FuncObject {
-	return FuncObjects.newFunc(f.id, f.params, CodeObject.new(f.body));	
+def funcToFunc(f: AST.Func) -> Func {
+	// FIXME null
+	return Func.new(f.id, f.params, Codes.fromAST(f, null));	
 }
 
 

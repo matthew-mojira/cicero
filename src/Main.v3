@@ -3,7 +3,8 @@ def main(args: Array<string>) -> int {
 	for (builtin in Builtin.set.all) {
 		builtins[builtin.id] = builtin.val;
 	}
-	def frame = FrameObject.new(null, builtins, null, null);
+	// BuiltinClasses.printClasses();
+	def frame = Frame.new(null, builtins, null, null);
 
 	match (args.length) {
 		0 => {

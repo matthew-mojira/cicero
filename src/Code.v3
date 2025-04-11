@@ -1,4 +1,3 @@
-// TODO combine Code and CodeObject
 class Code(range: FileRange) {
 	private new() {}
 	
@@ -21,4 +20,15 @@ component Codes {
 		code.tier = 0;
 		return code;
 	}
+	def virgilFail: Code = fromVirgil(doNotInstantiateThisClass);
+	def virgilPoopCrap: Code = fromVirgil(justReturnPoopCrap);
+}
+
+def doNotInstantiateThisClass(range: Range<Object>) -> (Object, bool) {
+	return (StrObjects.getStrObject("do not use `new` to instantiate this class"), true);
+}
+
+def justReturnPoopCrap(range: Range<Object>) -> (Object, bool) {
+	if (range.length > 0) System.error("internal error", "poopcrap virgil > 0");
+	return (PoopCrapObjects.instance, false);
 }

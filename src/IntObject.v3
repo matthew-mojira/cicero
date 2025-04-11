@@ -3,18 +3,66 @@ class IntObject(val: long) extends Object {
 
 	def display() -> string { return Strings.format1("%d", val); }
 	def isTrue()  -> bool   { return true; }
+
+	def i_succ() -> (Object, bool) { return (IntObjects.getIntObject(val + 1), false); }
+	def i_pred() -> (Object, bool) { return (IntObjects.getIntObject(val - 1), false); }
+	def i_neg()  -> (Object, bool) { return (IntObjects.getIntObject(-val), false); }
+	def i_add(that: IntObject) -> (Object, bool) {
+		return (IntObjects.getIntObject(this.val + that.val), false);
+	}
+	def i_sub(that: IntObject) -> (Object, bool) {
+		return (IntObjects.getIntObject(this.val - that.val), false);
+	}
+	def i_mul(that: IntObject) -> (Object, bool) {
+		return (IntObjects.getIntObject(this.val * that.val), false);
+	}
+	def i_div(that: IntObject) -> (Object, bool) {
+		if (that.val == 0) {
+			return (StrObjects.getStrObject("divide by zero"), true);
+		}
+		return (IntObjects.getIntObject(this.val / that.val), false);
+	}
+	def i_eq(that: IntObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val == that.val), false);
+	}
+	def i_neq(that: IntObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val != that.val), false);
+	}
+	def i_lt(that: IntObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val < that.val), false);
+	}
+	def i_leq(that: IntObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val <= that.val), false);
+	}
+	def i_gt(that: IntObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val > that.val), false);
+	}
+	def i_geq(that: IntObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val >= that.val), false);
+	}
 }
 
-def i_display(vals: Range<Object>) -> (Object, bool) {
-	return (StrObjects.getStrObject(Strings.format1("%d", IntObject.!(vals[0]).val)), false);
-}
-
-def i_istrue(vals: Range<Object>) -> (Object, bool) {
-	return (BoolObjects.trueObject, false);
-}
+def i: Array<Class> = Array.new(1);
 
 component IntObjects {
-	def classInt = ClassObject.new("int", Objects.classBase, null, [], []);
+	def classInt = Class.new("int", 
+			Objects.classBase, 
+			Codes.virgilFail, 
+			[], 
+			[Funcs.fromVirgilMethod0("succ",  IntObject.i_succ),
+			 Funcs.fromVirgilMethod0("pred",  IntObject.i_pred),
+			 Funcs.fromVirgilMethod0("neg",   IntObject.i_neg),
+			 Funcs.fromVirgilMethod1("+",  i, IntObject.i_add),
+			 Funcs.fromVirgilMethod1("-",  i, IntObject.i_sub),
+			 Funcs.fromVirgilMethod1("*",  i, IntObject.i_mul),
+			 Funcs.fromVirgilMethod1("/",  i, IntObject.i_div),
+			 Funcs.fromVirgilMethod1("==", i, IntObject.i_eq),
+			 Funcs.fromVirgilMethod1("!=", i, IntObject.i_neq),
+			 Funcs.fromVirgilMethod1("<",  i, IntObject.i_lt),
+			 Funcs.fromVirgilMethod1("<=", i, IntObject.i_leq),
+			 Funcs.fromVirgilMethod1(">",  i, IntObject.i_gt),
+			 Funcs.fromVirgilMethod1(">=", i, IntObject.i_geq)
+			]);
 
 	/* canonicalize int value instances */
 	def intObjects = HashMap<long, IntObject>.new(int.!, long.==);
@@ -24,19 +72,7 @@ component IntObjects {
 		intObjects[val] = newInt;
 		return newInt;
 	}
-
-	/* arithmetic operations on int values */
-	def add(int1: IntObject, int2: IntObject) -> IntObject {
-		return getIntObject(int1.val + int2.val);
-	}
-	def sub(int1: IntObject, int2: IntObject) -> IntObject {
-		return getIntObject(int1.val - int2.val);
-	}
-	def mul(int1: IntObject, int2: IntObject) -> IntObject {
-		return getIntObject(int1.val * int2.val);
-	}
-	// TODO what to do if this fails?
-	def div(int1: IntObject, int2: IntObject) -> IntObject {
-		return getIntObject(int1.val / int2.val);
-	}
 }
+
+def stuff = i[0] = IntObjects.classInt;
+def things = System.puts(if(i[0] == null, "####null!\n", "####not null!\n"));

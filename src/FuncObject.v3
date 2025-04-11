@@ -1,28 +1,42 @@
-class FuncObject(id: string, params: Array<string>, code: CodeObject, clz: ClassObject) extends Object(clz) {
-	def display() -> string { return "<func>"; }
+class Func(id: string, params: Array<string>, code: Code) {
+
+}
+
+class FuncObject(func: Func) extends Object {
+	new() super(FuncObjects.classFunc) {}
+
+	def display() -> string { return Strings.format1("<func '%s'>", func.id); }
 	def isTrue()  -> bool   { return true; }
+
+	def f_name() -> (Object, bool) {
+		return (StrObjects.getStrObject(func.id), false);
+	}
 }
 
 component FuncObjects {
-	def classFunc = ClassObject.new("func", Objects.classBase, null, [], []);
-	// XXX must use this function to create functions
-	def newFunc(id: string, params: Array<string>, code: CodeObject) -> FuncObject {
-		return FuncObject.new(id, params, code, classFunc);
-	}
-	def fromVirgil(id: string, params: Array<string>, fn: Range<Object> -> (Object, bool)) -> FuncObject {
-		return newFunc(id, params, CodeObjects.fromVirgil(fn));
+	def classFunc = Class.new(
+			"func", 
+			Objects.classBase, 
+			Codes.virgilFail, 
+			[], 
+			[Funcs.fromVirgilMethod0("name", FuncObject.f_name)]);
+}
+
+component Funcs {
+	def fromVirgil(id: string, params: Array<string>, fn: Range<Object> -> (Object, bool)) -> Func {
+		return Func.new(id, params, Codes.fromVirgil(fn));
 	}
 
-	def fromVirgilMethod0<T>(name: string, method: T -> (Object, bool)) -> FuncObject {
+	def fromVirgilMethod0<T>(name: string, method: T -> (Object, bool)) -> Func {
 		return fromVirgil(name, [], callMethod0(_, method));
 	}
-	def fromVirgilMethod1<T, A1>(name: string, cst: Array<ClassObject>, method: (T, A1) -> (Object, bool)) -> FuncObject {
+	def fromVirgilMethod1<T, A1>(name: string, cst: Array<Class>, method: (T, A1) -> (Object, bool)) -> Func {
 		return fromVirgil(name, ["arg1"], callMethod1(_, cst, method));
 	}
-	def fromVirgilMethod2<T, A1, A2>(name: string, cst: Array<ClassObject>, method: (T, A1, A2) -> (Object, bool)) -> FuncObject {
+	def fromVirgilMethod2<T, A1, A2>(name: string, cst: Array<Class>, method: (T, A1, A2) -> (Object, bool)) -> Func {
 		return fromVirgil(name, ["arg1", "arg2"], callMethod2(_, cst, method));
 	}
-	def fromVirgilMethod3<T, A1, A2, A3>(name: string, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> (Object, bool)) -> FuncObject {
+	def fromVirgilMethod3<T, A1, A2, A3>(name: string, cst: Array<Class>, method: (T, A1, A2, A3) -> (Object, bool)) -> Func {
 		return fromVirgil(name, ["arg1", "arg2", "arg3"], callMethod3(_, cst, method));
 	}
 }
@@ -33,14 +47,14 @@ def callMethod0<T>(args: Range<Object>, method: T -> (Object, bool)) -> (Object,
 
 // FIXME improve error messages
 
-def callMethod1<T, A1>(args: Range<Object>, cst: Array<ClassObject>, method: (T, A1) -> (Object, bool)) -> (Object, bool) {
+def callMethod1<T, A1>(args: Range<Object>, cst: Array<Class>, method: (T, A1) -> (Object, bool)) -> (Object, bool) {
 	if (!args[1].instanceOf(cst[0])) {
 		return (StrObjects.getStrObject("type mismatch"), true);
 	}
 	return method(T.!(args[0]), A1.!(args[1]));
 }
 
-def callMethod2<T, A1, A2>(args: Range<Object>, cst: Array<ClassObject>, method: (T, A1, A2) -> (Object, bool)) -> (Object, bool) {
+def callMethod2<T, A1, A2>(args: Range<Object>, cst: Array<Class>, method: (T, A1, A2) -> (Object, bool)) -> (Object, bool) {
 	if (!args[1].instanceOf(cst[0])) {
 		return (StrObjects.getStrObject("type mismatch"), true);
 	}
@@ -50,7 +64,7 @@ def callMethod2<T, A1, A2>(args: Range<Object>, cst: Array<ClassObject>, method:
 	return method(T.!(args[0]), A1.!(args[1]), A2.!(args[2]));
 }
 
-def callMethod3<T, A1, A2, A3>(args: Range<Object>, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> (Object, bool)) -> (Object, bool) {
+def callMethod3<T, A1, A2, A3>(args: Range<Object>, cst: Array<Class>, method: (T, A1, A2, A3) -> (Object, bool)) -> (Object, bool) {
 	if (!args[1].instanceOf(cst[0])) {
 		return (StrObjects.getStrObject("type mismatch"), true);
 	}
