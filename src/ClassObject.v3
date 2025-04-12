@@ -1,5 +1,5 @@
 class ClassObject(clazz: Class) extends Object {
-	new() super(null) {}
+	new() super(ClassObjects.classClass) {}
 	
 	def display() -> string { return Strings.format1("<class '%s'>", clazz.name); }
 	def isTrue()  -> bool   { return true; }

@@ -238,11 +238,11 @@ class Frame(prev: Frame,
 				if (exn) return value;
 
 				def clsObj = ClassObject.!(cls);
-				def obj = Object.new(clsObj.cls);
+				def obj = Object.new(clsObj.clazz);
 
 				// initialize fields in superclass order
 				def classes: Vector<Class> = Vector.new();
-				for (cls = clsObj.cls; cls != null; cls = cls.superclass)
+				for (cls = clsObj.clazz; cls != null; cls = cls.superclass)
 					classes.put(cls);
 				
 				for (cls in classes.extract()) {
@@ -266,6 +266,7 @@ class Frame(prev: Frame,
 // 					}
 					// call initializer
 					if (cls.init != null) {
+						System.puts(Strings.format1("> %s\n", cls.name));
 						def code = cls.init;
 
 						def newLocals: HashMap<string, Object> = Strings.newMap();

@@ -19,7 +19,7 @@ class Object(cls: Class) {
  					return Maybe.Just(m);
  				}
  			}
-			System.ln();
+			// System.ln();
  		}
 		return Maybe.Nothing;
 	}
@@ -34,7 +34,7 @@ class Object(cls: Class) {
 	}
 
 	def getClass() -> ClassObject;
-	def display() -> string;
+	def display() -> string { return "<object>"; }
 	def isTrue() -> bool;
 
 }
