@@ -136,7 +136,7 @@ class Frame(prev: Frame,
 			}
 			Func(id, params, code) => {
 				def c = CodeObject.new(code);
-				def f = FuncObject.new(Func.new(id, params, c.code));
+				def f = FuncObjects.newFO(Func.new(id, params, c.code));
 				locals[id] = f;
 				value = f;
 			}

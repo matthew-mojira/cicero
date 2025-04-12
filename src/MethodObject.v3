@@ -1,9 +1,5 @@
-// class Method(obj: Object, id_: string, params_: Array<string>, code_: CodeObject) extends Func(id_, params_, code_) {
-// 
-// }
-
-class MethodObject(obj: Object, func: Func) extends Object {
-	new() super(MethodObjects.classMethod) {}
+class MethodObject(obj: Object, func_: Func) extends FuncObject {
+	new() super(func_, MethodObjects.classMethod) {}
 	def display() -> string { return "<method>"; }
 	def isTrue()  -> bool   { return true; }
 }

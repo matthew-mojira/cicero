@@ -75,4 +75,3 @@ component IntObjects {
 }
 
 def stuff = i[0] = IntObjects.classInt;
-def things = System.puts(if(i[0] == null, "####null!\n", "####not null!\n"));
