@@ -11,6 +11,10 @@ class ClassObject(clazz: Class) extends Object {
 			return (ClassObject.new(cls.superclass), false);
 		}
 	}
+
+	def c_name() -> (Object, bool) {
+		return (StrObjects.getStrObject(clazz.name), false);
+	}
 }
 
 component ClassObjects {
@@ -19,6 +23,8 @@ component ClassObjects {
 				Objects.classBase, 
 				Codes.virgilFail, 
 				[], 
-				[Funcs.fromVirgilMethod0("superclass", ClassObject.c_superclass)]);
+				[Funcs.fromVirgilMethod0("superclass", ClassObject.c_superclass),
+				 Funcs.fromVirgilMethod0("name",       ClassObject.c_name)
+				]);
 }
 

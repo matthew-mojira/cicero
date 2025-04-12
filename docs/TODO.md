@@ -1,5 +1,7 @@
 # Todos
 
+**Ensure that internal objects do not have multiple Virgil objects.**
+
 * read "Crafting Interpreters"
   - better understand prototype-based objects, even though we are and probably
     will stick to class-based objects
@@ -32,6 +34,8 @@
     object (i.e. the `int` field of IntObject) should be a field and everything
     should access this field (allowing the user to change things)
   - init syntax, better constructors
+* Fix method calls!
+* use `display` METHOD
 * tier1: bytecode
   - generalize frame evaluator
 

@@ -14,7 +14,7 @@ def main(args: Array<string>) -> int {
 				var reader = Parser.new("<repl>", scanner.nextLine());
 				if (reader.ok) {
 					def exprs = reader.getExprs();
-					
+
 					for (expr in exprs) {
 						frame.eval(expr);
 						if (frame.exn) {

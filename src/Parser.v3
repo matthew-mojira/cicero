@@ -220,6 +220,8 @@ class Parser extends TextReader {
 			}
 			// { } is a shortcut for `begin`
 			'{' => {
+				req1('{');
+
 				def exprs: Vector<Code> = Vector.new();
 				while (opt1('}') < 0) {
 					def expr = readExpr();

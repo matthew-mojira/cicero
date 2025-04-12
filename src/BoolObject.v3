@@ -4,13 +4,13 @@ class BoolObject(val: bool) extends Object {
 	def display() -> string { return if(val, "true", "false"); }
 	def isTrue()  -> bool   { return val; }
 
-	def not() -> (Object, bool) { 
+	def b_not() -> (Object, bool) { 
 		return (BoolObjects.getBoolObject(!val), false);
 	}
-	def and(that: BoolObject) -> (Object, bool) {
+	def b_and(that: BoolObject) -> (Object, bool) {
 		return (BoolObjects.getBoolObject(this.val && that.val), false);
 	}
-	def or(that: BoolObject) -> (Object, bool) {
+	def b_or(that: BoolObject) -> (Object, bool) {
 		return (BoolObjects.getBoolObject(this.val || that.val), false);
 	}
 }
@@ -23,9 +23,9 @@ component BoolObjects {
 				Objects.classBase, 
 				Codes.virgilFail, 
 				[], 
-				[Funcs.fromVirgilMethod0("not", BoolObject.not),
-				 Funcs.fromVirgilMethod1("and", b, BoolObject.and),
-				 Funcs.fromVirgilMethod1("or", b, BoolObject.or)
+				[Funcs.fromVirgilMethod0("not",    BoolObject.b_not),
+				 Funcs.fromVirgilMethod1("and", b, BoolObject.b_and),
+				 Funcs.fromVirgilMethod1("or",  b, BoolObject.b_or)
 				]);
 
 	/* canonical instances of bool values */
