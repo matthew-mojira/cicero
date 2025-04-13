@@ -18,9 +18,6 @@
   - return
 * classes
   - define initialization semantics, especially when inheritance is involved
-  - make fields and methods out of its internal components of class and expose
-    to user (but how might this work when a user can change the internal
-    properties of a class?)
   - inheritance (would allow general things like Callables and Exceptions) and
     superclass references. right now, inheritance can be done internally (not
     specifiable in user classes) and you can't access super things

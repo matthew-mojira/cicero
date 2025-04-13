@@ -5,10 +5,10 @@ class ClassObject(clazz: Class) extends Object {
 	def isTrue()  -> bool   { return true; }
 
 	def c_superclass() -> (Object, bool) {
-		if (cls.superclass == null) {
+		if (clazz.superclass == null) {
 			return (StrObjects.getStrObject("no superclass"), true);
 		} else {
-			return (ClassObject.new(cls.superclass), false);
+			return (ClassObject.new(clazz.superclass), false);
 		}
 	}
 

@@ -5,9 +5,7 @@ type AST {
 	case If(cond: Code, exprT: Code, exprF: Code);
 	case Cond(cases: Array<(Code, Code)>);
 	case Raise(exn: Code);
-	// TODO you raise a value as an exception, but when you catch the exception
-	// you cannot catch the value
-	case Catch(try: Code, catch: Code);
+	case Catch(try: Code, exn: string, catch: Code);
 	// this is a function expression (which evaluates to function value)
 	case Func(id: string, params: Array<string>, body: Code);
 	case Assign(id: string, assn: Code);

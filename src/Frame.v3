@@ -119,13 +119,14 @@ class Frame(prev: Frame,
 
 				throw(v);
 			}
-			Catch(try, catch) => {
+			Catch(try, exnvar, catch) => {
 				def v = eval(try);
 				if (!exn) {
 					value = v;
 				} else {
 					// catch exception
 					exn = false;
+					locals[exnvar] = val; // bind exception to variable
 					def e = eval(catch);
 					if (exn) return value;
 					value = e;
@@ -263,7 +264,7 @@ class Frame(prev: Frame,
 // 					}
 					// call initializer
 					if (cls.init != null) {
-						System.puts(Strings.format1("> %s\n", cls.name));
+						//System.puts(Strings.format1("> %s\n", cls.name));
 						def code = cls.init;
 
 						def newLocals: HashMap<string, Object> = Strings.newMap();

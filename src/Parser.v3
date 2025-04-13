@@ -48,10 +48,11 @@ class Parser extends TextReader {
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "try")) {
 							def try = readExpr();
+							def exn = readIdentifier();
 							def catch = readExpr();
 							req1(')');
 
-							return Codes.fromAST(AST.Catch(try, catch),
+							return Codes.fromAST(AST.Catch(try, exn, catch),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "func")) {
 							/* The syntax of a function is
@@ -101,7 +102,6 @@ class Parser extends TextReader {
 									return null;
 								}
 							}
-							req1(')');
 
 							return Codes.fromAST(AST.Cond(cases.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
