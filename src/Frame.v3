@@ -6,6 +6,7 @@ class Frame(prev: Frame,
 
 	// status flags as the result of evaluation
 	var exn: bool = false;  // whether evaluation threw uncaught exception
+	var stacktrace = Vector<FileRange>.new();
 	var val: Object;        // result of evaluation or exception value
 
 	/* Initializing the frame also evaluates it (except for top-level frames). */
@@ -39,10 +40,14 @@ class Frame(prev: Frame,
 		def ret = code.virgil(args);
 		val = ret.0;
 		exn = ret.1;
+		if (exn) stacktrace.put(null); // XXX null signifies native code
 		return val;
 	}
 
+	var curr: Code;
+
 	private def tier0Eval(code: Code) -> Object {
+		curr = code;
 		var value: Object;
 
 		match (code.ast) {
@@ -93,6 +98,8 @@ class Frame(prev: Frame,
 				// create new frame (and evaluate)
 				def frame = Frame.new(this, newLocals, argv, code);
 				if (frame.exn) {
+					// record stacktrace
+					stacktrace.puta(frame.stacktrace.extract());
 					// rethrow
 					throw(frame.val);
 					return value;
@@ -274,6 +281,8 @@ class Frame(prev: Frame,
 						// create new frames here!
 						def frame = Frame.new(this, newLocals, argv, code);
 						if (frame.exn) {
+							// record stacktrace
+							stacktrace.puta(frame.stacktrace.extract());
 							// rethrow
 							throw(frame.val);
 							return value;
@@ -296,6 +305,7 @@ class Frame(prev: Frame,
 
 	// throw sets the exception value in the frame right away
 	private def throw(value: Object) {
+		stacktrace.put(curr.range);
 		exn = true;
 		val = value;
 	}

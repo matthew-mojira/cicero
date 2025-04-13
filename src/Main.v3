@@ -20,9 +20,14 @@ def main(args: Array<string>) -> int {
 					for (expr in exprs) {
 						frame.eval(expr);
 						if (frame.exn) {
-							System.puts(frame.val.display());
-							System.ln();
-							frame.exn = false;
+							System.puts(Strings.format1("exception: %s\n", frame.val.display()));
+							for (range in frame.stacktrace.extract()) {
+								if (range == null) {
+									System.puts("  <Virgil code>\n");
+								} else {
+									System.puts(Strings.format3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine));
+								}
+							}
 						} else {
 							System.puts("=> ");
 							System.puts(frame.val.display());
@@ -42,8 +47,14 @@ def main(args: Array<string>) -> int {
 				for (expr in exprs) {
 					frame.eval(expr);
 					if (frame.exn) {
-						System.puts(frame.val.display());
-						System.ln();
+						System.puts(Strings.format1("exception: %s\n", frame.val.display()));
+						for (range in frame.stacktrace.extract()) {
+							if (range == null) {
+								System.puts("  <Virgil code>\n");
+							} else {
+								System.puts(Strings.format3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine));
+							}
+						}
 					} else {
 						System.puts("=> ");
 						System.puts(frame.val.display());
