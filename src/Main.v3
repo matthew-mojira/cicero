@@ -6,6 +6,8 @@ def main(args: Array<string>) -> int {
 	// BuiltinClasses.printClasses();
 	def frame = Frame.new(null, builtins, null, null);
 
+	loadLib(frame, "lib/core.co");
+
 	match (args.length) {
 		0 => {
 			var scanner = Scanner.new();
@@ -58,4 +60,15 @@ def main(args: Array<string>) -> int {
 		_ => System.error("argument error", "invalid use of program (too many arguments)");
 	}
 	return 1;
+}
+
+// XXX do not expect load lib to fail
+def loadLib(frame: Frame, filename: string) {
+	def file = System.fileLoad(filename);
+	if (file == null)
+		System.error("init error", "unable to load library");
+	def reader = Parser.new(filename, file);
+	def exprs = reader.getExprs();
+	for (expr in exprs)
+		frame.eval(expr);
 }

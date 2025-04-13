@@ -1,0 +1,10 @@
+; core library. this file is loaded and executed in the top-level frame each
+; time the Cicero VM starts
+
+; binary function are wrappers to methods on those objects which implement them
+(func (+ x y) (x.+ y))
+(func (- x y) (x.- y))
+(func (* x y) (x.* y))
+(func (/ x y) (x./ y))
+(func (= x y) (x.= y))
+(func (!= x y) (x.!= y))
