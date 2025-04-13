@@ -1,40 +1,37 @@
 # Todos
 
-**Ensure that internal objects do not have multiple Virgil objects.**
 
-* read "Crafting Interpreters"
-  - better understand prototype-based objects, even though we are and probably
-    will stick to class-based objects
 * functions  
   - anonymous functions (closure?)
   - figure out how nested functions should be handled (closures, special
     scoping?)
-  - recursive functions (this might work already? but you must know one way or
-    the other!)
+  - recursive functions: at the top level, a function declaration is added to
+    the global scope, so a function can see itself. if it is a method, it can
+    access itself through `self`. but if it is a nested function, it cannot
+    see itself (perhaps this should be enabled, see above)
   - coroutines (for loop)
   - optional, variadic, and keyword arguments
-* frames
-  - stacktraces (catch values! built-in exception classes?)
+* frames and exceptions
+  - exception class, and standardize exception names around built-ins
+  - better stacktraces (include file name, methods around exn object to query
+    location info)
   - return
 * classes
-  - define initialization semantics, especially when inheritance is involved
-  - inheritance (would allow general things like Callables and Exceptions) and
-    superclass references. right now, inheritance can be done internally (not
-    specifiable in user classes) and you can't access super things
-  - (?) allow methods to be added dynamically to a class ([Section 12.5](https://craftinginterpreters.com/classes.html#methods-on-classes)) perhaps by allowing them
-    to be created arbitarily
-  - should lookups be helped by the class? isn't that the whole point of class-
-    based objects?
-  - casting? (not necessary because of duck typing?)
+  - initialization syntax for user-defined classes
+  - extends syntax for inheritance in user-defined classes
   - document your final decisions about class semantics!
-  - idea: anything that's not necessary to back up the internal structure of an
-    object (i.e. the `int` field of IntObject) should be a field and everything
-    should access this field (allowing the user to change things)
-  - init syntax, better constructors
-* Fix method calls!
-* use `display` METHOD
+  - potentially use an array instead of a map for value lookup (can be used for
+    dynamci optimizations?)
+  - built-in classes should override base class methods, instead of having base
+    class methods implement those for it (for display)
 * tier1: bytecode
   - generalize frame evaluator
+* allow map to be created (maybe define built-in function for the time being)
+* more methods for classes
+* Ensure that internal objects do not have multiple Virgil objects?
+* implement `ObjectOf<T>`
+* documentation
+* example programs/test cases
 
 ## Scoping
 Right now, there are two scopes that matter:
