@@ -259,16 +259,17 @@ class Frame(prev: Frame,
 
 						// XXX hackfix
 						if (expr == null) continue;
-						var v = eval(expr);
-						if (exn) return value;
-						obj.fields[name] = v;
+						// create new frames here!
+						def frame = Frame.new(this, Strings.newMap(), [], expr);
+						if (frame.exn) {
+							// record stacktrace
+							stacktrace.puta(frame.stacktrace.extract());
+							// rethrow
+							throw(frame.val);
+							return value;
+						}
+						obj.fields[name] = frame.val;
 					}
-					// initialize methods?
-// 					for (func in cls.classMethods) {
-// 						if (obj.fields.has(func.id)) continue;
-// 						def m = MethodObject.new(obj, func.id, func.params, func.code);
-// 						obj.fields[func.id] = m;
-// 					}
 					// call initializer
 					if (cls.init != null) {
 						//System.puts(Strings.format1("> %s\n", cls.name));

@@ -48,14 +48,18 @@ component Objects {
 			// methods
 			[Funcs.fromVirgil("class", [], o_getclass),
 			 Funcs.fromVirgil("fields", [], o_fields),
-			 Funcs.fromVirgil("display", [], o_display)]
+			 Funcs.fromVirgil("display", [], o_display),
+			 Funcs.fromVirgil("=", ["other"], o_eq),
+			 Funcs.fromVirgil("!=", ["other"], o_neq)
+			]
 			);
 }
 
+// TODO refactor these to use Funcs.fromVirgilMethod
+
 def o_getclass(args: Range<Object>) -> (Object, bool) {
 	def obj = args[0];
-	obj.fields["class"] = ClassObject.new(obj.cls);
-	return (PoopCrapObjects.instance, false);
+	return (ClassObject.new(obj.cls), false);
 }
 
 def o_fields(args: Range<Object>) -> (Object, bool) {
@@ -75,4 +79,12 @@ def putList(list: ListObject, str: string) {
 def o_display(args: Range<Object>) -> (Object, bool) {
 	def obj = args[0];
 	return (StrObjects.getStrObject(obj.display()), false);
+}
+
+def o_eq(args: Range<Object>) -> (Object, bool) {
+	return (BoolObjects.getBoolObject(args[0] == args[1]), false);
+}
+
+def o_neq(args: Range<Object>) -> (Object, bool) {
+	return (BoolObjects.getBoolObject(args[0] != args[1]), false);
 }

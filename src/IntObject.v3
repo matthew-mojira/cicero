@@ -22,12 +22,6 @@ class IntObject(val: long) extends Object {
 		}
 		return (IntObjects.getIntObject(this.val / that.val), false);
 	}
-	def i_eq(that: IntObject) -> (Object, bool) {
-		return (BoolObjects.getBoolObject(this.val == that.val), false);
-	}
-	def i_neq(that: IntObject) -> (Object, bool) {
-		return (BoolObjects.getBoolObject(this.val != that.val), false);
-	}
 	def i_lt(that: IntObject) -> (Object, bool) {
 		return (BoolObjects.getBoolObject(this.val < that.val), false);
 	}
@@ -56,8 +50,6 @@ component IntObjects {
 			 Funcs.fromVirgilMethod1("-",  i, IntObject.i_sub),
 			 Funcs.fromVirgilMethod1("*",  i, IntObject.i_mul),
 			 Funcs.fromVirgilMethod1("/",  i, IntObject.i_div),
-			 Funcs.fromVirgilMethod1("=", i, IntObject.i_eq),
-			 Funcs.fromVirgilMethod1("!=", i, IntObject.i_neq),
 			 Funcs.fromVirgilMethod1("<",  i, IntObject.i_lt),
 			 Funcs.fromVirgilMethod1("<=", i, IntObject.i_leq),
 			 Funcs.fromVirgilMethod1(">",  i, IntObject.i_gt),

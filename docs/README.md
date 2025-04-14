@@ -1,22 +1,30 @@
 # Cicero language features
 
-## Types and values
+## Values
 
-* Int - backed by a Virgil integer
-* Bool
-* Func
-* Str
-* Type
-* PoopCrap - this is the unit type, what is `null` or `None` in other languages.
-  The literal form of PoopCrap is `()`.
-* Frame - execution frames
-* Expr - an abstraction over Virgil code and Cicero AST for function bodies
-* Class - user-defined class
-* Object - an instantiated version of a Class
-* Method - a function bound to an object (as `self`)
+All values are objects.
 
-Right now, there's no way (I think) to access or create frames or expressions
-in the language.
+### Poopcrap
+
+Poopcrap is the unit type (null, nil, None, ()). The literal is `()` and it is
+a singleton object of class `poopcrap`.
+
+### Built-in classes
+
+* `base`: the parent class of all objects
+  * `bool`
+  * `class`
+  * `code`
+  * `frame`
+  * `func`
+    * `method`
+  * `int`
+  * `list`
+  * `map`
+  * `poopcrap`
+  * `str`
+
+Learn more about their methods and what they mean [here](./classes.md).
 
 ### Truthiness
 
@@ -61,95 +69,51 @@ Some conveniences to reduce the amount of s-expressing:
 Here is how the easy things evaluate:
 
 * The value of a literal is its value!
-* The value of the identifier is a lookup in the environment. Right now you
-  can't define your own variables so it is only the built-ins.
+* The value of an identifier is a lookup in the environment. See the
+  subsection on variable scope.
 * To evaluate a function call `(f e1 e2 ... en)`:
   - evaluate `f`
   - assert `f` is a value of function type
   - evaluate `e2 ... en`
   - do the call
-
-### Special language features
-
-Some language features are special. You will see in a moment. These look like
-normal s-expressions, except that they have different semantics not
-representable as a normal function call (i.e. require non-strict evaluation or
-some unusual control flow). Also, the arity is checked at parse time and not
-during evaluation.
-* `(if e1 e2 e3)`: conditional expression works like you would expect. `e1` is
-  the condition, `e2` is the true expression and `e3` is the false expression.
-  `e1` may be a value of any type, not just `bool`. See the note on truthiness.
-* `(raise e)`: evaluates `e` and raises it as an exception.
-* `(try e1 e2)`: evaluates `e1` and returns its value. But if `e1` raises an
-  exception, evaluate `e2` and return that value. Note that you raise a value
-  (any value!) as an exception but you can't get it back for the catch.
-* `(set x e)`: evaluates `e` and binds it to `x` (identifer) local variable.
-  The value of the expression is whatever `e` evaluated to.
-* `(func ...)`: defines a function, see below
-* `(cond (e1 f1) ... (e2 f2))`: evaluate each condition `e1...en` in order
-  until the first `ei` evaluates to true, then evaluate `fi` (which will be the
-  value of the whole expression). Throws an exception if no cases match
-* `(while e1 e2)`: while loop as you expect where `e1` is the condition and 
-  `e2` is the body. The value of the expression is the value of `e1` during the
-  last evaluation (not so helpful really, just one of two falsy values)
-* `(begin e1 e2 ... en)`: evaluate all expressions in order (given that there's
-  not some exception thrown). As a matter of syntax, the list of expressions
-  must be nonempty
-* `(get-field f e)`: accesses field `f` of the object evaluated in `e`
-* `(set-field f e1 e2)`: sets field `f` of the object evaluated in `e1` to the
-  value of `e2`. This value must already be bound to a value otherwise it
-  raises an exception.
-* `(class id f/m*)`: declares a new Class, see below
-* `(new e)`: instantiate a new Object, given that `e` evaluates to a Class
+* Some language features are special. See [syntactic language features](./syntax.md) 
+  for the list and how they evaluate.
 
 ### Built-ins
 
-Some values are provided as built-ins. They are
+Some values are provided as variables in the global environment. They are
 
-* `typeof`: takes in a single value and returns its type
-* `print`: takes in a single value and prints it. returns PoopCrap
-* `+`: takes in two integers and adds them.
 * `true` and `false`
-* `int`, `bool`, `func`, `str`, `type`, `poopcrap`, `expr`, `frame` referring
-  to those types (note that `func` is overloaded for the syntactic function
-  declaration)
-  
+* `base`, `bool`, `class`, `code`, `frame`, `func`, `int`, `list`, `map`,
+  `method`, `poopcrap`, `str` referring to those classes (note that `func` is 
+  overloaded for the syntactic function declaration)
 
 These are not literals but are instead variables defined in the global 
 environment.
 
-### Defining your own functions.
+### Core
 
-Use `func` to define your own functions:
+The VM loads a file `lib/core.co` at startup and evaluates it, binding some
+extra utility functions in the global scope (which is like the built-ins above,
+except it is defined as Cicero code).
 
-```
-(func (f) 1)
-```
+It is not intended for the end user to modify this file.
 
-```
-(func (f x)
-  x)
-```
-
-```
-(func (f x y)
-  (+ x y))
-```
-
-The name of the function (up there, `f`) is bound to a local variable.
-Parameter names can (but should not) be dupliated.
+The core utilities are:
+* binary operator wrappers: `+`, `-`, `*`, `/`, `=`, `!=`, which wrap around a
+  more ugly method call. 
+  ```
+  ((get-field + 1) 2)
+  ; can be written more familiarly as
+  (+ 1 2)
+  ```
 
 ### Variable scope
 
 Variables set at the top level have global scope (and can irreparably overwrite
 built-ins!). Variables set in functions are always set locally, which may
-shadow a global variable of the same name.
-
-### Fields
-
-All values are objects in that they have fields which can be accessed by
-`get-field` and `set-field`. Except that, as stated above, you cannot set a
-field that is not already bound to a value.
+shadow a global variable of the same name. That means it is currently not
+possible to modify a global variable in an expression not at the top level.
 
 ### Canonicalization
 
@@ -182,18 +146,16 @@ You can define custom classes like this:
 This evaluates to a Class value, which allows it to be instantiated with `new`
 
 A class consists of
-* a name: the resulting Class is bound to name as a local variable
-* field and method declarations (they may be mixed)
-  - a field consists of a name and an initial value
-  - a method has the same syntax as a function declaration, except it also has
-    a reference to an object in `self`. Note that there isn't an implicit
-    lookup when you reference another field (i.e. you must access through
-    `self`). Methods are also fields.
+* a name: the resulting Class is bound to the name
+* optionally, a superclass
+* optionally, an initializer
+* field and method declarations
+  - a field consists of an identifier and an initial value
+  - methods are bound to an object which can be accessed through `self`.
+    Note that there isn't an implicit lookup when you reference another field 
+    (i.e. you must access through `self`). Methods are also fields.
 
-A method is a special kind of function which has a reference to the object in
-`self`. Methods are *bound methods* a la Python.
-
-No static members of a class. No inheritance.
+No static members of a class.
 
 Create a new object using the `new` syntax:
 

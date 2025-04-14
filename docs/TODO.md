@@ -32,6 +32,11 @@
 * implement `ObjectOf<T>`
 * documentation
 * example programs/test cases
+* CL args, better repl handling
+* debug state stuff?
+* global variables
+* make the lazy allocation of methods unobservable (i.e. return lazy methods
+  in `o.fields` and fix incorrect inheritance behavior)
 
 ## Scoping
 Right now, there are two scopes that matter:
@@ -94,31 +99,3 @@ initializer) and also specifying mutability:
 ```
 
 This also means we could check references to undefined variables at parse time.
-
-## Initializing classes
-
-Right now you use `(new Class)` to create a class. This also initializes it,
-since all fields have initializers attached to them and all methods (also a
-field) have definitions.
-
-So if you wanted to customize what those initial values are (say, parameterize
-them), then you would need a function (outside the class!) that initializes
-it:
-
-```
-(class Counter
-  (field count 0)
-  (method (increment) (set-field count (+ self.count 1)))
-  (method (reset) (set-field count 0)))
-
-(func (new-counter init) {
-  (set c (new Counter))
-  (set-field count c init)
-  c
-})
-```
-
-
-
-But that may complicate things if you want immutable fields and to change what
-that initial (final) value is based on multiple initializers.
