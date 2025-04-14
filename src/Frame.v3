@@ -147,8 +147,19 @@ class Frame(prev: Frame,
 			}
 			Class(id, superclass, init, fields, methods) => {
 				var i: Code = if(init.isJust(), init.fromJust(), null);
-				var s: Class = Objects.classBase;
-				// TODO match on {superclass} and evaluate expression
+				var s: Class;
+				match (superclass) {
+					Just(e) => {
+						var v = eval(e);
+						if (exn) return value;
+						
+						assertType(ClassObjects.classClass, v);
+						if (exn) return value;
+						
+						s = ClassObject.!(v).clazz;
+					}
+					Nothing => s = Objects.classBase;
+				}
 				def f: Array<(string, Code)> = fields;
 				def m: Array<Func> = Arrays.map(methods, funcToFunc);
 				def c = ClassObject.new(Class.new(id, s, i, f, m));
@@ -245,17 +256,16 @@ class Frame(prev: Frame,
 				def clsObj = ClassObject.!(cls);
 				def obj = Object.new(clsObj.clazz);
 
-				// initialize fields in superclass order
 				def classes: Vector<Class> = Vector.new();
 				for (cls = clsObj.clazz; cls != null; cls = cls.superclass)
 					classes.put(cls);
-				
-				for (cls in classes.extract()) {
+			
+				// initialization order is from base class downwards, which
+				// may involve reinitializing some fields
+				for (cls in classes.reverse().extract()) {
 					// initialize fields
 					for (field in cls.classFields) {
 						def name = field.0, expr = field.1;
-						// FIXME this is incorrect if a child class overrides a field with a method
-						if (obj.fields.has(name)) continue;
 
 						// XXX hackfix
 						if (expr == null) continue;

@@ -150,6 +150,8 @@ class Parser extends TextReader {
 							def name = readIdentifier();
 							def fields: Vector<(string, Code)> = Vector.new();
 							def methods: Vector<AST.Func> = Vector.new();
+							var init: Maybe<Code> = Maybe.Nothing;
+							var superclass: Maybe<Code> = Maybe.Nothing;
 
 							while (opt1(')') < 0) {
 								req1('(');
@@ -176,6 +178,18 @@ class Parser extends TextReader {
 									def methodBody = readExpr();
 
 									methods.put(AST.Func(methodName, methodParams.extract(), methodBody));
+								} else if (Strings.equal(word, "init")) {
+									if (init.isJust()) {
+										fail("redeclaration of init in class definition");
+										return null;
+									}
+									init = Maybe.Just(readExpr());
+								} else if (Strings.equal(word, "extends")) {
+									if (init.isJust()) {
+										fail("redeclaration of extends in class definition");
+										return null;
+									}
+									superclass = Maybe.Just(readExpr());
 								} else {
 									fail(Strings.format1("unrecognized attribute of class declaration: %s", word));
 									return null;
@@ -189,7 +203,7 @@ class Parser extends TextReader {
 							}
 
 							// TODO support parser for init and superclass,
-							return Codes.fromAST(AST.Class(name, Maybe.Nothing, Maybe.Nothing, fields.extract(), methods.extract()),
+							return Codes.fromAST(AST.Class(name, superclass, init, fields.extract(), methods.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "new")) {
 							def expr = readExpr();

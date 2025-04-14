@@ -13,4 +13,12 @@ enum Builtin(id: string, val: Object) {
  	METHOD  ("method",   ClassObject.new(MethodObjects.classMethod)),
  	POOPCRAP("poopcrap", ClassObject.new(PoopCrapObjects.classPoopCrap)),
  	STR     ("str",      ClassObject.new(StrObjects.classStr)),
+	PRINT   ("print",    FuncObjects.newFO(Funcs.fromVirgil("print", ["o"], print)))
+}
+
+def print(args: Range<Object>) -> (Object, bool) {
+	def obj = args[0];
+	System.puts(obj.display());
+	System.ln();
+	return (PoopCrapObjects.instance, false);
 }
