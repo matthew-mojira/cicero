@@ -1,0 +1,40 @@
+class BoolObject(val: bool) extends Object {
+	private new () super(BoolObjects.classBool) {}
+	
+	def display() -> string { return if(val, "true", "false"); }
+	def isTrue()  -> bool   { return val; }
+
+	def b_not() -> (Object, bool) { 
+		return (BoolObjects.getBoolObject(!val), false);
+	}
+	def b_and(that: BoolObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val && that.val), false);
+	}
+	def b_or(that: BoolObject) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this.val || that.val), false);
+	}
+}
+
+def b: Array<Class> = Array.new(1);
+
+component BoolObjects {
+	def classBool: Class = 
+		Class.new("bool", 
+				Objects.classBase, 
+				Codes.virgilFail, 
+				[], 
+				[Funcs.fromVirgilMethod0("not",    BoolObject.b_not),
+				 Funcs.fromVirgilMethod1("and", b, BoolObject.b_and),
+				 Funcs.fromVirgilMethod1("or",  b, BoolObject.b_or)
+				]);
+
+	/* canonical instances of bool values */
+	def trueObject  = BoolObject.new(true);
+	def falseObject = BoolObject.new(false);
+
+	def getBoolObject(b: bool) -> BoolObject {
+		return if(b, trueObject, falseObject);
+	}
+}
+
+def stuff = b[0] = BoolObjects.classBool;

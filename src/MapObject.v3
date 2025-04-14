@@ -1,0 +1,12 @@
+class MapObject extends Object {
+	new() super(MapObjects.classMap) {}
+
+	def map: Map<string, Object> = Strings.newMap();
+
+	def display() -> string { return "map"; }
+	def isTrue()  -> bool   { return true; }
+}
+
+component MapObjects {
+	def classMap = Class.new("map", Objects.classBase, null, [], []);
+}

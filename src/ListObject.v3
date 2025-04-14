@@ -1,0 +1,64 @@
+class ListObject extends Object {
+	new() super(ListObjects.classList) {}
+
+	def list: Vector<Object> = Vector.new();
+
+	def display() -> string {
+		def buf = StringBuilder.new();
+		buf.putc('[');
+		if (list.length > 0) {
+			buf.puts(list[0].display());
+		}
+		for (i = 1; i < list.length; i++) {
+			buf.csp();
+			buf.puts(list[i].display());
+		}
+		buf.putc(']');
+		return buf.extract();
+	}
+	def isTrue()  -> bool   { return true; }
+
+	def l_get(idx: IntObject) -> (Object, bool) {
+		if (idx.val < 0 || idx.val >= list.length)
+			return (StrObjects.getStrObject(Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length)), true);
+		// XXX cast, discrepancy between allowed index values (i.e. length)
+		// and the length of the list
+		return (list.get(int.!(idx.val)), false);
+	}
+ 	def l_set(idx: IntObject, obj: Object) -> (Object, bool) {
+		if (idx.val < 0 || idx.val >= list.length)
+			return (StrObjects.getStrObject(Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length)), true);
+		list.set(int.!(idx.val), obj);
+		return (this, false);
+	}
+ 	def l_put(obj: Object) -> (Object, bool) {
+		list.put(obj);
+		return (this, false);
+	}
+ 	def l_length() -> (Object, bool) {
+		return (IntObjects.getIntObject(list.length), false);
+	}
+ 	def l_reverse() -> (Object, bool) {
+		list.reverse();
+		return (this, false);
+	}
+}
+
+component ListObjects {
+	def classList = Class.new("list", 
+			Objects.classBase, 
+			Codes.virgilFail, 
+			[], 
+			[Funcs.fromVirgilMethod1("get", [IntObjects.classInt], ListObject.l_get),
+			 Funcs.fromVirgilMethod2("set", [IntObjects.classInt, Objects.classBase], ListObject.l_set),
+			 Funcs.fromVirgilMethod1("put", [Objects.classBase], ListObject.l_put),
+			 Funcs.fromVirgilMethod0("length",  ListObject.l_length),
+			 Funcs.fromVirgilMethod0("reverse", ListObject.l_reverse)
+			]);
+
+	def fromArray(array: Array<Object>) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.puta(array);
+		return obj;
+	}
+}

@@ -1,0 +1,13 @@
+class PoopCrapObject extends Object {
+	private new() super(PoopCrapObjects.classPoopCrap) {}
+
+	def display() -> string { return "poopcrap"; }
+	def isTrue()  -> bool   { return false; }
+}
+
+component PoopCrapObjects {
+	/* only one poop and one crap */
+	def instance = PoopCrapObject.new();
+
+	def classPoopCrap = Class.new("poopcrap", Objects.classBase, Codes.virgilFail, [], []);
+}

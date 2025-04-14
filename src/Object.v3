@@ -1,0 +1,90 @@
+class Object(cls: Class) {
+	// who is responsible for initializing fields?
+	def var fields: HashMap<string, Object> = Strings.newMap();
+	new() {}
+
+	def getField(name: string) -> Maybe<Object> {
+		if (fields.has(name)) return Maybe.Just(fields[name]);
+		// Methods are lazily bound, that is, they are not initialized until
+		// it is requested for the first time.
+ 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
+			// System.puts(clazz.name);
+			// System.puts(": ");
+ 			for (func in clazz.classMethods) {
+				// System.puts(func.id);
+				// System.puts(" ");
+ 				if (Strings.equal(func.id, name)) {
+ 					def m = MethodObject.new(this, func);
+ 					fields[name] = m;
+ 					return Maybe.Just(m);
+ 				}
+ 			}
+			// System.ln();
+ 		}
+		return Maybe.Nothing;
+	}
+
+	def instanceOf(otherCls: Class) -> bool {
+ 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
+			if (clazz == otherCls) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	def getClass() -> ClassObject;
+	def display() -> string { return "<object>"; }
+	def isTrue() -> bool;
+
+}
+
+component Objects {
+	def classBase = Class.new("base", null,
+			// init
+			null,
+			// fields
+			[],
+			// methods
+			[Funcs.fromVirgil("class", [], o_getclass),
+			 Funcs.fromVirgil("fields", [], o_fields),
+			 Funcs.fromVirgil("display", [], o_display),
+			 Funcs.fromVirgil("=", ["other"], o_eq),
+			 Funcs.fromVirgil("!=", ["other"], o_neq)
+			]
+			);
+}
+
+// TODO refactor these to use Funcs.fromVirgilMethod
+
+def o_getclass(args: Range<Object>) -> (Object, bool) {
+	def obj = args[0];
+	return (ClassObject.new(obj.cls), false);
+}
+
+def o_fields(args: Range<Object>) -> (Object, bool) {
+	def obj = args[0];
+	def list = ListObject.new();
+	def fList = Maps.keyList(obj.fields);
+	// FIXME add lazy fields
+	Lists.apply(fList, putList(list, _));
+	return (list, false);
+}
+
+def putList(list: ListObject, str: string) {
+	def obj = StrObjects.getStrObject(str);
+	list.list.put(obj);
+}
+
+def o_display(args: Range<Object>) -> (Object, bool) {
+	def obj = args[0];
+	return (StrObjects.getStrObject(obj.display()), false);
+}
+
+def o_eq(args: Range<Object>) -> (Object, bool) {
+	return (BoolObjects.getBoolObject(args[0] == args[1]), false);
+}
+
+def o_neq(args: Range<Object>) -> (Object, bool) {
+	return (BoolObjects.getBoolObject(args[0] != args[1]), false);
+}

@@ -1,0 +1,18 @@
+class StrObject(str: string) extends Object {
+	private new() super(StrObjects.classStr) {}
+
+	def display() -> string { return Strings.format1("\"%s\"", str); }
+	def isTrue()  -> bool   { return true; }
+}
+
+component StrObjects {
+	/* canonical instances of strings */
+	def strObjects: HashMap<string, StrObject> = Strings.newMap();
+	def getStrObject(str: string) -> StrObject {
+		if (strObjects.has(str)) return strObjects[str];
+		def newStr = StrObject.new(str);
+		strObjects[str] = newStr;
+		return newStr;
+	}
+	def classStr = Class.new("str", Objects.classBase, Codes.virgilFail, [], []);
+}

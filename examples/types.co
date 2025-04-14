@@ -1,0 +1,40 @@
+; builtin type names
+int
+bool
+func
+str
+poopcrap
+frame
+expr
+; typeof
+(typeof int)
+(typeof bool)
+(typeof func)
+(typeof str)
+(typeof poopcrap)
+(typeof frame)
+(typeof expr)
+; equality
+(= int int)
+(= bool bool)
+(= func func)
+(= str str)
+(= poopcrap poopcrap)
+(= frame frame)
+(= expr expr)
+(= (typeof int) (typeof (typeof poopcrap)))
+; inequality
+(!= int int)
+(!= bool bool)
+(!= func func)
+(!= str str)
+(!= poopcrap poopcrap)
+(!= frame frame)
+(!= expr expr)
+(= (typeof int) int)
+(= int bool)
+(= int func)
+(= int str)
+(= int poopcrap)
+(= int frame)
+(= int expr)

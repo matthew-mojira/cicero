@@ -1,0 +1,7 @@
+(func (id x) x)
+(func (apply f x) (f x))
+
+id
+(id id)
+(id 77)
+(apply id 1)

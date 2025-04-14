@@ -1,0 +1,15 @@
+1
+2
+-3
+- 4
+5
+()
+true
+false
+"string"
+(if 3 1 2)
+(if 3 1 (2 3))
+(if false 1 2)
+(+ 1 2)
+(print (+ 3 (+ 3 7)))
+"this is \n the \t great\"est'"

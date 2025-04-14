@@ -1,0 +1,33 @@
+class FuncObject(func: Func, cls_: Class) extends Object {
+	private new() super(cls_) {}
+
+	def display() -> string { return Strings.format1("<func '%s'>", func.id); }
+	def isTrue()  -> bool   { return true; }
+
+	def f_name() -> (Object, bool) {
+		return (StrObjects.getStrObject(func.id), false);
+	}
+	def f_params() -> (Object, bool) {
+		return (ListObjects.fromArray(Arrays.map(func.params, StrObjects.getStrObject)), false);
+	}
+	def f_code() -> (Object, bool) {
+		return (CodeObject.new(func.code), false);
+	}
+}
+
+component FuncObjects {
+	def classFunc = Class.new(
+			"func", 
+			Objects.classBase, 
+			Codes.virgilFail, 
+			[], 
+			[Funcs.fromVirgilMethod0("name",   FuncObject.f_name),
+			 Funcs.fromVirgilMethod0("params", FuncObject.f_params),
+			 Funcs.fromVirgilMethod0("code",   FuncObject.f_code)
+			]);
+	// XXX hackfix to allow method subclass
+	def newFO(func: Func) -> FuncObject {
+		return FuncObject.new(func, classFunc);
+	}
+}
+

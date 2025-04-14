@@ -1,0 +1,40 @@
+; no list literals...
+(func (empty) ((get-field params (func (f) ()))))
+
+; appends lists `l1` and `l2` in a new list
+(func (append l1 l2) {
+  (set list (empty))
+  (set i 0)
+  (while (< i (l1.length)) {
+    (list.put (l1.get i))
+    (set i (i.succ))
+  })
+  (set j 0)
+  (while (< j (l2.length)) {
+    (list.put (l2.get j))
+    (set j (j.succ))
+  })
+  list
+})
+
+(set l1 ((get-field params (func (f a b c) ()))))
+(set l2 ((get-field params (func (f a b c d e f g) ()))))
+(set l3 (empty))
+
+(append l1 l1)
+(append l1 l2)
+(append l1 l3)
+(append l2 l1)
+(append l2 l2)
+(append l2 l3)
+(append l3 l1)
+(append l3 l2)
+(append l3 l3)
+
+(set long (empty))
+(set x 0)
+(while (< x 100) {
+  (set long (append long l1))
+  (set x (x.succ))
+})
+long

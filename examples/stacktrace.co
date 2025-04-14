@@ -1,0 +1,6 @@
+(func (f x)
+  (if (= x 0)
+      fail
+		(f (x.pred))))
+
+(f 10)

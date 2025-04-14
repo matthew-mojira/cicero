@@ -1,0 +1,356 @@
+class Parser extends TextReader {
+	private def exprs: Vector<Code> = Vector<Code>.new();
+
+	new(fileName: string, data: string) super(fileName, data) {
+		skipWs = skipWhitespaceAndComments;
+
+		skipWs(this);
+		while (pos < limit) {
+			skipWs(this);
+			def expr = readExpr();
+			exprs.put(expr);
+			if (!ok) break;
+		}
+	}
+
+	private def readExpr() -> Code {
+		def startPos = pos;
+		def startLine = line, startColumn = column;
+		match (char) {
+			'(' => {
+				req1('(');
+				if (opt1(')') >= 0) {
+					// () case
+					return Codes.fromAST(AST.Lit(PoopCrapObjects.instance), FileRange.new(fileName, startLine, startColumn, line, column));
+				}
+
+				// check first word to indicate KW-syntax expression
+				def head = readExpr();
+
+				// XXX A keyword is allowed to be used anywhere. It only takes on special
+				// meaning if it appears as the first identifier in a list.
+				match (head.ast) {
+					Id(str) => {
+						// check if this is a keyword
+						if (Strings.equal(str, "if")) {
+							def cond = readExpr();
+							def exprT = readExpr();
+							def exprF = readExpr();
+							req1(')');
+
+							return Codes.fromAST(AST.If(cond, exprT, exprF),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "raise")) {
+							def exn = readExpr();
+							req1(')');
+
+							return Codes.fromAST(AST.Raise(exn),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "try")) {
+							def try = readExpr();
+							def exn = readIdentifier();
+							def catch = readExpr();
+							req1(')');
+
+							return Codes.fromAST(AST.Catch(try, exn, catch),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "func")) {
+							/* The syntax of a function is
+							 *   (func (f x y z)
+							 *      <expr>
+							 *   )
+							 */
+							req1('(');
+							// name of function
+							def name = readIdentifier();
+							// params to function
+							def params: Vector<string> = Vector<string>.new();
+							while (opt1(')') < 0) {
+								def param = readIdentifier();
+								params.put(param);
+
+								if (pos >= limit) {
+									failRel(startPos - pos, "unmatched opening parentheses");
+									return null;
+								}
+							}
+							
+							// body expresssion
+							def body = readExpr();
+							req1(')');
+
+							return Codes.fromAST(AST.Func(name, params.extract(), body),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "set")) {
+							def id = readIdentifier();
+							def expr = readExpr();
+							req1(')');
+
+							return Codes.fromAST(AST.Assign(id, expr),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "cond")) {
+							def cases: Vector<(Code, Code)> = Vector.new();
+							while (opt1(')') < 0) {
+								req1('(');
+								def fst = readExpr();
+								def snd = readExpr();
+								req1(')');
+								cases.put((fst, snd));
+								
+								if (pos >= limit) {
+									failRel(startPos - pos, "unmatched opening parentheses");
+									return null;
+								}
+							}
+
+							return Codes.fromAST(AST.Cond(cases.extract()),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "while")) {
+							def cond = readExpr();
+							def body = readExpr();
+							req1(')');
+							
+							return Codes.fromAST(AST.While(cond, body),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "begin")) { // also has a sugary version
+							def exprs: Vector<Code> = Vector.new();
+							// begin must not be non-empty
+							// TODO this does not print a nice error message if it fails
+							def fst = readExpr();
+							exprs.put(fst);
+
+							while (opt1(')') < 0) {
+								def expr = readExpr();
+								exprs.put(expr);
+
+								if (pos >= limit) {
+									failRel(startPos - pos, "unmatched opening parentheses");
+									return null;
+								}
+							}
+							
+							return Codes.fromAST(AST.Begin(exprs.extract()),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "get-field")) { // also has a sugary version
+							def field = readIdentifier();
+							def obj = readExpr();
+							req1(')');
+
+							return Codes.fromAST(AST.GetField(field, obj),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "set-field")) { // also has a sugary version
+							def field = readIdentifier();
+							def obj = readExpr();
+							def val = readExpr();
+							req1(')');
+
+							return Codes.fromAST(AST.SetField(field, obj, val),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "class")) {
+							def name = readIdentifier();
+							def fields: Vector<(string, Code)> = Vector.new();
+							def methods: Vector<AST.Func> = Vector.new();
+
+							while (opt1(')') < 0) {
+								req1('(');
+								def word = readIdentifier();
+								if (Strings.equal(word, "field")) {
+									def fieldName = readIdentifier();
+									def fieldInit = readExpr();
+									
+									fields.put(fieldName, fieldInit);
+								} else if (Strings.equal(word, "method")) {
+									req1('(');
+									def methodName = readIdentifier();
+									def methodParams = Vector<string>.new();
+									
+									while (opt1(')') < 0) {
+										def paramName = readIdentifier();
+										methodParams.put(paramName);
+
+										if (pos >= limit) {
+											failRel(startPos - pos, "unmatched opening parentheses");
+											return null;
+										}
+									}
+									def methodBody = readExpr();
+
+									methods.put(AST.Func(methodName, methodParams.extract(), methodBody));
+								} else {
+									fail(Strings.format1("unrecognized attribute of class declaration: %s", word));
+									return null;
+								}
+								req1(')');
+
+								if (pos >= limit) {
+									failRel(startPos - pos, "unmatched opening parentheses");
+									return null;
+								}
+							}
+
+							// TODO support parser for init and superclass,
+							return Codes.fromAST(AST.Class(name, Maybe.Nothing, Maybe.Nothing, fields.extract(), methods.extract()),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "new")) {
+							def expr = readExpr();
+							req1(')');
+
+							return Codes.fromAST(AST.New(expr),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						}
+					}
+					_ => ;
+				}
+				def tail: Vector<Code> = Vector.new();
+				while (opt1(')') < 0) {
+					def expr = readExpr();
+					tail.put(expr);
+
+					if (pos >= limit) {
+						failRel(startPos - pos, "unmatched opening parentheses");
+						return null;
+					}
+				}
+				return Codes.fromAST(AST.Apply(head, tail.extract()),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
+			')' => {
+				fail("unmatched closing parentheses");
+				return null;
+			}
+			// { } is a shortcut for `begin`
+			'{' => {
+				req1('{');
+
+				def exprs: Vector<Code> = Vector.new();
+				while (opt1('}') < 0) {
+					def expr = readExpr();
+					exprs.put(expr);
+
+					if (pos >= limit) {
+						failRel(startPos - pos, "unmatched opening brace");
+						return null;
+					}
+				}
+				return Codes.fromAST(AST.Begin(exprs.extract()),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
+			'}' => {
+				fail("unmatched closing brace");
+				return null;
+			}
+			'\"' => {
+				def str = readString();
+				return Codes.fromAST(AST.Lit(StrObjects.getStrObject(str)),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
+			_ => {
+				// this is an identifier
+				def strs = readQualifiedName();
+				def range = FileRange.new(fileName, startLine, startColumn, line, column);
+				var expr: Code;
+
+				// parse first identifier for decimal integer literal
+				def str = strs[0];
+				def res = Ints.parseDecimal(str, 0);
+				def status = res.0, value = res.1;
+				if (status > 0) {
+					if (status != str.length) {
+//						System.puts(Strings.format3("string is \"%s\", found %d characters and length is %d\n",
+//									str, status, str.length));
+						fail("trailing information after integer literal");
+						return null;
+					}
+					// any characters that start an integer literal cannot be part of a valid identifier
+					expr = Codes.fromAST(AST.Lit(IntObjects.getIntObject(value)), range);
+				} else {
+					expr = Codes.fromAST(AST.Id(str), range);
+				}
+
+				// remaining strings are field accesses
+				for (i = 1; i < strs.length; i++) {
+					expr = Codes.fromAST(AST.GetField(strs[i], expr), range);
+				}
+
+				return expr;
+			}
+		}
+	}
+
+	private def readString() -> string {
+		def a = Strings.parseLiteral(data, pos);
+		def chars = a.0, str = a.1;
+		if (chars < 0) {
+			fail("malformed string literal");
+			return null;
+		}
+		advance(chars);
+		return str;
+	}
+
+	private def readQualifiedName() -> Array<string> {
+		def len = plus_rel(0, isFullQualCharacter) - pos;
+		if (len < 0) {
+			fail("invalid character in identifier name");
+			return null;
+		}
+		def str = readToken(len).image;
+		return Strings.split(str, ".", -1);
+	}
+
+	private def readIdentifier() -> string {
+		def len = plus_rel(0, isIdentCharacter) - pos;
+		if (len < 0) {
+			fail("invalid character in identifier name");
+			return null;
+		}
+		def str = readToken(len).image;
+		return str;
+	}
+
+	def getExprs() -> Array<Code> {
+		return exprs.extract();
+	}
+}
+
+def isIdentCharacter(ch: byte) -> bool {
+	match (ch) {
+		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']', ';', '.' => return false;
+		_ => return true;
+	}
+}
+
+def isFullQualCharacter(ch: byte) -> bool {
+	match (ch) {
+		' ', '\t', '\n', '\'', '\"', '(', ')', '[', ']', ';' => return false;
+		_ => return true;
+	}
+}
+
+def skipWhitespaceAndComments(tr: TextReader) {
+	var pos = tr.pos, line = tr.line, column = tr.column;
+	var data = tr.data, max = tr.limit;
+	var comment = false;
+	while (pos < max) {
+		var ch = data[pos];
+		match (ch) {
+			';' => {
+				comment = true;
+				column++;
+			}
+			' ' => column++;
+			'\t' => column = tr.nextTabStop(column);
+			'\n' => {
+				tr.lineEnds.put(pos);
+				column = 1;
+				line++;
+				comment = false;
+			}
+			_ => if (!comment) break; // not whitespace
+		}
+		pos++;
+	}
+	// reached the end or a non-whitespace byte
+	tr.at(pos, line, column);
+}
+

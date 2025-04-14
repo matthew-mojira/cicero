@@ -1,0 +1,85 @@
+def main(args: Array<string>) -> int {
+	def builtins: HashMap<string, Object> = Strings.newMap();
+	for (builtin in Builtin.set.all) {
+		builtins[builtin.id] = builtin.val;
+	}
+	// BuiltinClasses.printClasses();
+	def frame = Frame.new(null, builtins, null, null);
+
+	loadLib(frame, "lib/core.co");
+
+	match (args.length) {
+		0 => {
+			var scanner = Scanner.new();
+			while (true) {
+				System.puts("cicero> ");
+				var reader = Parser.new("<repl>", scanner.nextLine());
+				if (reader.ok) {
+					def exprs = reader.getExprs();
+
+					for (expr in exprs) {
+						frame.eval(expr);
+						if (frame.exn) {
+							System.puts(Strings.format1("exception: %s\n", frame.val.display()));
+							for (range in frame.stacktrace.extract()) {
+								if (range == null) {
+									System.puts("  <Virgil code>\n");
+								} else {
+									System.puts(Strings.format3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine));
+								}
+							}
+						} else {
+							System.puts("=> ");
+							System.puts(frame.val.display());
+							System.ln();
+						}
+					}
+				} else {
+					System.puts(Strings.format1("parse error: %s\n", reader.error_msg));
+				}
+			}
+		}
+		1 => {
+			var reader = Parser.new(args[0], System.fileLoad(args[0]));
+			if (reader.ok) {
+				def exprs = reader.getExprs();
+
+				for (expr in exprs) {
+					frame.eval(expr);
+					if (frame.exn) {
+						System.puts(Strings.format1("exception: %s\n", frame.val.display()));
+						for (range in frame.stacktrace.extract()) {
+							if (range == null) {
+								System.puts("  <Virgil code>\n");
+							} else {
+								System.puts(Strings.format3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine));
+							}
+						}
+					} else {
+						System.puts("=> ");
+						System.puts(frame.val.display());
+						System.ln();
+					}
+				}
+			} else {
+				System.puts(reader.fileName);
+				System.puts(Strings.format3(":%d:%d: parse error: %s\n", reader.error_line, reader.error_column, reader.error_msg));
+				return 1;
+			}
+			return 0;
+		}
+		_ => System.error("argument error", "invalid use of program (too many arguments)");
+	}
+	return 1;
+}
+
+// XXX do not expect load lib to fail
+def loadLib(frame: Frame, filename: string) {
+	def file = System.fileLoad(filename);
+	if (file == null)
+		System.error("init error", "unable to load library");
+	def reader = Parser.new(filename, file);
+	def exprs = reader.getExprs();
+	for (expr in exprs)
+		frame.eval(expr);
+}

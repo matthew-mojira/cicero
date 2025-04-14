@@ -1,0 +1,11 @@
+class Scanner {
+	def buffer: Vector<byte> = Vector<byte>.new();
+
+	def nextLine() -> string {
+		var char: byte;
+		while ((char = byte.!(System.fileRead(0))) != '\n') {
+			buffer.put(char);
+		}
+		return buffer.extract();
+	}
+}

@@ -1,0 +1,14 @@
+class CodeObject(code: Code) extends Object {
+	new() super(CodeObjects.classCode) {}
+
+	def display() -> string { return "<code>"; }
+	def isTrue()  -> bool   { return true; }
+}
+
+component CodeObjects {
+	def fromVirgil(func: Range<Object> -> (Object, bool)) -> CodeObject {
+		return CodeObject.new(Codes.fromVirgil(func));
+	}
+	def classCode = Class.new("code", Objects.classBase, Codes.virgilFail, [], []);
+}
+
