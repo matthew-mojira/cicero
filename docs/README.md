@@ -100,8 +100,8 @@ except it is defined as Cicero code).
 It is not intended for the end user to modify this file.
 
 The core utilities are:
-* binary operator wrappers: `+`, `-`, `*`, `/`, `=`, `!=`, which wrap around a
-  more ugly method call. 
+* binary operator wrappers: `+`, `-`, `*`, `/`, `=`, `!=`, `<`, `<=`, `>`, `>=`
+  which wrap around a more ugly method call. 
   ```
   ((get-field + 1) 2)
   ; can be written more familiarly as
