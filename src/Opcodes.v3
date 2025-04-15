@@ -4,6 +4,7 @@ enum Opcode {
 	CALL,          // [n] number of arguments (not including function!)
 	JUMP,          // [0] offset of pc
 	JUMP_IF_FALSE, // [1] offset of pc
+	JUMP_IF_FALSE_PEEK, // [1] offset of pc
 	RAISE,         // [1]
 	TRY,           // [0] offset from this bytecode of the catch
 	CATCH,         // [0]
@@ -73,6 +74,7 @@ enum Opcode {
  *   compile cond
  *   JUMP_IF_FALSE 2
  *   compile body
+ *   PULL 1
  *   JUMP 1
  * 2:
  *   

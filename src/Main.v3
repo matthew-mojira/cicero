@@ -63,8 +63,18 @@ def main(args: Array<string>) -> int {
 
 				for (expr in exprs) {
 					// compile to tier1 bytecode
-					if (enableTier1)
+					if (enableTier1) {
 						expr.compile(expr);
+						def buf = StringBuilder.new();
+						for (i < expr.bytecode.pos) {
+							def data = expr.bytecode.data[i];
+							buf.putx_8(data);
+						}
+						System.puts(buf.extract());
+						System.ln();
+						Bytecodes.inspect(expr.bytecode.copy());
+						System.puts("--\n");
+					}
 
 					// evaluate
 					frame.eval(expr);
@@ -103,8 +113,8 @@ def loadLib(frame: Frame, filename: string) {
 	def reader = Parser.new(filename, file);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
-		if (enableTier1)
-			expr.compile(expr);
+// 		if (enableTier1)
+// 			expr.compile(expr);
 		frame.eval(expr);
 	}
 }

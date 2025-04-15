@@ -340,18 +340,36 @@ class Frame(prev: Frame,
 						stack.push(globals[id]);
 					} else {
 						throw(StrObjects.getStrObject(Strings.format1("unbound identifier: %s", id)));
-						return null;
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
 					}
 				}
-				JUMP => pc += byte.view(operand);
+				JUMP => pc += i8.view(operand);
 				JUMP_IF_FALSE => {
 					def top = stack.pop();
-					if (!top.isTrue()) pc += byte.view(operand);
+					if (!top.isTrue()) pc += i8.view(operand);
+				}
+				JUMP_IF_FALSE_PEEK => {
+					def top = stack.peek();
+					if (top.isTrue()) {
+						stack.pop();
+					} else {
+						pc += i8.view(operand);
+					}
 				}
 				RAISE => {
 					def top = stack.pop();
 					throw(top);
-					return null;
+					if (!handlers.empty()) {
+						pc = handlers.pop();
+						exn = false;
+					} else {
+						return null;
+					}
 				}
 				STORE_NAME => {
 					def id = strings[operand];
@@ -361,7 +379,13 @@ class Frame(prev: Frame,
 				ASSERT_FUNC => {
 					def top = stack.peek();
 					assertType(FuncObjects.classFunc, top);
-					if (exn) return null;
+					if (exn)
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
 				}
 				CALL => {
 					var args: Vector<Object> = Vector.new();
@@ -378,7 +402,13 @@ class Frame(prev: Frame,
 
 					// arity check
 					assertArity(params.length, argv);
-					if (exn) return null;
+					if (exn)
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
 
 					// create locals
 					def newLocals: HashMap<string, Object> = Strings.newMap();
@@ -399,11 +429,24 @@ class Frame(prev: Frame,
 						stacktrace.puta(frame.stacktrace.extract());
 						// rethrow
 						throw(frame.val);
-						return null;
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
 					}
 
 					stack.push(frame.val);
 				}
+				TRY => {
+					handlers.push(pc + operand);
+				}
+				CATCH => {
+					handlers.pop();
+				}
+				PULL => for (i < operand) stack.pop();
+				
 				_ => System.error("eval error", "unsupported opcode");
 			}
 		}
