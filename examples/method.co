@@ -1,0 +1,6 @@
+(class X
+  (method (f x) x))
+
+(set x (new X))
+x.f
+(x.f 1)

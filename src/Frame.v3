@@ -50,9 +50,6 @@ class Frame(prev: Frame,
 		curr = code;
 		var value: Object;
 
-		System.puts(code.ast.whichOne());
-		System.ln();
-
 		match (code.ast) {
 			Lit(val) => value = val;
 			Id(id) => {
@@ -99,9 +96,7 @@ class Frame(prev: Frame,
 				}
 
 				// create new frame (and evaluate)
-				System.puts(Strings.format1("Creating frame for: %s\n", fv.func.id));
 				def frame = Frame.new(this, newLocals, argv, code);
-				System.puts("done\n");
 				if (frame.exn) {
 					// record stacktrace
 					stacktrace.puta(frame.stacktrace.extract());
@@ -287,7 +282,6 @@ class Frame(prev: Frame,
 					}
 					// call initializer
 					if (cls.init != null) {
-						//System.puts(Strings.format1("> %s\n", cls.name));
 						def code = cls.init;
 
 						def newLocals: HashMap<string, Object> = Strings.newMap();
@@ -316,7 +310,6 @@ class Frame(prev: Frame,
 	
 	/* BYTECODE EVALUATOR */
 	def tier1Eval(c: Code) -> Object {
-		System.puts("tier1Eval\n");
 		def code       = c.bytecode.copy();
 		def strings    = c.strings;
 		def classholes = c.classholes;
@@ -616,8 +609,7 @@ class Frame(prev: Frame,
 
 
 def funcToFunc(f: AST.Func) -> Func {
-	// FIXME null
-	return Func.new(f.id, f.params, Codes.fromAST(f, null));	
+	return Func.new(f.id, f.params, f.body);
 }
 
 

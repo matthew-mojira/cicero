@@ -1,4 +1,4 @@
-def enableTier1 = false;
+def enableTier1 = true;
 
 def main(args: Array<string>) -> int {
 	def builtins: HashMap<string, Object> = Strings.newMap();
@@ -66,15 +66,15 @@ def main(args: Array<string>) -> int {
 					// compile to tier1 bytecode
 					if (enableTier1) {
 						expr.compile(expr);
-// 						def buf = StringBuilder.new();
-// 						for (i < expr.bytecode.pos) {
-// 							def data = expr.bytecode.data[i];
-// 							buf.putx_8(data);
-// 						}
-// 						System.puts(buf.extract());
-// 						System.ln();
-// 						Bytecodes.inspect(expr.bytecode.copy());
-// 						System.puts("--\n");
+ 						def buf = StringBuilder.new();
+ 						for (i < expr.bytecode.pos) {
+ 							def data = expr.bytecode.data[i];
+ 							buf.putx_8(data);
+ 						}
+ 						System.puts(buf.extract());
+ 						System.ln();
+ 						Bytecodes.inspect(expr.bytecode.copy());
+ 						System.puts("--\n");
 					}
 
 					// evaluate

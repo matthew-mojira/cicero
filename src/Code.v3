@@ -247,8 +247,7 @@ def justReturnPoopCrap(range: Range<Object>) -> (Object, bool) {
 }
 
 def funcToFunc(f: AST.Func) -> Func {
-	// FIXME null
-	def code = Codes.fromAST(f, null);
+	def code = f.body;
 	code.compile(code);
 	return Func.new(f.id, f.params, code);	
 }
