@@ -1,18 +1,35 @@
 type AST {
-	case Lit(val: Object);
-	case Id(id: string);
-	case Apply(tgt: Code, args: Array<Code>);
-	case If(cond: Code, exprT: Code, exprF: Code);
-	case Cond(cases: Array<(Code, Code)>);
-	case Raise(exn: Code);
-	case Catch(try: Code, exn: string, catch: Code);
+	case Lit(val: Object)
+		 { def whichOne() -> string { return "lit"; } }
+	case Id(id: string)
+		 { def whichOne() -> string { return "id"; } }
+	case Apply(tgt: Code, args: Array<Code>)
+		 { def whichOne() -> string { return "apply"; } }
+	case If(cond: Code, exprT: Code, exprF: Code)
+		 { def whichOne() -> string { return "if"; } }
+	case Cond(cases: Array<(Code, Code)>)
+		 { def whichOne() -> string { return "cond"; } }
+	case Raise(exn: Code)
+		 { def whichOne() -> string { return "raise"; } }
+	case Catch(try: Code, exn: string, catch: Code)
+		 { def whichOne() -> string { return "catch"; } }
 	// this is a function expression (which evaluates to function value)
-	case Func(id: string, params: Array<string>, body: Code);
-	case Assign(id: string, assn: Code);
-	case While(cond: Code, body: Code);
-	case Begin(exprs: Array<Code>);
-	case GetField(field: string, obj: Code);
-	case SetField(field: string, obj: Code, val: Code);
-	case Class(id: string, superclass: Maybe<Code>, init: Maybe<Code>, fields: Array<(string, Code)>, methods: Array<AST.Func>);
-	case New(expr: Code);
+	case Func(id: string, params: Array<string>, body: Code)
+		 { def whichOne() -> string { return "func"; } }
+	case Assign(id: string, assn: Code)
+		 { def whichOne() -> string { return "assign"; } }
+	case While(cond: Code, body: Code)
+		 { def whichOne() -> string { return "while"; } }
+	case Begin(exprs: Array<Code>)
+		 { def whichOne() -> string { return "begin"; } }
+	case GetField(field: string, obj: Code)
+		 { def whichOne() -> string { return "get-field"; } }
+	case SetField(field: string, obj: Code, val: Code)
+		 { def whichOne() -> string { return "set-field"; } }
+	case Class(id: string, superclass: Maybe<Code>, init: Maybe<Code>, fields: Array<(string, Code)>, methods: Array<AST.Func>)
+		 { def whichOne() -> string { return "class"; } }
+	case New(expr: Code)
+		 { def whichOne() -> string { return "new"; } }
+
+	def whichOne() -> string;
 }

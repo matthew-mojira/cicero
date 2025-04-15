@@ -8,7 +8,7 @@ class Code(range: FileRange) {
 
 	def var bytecode:   DataWriter     = DataWriter.new();
 	def var strings:    Vector<string> = Vector.new();
-	def var classholes: Vector<Class>  = Vector.new();
+	def var classholes: Vector<Class>  = Vector.new(); // XXX these are not real classes!
 	def var constants:  Vector<Object> = Vector.new();
 
 	/* Compile code (in {code}) to {this} as target */
@@ -77,6 +77,8 @@ class Code(range: FileRange) {
 				// XXX object creation in AST compilation!
 				// could be problematic if we object lookup observable
 				constants.put(StrObjects.getStrObject("cond error: no true breanch"));
+				bytecode.putb(Opcode.LOAD_LIT.tag);
+				bytecode.putb(idx);
 				bytecode.putb(Opcode.RAISE.tag);
 				bytecode.putb(0); // no operand
 				// fill in all jump to end targets
@@ -85,11 +87,13 @@ class Code(range: FileRange) {
 				}
 			}
 			Func(id, params, code) => {
-				def cst = constants.length;
 				// XXX compiling code
 				code.compile(code);
+				
+				def cst = constants.length;
 				// XXX object creation in AST compilation!
 				constants.put(FuncObjects.newFO(Func.new(id, params, code)));
+			
 				def str = strings.length;
 				strings.put(id);
 
@@ -156,7 +160,60 @@ class Code(range: FileRange) {
 				bytecode.data[bytecode.pos - 1] = byte.view(pos - bytecode.pos);
 				bytecode.data[hole] = byte.view(bytecode.pos - hole - 1);
 			}
-			_ => System.error("compile error", "unsupported AST node");
+			GetField(id, obj) => {
+				compile(obj);
+				def idx = strings.length;
+				strings.put(id);
+				bytecode.putb(Opcode.GET_FIELD.tag);
+				bytecode.putb(idx);
+			}
+			SetField(id, obj, val) => {
+				compile(obj);
+				compile(val);
+				def idx = strings.length;
+				strings.put(id);
+				bytecode.putb(Opcode.SET_FIELD.tag);
+				bytecode.putb(idx);
+			}
+			Class(id, superclass, init, fields, methods) => {
+				// there are subcodes which are getting compiled here
+				// TODO should this compilation process just be part of code creation?
+				match (superclass) {
+					Nothing => {
+						def idx = constants.length;
+						constants.put(ClassObject.new(Objects.classBase));
+						bytecode.putb(Opcode.LOAD_LIT.tag);
+						bytecode.putb(idx);
+					}
+					Just(expr) => compile(expr);
+				}
+				var init2: Code;
+				match (init) {
+					Nothing => ;
+					Just(code) => {
+						code.compile(code);
+						init2 = code;
+					}
+				}
+				def idx = classholes.length;
+				//                            XXX
+				classholes.put(Class.new(id, null, init2, fields, Arrays.map(methods, funcToFunc)));
+				bytecode.putb(Opcode.CREATE_CLASS.tag);
+				bytecode.putb(idx);
+				def str = strings.length;
+				strings.put(id);
+				bytecode.putb(Opcode.STORE_NAME.tag);
+				bytecode.putb(str);
+				bytecode.putb(Opcode.LOAD_NAME.tag);
+				bytecode.putb(str);
+			}
+			New(obj) => {
+				compile(obj);
+				bytecode.putb(Opcode.NEW.tag);
+				bytecode.putb(0); // no operand
+			}
+
+//			_ => System.error("compile error", "unsupported AST node");
 		}
 		
 	}
@@ -187,4 +244,11 @@ def doNotInstantiateThisClass(range: Range<Object>) -> (Object, bool) {
 def justReturnPoopCrap(range: Range<Object>) -> (Object, bool) {
 	if (range.length > 0) System.error("internal error", "poopcrap virgil > 0");
 	return (PoopCrapObjects.instance, false);
+}
+
+def funcToFunc(f: AST.Func) -> Func {
+	// FIXME null
+	def code = Codes.fromAST(f, null);
+	code.compile(code);
+	return Func.new(f.id, f.params, code);	
 }

@@ -1,4 +1,4 @@
-def enableTier1 = true;
+def enableTier1 = false;
 
 def main(args: Array<string>) -> int {
 	def builtins: HashMap<string, Object> = Strings.newMap();
@@ -23,15 +23,15 @@ def main(args: Array<string>) -> int {
 						// compile to tier1 bytecode
 						if (enableTier1) {
 							expr.compile(expr);
-							def buf = StringBuilder.new();
-							for (i < expr.bytecode.pos) {
-								def data = expr.bytecode.data[i];
-								buf.putx_8(data);
-							}
-							System.puts(buf.extract());
-							System.ln();
-							Bytecodes.inspect(expr.bytecode.copy());
-							System.puts("--\n");
+// 							def buf = StringBuilder.new();
+// 							for (i < expr.bytecode.pos) {
+// 								def data = expr.bytecode.data[i];
+// 								buf.putx_8(data);
+// 							}
+// 							System.puts(buf.extract());
+// 							System.ln();
+// 							Bytecodes.inspect(expr.bytecode.copy());
+// 							System.puts("--\n");
 						}
 
 						// evaluate
@@ -45,6 +45,7 @@ def main(args: Array<string>) -> int {
 									System.puts(Strings.format3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine));
 								}
 							}
+							frame.exn = false;
 						} else {
 							System.puts("=> ");
 							System.puts(frame.val.display());
@@ -65,15 +66,15 @@ def main(args: Array<string>) -> int {
 					// compile to tier1 bytecode
 					if (enableTier1) {
 						expr.compile(expr);
-						def buf = StringBuilder.new();
-						for (i < expr.bytecode.pos) {
-							def data = expr.bytecode.data[i];
-							buf.putx_8(data);
-						}
-						System.puts(buf.extract());
-						System.ln();
-						Bytecodes.inspect(expr.bytecode.copy());
-						System.puts("--\n");
+// 						def buf = StringBuilder.new();
+// 						for (i < expr.bytecode.pos) {
+// 							def data = expr.bytecode.data[i];
+// 							buf.putx_8(data);
+// 						}
+// 						System.puts(buf.extract());
+// 						System.ln();
+// 						Bytecodes.inspect(expr.bytecode.copy());
+// 						System.puts("--\n");
 					}
 
 					// evaluate
@@ -87,6 +88,7 @@ def main(args: Array<string>) -> int {
 								System.puts(Strings.format3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine));
 							}
 						}
+						return 1;
 					} else {
 						System.puts("=> ");
 						System.puts(frame.val.display());
@@ -113,8 +115,8 @@ def loadLib(frame: Frame, filename: string) {
 	def reader = Parser.new(filename, file);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
-// 		if (enableTier1)
-// 			expr.compile(expr);
+ 		if (enableTier1)
+ 			expr.compile(expr);
 		frame.eval(expr);
 	}
 }

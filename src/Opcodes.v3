@@ -89,10 +89,13 @@ enum Opcode {
  *   compile obj
  *   compile val
  *   SET_FIELD
+ *   GET_FIELD
  *   
  * Class
  *   compile superclass
  *   CREATE_CLASS
+ *   STORE_NAME
+ *   LOAD_NAME
  *   
  * New
  *   compile expr

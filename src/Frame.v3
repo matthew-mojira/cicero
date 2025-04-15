@@ -50,6 +50,9 @@ class Frame(prev: Frame,
 		curr = code;
 		var value: Object;
 
+		System.puts(code.ast.whichOne());
+		System.ln();
+
 		match (code.ast) {
 			Lit(val) => value = val;
 			Id(id) => {
@@ -96,7 +99,9 @@ class Frame(prev: Frame,
 				}
 
 				// create new frame (and evaluate)
+				System.puts(Strings.format1("Creating frame for: %s\n", fv.func.id));
 				def frame = Frame.new(this, newLocals, argv, code);
+				System.puts("done\n");
 				if (frame.exn) {
 					// record stacktrace
 					stacktrace.puta(frame.stacktrace.extract());
@@ -298,11 +303,11 @@ class Frame(prev: Frame,
 							throw(frame.val);
 							return value;
 						}
-						value = frame.val;
-					}
+						value = frame.val; // why?
+					} 
 				}
 
-				return obj;
+				return obj; // why?
 			}
 		}
 
@@ -311,15 +316,17 @@ class Frame(prev: Frame,
 	
 	/* BYTECODE EVALUATOR */
 	def tier1Eval(c: Code) -> Object {
-		// System.puts("tier 1 evaluator!\n");
+		System.puts("tier1Eval\n");
 		def code       = c.bytecode.copy();
 		def strings    = c.strings;
 		def classholes = c.classholes;
 		def constants  = c.constants;
 
+		// Bytecodes.inspect(code);
+
 		// FIXME this valuestack thing should be in the Frame
 		// big idea: perhaps each tier should extend Frame (so it can all be separate!)?
-		def stack: Stack<Object> = ArrayStack.new();
+		def stack: ArrayStack<Object> = ArrayStack.new();
 		def handlers: Stack<int> = ArrayStack.new();
 
 		var pc = 0;
@@ -327,6 +334,14 @@ class Frame(prev: Frame,
 			def bytecode = Ref<Bytecode>.at(code, pc);
 			def opcode   = bytecode.opcode;
 			def operand  = bytecode.operand;
+
+			//System.puts(Strings.format3("+%d: %s %d\n", pc, opcode.name, operand));
+			//System.puts("stack:\n");
+			//for (i < stack.top) {
+			//	System.puts(stack.elems[i].display());
+			//	System.ln();
+			//}
+			//System.puts("--\n");
 
 			pc += 2;
 			match (opcode) {
@@ -446,8 +461,129 @@ class Frame(prev: Frame,
 					handlers.pop();
 				}
 				PULL => for (i < operand) stack.pop();
+				// objects
+				CREATE_CLASS => {
+					def superclass = stack.pop();
+					assertType(ClassObjects.classClass, superclass);
+					if (exn)
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+
+					def classhole = classholes[operand];
+					stack.push(ClassObject.new(Class.new(classhole.name, ClassObject.!(superclass).clazz, classhole.init, classhole.classFields, classhole.classMethods)));
+				}
+				NEW => {
+					def top = stack.pop();
+					assertType(ClassObjects.classClass, top);
+					if (exn)
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+
+					// duplicated code
+					def clsObj = ClassObject.!(top);
+					def obj = Object.new(clsObj.clazz);
+
+					def classes: Vector<Class> = Vector.new();
+					for (cls = clsObj.clazz; cls != null; cls = cls.superclass)
+						classes.put(cls);
 				
-				_ => System.error("eval error", "unsupported opcode");
+					// initialization order is from base class downwards, which
+					// may involve reinitializing some fields
+					for (cls in classes.reverse().extract()) {
+						// initialize fields
+						for (field in cls.classFields) {
+							def name = field.0, expr = field.1;
+
+							// XXX hackfix
+							if (expr == null) continue;
+							// create new frames here!
+							def frame = Frame.new(this, Strings.newMap(), [], expr);
+							if (frame.exn) {
+								// record stacktrace
+								stacktrace.puta(frame.stacktrace.extract());
+								// rethrow
+								throw(frame.val);
+								if (!handlers.empty()) {
+									pc = handlers.pop();
+									exn = false;
+								} else {
+									return null;
+								}
+							}
+							obj.fields[name] = frame.val;
+						}
+						// call initializer
+						if (cls.init != null) {
+							//System.puts(Strings.format1("> %s\n", cls.name));
+							def code = cls.init;
+
+							def newLocals: HashMap<string, Object> = Strings.newMap();
+							newLocals["self"] = obj;
+							def argv: Array<Object> = [obj];
+
+							// create new frames here!
+							def frame = Frame.new(this, newLocals, argv, code);
+							if (frame.exn) {
+								// record stacktrace
+								stacktrace.puta(frame.stacktrace.extract());
+								// rethrow
+								throw(frame.val);
+								if (!handlers.empty()) {
+									pc = handlers.pop();
+									exn = false;
+								} else {
+									return null;
+								}
+							}
+						}
+					}
+					stack.push(obj);
+				}
+				GET_FIELD => {
+					def obj = stack.pop();
+					def field = strings[operand];
+
+					match (obj.getField(field)) {
+						Just(v) => stack.push(v);
+					} else {
+						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+					}
+
+				}
+				SET_FIELD => {
+					def val = stack.pop();
+					def obj = stack.pop();
+					def field = strings[operand];
+
+					if (obj.fields.has(field)) {
+						obj.fields[field] = val;
+						stack.push(val);
+					} else {
+						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+					}
+				}
+
+			//	_ => System.error("eval error", "unsupported opcode");
 			}
 		}
 
@@ -461,7 +597,7 @@ class Frame(prev: Frame,
 
 	// throw sets the exception value in the frame right away
 	private def throw(value: Object) {
-		stacktrace.put(curr.range);
+		stacktrace.put(null); // FIXME figure out proper error reporting for tier1
 		exn = true;
 		val = value;
 	}
