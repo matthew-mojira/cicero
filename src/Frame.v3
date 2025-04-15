@@ -29,7 +29,7 @@ class Frame(prev: Frame,
 	 */
 	def eval(code: Code) -> Object {
 		// dispatch on the code tier
-		def evalFuncs = [virgilEval, tier0Eval];
+		def evalFuncs = [virgilEval, tier0Eval, tier1Eval];
 		def v = evalFuncs[code.tier + 1](code);
 		if (!exn)
 			val = v;
@@ -307,6 +307,108 @@ class Frame(prev: Frame,
 		}
 
 		return value;
+	}
+	
+	/* BYTECODE EVALUATOR */
+	def tier1Eval(c: Code) -> Object {
+		// System.puts("tier 1 evaluator!\n");
+		def code       = c.bytecode.copy();
+		def strings    = c.strings;
+		def classholes = c.classholes;
+		def constants  = c.constants;
+
+		// FIXME this valuestack thing should be in the Frame
+		// big idea: perhaps each tier should extend Frame (so it can all be separate!)?
+		def stack: Stack<Object> = ArrayStack.new();
+		def handlers: Stack<int> = ArrayStack.new();
+
+		var pc = 0;
+		while (pc < code.length) {
+			def bytecode = Ref<Bytecode>.at(code, pc);
+			def opcode   = bytecode.opcode;
+			def operand  = bytecode.operand;
+
+			pc += 2;
+			match (opcode) {
+				LOAD_LIT => stack.push(constants[operand]);
+				LOAD_NAME => {
+					def id = strings[operand];
+					// XXX this duplicates tier0 code, refactor away (using OO approach)
+					if (locals.has(id)) {
+						stack.push(locals[id]);
+					} else if (globals.has(id)) {
+						stack.push(globals[id]);
+					} else {
+						throw(StrObjects.getStrObject(Strings.format1("unbound identifier: %s", id)));
+						return null;
+					}
+				}
+				JUMP => pc += byte.view(operand);
+				JUMP_IF_FALSE => {
+					def top = stack.pop();
+					if (!top.isTrue()) pc += byte.view(operand);
+				}
+				RAISE => {
+					def top = stack.pop();
+					throw(top);
+					return null;
+				}
+				STORE_NAME => {
+					def id = strings[operand];
+					def top = stack.pop();
+					locals[id] = top;
+				}
+				ASSERT_FUNC => {
+					def top = stack.peek();
+					assertType(FuncObjects.classFunc, top);
+					if (exn) return null;
+				}
+				CALL => {
+					var args: Vector<Object> = Vector.new();
+					for (i < operand) {
+						args.put(stack.pop());
+					}
+					args.reverse();
+					var argv: Array<Object> = args.extract();
+
+					def top = stack.pop();
+					// function code
+					def fv = FuncObject.!(top); // this cast succeeds because of ASSERT_FUNC
+					def params = fv.func.params, code = fv.func.code;
+
+					// arity check
+					assertArity(params.length, argv);
+					if (exn) return null;
+
+					// create locals
+					def newLocals: HashMap<string, Object> = Strings.newMap();
+					for (i < argv.length) {
+						newLocals[params[i]] = argv[i];
+					}
+
+					// if this is a method, insert extra locals or arguments
+					if (fv.instanceOf(MethodObjects.classMethod)) {
+						newLocals["self"] = MethodObject.!(fv).obj;
+						argv = Arrays.prepend(MethodObject.!(fv).obj, argv);					
+					}
+
+					// create new frame (and evaluate)
+					def frame = Frame.new(this, newLocals, argv, code);
+					if (frame.exn) {
+						// record stacktrace
+						stacktrace.puta(frame.stacktrace.extract());
+						// rethrow
+						throw(frame.val);
+						return null;
+					}
+
+					stack.push(frame.val);
+				}
+				_ => System.error("eval error", "unsupported opcode");
+			}
+		}
+
+		return stack.peek();
 	}
 	
 	def display() -> string { return "<frame>"; }

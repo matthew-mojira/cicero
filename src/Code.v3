@@ -5,6 +5,115 @@ class Code(range: FileRange) {
 	def var ast: AST;
 
 	def var tier: i2;
+
+	def var bytecode:   DataWriter     = DataWriter.new();
+	def var strings:    Vector<string> = Vector.new();
+	def var classholes: Vector<Class>  = Vector.new();
+	def var constants:  Vector<Object> = Vector.new();
+
+	/* Compile code (in {code}) to {this} as target */
+	def compile(code: Code) {
+		if (code.tier < 0) System.error("compile error", "attempting to compile Virgil code to bytecode");
+		compileAST(code.ast);
+		tier = 1;
+	}
+
+	def compileAST(ast: AST) {
+		match (ast) {
+			Lit(obj) => {
+				def idx = constants.length;
+				constants.put(obj);
+
+				bytecode.putb(Opcode.LOAD_LIT.tag);
+				bytecode.putb(idx);
+			}
+			Id(id) => {
+				def idx = strings.length;
+				strings.put(id);
+
+				bytecode.putb(Opcode.LOAD_NAME.tag);
+				bytecode.putb(idx);
+			}
+			Apply(tgt, args) => {
+				compile(tgt);
+				bytecode.putb(Opcode.ASSERT_FUNC.tag);
+				bytecode.zeroN(1);
+				for (arg in args) {
+					compile(arg);
+				}
+				bytecode.putb(Opcode.CALL.tag);
+				bytecode.putb(args.length);
+			}
+			If(cond, tru, fals) => {
+				compile(cond);
+				bytecode.putb(Opcode.JUMP_IF_FALSE.tag);
+				def hole1 = bytecode.pos;
+				bytecode.skipN(1); // hole to put jump offset
+				compile(tru);
+				bytecode.putb(Opcode.JUMP.tag);
+				def hole2 = bytecode.pos;
+				bytecode.skipN(1); // hole to put jump offset
+				bytecode.data[hole1] = byte.view(bytecode.pos - hole1 - 1);
+				compile(fals);
+				bytecode.data[hole2] = byte.view(bytecode.pos - hole2 - 1);
+			}
+			Cond(cases) => {
+				def ends: Vector<int> = Vector.new();
+				for (c in cases) {
+					def cond = c.0;
+					def body = c.1;
+
+					compile(cond);
+					bytecode.putb(Opcode.JUMP_IF_FALSE.tag);
+					def hole = bytecode.pos;
+					bytecode.skipN(1); // hole to put jump offset
+					compile(body);
+					bytecode.putb(Opcode.JUMP.tag);
+					ends.put(bytecode.pos);
+					bytecode.skipN(1); // hole to put jump offset
+					bytecode.data[hole] = byte.view(bytecode.pos - hole - 1);
+				}
+				def idx = constants.length;
+				// XXX object creation in AST compilation!
+				// could be problematic if we object lookup observable
+				constants.put(StrObjects.getStrObject("cond error: no true breanch"));
+				bytecode.putb(Opcode.RAISE.tag);
+				bytecode.putb(0); // no operand
+				// fill in all jump to end targets
+				for (hole in ends.extract()) {
+					bytecode.data[hole] = byte.view(bytecode.pos - hole - 1);
+				}
+			}
+			Func(id, params, code) => {
+				def cst = constants.length;
+				// XXX compiling code
+				code.compile(code);
+				// XXX object creation in AST compilation!
+				constants.put(FuncObjects.newFO(Func.new(id, params, code)));
+				def str = strings.length;
+				strings.put(id);
+
+				bytecode.putb(Opcode.LOAD_LIT.tag);
+				bytecode.putb(cst);
+				bytecode.putb(Opcode.STORE_NAME.tag);
+				bytecode.putb(str);
+				bytecode.putb(Opcode.LOAD_NAME.tag);
+				bytecode.putb(str);
+			}
+			Assign(id, code) => {
+				def str = strings.length;
+				strings.put(id);
+
+				compile(code);
+				bytecode.putb(Opcode.STORE_NAME.tag);
+				bytecode.putb(str);
+				bytecode.putb(Opcode.LOAD_NAME.tag);
+				bytecode.putb(str);
+			}
+			_ => ;
+		}
+		
+	}
 }
 
 component Codes {
@@ -18,6 +127,7 @@ component Codes {
 		def code = Code.new(range);
 		code.ast = ast;
 		code.tier = 0;
+
 		return code;
 	}
 	def virgilFail: Code = fromVirgil(doNotInstantiateThisClass);

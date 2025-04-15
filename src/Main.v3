@@ -6,7 +6,7 @@ def main(args: Array<string>) -> int {
 	// BuiltinClasses.printClasses();
 	def frame = Frame.new(null, builtins, null, null);
 
-	loadLib(frame, "lib/core.co");
+	loadLib(frame, "lib/core.co"); // AST evaluation
 
 	match (args.length) {
 		0 => {
@@ -18,6 +18,19 @@ def main(args: Array<string>) -> int {
 					def exprs = reader.getExprs();
 
 					for (expr in exprs) {
+						// compile to tier1 bytecode	
+						expr.compile(expr);
+						def buf = StringBuilder.new();
+						for (i < expr.bytecode.pos) {
+							def data = expr.bytecode.data[i];
+							buf.putx_8(data);
+						}
+						System.puts(buf.extract());
+						System.ln();
+						Bytecodes.inspect(expr.bytecode.copy());
+						System.puts("--\n");
+
+						// evaluate
 						frame.eval(expr);
 						if (frame.exn) {
 							System.puts(Strings.format1("exception: %s\n", frame.val.display()));
@@ -45,6 +58,10 @@ def main(args: Array<string>) -> int {
 				def exprs = reader.getExprs();
 
 				for (expr in exprs) {
+					// compile to tier1 bytecode
+					expr.compile(expr);
+
+					// evaluate
 					frame.eval(expr);
 					if (frame.exn) {
 						System.puts(Strings.format1("exception: %s\n", frame.val.display()));

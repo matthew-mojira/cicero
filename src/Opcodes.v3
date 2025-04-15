@@ -1,0 +1,111 @@
+enum Opcode {
+	LOAD_LIT,      // [0] index into the constant pool
+	LOAD_NAME,     // [0] index into the string pool
+	CALL,          // [n] number of arguments (not including function!)
+	JUMP,          // [0] offset of pc
+	JUMP_IF_FALSE, // [1] offset of pc
+	RAISE,         // [1]
+	TRY,           // [0] offset from this bytecode of the catch
+	CATCH,         // [0]
+	ASSERT_FUNC    // [1]
+	STORE_NAME,    // [1] index into the string pool
+	GET_FIELD,     // [1] index into the string pool
+	SET_FIELD,     // [1] index into the string pool
+	CREATE_CLASS,  // [1] index into the classhole pool
+	NEW,           // [1]
+	PULL,          // [1] how many values to pull
+
+	// should typechecking be done as a bytecode? or can the bytecodes
+	// just sometimes raise exceptions
+}
+
+/* Bytecode requires:
+ * - string pool
+ * - classhole pool
+ * - constant pool
+ */
+
+/* How to compile the AST down to bytecode?
+ * 
+ * Lit
+ *   LOAD_LIT
+ *
+ * Id
+ *   LOAD_NAME
+ * 
+ * Call
+ *   compile tgt
+ *   ASSERT_FUNC
+ *   for each arg: compile arg
+ *   CALL
+ *
+ * If
+ *   compile cond
+ *   JUMP_IF_FALSE 1
+ *   compile true
+ *   JUMP 2
+ * label 1:
+ *   compile false
+ * label 2:
+ *
+ * Cond
+ *  for each case:
+ *    compile cond1
+ *    JUMP_IF_FALSE
+ *    compile code1
+ *    JUMP 1
+ *  LOAD_LIT
+ *  RAISE
+ * 1:
+ * 
+ * Func
+ *   LOAD_LIT
+ *   STORE_NAME
+ *   LOAD_NAME
+ *
+ * Assign
+ *   compile assn
+ *   STORE_NAME
+ *   LOAD_NAME
+ *   
+ * While
+ * 1:
+ *   compile cond
+ *   JUMP_IF_FALSE 2
+ *   compile body
+ *   JUMP 1
+ * 2:
+ *   
+ * Begin 
+ *   compile each expr and pull, except the last
+ *  
+ * GetField  
+ *   compile obj
+ *   GET_FIELD
+ *   
+ * SetField
+ *   compile obj
+ *   compile val
+ *   SET_FIELD
+ *   
+ * Class
+ *   compile superclass
+ *   CREATE_CLASS
+ *   
+ * New
+ *   compile expr
+ *   NEW
+ *   
+ * Raise
+ *   compile exn
+ *   RAISE
+ * 
+ * Catch
+ *   TRY
+ *   compile try
+ *   CATCH
+ *   JUMP 1
+ *   STORE_NAME
+ *   compile catch
+ * 1:
+ */
