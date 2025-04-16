@@ -138,7 +138,7 @@ class Parser extends TextReader {
 
 							return Codes.fromAST(AST.GetField(field, obj),
 								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "set-field")) { // also has a sugary version
+						} else if (Strings.equal(str, "set-field")) {
 							def field = readIdentifier();
 							def obj = readExpr();
 							def val = readExpr();
@@ -202,7 +202,6 @@ class Parser extends TextReader {
 								}
 							}
 
-							// TODO support parser for init and superclass,
 							return Codes.fromAST(AST.Class(name, superclass, init, fields.extract(), methods.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "new")) {

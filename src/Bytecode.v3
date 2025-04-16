@@ -1,0 +1,33 @@
+layout Bytecode {
+	+0  opcode:  Opcode;
+	+1  operand: byte; // you may treat this as unsigned or signed depending on opcode
+	=2;
+}
+
+component Bytecodes {
+	def inspect(code: Array<byte>) {
+		var pc = 0;
+		while (pc < code.length) {
+			def bytecode = Ref<Bytecode>.at(code, pc);
+			def opcode   = bytecode.opcode;
+			def operand  = bytecode.operand;
+
+			System.puts(Strings.format3("+%d: %s %d\n", pc, opcode.name, operand));
+			
+			pc += 2;
+			// dispatch on bytecode
+			match (opcode) {
+				_ => ;
+			}
+		}
+	}
+}
+
+
+// def main(args: Array<string>) -> int {
+// 	def code: Array<byte> = [0, 0, 0, 1, 0, 2, 1, byte.view(-3)];
+// 
+// 	inspect(code);
+// 
+// 	return 0;
+// }

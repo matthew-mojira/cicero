@@ -29,7 +29,7 @@ class Frame(prev: Frame,
 	 */
 	def eval(code: Code) -> Object {
 		// dispatch on the code tier
-		def evalFuncs = [virgilEval, tier0Eval];
+		def evalFuncs = [virgilEval, tier0Eval, tier1Eval];
 		def v = evalFuncs[code.tier + 1](code);
 		if (!exn)
 			val = v;
@@ -282,7 +282,6 @@ class Frame(prev: Frame,
 					}
 					// call initializer
 					if (cls.init != null) {
-						//System.puts(Strings.format1("> %s\n", cls.name));
 						def code = cls.init;
 
 						def newLocals: HashMap<string, Object> = Strings.newMap();
@@ -298,15 +297,290 @@ class Frame(prev: Frame,
 							throw(frame.val);
 							return value;
 						}
-						value = frame.val;
-					}
+						value = frame.val; // why?
+					} 
 				}
 
-				return obj;
+				return obj; // why?
 			}
 		}
 
 		return value;
+	}
+	
+	/* BYTECODE EVALUATOR */
+	def tier1Eval(c: Code) -> Object {
+		def code       = c.bytecode.copy();
+		def strings    = c.strings;
+		def classholes = c.classholes;
+		def constants  = c.constants;
+
+		// Bytecodes.inspect(code);
+
+		// FIXME this valuestack thing should be in the Frame
+		// big idea: perhaps each tier should extend Frame (so it can all be separate!)?
+		def stack: ArrayStack<Object> = ArrayStack.new();
+		def handlers: Stack<int> = ArrayStack.new();
+
+		var pc = 0;
+		while (pc < code.length) {
+			def bytecode = Ref<Bytecode>.at(code, pc);
+			def opcode   = bytecode.opcode;
+			def operand  = bytecode.operand;
+
+			//System.puts(Strings.format3("+%d: %s %d\n", pc, opcode.name, operand));
+			//System.puts("stack:\n");
+			//for (i < stack.top) {
+			//	System.puts(stack.elems[i].display());
+			//	System.ln();
+			//}
+			//System.puts("--\n");
+
+			pc += 2;
+			match (opcode) {
+				LOAD_LIT => stack.push(constants[operand]);
+				LOAD_NAME => {
+					def id = strings[operand];
+					// XXX this duplicates tier0 code, refactor away (using OO approach)
+					if (locals.has(id)) {
+						stack.push(locals[id]);
+					} else if (globals.has(id)) {
+						stack.push(globals[id]);
+					} else {
+						throw(StrObjects.getStrObject(Strings.format1("unbound identifier: %s", id)));
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+					}
+				}
+				JUMP => pc += i8.view(operand);
+				JUMP_IF_FALSE => {
+					def top = stack.pop();
+					if (!top.isTrue()) pc += i8.view(operand);
+				}
+				JUMP_IF_FALSE_PEEK => {
+					def top = stack.peek();
+					if (top.isTrue()) {
+						stack.pop();
+					} else {
+						pc += i8.view(operand);
+					}
+				}
+				RAISE => {
+					def top = stack.pop();
+					throw(top);
+					if (!handlers.empty()) {
+						pc = handlers.pop();
+						exn = false;
+					} else {
+						return null;
+					}
+				}
+				STORE_NAME => {
+					def id = strings[operand];
+					def top = stack.pop();
+					locals[id] = top;
+				}
+				ASSERT_FUNC => {
+					def top = stack.peek();
+					assertType(FuncObjects.classFunc, top);
+					if (exn)
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+				}
+				CALL => {
+					var args: Vector<Object> = Vector.new();
+					for (i < operand) {
+						args.put(stack.pop());
+					}
+					args.reverse();
+					var argv: Array<Object> = args.extract();
+
+					def top = stack.pop();
+					// function code
+					def fv = FuncObject.!(top); // this cast succeeds because of ASSERT_FUNC
+					def params = fv.func.params, code = fv.func.code;
+
+					// arity check
+					assertArity(params.length, argv);
+					if (exn)
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+
+					// create locals
+					def newLocals: HashMap<string, Object> = Strings.newMap();
+					for (i < argv.length) {
+						newLocals[params[i]] = argv[i];
+					}
+
+					// if this is a method, insert extra locals or arguments
+					if (fv.instanceOf(MethodObjects.classMethod)) {
+						newLocals["self"] = MethodObject.!(fv).obj;
+						argv = Arrays.prepend(MethodObject.!(fv).obj, argv);					
+					}
+
+					// create new frame (and evaluate)
+					def frame = Frame.new(this, newLocals, argv, code);
+					if (frame.exn) {
+						// record stacktrace
+						stacktrace.puta(frame.stacktrace.extract());
+						// rethrow
+						throw(frame.val);
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+					}
+
+					stack.push(frame.val);
+				}
+				TRY => {
+					handlers.push(pc + operand);
+				}
+				CATCH => {
+					handlers.pop();
+				}
+				PULL => for (i < operand) stack.pop();
+				// objects
+				CREATE_CLASS => {
+					def superclass = stack.pop();
+					assertType(ClassObjects.classClass, superclass);
+					if (exn)
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+
+					def classhole = classholes[operand];
+					stack.push(ClassObject.new(Class.new(classhole.name, ClassObject.!(superclass).clazz, classhole.init, classhole.classFields, classhole.classMethods)));
+				}
+				NEW => {
+					def top = stack.pop();
+					assertType(ClassObjects.classClass, top);
+					if (exn)
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+
+					// duplicated code
+					def clsObj = ClassObject.!(top);
+					def obj = Object.new(clsObj.clazz);
+
+					def classes: Vector<Class> = Vector.new();
+					for (cls = clsObj.clazz; cls != null; cls = cls.superclass)
+						classes.put(cls);
+				
+					// initialization order is from base class downwards, which
+					// may involve reinitializing some fields
+					for (cls in classes.reverse().extract()) {
+						// initialize fields
+						for (field in cls.classFields) {
+							def name = field.0, expr = field.1;
+
+							// XXX hackfix
+							if (expr == null) continue;
+							// create new frames here!
+							def frame = Frame.new(this, Strings.newMap(), [], expr);
+							if (frame.exn) {
+								// record stacktrace
+								stacktrace.puta(frame.stacktrace.extract());
+								// rethrow
+								throw(frame.val);
+								if (!handlers.empty()) {
+									pc = handlers.pop();
+									exn = false;
+								} else {
+									return null;
+								}
+							}
+							obj.fields[name] = frame.val;
+						}
+						// call initializer
+						if (cls.init != null) {
+							//System.puts(Strings.format1("> %s\n", cls.name));
+							def code = cls.init;
+
+							def newLocals: HashMap<string, Object> = Strings.newMap();
+							newLocals["self"] = obj;
+							def argv: Array<Object> = [obj];
+
+							// create new frames here!
+							def frame = Frame.new(this, newLocals, argv, code);
+							if (frame.exn) {
+								// record stacktrace
+								stacktrace.puta(frame.stacktrace.extract());
+								// rethrow
+								throw(frame.val);
+								if (!handlers.empty()) {
+									pc = handlers.pop();
+									exn = false;
+								} else {
+									return null;
+								}
+							}
+						}
+					}
+					stack.push(obj);
+				}
+				GET_FIELD => {
+					def obj = stack.pop();
+					def field = strings[operand];
+
+					match (obj.getField(field)) {
+						Just(v) => stack.push(v);
+					} else {
+						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+					}
+
+				}
+				SET_FIELD => {
+					def val = stack.pop();
+					def obj = stack.pop();
+					def field = strings[operand];
+
+					if (obj.fields.has(field)) {
+						obj.fields[field] = val;
+						stack.push(val);
+					} else {
+						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+						if (!handlers.empty()) {
+							pc = handlers.pop();
+							exn = false;
+						} else {
+							return null;
+						}
+					}
+				}
+
+			//	_ => System.error("eval error", "unsupported opcode");
+			}
+		}
+
+		return stack.peek();
 	}
 	
 	def display() -> string { return "<frame>"; }
@@ -316,7 +590,7 @@ class Frame(prev: Frame,
 
 	// throw sets the exception value in the frame right away
 	private def throw(value: Object) {
-		stacktrace.put(curr.range);
+		stacktrace.put(null); // FIXME figure out proper error reporting for tier1
 		exn = true;
 		val = value;
 	}
@@ -335,8 +609,7 @@ class Frame(prev: Frame,
 
 
 def funcToFunc(f: AST.Func) -> Func {
-	// FIXME null
-	return Func.new(f.id, f.params, Codes.fromAST(f, null));	
+	return Func.new(f.id, f.params, f.body);
 }
 
 
