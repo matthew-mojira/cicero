@@ -116,7 +116,7 @@ Otherwise, the value from evaluating `e1` is the value of the entire expression.
   (method (f1 y11 y12 ... y1n1) g1)
   (method (f2 y21 y22 ... y2n2) g2)
   ...
-  (method (fm ym1 ym2 ... ymnm) gm)
+  (method (fm ym1 ym2 ... ymnm) gm))
 ```
 `x` and the `xi`s and `fi`s are identifiers. `c`, `i`, and the `ei`s, yi`s, and
 `gi`s are all expressions. The clauses inside the `class` except for the class
