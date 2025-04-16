@@ -123,6 +123,7 @@ class Code(range: FileRange) {
 				bytecode.putb(Opcode.TRY.tag);
 				def hole1 = bytecode.pos;
 				bytecode.skipN(1);
+				compile(try);
 				bytecode.putb(Opcode.CATCH.tag);
 				bytecode.putb(0); // no operand
 				bytecode.putb(Opcode.JUMP.tag);
