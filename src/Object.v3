@@ -1,6 +1,5 @@
 class Object(cls: Class) {
-	// who is responsible for initializing fields?
-	def var fields: HashMap<string, Object> = Strings.newMap();
+	def fields: HashMap<string, Object> = Strings.newMap();
 	new() {}
 
 	def getField(name: string) -> Maybe<Object> {

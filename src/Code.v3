@@ -6,10 +6,10 @@ class Code(range: FileRange) {
 
 	def var tier: i2;
 
-	def var bytecode:   DataWriter     = DataWriter.new();
-	def var strings:    Vector<string> = Vector.new();
-	def var classholes: Vector<Class>  = Vector.new(); // XXX these are not real classes!
-	def var constants:  Vector<Object> = Vector.new();
+	def bytecode:   DataWriter     = DataWriter.new();
+	def strings:    Vector<string> = Vector.new();
+	def classholes: Vector<Class>  = Vector.new(); // XXX these are not real classes!
+	def constants:  Vector<Object> = Vector.new();
 
 	/* Compile code (in {code}) to {this} as target */
 	def compile(code: Code) {

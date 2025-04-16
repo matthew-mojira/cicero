@@ -33,7 +33,7 @@
 
 (set long (empty))
 (set x 0)
-(while (< x 100) {
+(while (< x 1000) {
   (set long (append long l1))
   (set x (x.succ))
 })
