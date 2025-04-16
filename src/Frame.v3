@@ -29,15 +29,19 @@ class Frame(prev: Frame,
 	 */
 	def eval(code: Code) -> Object {
 		// dispatch on the code tier
-		def evalFuncs = [virgilEval, tier0Eval, tier1Eval];
-		def v = evalFuncs[code.tier + 1](code);
+		var v: Object;
+		match (code.tier) {
+			-1 => v = virgilEval(code.virgil);
+			 0 => v = tier0Eval(code.ast);
+			 1 => v = tier1Eval(code);
+		}
 		if (!exn)
 			val = v;
 		return v;
 	}
 
-	private def virgilEval(code: Code) -> Object {
-		def ret = code.virgil(args);
+	private def virgilEval(func: Range<Object> -> (Object, bool)) -> Object {
+		def ret = func(args);
 		val = ret.0;
 		exn = ret.1;
 		if (exn) stacktrace.put(null); // XXX null signifies native code
@@ -46,11 +50,11 @@ class Frame(prev: Frame,
 
 	var curr: Code;
 
-	private def tier0Eval(code: Code) -> Object {
+	private def tier0Eval(ast: AST) -> Object {
 		curr = code;
 		var value: Object;
 
-		match (code.ast) {
+		match (code.ast.data) {
 			Lit(val) => value = val;
 			Id(id) => {
 				if (locals.has(id)) {
@@ -608,7 +612,7 @@ class Frame(prev: Frame,
 }
 
 
-def funcToFunc(f: AST.Func) -> Func {
+def funcToFunc(f: ASTData.Func) -> Func {
 	return Func.new(f.id, f.params, f.body);
 }
 

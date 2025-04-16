@@ -46,7 +46,7 @@
   - tier0 -> tier1 compiler don't use DataWriter (or use it better)
   - canonicalize constants and strings
 * understand tier1 bytecode
-  - GRP
+  - GRP (unable to detect interpreter loop!)
   - wizard engine profiling
   - cut down tier1 eval overhead
 * parser

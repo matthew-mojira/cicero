@@ -8,12 +8,12 @@ class Parser extends TextReader {
 		while (pos < limit) {
 			skipWs(this);
 			def expr = readExpr();
-			exprs.put(expr);
+			exprs.put(Codes.fromAST(expr));
 			if (!ok) break;
 		}
 	}
 
-	private def readExpr() -> Code {
+	private def readExpr() -> AST {
 		def startPos = pos;
 		def startLine = line, startColumn = column;
 		match (char) {
@@ -21,7 +21,7 @@ class Parser extends TextReader {
 				req1('(');
 				if (opt1(')') >= 0) {
 					// () case
-					return Codes.fromAST(AST.Lit(PoopCrapObjects.instance), FileRange.new(fileName, startLine, startColumn, line, column));
+					return AST.new(ASTData.Lit(PoopCrapObjects.instance), FileRange.new(fileName, startLine, startColumn, line, column));
 				}
 
 				// check first word to indicate KW-syntax expression
@@ -38,13 +38,13 @@ class Parser extends TextReader {
 							def exprF = readExpr();
 							req1(')');
 
-							return Codes.fromAST(AST.If(cond, exprT, exprF),
+							return AST.new(ASTData.If(cond, exprT, exprF),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "raise")) {
 							def exn = readExpr();
 							req1(')');
 
-							return Codes.fromAST(AST.Raise(exn),
+							return AST.new(ASTData.Raise(exn),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "try")) {
 							def try = readExpr();
@@ -52,7 +52,7 @@ class Parser extends TextReader {
 							def catch = readExpr();
 							req1(')');
 
-							return Codes.fromAST(AST.Catch(try, exn, catch),
+							return AST.new(ASTData.Catch(try, exn, catch),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "func")) {
 							/* The syntax of a function is
@@ -78,15 +78,16 @@ class Parser extends TextReader {
 							// body expresssion
 							def body = readExpr();
 							req1(')');
-
-							return Codes.fromAST(AST.Func(name, params.extract(), body),
+							
+							// XXX creating Code here
+							return AST.new(ASTData.Func(name, params.extract(), Codes.fromAST(body)),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "set")) {
 							def id = readIdentifier();
 							def expr = readExpr();
 							req1(')');
 
-							return Codes.fromAST(AST.Assign(id, expr),
+							return AST.new(ASTData.Assign(id, expr),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "cond")) {
 							def cases: Vector<(Code, Code)> = Vector.new();
@@ -103,14 +104,14 @@ class Parser extends TextReader {
 								}
 							}
 
-							return Codes.fromAST(AST.Cond(cases.extract()),
+							return AST.new(ASTData.Cond(cases.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "while")) {
 							def cond = readExpr();
 							def body = readExpr();
 							req1(')');
 							
-							return Codes.fromAST(AST.While(cond, body),
+							return AST.new(ASTData.While(cond, body),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "begin")) { // also has a sugary version
 							def exprs: Vector<Code> = Vector.new();
@@ -129,14 +130,14 @@ class Parser extends TextReader {
 								}
 							}
 							
-							return Codes.fromAST(AST.Begin(exprs.extract()),
+							return AST.new(ASTData.Begin(exprs.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "get-field")) { // also has a sugary version
 							def field = readIdentifier();
 							def obj = readExpr();
 							req1(')');
 
-							return Codes.fromAST(AST.GetField(field, obj),
+							return AST.new(ASTData.GetField(field, obj),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "set-field")) {
 							def field = readIdentifier();
@@ -144,12 +145,12 @@ class Parser extends TextReader {
 							def val = readExpr();
 							req1(')');
 
-							return Codes.fromAST(AST.SetField(field, obj, val),
+							return AST.new(ASTData.SetField(field, obj, val),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "class")) {
 							def name = readIdentifier();
 							def fields: Vector<(string, Code)> = Vector.new();
-							def methods: Vector<AST.Func> = Vector.new();
+							def methods: Vector<ASTData.Func> = Vector.new();
 							var init: Maybe<Code> = Maybe.Nothing;
 							var superclass: Maybe<Code> = Maybe.Nothing;
 
@@ -160,7 +161,7 @@ class Parser extends TextReader {
 									def fieldName = readIdentifier();
 									def fieldInit = readExpr();
 									
-									fields.put(fieldName, fieldInit);
+									fields.put(fieldName, Codes.fromAST(fieldInit));
 								} else if (Strings.equal(word, "method")) {
 									req1('(');
 									def methodName = readIdentifier();
@@ -177,13 +178,14 @@ class Parser extends TextReader {
 									}
 									def methodBody = readExpr();
 
-									methods.put(AST.Func(methodName, methodParams.extract(), methodBody));
+									// XXX creating Code here
+									methods.put(ASTData.Func(methodName, methodParams.extract(), Codes.fromAST(methodBody)));
 								} else if (Strings.equal(word, "init")) {
 									if (init.isJust()) {
 										fail("redeclaration of init in class definition");
 										return null;
 									}
-									init = Maybe.Just(readExpr());
+									init = Maybe.Just(Codes.fromAST(readExpr()));
 								} else if (Strings.equal(word, "extends")) {
 									if (init.isJust()) {
 										fail("redeclaration of extends in class definition");
@@ -202,13 +204,13 @@ class Parser extends TextReader {
 								}
 							}
 
-							return Codes.fromAST(AST.Class(name, superclass, init, fields.extract(), methods.extract()),
+							return AST.new(ASTData.Class(name, superclass, init, fields.extract(), methods.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "new")) {
 							def expr = readExpr();
 							req1(')');
 
-							return Codes.fromAST(AST.New(expr),
+							return AST.new(ASTData.New(expr),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						}
 					}
@@ -224,7 +226,7 @@ class Parser extends TextReader {
 						return null;
 					}
 				}
-				return Codes.fromAST(AST.Apply(head, tail.extract()),
+				return AST.new(ASTData.Apply(head, tail.extract()),
 					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
 			')' => {
@@ -245,7 +247,7 @@ class Parser extends TextReader {
 						return null;
 					}
 				}
-				return Codes.fromAST(AST.Begin(exprs.extract()),
+				return AST.new(ASTData.Begin(exprs.extract()),
 					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
 			'}' => {
@@ -254,7 +256,7 @@ class Parser extends TextReader {
 			}
 			'\"' => {
 				def str = readString();
-				return Codes.fromAST(AST.Lit(StrObjects.getStrObject(str)),
+				return AST.new(ASTData.Lit(StrObjects.getStrObject(str)),
 					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
 			_ => {
@@ -275,14 +277,14 @@ class Parser extends TextReader {
 						return null;
 					}
 					// any characters that start an integer literal cannot be part of a valid identifier
-					expr = Codes.fromAST(AST.Lit(IntObjects.getIntObject(value)), range);
+					expr = AST.new(ASTData.Lit(IntObjects.getIntObject(value)), range);
 				} else {
-					expr = Codes.fromAST(AST.Id(str), range);
+					expr = AST.new(ASTData.Id(str), range);
 				}
 
 				// remaining strings are field accesses
 				for (i = 1; i < strs.length; i++) {
-					expr = Codes.fromAST(AST.GetField(strs[i], expr), range);
+					expr = AST.new(ASTData.GetField(strs[i], expr), range);
 				}
 
 				return expr;

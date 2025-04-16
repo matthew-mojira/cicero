@@ -1,35 +1,38 @@
-type AST {
+// When a field is of type Code, that indicates that its evaluation occurs in
+// a new frame, hence it should be parsed as a new Code object.
+type ASTData {
 	case Lit(val: Object)
 		 { def whichOne() -> string { return "lit"; } }
 	case Id(id: string)
 		 { def whichOne() -> string { return "id"; } }
-	case Apply(tgt: Code, args: Array<Code>)
+	case Apply(tgt: AST, args: Array<AST>)
 		 { def whichOne() -> string { return "apply"; } }
-	case If(cond: Code, exprT: Code, exprF: Code)
+	case If(cond: AST, exprT: AST, exprF: AST)
 		 { def whichOne() -> string { return "if"; } }
-	case Cond(cases: Array<(Code, Code)>)
+	case Cond(cases: Array<(AST, AST)>)
 		 { def whichOne() -> string { return "cond"; } }
-	case Raise(exn: Code)
+	case Raise(exn: AST)
 		 { def whichOne() -> string { return "raise"; } }
-	case Catch(try: Code, exn: string, catch: Code)
+	case Catch(try: AST, exn: string, catch: AST)
 		 { def whichOne() -> string { return "catch"; } }
-	// this is a function expression (which evaluates to function value)
 	case Func(id: string, params: Array<string>, body: Code)
 		 { def whichOne() -> string { return "func"; } }
-	case Assign(id: string, assn: Code)
+	case Assign(id: string, assn: AST)
 		 { def whichOne() -> string { return "assign"; } }
-	case While(cond: Code, body: Code)
+	case While(cond: AST, body: AST)
 		 { def whichOne() -> string { return "while"; } }
-	case Begin(exprs: Array<Code>)
+	case Begin(exprs: Array<AST>)
 		 { def whichOne() -> string { return "begin"; } }
-	case GetField(field: string, obj: Code)
+	case GetField(field: string, obj: AST)
 		 { def whichOne() -> string { return "get-field"; } }
-	case SetField(field: string, obj: Code, val: Code)
+	case SetField(field: string, obj: AST, val: AST)
 		 { def whichOne() -> string { return "set-field"; } }
-	case Class(id: string, superclass: Maybe<Code>, init: Maybe<Code>, fields: Array<(string, Code)>, methods: Array<AST.Func>)
+	case Class(id: string, superclass: Maybe<AST>, init: Maybe<Code>, fields: Array<(string, Code)>, methods: Array<ASTData.Func>)
 		 { def whichOne() -> string { return "class"; } }
-	case New(expr: Code)
+	case New(expr: AST)
 		 { def whichOne() -> string { return "new"; } }
 
 	def whichOne() -> string;
 }
+
+class AST(data: ASTData, loc: FileRange) {}
