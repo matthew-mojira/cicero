@@ -12,7 +12,7 @@
 (if (begin false false false false false 1) true (raise "exception: false"))
 (if { (set x 1) (set y x) } true (raise "exception: false"))
 (if (if false false true) true (raise "exception: false"))
-(if (try { false (raise "false") } 3) true (raise "exception: false"))
+(if (try { false (raise "false") } x 3) true (raise "exception: false"))
 ; false
 (if false (raise "exception: true") false)
 (if () (raise "exception: true") false)
