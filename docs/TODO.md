@@ -14,6 +14,7 @@
   - exception class, and standardize exception names around built-ins
   - better stacktraces (include file name, methods around exn object to query
     location info)
+  - refix stacktraces
   - return
 * classes
   - initialization syntax for user-defined classes
@@ -23,7 +24,7 @@
     dynamci optimizations?)
   - built-in classes should override base class methods, instead of having base
     class methods implement those for it (for display)
-* tier1: bytecode
+  - Don't use a hashmap for fields!! (but an IC could optimize this)
 * allow map to be created (maybe define built-in function for the time being)
 * list literals
 * more methods for classes
@@ -32,9 +33,32 @@
 * implement `ObjectOf<T>`
 * CL args, better repl handling
 * debug state stuff?
-* global variables
+* local and global variables
+  - should variables be declared before they are used?
+  - should we separate set-local/global (like wasm!) SEE BELOW
 * make the lazy allocation of methods unobservable (i.e. return lazy methods
   in `o.fields` and fix incorrect inheritance behavior)
+* split Frames based on tiers (so it can become fields of a class instead of
+  local variables in a method)
+* better tier1 bytecode
+  - bytecode should also contain source code mapping (For tier1 errors)
+  - develop a method of dynamically tiering up tier0 -> tier1
+  - tier0 -> tier1 compiler don't use DataWriter (or use it better)
+  - canonicalize constants and strings
+* understand tier1 bytecode
+  - GRP
+  - wizard engine profiling
+  - cut down tier1 eval overhead
+* parser
+  - when input is stdin, keep reading on incomplete input
+  - nicer parser error messages
+  - first-class parser (make parser errors exceptions? would mean that loading
+    process is a feature of the language)
+  - clarify keywords, literals, and builtins
+* limits: incorporate limits to settle potentially unbounded weird things
+* arbitary length integers?
+* multiple files, namespaces
+* decimal/floating-point numbers?
 
 ## Scoping
 Right now, there are two scopes that matter:
@@ -84,6 +108,14 @@ you may reference a variable without it being assigned:
 How does Python do this with code objects, since it identifies all local
 variables which are referenced in a function, but still disallows variables
 to be read before it is assigned?
+
+Python:
+```
+UnboundLocalError: local variable 'y' referenced before assignment on line 4 in main.py
+```
+
+Perhaps dynamic optimizations/ICs can determine whether a variable refers to a
+value in the global scope or local scope.
 
 ### Mutability
 
@@ -153,5 +185,8 @@ When a function is evaluated, the frame accesses the Cicero fields, which are
 now exposed to the user and mutable. This means the user can mess with them, in
 a way which is more often than not confusing and unintuitive. But it's more
 dynamic!
+
+The question is speed. Obviously this is slower in a trivial implementation,
+but how much can dynamic optimizations cut down on this overhead?
 
 

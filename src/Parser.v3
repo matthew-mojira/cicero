@@ -202,7 +202,6 @@ class Parser extends TextReader {
 								}
 							}
 
-							// TODO support parser for init and superclass,
 							return Codes.fromAST(AST.Class(name, superclass, init, fields.extract(), methods.extract()),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "new")) {
