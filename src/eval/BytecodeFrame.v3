@@ -24,7 +24,7 @@ class BytecodeFrame extends Frame {
 		return v;
 	}
 
-	def debug = !true;
+	def debug = false;
 	
 	/* BYTECODE EVALUATOR */
 	def evalBytecode(b: Bytecode) -> Object {
@@ -32,6 +32,7 @@ class BytecodeFrame extends Frame {
 		def strings    = b.strings;
 		def classholes = b.classholes;
 		def constants  = b.constants;
+		def source     = b.source;
 		
 		if (debug) {
 			System.puts("Evaluating bytecode:\n");
@@ -60,6 +61,7 @@ class BytecodeFrame extends Frame {
 			def bytecode = Ref<Instruction>.at(code, pc);
 			def opcode   = bytecode.opcode;
 			def operand  = bytecode.operand;
+			loc = source.get(pc >> 1);
 
 			if (debug) {
 				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, operand));

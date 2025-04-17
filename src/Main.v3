@@ -1,5 +1,3 @@
-def enableTier1 = true;
-
 def main(args: Array<string>) -> int {
 	def builtins: Vector<(string, Object)> = Vector.new();
 	for (builtin in Builtin.set.all) {
@@ -20,7 +18,7 @@ def main(args: Array<string>) -> int {
 
 					for (expr in exprs) {
 						// compile to tier1 bytecode
-						if (enableTier1) {
+						if (Tiers.enableTier1) {
 							expr.compile();
 // 							def buf = StringBuilder.new();
 // 							for (i < expr.bytecode.pos) {
@@ -63,7 +61,7 @@ def main(args: Array<string>) -> int {
 
 				for (expr in exprs) {
 					// compile to tier1 bytecode
-					if (enableTier1) {
+					if (Tiers.enableTier1) {
 						expr.compile();
 //  						def buf = StringBuilder.new();
 //  						for (i < expr.bytecode.pos) {
@@ -114,7 +112,7 @@ def loadLib(frame: Frame, filename: string) {
 	def reader = Parser.new(filename, file);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
- 		if (enableTier1)
+ 		if (Tiers.enableTier1)
  			expr.compile();
 		frame.evalCode(expr);
 	}

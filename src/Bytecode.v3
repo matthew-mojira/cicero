@@ -4,36 +4,46 @@ class Bytecode {
 	def classholes: Vector<Class>  = Vector.new(); // XXX these are not real classes!
 	def constants:  Vector<Object> = Vector.new();
 
+	/* Source mappings */
+	def source: Vector<FileRange>  = Vector.new();
+
 	new(ast: AST) {
 		compileAST(ast);
 	}
 
 	def compileAST(ast: AST) {
+		def loc = ast.loc;
 		match (ast.data) {
 			Lit(obj) => {
+				source.put(loc);
 				putb(Opcode.LOAD_LIT.tag);
 				putb(addConstant(obj));
 			}
 			Id(id) => {
+				source.put(loc);
 				putb(Opcode.LOAD_NAME.tag);
 				putb(addString(id));
 			}
 			Apply(tgt, args) => {
 				compileAST(tgt);
+				source.put(loc);
 				putb(Opcode.ASSERT_FUNC.tag);
 				zeroN(1);
 				for (arg in args) {
 					compileAST(arg);
 				}
+				source.put(loc);
 				putb(Opcode.CALL.tag);
 				putb(args.length);
 			}
 			If(cond, tru, fals) => {
 				compileAST(cond);
+				source.put(loc);
 				putb(Opcode.JUMP_IF_FALSE.tag);
 				def hole1 = pos();
 				skipN(1); // hole to put jump offset
 				compileAST(tru);
+				source.put(loc);
 				putb(Opcode.JUMP.tag);
 				def hole2 = pos();
 				skipN(1); // hole to put jump offset
@@ -48,10 +58,12 @@ class Bytecode {
 					def body = c.1;
 
 					compileAST(cond);
+					source.put(loc);
 					putb(Opcode.JUMP_IF_FALSE.tag);
 					def hole = pos();
 					skipN(1); // hole to put jump offset
 					compileAST(body);
+					source.put(loc);
 					putb(Opcode.JUMP.tag);
 					ends.put(pos());
 					skipN(1); // hole to put jump offset
@@ -60,8 +72,10 @@ class Bytecode {
 				def idx = constants.length;
 				// XXX object creation in AST compilation!
 				// could be problematic if we object lookup observable
+				source.put(loc);
 				putb(Opcode.LOAD_LIT.tag);
 				putb(addConstant(StrObjects.getStrObject("cond error: no true breanch")));
+				source.put(loc);
 				putb(Opcode.RAISE.tag);
 				putb(0); // no operand
 				// fill in all jump to end targets
@@ -77,10 +91,13 @@ class Bytecode {
 				def cst = addConstant(FuncObjects.newFO(Func.new(id, params, code)));
 				def str = addString(id);
 			
+				source.put(loc);
 				putb(Opcode.LOAD_LIT.tag);
 				putb(cst);
+				source.put(loc);
 				putb(Opcode.STORE_NAME.tag);
 				putb(str);
+				source.put(loc);
 				putb(Opcode.LOAD_NAME.tag);
 				putb(str);
 			}
@@ -88,28 +105,35 @@ class Bytecode {
 				compileAST(code);
 				
 				def str = addString(id);
+				source.put(loc);
 				putb(Opcode.STORE_NAME.tag);
 				putb(str);
+				source.put(loc);
 				putb(Opcode.LOAD_NAME.tag);
 				putb(str);
 			}
 			Raise(exn) => {
 				compileAST(exn);
+				source.put(loc);
 				putb(Opcode.RAISE.tag);
 				putb(0); // no operand
 			}
 			Catch(try, id, catch) => {
+				source.put(loc);
 				putb(Opcode.TRY.tag);
 				def hole1 = pos();
 				skipN(1);
 				compileAST(try);
+				source.put(loc);
 				putb(Opcode.CATCH.tag);
 				putb(0); // no operand
+				source.put(loc);
 				putb(Opcode.JUMP.tag);
 				def hole2 = pos();
 				skipN(1);
 				writeb(hole1, pos() - hole1 - 1);
 
+				source.put(loc);
 				putb(Opcode.STORE_NAME.tag);
 				putb(addString(id));
 
@@ -119,6 +143,7 @@ class Bytecode {
 			Begin(exprs) => {
 				for (i < exprs.length - 1) {
 					compileAST(exprs[i]);
+					source.put(loc);
 					putb(Opcode.PULL.tag);
 					putb(1); // ignore this value
 				}
@@ -127,12 +152,15 @@ class Bytecode {
 			While(cond, body) => {
 				def head = pos();
 				compileAST(cond);
+				source.put(loc);
 				putb(Opcode.JUMP_IF_FALSE_PEEK.tag);
 				def hole = pos();
 				skipN(1); // hole to put jump offset
 				compileAST(body);
+				source.put(loc);
 				putb(Opcode.PULL.tag);
 				putb(100);
+				source.put(loc);
 				putb(Opcode.JUMP.tag);
 				skipN(1);
 				writeb(pos() - 1, head - pos());
@@ -140,12 +168,14 @@ class Bytecode {
 			}
 			GetField(id, obj) => {
 				compileAST(obj);
+				source.put(loc);
 				putb(Opcode.GET_FIELD.tag);
 				putb(addString(id));
 			}
 			SetField(id, obj, val) => {
 				compileAST(obj);
 				compileAST(val);
+				source.put(loc);
 				putb(Opcode.SET_FIELD.tag);
 				putb(addString(id));
 			}
@@ -155,6 +185,7 @@ class Bytecode {
 				match (superclass) {
 					Nothing => {
 						def idx = constants.length;
+						source.put(loc);
 						putb(Opcode.LOAD_LIT.tag);
 						putb(addConstant(ClassObject.new(Objects.classBase)));
 					}
@@ -170,16 +201,20 @@ class Bytecode {
 				}
 				//                                   XXX
 				def idx = addClasshole(Class.new(id, null, init2, fields, Arrays.map(methods, funcToFunc)));
+				source.put(loc);
 				putb(Opcode.CREATE_CLASS.tag);
 				putb(idx);
 				def str = addString(id);
+				source.put(loc);
 				putb(Opcode.STORE_NAME.tag);
 				putb(str);
+				source.put(loc);
 				putb(Opcode.LOAD_NAME.tag);
 				putb(str);
 			}
 			New(obj) => {
 				compileAST(obj);
+				source.put(loc);
 				putb(Opcode.NEW.tag);
 				putb(0); // no operand
 			}
@@ -222,8 +257,10 @@ class Bytecode {
 			def bc      = Ref<Instruction>.at(bc, pc);
 			def opcode  = bc.opcode;
 			def operand = bc.operand;
+			def loc = source[pc >> 1];
 
-			System.puts(Strings.format3("+%d: %s %d\n", pc, opcode.name, operand));
+			System.puts(Strings.format3("+%d: %s %d", pc, opcode.name, operand));
+			System.puts(Strings.format2(" (%d:%d)\n", loc.beginLine, loc.beginColumn));
 			
 			pc += 2;
 			// dispatch on bytecode
@@ -249,7 +286,7 @@ component Bytecodes {
 			def opcode   = bytecode.opcode;
 			def operand  = bytecode.operand;
 
-			System.puts(Strings.format3("+%d: %s %d\n", pc, opcode.name, operand));
+			System.puts(Strings.format3("+%d: %s %d", pc, opcode.name, operand));
 			
 			pc += 2;
 			// dispatch on bytecode

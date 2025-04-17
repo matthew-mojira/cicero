@@ -74,7 +74,10 @@ component Frames {
 		return null;
 	}
 	def newTopFrame(builtins: Array<(string, Object)>) -> Frame {
-		// FIXME
-		return BytecodeFrame.new(null, null, builtins);
+		if (Tiers.enableTier1) {
+			return BytecodeFrame.new(null, null, builtins);
+		} else {
+			return ASTFrame.new(null, null, builtins);
+		}
 	}
 }
