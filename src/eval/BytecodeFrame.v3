@@ -24,11 +24,11 @@ class BytecodeFrame extends Frame {
 		return v;
 	}
 
-	def debug = false;
+	def debug = !false;
 	
 	/* BYTECODE EVALUATOR */
 	def evalBytecode(b: Bytecode) -> Object {
-		def code       = b.bytecode.copy();
+		def code       = b.bytecode;
 		def strings    = b.strings;
 		def classholes = b.classholes;
 		def constants  = b.constants;
@@ -80,7 +80,7 @@ class BytecodeFrame extends Frame {
 				System.puts("--\n");
 			}
 
-			pc += 2;
+			pc += 4;
 			match (opcode) {
 				LOAD_LIT => stack.push(constants[operand]);
 				LOAD_NAME => {

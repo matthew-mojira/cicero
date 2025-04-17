@@ -12,11 +12,11 @@ class Code(range: FileRange) {
 	def var tier: i2;
 
 	def incrementCount() {
-// 		runCount++;
-// 		if (runCount > 10 && tier == 0) {
-// 			System.puts("tiering up!\n");
-// 			compile();
-// 		}
+//  		runCount++;
+//  		if (runCount > 10 && tier == 0) {
+//  			System.puts("tiering up!\n");
+//  			compile();
+//  		}
 	}
 
 	/* Compile code */

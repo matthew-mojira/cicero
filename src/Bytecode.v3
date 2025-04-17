@@ -1,5 +1,7 @@
 class Bytecode {
-	def bytecode:   DataWriter     = DataWriter.new();
+	def writer:     DataWriter     = DataWriter.new();
+
+	var bytecode:   Array<byte>;
 	def strings:    Vector<string> = Vector.new();
 	def classholes: Vector<Class>  = Vector.new(); // XXX these are not real classes!
 	def constants:  Vector<Object> = Vector.new();
@@ -9,6 +11,7 @@ class Bytecode {
 
 	new(ast: AST) {
 		compileAST(ast);
+		bytecode = writer.copy();
 	}
 
 	def compileAST(ast: AST) {
@@ -17,39 +20,39 @@ class Bytecode {
 			Lit(obj) => {
 				source.put(loc);
 				putb(Opcode.LOAD_LIT.tag);
-				putb(addConstant(obj));
+				putO(addConstant(obj));
 			}
 			Id(id) => {
 				source.put(loc);
 				putb(Opcode.LOAD_NAME.tag);
-				putb(addString(id));
+				putO(addString(id));
 			}
 			Apply(tgt, args) => {
 				compileAST(tgt);
 				source.put(loc);
 				putb(Opcode.ASSERT_FUNC.tag);
-				zeroN(1);
+				zeroO();
 				for (arg in args) {
 					compileAST(arg);
 				}
 				source.put(loc);
 				putb(Opcode.CALL.tag);
-				putb(args.length);
+				putO(args.length);
 			}
 			If(cond, tru, fals) => {
 				compileAST(cond);
 				source.put(loc);
 				putb(Opcode.JUMP_IF_FALSE.tag);
 				def hole1 = pos();
-				skipN(1); // hole to put jump offset
+				skipO(); // hole to put jump offset
 				compileAST(tru);
 				source.put(loc);
 				putb(Opcode.JUMP.tag);
 				def hole2 = pos();
-				skipN(1); // hole to put jump offset
-				writeb(hole1, pos() - hole1 - 1);
+				skipO(); // hole to put jump offset
+				writeO(hole1, pos() - hole1 - 1);
 				compileAST(fals);
-				writeb(hole2, pos() - hole2 - 1);
+				writeO(hole2, pos() - hole2 - 1);
 			}
 			Cond(cases) => {
 				def ends: Vector<int> = Vector.new();
@@ -61,26 +64,26 @@ class Bytecode {
 					source.put(loc);
 					putb(Opcode.JUMP_IF_FALSE.tag);
 					def hole = pos();
-					skipN(1); // hole to put jump offset
+					skipO(); // hole to put jump offset
 					compileAST(body);
 					source.put(loc);
 					putb(Opcode.JUMP.tag);
 					ends.put(pos());
-					skipN(1); // hole to put jump offset
-					writeb(hole, pos() - hole - 1);
+					skipO(); // hole to put jump offset
+					writeO(hole, pos() - hole - 1);
 				}
 				def idx = constants.length;
 				// XXX object creation in AST compilation!
 				// could be problematic if we object lookup observable
 				source.put(loc);
 				putb(Opcode.LOAD_LIT.tag);
-				putb(addConstant(StrObjects.getStrObject("cond error: no true breanch")));
+				putO(addConstant(StrObjects.getStrObject("cond error: no true breanch")));
 				source.put(loc);
 				putb(Opcode.RAISE.tag);
-				putb(0); // no operand
+				putO(0); // no operand
 				// fill in all jump to end targets
 				for (hole in ends.extract()) {
-					writeb(hole, pos() - hole - 1);
+					writeO(hole, pos() - hole - 1);
 				}
 			}
 			Func(id, params, code) => {
@@ -93,13 +96,13 @@ class Bytecode {
 			
 				source.put(loc);
 				putb(Opcode.LOAD_LIT.tag);
-				putb(cst);
+				putO(cst);
 				source.put(loc);
 				putb(Opcode.STORE_NAME.tag);
-				putb(str);
+				putO(str);
 				source.put(loc);
 				putb(Opcode.LOAD_NAME.tag);
-				putb(str);
+				putO(str);
 			}
 			Assign(id, code) => {
 				compileAST(code);
@@ -107,45 +110,45 @@ class Bytecode {
 				def str = addString(id);
 				source.put(loc);
 				putb(Opcode.STORE_NAME.tag);
-				putb(str);
+				putO(str);
 				source.put(loc);
 				putb(Opcode.LOAD_NAME.tag);
-				putb(str);
+				putO(str);
 			}
 			Raise(exn) => {
 				compileAST(exn);
 				source.put(loc);
 				putb(Opcode.RAISE.tag);
-				putb(0); // no operand
+				putO(0); // no operand
 			}
 			Catch(try, id, catch) => {
 				source.put(loc);
 				putb(Opcode.TRY.tag);
 				def hole1 = pos();
-				skipN(1);
+				skipO();
 				compileAST(try);
 				source.put(loc);
 				putb(Opcode.CATCH.tag);
-				putb(0); // no operand
+				putO(0); // no operand
 				source.put(loc);
 				putb(Opcode.JUMP.tag);
 				def hole2 = pos();
-				skipN(1);
-				writeb(hole1, pos() - hole1 - 1);
+				skipO();
+				writeO(hole1, pos() - hole1 - 1);
 
 				source.put(loc);
 				putb(Opcode.STORE_NAME.tag);
-				putb(addString(id));
+				putO(addString(id));
 
 				compileAST(catch);
-				writeb(hole2, pos() - hole2 - 1);
+				writeO(hole2, pos() - hole2 - 1);
 			}
 			Begin(exprs) => {
 				for (i < exprs.length - 1) {
 					compileAST(exprs[i]);
 					source.put(loc);
 					putb(Opcode.PULL.tag);
-					putb(1); // ignore this value
+					putO(1); // ignore eval result
 				}
 				compileAST(exprs[exprs.length - 1]);
 			}
@@ -155,29 +158,29 @@ class Bytecode {
 				source.put(loc);
 				putb(Opcode.JUMP_IF_FALSE_PEEK.tag);
 				def hole = pos();
-				skipN(1); // hole to put jump offset
+				skipO(); // hole to put jump offset
 				compileAST(body);
 				source.put(loc);
 				putb(Opcode.PULL.tag);
-				putb(100);
+				putO(1);
 				source.put(loc);
 				putb(Opcode.JUMP.tag);
-				skipN(1);
-				writeb(pos() - 1, head - pos());
-				writeb(hole, pos() - hole - 1);
+				skipO();
+				writeO(pos() - 3, head - pos());
+				writeO(hole, pos() - hole - 1);
 			}
 			GetField(id, obj) => {
 				compileAST(obj);
 				source.put(loc);
 				putb(Opcode.GET_FIELD.tag);
-				putb(addString(id));
+				putO(addString(id));
 			}
 			SetField(id, obj, val) => {
 				compileAST(obj);
 				compileAST(val);
 				source.put(loc);
 				putb(Opcode.SET_FIELD.tag);
-				putb(addString(id));
+				putO(addString(id));
 			}
 			Class(id, superclass, init, fields, methods) => {
 				// there are subcodes which are getting compiled here
@@ -187,7 +190,7 @@ class Bytecode {
 						def idx = constants.length;
 						source.put(loc);
 						putb(Opcode.LOAD_LIT.tag);
-						putb(addConstant(ClassObject.new(Objects.classBase)));
+						putO(addConstant(ClassObject.new(Objects.classBase)));
 					}
 					Just(expr) => compileAST(expr);
 				}
@@ -203,20 +206,20 @@ class Bytecode {
 				def idx = addClasshole(Class.new(id, null, init2, fields, Arrays.map(methods, funcToFunc)));
 				source.put(loc);
 				putb(Opcode.CREATE_CLASS.tag);
-				putb(idx);
+				putO(idx);
 				def str = addString(id);
 				source.put(loc);
 				putb(Opcode.STORE_NAME.tag);
-				putb(str);
+				putO(str);
 				source.put(loc);
 				putb(Opcode.LOAD_NAME.tag);
-				putb(str);
+				putO(str);
 			}
 			New(obj) => {
 				compileAST(obj);
 				source.put(loc);
 				putb(Opcode.NEW.tag);
-				putb(0); // no operand
+				putO(0); // no operand
 			}
 
 //			_ => System.error("compile error", "unsupported AST node");
@@ -225,11 +228,19 @@ class Bytecode {
 	}
 
 	// wrappers around datawriter
-	def putb(b: int) { bytecode.putb(b); }
-	def skipN(s: int) { bytecode.skipN(s); }
-	def zeroN(s: int) { bytecode.zeroN(s); }
-	def pos() -> int { return bytecode.pos; }
-	def writeb(addr: int, data: int) { bytecode.data[addr] = byte.view(data); }
+	def putb(b: int)  { writer.putb(b); }
+	def putO(o: int)  { writer.putbbb(o, o >> 8, o >> 16); }
+	//def skipN(s: int) { writer.skipN(s); }
+	def skipO()       { writer.skipN(3); }
+	//def zeroN(s: int) { writer.zeroN(s); }
+	def zeroO()       { writer.zeroN(3); }
+	def pos() -> int  { return writer.pos; }
+	//def writeb(addr: int, data: int) { writer.data[addr] = byte.view(data); }
+	def writeO(addr: int, data: int) {
+		writer.data[addr]     = byte.view(data);
+		writer.data[addr + 1] = byte.view(data >> 8);
+		writer.data[addr + 2] = byte.view(data >> 16);
+	}
 
 	def addString(str: string) -> int {
 		def idx = strings.length;
@@ -251,18 +262,18 @@ class Bytecode {
 
 	/* print this bytecode */
 	def inspect() {
-		def bc = bytecode.copy();
+		def bc = bytecode;
 		var pc = 0;
 		while (pc < bc.length) {
 			def bc      = Ref<Instruction>.at(bc, pc);
 			def opcode  = bc.opcode;
 			def operand = bc.operand;
-			def loc = source[pc >> 1];
+			def loc = source[pc >> 2];
 
 			System.puts(Strings.format3("+%d: %s %d", pc, opcode.name, operand));
 			System.puts(Strings.format2(" (%d:%d)\n", loc.beginLine, loc.beginColumn));
 			
-			pc += 2;
+			pc += 4;
 			// dispatch on bytecode
 			match (opcode) {
 				_ => ;
@@ -274,8 +285,8 @@ class Bytecode {
 
 layout Instruction {
 	+0  opcode:  Opcode;
-	+1  operand: byte; // you may treat this as unsigned or signed depending on opcode
-	=2;
+	+1  operand: u24; // you may treat this as unsigned or signed depending on opcode
+	=4;
 }
 
 component Bytecodes {
@@ -288,7 +299,7 @@ component Bytecodes {
 
 			System.puts(Strings.format3("+%d: %s %d", pc, opcode.name, operand));
 			
-			pc += 2;
+			pc += 4;
 			// dispatch on bytecode
 			match (opcode) {
 				_ => ;

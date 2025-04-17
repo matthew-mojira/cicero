@@ -14,17 +14,14 @@
   - exception class, and standardize exception names around built-ins
   - better stacktraces (include file name, methods around exn object to query
     location info)
-  - refix stacktraces
   - return
 * classes
   - initialization syntax for user-defined classes
-  - extends syntax for inheritance in user-defined classes
-  - document your final decisions about class semantics!
   - potentially use an array instead of a map for value lookup (can be used for
     dynamci optimizations?)
   - built-in classes should override base class methods, instead of having base
     class methods implement those for it (for display)
-  - Don't use a hashmap for fields!! (but an IC could optimize this)
+  - Don't use a hashmap for fields!! (but an IC could optimize this--actually no)
 * allow map to be created (maybe define built-in function for the time being)
 * list literals
 * more methods for classes
@@ -41,7 +38,6 @@
 * split Frames based on tiers (so it can become fields of a class instead of
   local variables in a method)
 * better tier1 bytecode
-  - bytecode should also contain source code mapping (For tier1 errors)
   - develop a method of dynamically tiering up tier0 -> tier1
   - tier0 -> tier1 compiler don't use DataWriter (or use it better)
   - canonicalize constants and strings
@@ -147,8 +143,8 @@ wraps around a string (its name), a list of strings (its parameters), and code
 (`f_name`, `f_params`, and `f_body`, respectively). Since all fields in Cicero
 are mutable, we can change these. But these are getter methods, not the actual
 underlying values. In addition, each call to this method generates a new
-Cicero object which wraps around an underlying Virgil value. This value is not
-backed by the original value nor can modifying this new value modify the
+Cicero object which wraps around the same underlying Virgil value. This value 
+is not backed by the original value nor can modifying this new value modify the
 internal one. `f_params` returns a list, which if modified, doesn't change the
 original function.
 
@@ -188,5 +184,67 @@ dynamic!
 
 The question is speed. Obviously this is slower in a trivial implementation,
 but how much can dynamic optimizations cut down on this overhead?
+
+## Should fields be a HashMap?
+
+Right now, we do not allow fields to be added to a class (you may only set
+fields which have already been set). The HashMap lookup is pretty inefficient
+since it must run a hash function on every string access. It is much easier if
+all the fields are stored in an array where each field has an allocated
+location that is the same for every object of the same class. To find the index,
+look into the class which stores fields/methods in order to find the index
+into the fields.
+
+We can use inline caches to reduce the lookup penalty.
+
+This also means if we recombine built-in types the lookups aren't so bad either
+since we can probably determine them statically.
+
+If we decide that fields can be dynamically added to a class, we can include
+a hashmap anyway and "tack on" the extra fields in this map (which I think
+Python already does!).
+
+```
+Func:
+  |--------------------|
+  | class: class       |
+  | display: method    |
+  | =: method          |
+  | !=: method         | <- removed fields since you need to get that from class
+  |--------------------|
+  | id: str            |
+  | params: list[str]  |
+  | code: code         |
+  |--------------------|
+```
+
+instead of
+```
+def fv = FuncObject.!(obj);
+def params = fv.func.params, code = fv.func.code;
+```
+it becomes
+```
+def params = obj.fields[5], code = obj.fields[6]; // 5 and 6 are predetermined lookups
+```
+but now you have to typecheck `params` and `code`
+
+Some things (like `int` and `list`) still need to be backed by Virgil. And now
+a lot more operations may fail! And it can be harder to optimize this stuff
+(although JavaScript presents an example on how to do it). And it becomes a
+bigger question of if allowing this mutability is even useful. It's funky and
+cool, but also probably tedious to implement and unintuitive to the user. Hence
+not worth it until this becomes less of a toy artifact and more of a language
+used out in the wild (won't happen).
+
+```
+class Object {
+    def fields: Array<Object>
+
+    new(class: Class) {
+
+    }
+}
+```
 
 

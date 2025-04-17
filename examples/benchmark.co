@@ -1,0 +1,33 @@
+(func (loops x) {
+  (set a 100)
+  (set i 200)
+  (while (> i 0) {
+    (set j 200)
+    (while (> j 0) {
+      (set k 125)
+      (while (> k 0) {
+        (set a
+          (if (= (i.% 2) 0)
+	    (+ a (* x 3))
+	    (+ (- a x) j)
+	  )
+	)
+	(if (= (j.% 7) 0)
+	  (set a (+ (/ a 2) (* 3 i)))
+	  ()
+	)
+	(if (= (k.% 2) 0)
+	  (set a (+ a (* j k)))
+	  ()
+	)
+	(set k (k.pred))
+      })
+      (set j (j.pred))
+    })
+    (set i (i.pred))
+  })
+  (- a 67)
+})
+
+(loops 89)
+
