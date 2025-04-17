@@ -1,0 +1,81 @@
+class Frame(prev: Frame, code: Code, args: Array<(string, Object)>) {
+	var globals: HashMap<string, Object>;
+	def locals:  HashMap<string, Object> = Strings.newMap();
+
+	/* Initializing the frame also evaluates it (except for top-level frames). */
+	private new() {
+		// args to locals (XXX should be tier0/1 (really just 0) only)
+		for (arg in args) {
+			locals[arg.0] = arg.1;
+		}
+
+		if (prev == null) { // this is the top-level frame, where locals = globals
+			globals = locals;
+		} else {
+			globals = prev.globals;
+			eval(); // perhaps top frame should have dummy code?
+		}
+	}
+
+	// status flags as the result of evaluation
+	var exn: bool = false;  // whether evaluation threw uncaught exception
+	var val: Object;        // result of evaluation or exception value
+
+	/* Current location of the evaluation. This doesn't need to be exact, but it
+	 * should be correct whenever an exception is raised so that the stacktrace
+	 * is accurate.
+	 */
+	var loc: FileRange;
+	def stacktrace = Vector<FileRange>.new();
+
+	/* How to evaluate this frame. It must set {exn} and {val} based on what
+	 * happens.
+    */
+	def eval();
+	// XXX this is for top-level code. note that this may have a discrepancy
+	// in tiers!
+	def evalCode(code: Code) -> Object;
+
+	def newFrame(code: Code, args: Array<(string, Object)>) -> Frame {
+		return Frames.newFrame(this, code, args);
+	}
+
+	// throw sets the exception value in the frame right away
+	def throw(value: Object) {
+		stacktrace.put(loc); // FIXME figure out proper error reporting for tier1
+		exn = true;
+		val = value;
+	}
+
+	def assertType(exp: Class, val: Object) {
+		if (!val.instanceOf(exp))
+			throw(StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.cls.display())));
+	}
+
+	def assertArity<T>(argc: int, vals: Range<T>) {
+		if (vals.length != argc)
+			throw(StrObjects.getStrObject(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length)));
+	}
+}
+
+
+
+// class BytecodeFrame extends Frame {}
+
+// FIXME find a better way to pass arguments between different tiers. More importantly,
+// we have to figure out indexes for locals instead of looking them up by name.
+component Frames {
+	def newFrame(prev: Frame, code: Code, args: Array<(string, Object)>) -> Frame {
+		match (code.tier) {
+			-1 => return VirgilFrame.new(prev, code, args);
+			 0 => return ASTFrame.new(prev, code, args);
+		} else {
+			System.error("eval error", Strings.format1("unrecognized tier: %d", code.tier));
+		}
+		return null;
+	}
+	def newTopFrame(builtins: Array<(string, Object)>) -> Frame {
+		// FIXME
+		return ASTFrame.new(null, null, builtins);
+	}
+}

@@ -1,0 +1,16 @@
+class VirgilFrame extends Frame {
+	new(prev: Frame, code: Code, args: Array<(string, Object)>) super(prev, code, args) {}
+
+	def eval() {
+		def argv: Range<Object> = Arrays.map(args, snd<string, Object>);
+
+		def ret = code.virgil(argv);
+		val = ret.0;
+		exn = ret.1;
+		if (exn) stacktrace.put(null); // XXX null signifies native code
+	}
+}
+
+def snd<A, B>(p: (A, B)) -> B {
+	return p.1;
+}

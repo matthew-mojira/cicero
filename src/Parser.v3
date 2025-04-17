@@ -29,7 +29,7 @@ class Parser extends TextReader {
 
 				// XXX A keyword is allowed to be used anywhere. It only takes on special
 				// meaning if it appears as the first identifier in a list.
-				match (head.ast) {
+				match (head.data) {
 					Id(str) => {
 						// check if this is a keyword
 						if (Strings.equal(str, "if")) {
@@ -90,7 +90,7 @@ class Parser extends TextReader {
 							return AST.new(ASTData.Assign(id, expr),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "cond")) {
-							def cases: Vector<(Code, Code)> = Vector.new();
+							def cases: Vector<(AST, AST)> = Vector.new();
 							while (opt1(')') < 0) {
 								req1('(');
 								def fst = readExpr();
@@ -114,7 +114,7 @@ class Parser extends TextReader {
 							return AST.new(ASTData.While(cond, body),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "begin")) { // also has a sugary version
-							def exprs: Vector<Code> = Vector.new();
+							def exprs: Vector<AST> = Vector.new();
 							// begin must not be non-empty
 							// TODO this does not print a nice error message if it fails
 							def fst = readExpr();
@@ -152,7 +152,7 @@ class Parser extends TextReader {
 							def fields: Vector<(string, Code)> = Vector.new();
 							def methods: Vector<ASTData.Func> = Vector.new();
 							var init: Maybe<Code> = Maybe.Nothing;
-							var superclass: Maybe<Code> = Maybe.Nothing;
+							var superclass: Maybe<AST> = Maybe.Nothing;
 
 							while (opt1(')') < 0) {
 								req1('(');
@@ -216,7 +216,7 @@ class Parser extends TextReader {
 					}
 					_ => ;
 				}
-				def tail: Vector<Code> = Vector.new();
+				def tail: Vector<AST> = Vector.new();
 				while (opt1(')') < 0) {
 					def expr = readExpr();
 					tail.put(expr);
@@ -237,7 +237,7 @@ class Parser extends TextReader {
 			'{' => {
 				req1('{');
 
-				def exprs: Vector<Code> = Vector.new();
+				def exprs: Vector<AST> = Vector.new();
 				while (opt1('}') < 0) {
 					def expr = readExpr();
 					exprs.put(expr);
@@ -263,7 +263,7 @@ class Parser extends TextReader {
 				// this is an identifier
 				def strs = readQualifiedName();
 				def range = FileRange.new(fileName, startLine, startColumn, line, column);
-				var expr: Code;
+				var expr: AST;
 
 				// parse first identifier for decimal integer literal
 				def str = strs[0];

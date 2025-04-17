@@ -1,12 +1,11 @@
-def enableTier1 = true;
+def enableTier1 = false;
 
 def main(args: Array<string>) -> int {
-	def builtins: HashMap<string, Object> = Strings.newMap();
+	def builtins: Vector<(string, Object)> = Vector.new();
 	for (builtin in Builtin.set.all) {
-		builtins[builtin.id] = builtin.val;
+		builtins.put((builtin.id, builtin.val));
 	}
-	// BuiltinClasses.printClasses();
-	def frame = Frame.new(null, builtins, null, null);
+	def frame = Frames.newTopFrame(builtins.extract());
 
 	loadLib(frame, "lib/core.co"); // AST evaluation
 
@@ -35,7 +34,7 @@ def main(args: Array<string>) -> int {
 						}
 
 						// evaluate
-						frame.eval(expr);
+						frame.evalCode(expr);
 						if (frame.exn) {
 							System.puts(Strings.format1("exception: %s\n", frame.val.display()));
 							for (range in frame.stacktrace.extract()) {
@@ -78,7 +77,7 @@ def main(args: Array<string>) -> int {
 					}
 
 					// evaluate
-					frame.eval(expr);
+					frame.evalCode(expr);
 					if (frame.exn) {
 						System.puts(Strings.format1("exception: %s\n", frame.val.display()));
 						for (range in frame.stacktrace.extract()) {
@@ -117,6 +116,6 @@ def loadLib(frame: Frame, filename: string) {
 	for (expr in exprs) {
  		if (enableTier1)
  			expr.compile();
-		frame.eval(expr);
+		frame.evalCode(expr);
 	}
 }
