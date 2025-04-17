@@ -1,4 +1,4 @@
-def enableTier1 = false;
+def enableTier1 = true;
 
 def main(args: Array<string>) -> int {
 	def builtins: Vector<(string, Object)> = Vector.new();

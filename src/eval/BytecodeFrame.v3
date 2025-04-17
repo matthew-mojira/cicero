@@ -1,0 +1,268 @@
+class BytecodeFrame extends Frame {
+	new(prev: Frame, code: Code, args: Array<(string, Object)>) super(prev, code, args) {}
+
+	def stack: ArrayStack<Object> = ArrayStack.new();
+	/* This is a handler stack which stores structure about exceptions:
+	 *   (a, b)
+	 *   where
+	 *     a = absolute pc of handler
+	 *     b = absolute size of stack (i.e. pop other things until you restore stack state)
+	 */
+	def handlers: ArrayStack<(int, int)> = ArrayStack.new();
+
+	def eval() {
+		def v = evalBytecode(code.bytecode);
+		if (!exn)
+			val = v;
+	}
+
+	def evalCode(code: Code) -> Object {
+		stack.clear();
+		def v = evalBytecode(code.bytecode);
+		if (!exn)
+			val = v;
+		return v;
+	}
+
+	def debug = !true;
+	
+	/* BYTECODE EVALUATOR */
+	def evalBytecode(b: Bytecode) -> Object {
+		def code       = b.bytecode.copy();
+		def strings    = b.strings;
+		def classholes = b.classholes;
+		def constants  = b.constants;
+		
+		if (debug) {
+			System.puts("Evaluating bytecode:\n");
+			b.inspect();
+			System.puts("==\n");
+		}
+
+		var pc = 0;
+		while (pc < code.length || exn) {
+			// if frame is in an exceptional state, try to handle it!
+			if (exn) {
+				if (handlers.empty()) {
+					if (debug) System.puts("returned with exception\n");
+					return null;
+				}
+				def p = handlers.pop();
+				pc = p.0;
+				while (stack.top != p.1)
+					stack.pop();
+				// push error value
+				stack.push(val);
+				exn = false; // handled
+			}
+
+			// Fetch
+			def bytecode = Ref<Instruction>.at(code, pc);
+			def opcode   = bytecode.opcode;
+			def operand  = bytecode.operand;
+
+			if (debug) {
+				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, operand));
+				System.puts("    stack:\n");
+				for (i < stack.top) {
+					System.puts("    ");
+					System.puts(stack.elems[i].display());
+					System.ln();
+				}
+				System.puts("    exn loc stack:\n");
+				for (i < handlers.top) {
+					System.puts("    ");
+					System.puts(Strings.format2("=> %d (%d)", handlers.elems[i].0, handlers.elems[i].1));
+					System.ln();
+				}
+				System.puts("--\n");
+			}
+
+			pc += 2;
+			match (opcode) {
+				LOAD_LIT => stack.push(constants[operand]);
+				LOAD_NAME => {
+					def id = strings[operand];
+					// XXX this duplicates tier0 code, refactor away (using OO approach)
+					// duplication invalidated if tiers use different local storing mechanis
+					if (locals.has(id)) {
+						stack.push(locals[id]);
+					} else if (globals.has(id)) {
+						stack.push(globals[id]);
+					} else {
+						throw(StrObjects.getStrObject(Strings.format1("unbound identifier: %s", id)));
+					}
+				}
+				JUMP => pc += i8.view(operand);
+				JUMP_IF_FALSE => {
+					def top = stack.pop();
+					if (!top.isTrue()) pc += i8.view(operand);
+				}
+				JUMP_IF_FALSE_PEEK => {
+					def top = stack.peek();
+					if (top.isTrue()) {
+						stack.pop();
+					} else {
+						pc += i8.view(operand);
+					}
+				}
+				RAISE => {
+					def top = stack.pop();
+					throw(top);
+				}
+				STORE_NAME => {
+					def id = strings[operand];
+					def top = stack.pop();
+					locals[id] = top;
+				}
+				ASSERT_FUNC => {
+					def top = stack.peek();
+					assertType(FuncObjects.classFunc, top);
+				}
+				CALL => {
+					var args: Vector<Object> = Vector.new();
+					for (i < operand) {
+						args.put(stack.pop());
+					}
+					args.reverse(); // XXX reverse can be expensive, should do arithmetic on index instead
+
+					def top = stack.pop();
+					// function code
+					def fv = FuncObject.!(top); // this cast succeeds because of ASSERT_FUNC
+					def params = fv.func.params, code = fv.func.code;
+
+					// evaluate argument values
+					var argv: Array<(string, Object)>;
+
+					if (fv.instanceOf(MethodObjects.classMethod)) {
+						argv = Array.new(args.length + 1);
+						for (i < args.length) {
+							def arg = args[i];
+							if (i < params.length) // avoid out of bounds but don't raise exception
+								argv[i + 1] = (params[i], arg);
+						}
+						argv[0] = ("self", MethodObject.!(fv).obj);
+					} else {
+						argv = Array.new(args.length);
+						for (i < args.length) {
+							def arg = args[i];
+							if (i < params.length) // avoid out of bounds but don't raise exception
+								argv[i] = (params[i], arg);
+						}
+					}
+
+					// arity check
+					assertArity(params.length, args.extract()); // XXX extract
+					if (exn) continue;
+
+					// create new frame (and evaluate)
+					def frame = newFrame(code, argv);
+					if (frame.exn) {
+						// record stacktrace
+						stacktrace.puta(frame.stacktrace.extract());
+						// rethrow
+						throw(frame.val);
+						continue;
+					}
+					stack.push(frame.val);
+				}
+				TRY => {
+					handlers.push((pc + operand, stack.top));
+				}
+				CATCH => {
+					handlers.pop();
+				}
+				PULL => for (i < operand) stack.pop();
+				// objects
+				CREATE_CLASS => {
+					def superclass = stack.pop();
+					assertType(ClassObjects.classClass, superclass);
+					if (exn) continue;
+
+					def classhole = classholes[operand];
+					stack.push(ClassObject.new(Class.new(classhole.name, ClassObject.!(superclass).clazz, classhole.init, classhole.classFields, classhole.classMethods)));
+				}
+				NEW => {
+					def top = stack.pop();
+					assertType(ClassObjects.classClass, top);
+					if (exn) continue;
+
+					// duplicated code
+					def clsObj = ClassObject.!(top);
+					def obj = Object.new(clsObj.clazz);
+
+					def classes: Vector<Class> = Vector.new();
+					for (cls = clsObj.clazz; cls != null; cls = cls.superclass)
+						classes.put(cls);
+				
+					// initialization order is from base class downwards, which
+					// may involve reinitializing some fields
+					for (cls in classes.reverse().extract()) {
+						// initialize fields
+						for (field in cls.classFields) {
+							def name = field.0, expr = field.1;
+
+							// XXX hackfix
+							if (expr == null) continue;
+							// create new frames here!
+							def frame = newFrame(expr, []);
+							if (frame.exn) {
+								// record stacktrace
+								stacktrace.puta(frame.stacktrace.extract());
+								// rethrow
+								throw(frame.val);
+								continue;
+							}
+							obj.fields[name] = frame.val;
+						}
+						// call initializer
+						if (cls.init != null) {
+							def args = [("self", obj)];
+							def code = cls.init;
+
+							// create new frames here!
+							def frame = newFrame(code, args);
+							if (frame.exn) {
+								// record stacktrace
+								stacktrace.puta(frame.stacktrace.extract());
+								// rethrow
+								throw(frame.val);
+								continue;
+							}
+						} 
+					}
+					stack.push(obj);
+				}
+				GET_FIELD => {
+					def obj = stack.pop();
+					def field = strings[operand];
+
+					match (obj.getField(field)) {
+						Just(v) => stack.push(v);
+					} else {
+						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+					}
+
+				}
+				SET_FIELD => {
+					def val = stack.pop();
+					def obj = stack.pop();
+					def field = strings[operand];
+
+					if (obj.fields.has(field)) {
+						obj.fields[field] = val;
+						stack.push(val);
+					} else {
+						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+					}
+				}
+
+				//_ => System.error("eval error", "unsupported opcode");
+			}
+		}
+
+		if (stack.empty()) System.error("eval error", "stack is empty");
+		if (debug) System.puts("RETURN\n");
+		return stack.peek();
+	}
+}

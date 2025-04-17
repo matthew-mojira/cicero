@@ -264,11 +264,9 @@ class ASTFrame extends Frame {
 							throw(frame.val);
 							return value;
 						}
-						value = frame.val; // why?
 					} 
 				}
-
-				return obj; // why?
+				value = obj;
 			}
 		}
 
