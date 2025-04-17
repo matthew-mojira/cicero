@@ -13,6 +13,8 @@ class Frame(prev: Frame, code: Code, args: Array<(string, Object)>) {
 			globals = locals;
 		} else {
 			globals = prev.globals;
+
+			code.incrementCount();
 			eval(); // perhaps top frame should have dummy code?
 		}
 	}

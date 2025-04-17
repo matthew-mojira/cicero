@@ -1,5 +1,9 @@
+def TIER_UP = 10;
+
 class Code(range: FileRange) {
 	private new() {}
+
+	def var runCount = 0;
 	
 	def var virgil: Range<Object> -> (Object, bool);
 	def var ast: AST; // root node
@@ -10,6 +14,14 @@ class Code(range: FileRange) {
 	def var strings:    Vector<string> = Vector.new();
 	def var classholes: Vector<Class>  = Vector.new(); // XXX these are not real classes!
 	def var constants:  Vector<Object> = Vector.new();
+
+	def incrementCount() {
+		runCount++;
+		if (runCount > 10 && tier == 0) {
+			System.puts("tiering up!\n");
+			compile();
+		}
+	}
 
 	/* Compile code */
 	def compile() {
