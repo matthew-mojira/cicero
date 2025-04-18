@@ -50,9 +50,9 @@ class Bytecode {
 				putb(Opcode.JUMP.tag);
 				def hole2 = pos();
 				skipO(); // hole to put jump offset
-				writeO(hole1, pos() - hole1 - 1);
+				writeO(hole1, pos() - (hole1 + 3));
 				compileAST(fals);
-				writeO(hole2, pos() - hole2 - 1);
+				writeO(hole2, pos() - (hole2 + 3));
 			}
 			Cond(cases) => {
 				def ends: Vector<int> = Vector.new();
@@ -70,7 +70,7 @@ class Bytecode {
 					putb(Opcode.JUMP.tag);
 					ends.put(pos());
 					skipO(); // hole to put jump offset
-					writeO(hole, pos() - hole - 1);
+					writeO(hole, pos() - (hole + 3));
 				}
 				def idx = constants.length;
 				// XXX object creation in AST compilation!
@@ -83,7 +83,7 @@ class Bytecode {
 				putO(0); // no operand
 				// fill in all jump to end targets
 				for (hole in ends.extract()) {
-					writeO(hole, pos() - hole - 1);
+					writeO(hole, pos() - (hole + 3));
 				}
 			}
 			Func(id, params, code) => {
@@ -134,14 +134,14 @@ class Bytecode {
 				putb(Opcode.JUMP.tag);
 				def hole2 = pos();
 				skipO();
-				writeO(hole1, pos() - hole1 - 1);
+				writeO(hole1, pos() - (hole1 + 3));
 
 				source.put(loc);
 				putb(Opcode.STORE_NAME.tag);
 				putO(addString(id));
 
 				compileAST(catch);
-				writeO(hole2, pos() - hole2 - 1);
+				writeO(hole2, pos() - (hole2 + 3));
 			}
 			Begin(exprs) => {
 				for (i < exprs.length - 1) {
@@ -167,7 +167,7 @@ class Bytecode {
 				putb(Opcode.JUMP.tag);
 				skipO();
 				writeO(pos() - 3, head - pos());
-				writeO(hole, pos() - hole - 1);
+				writeO(hole, pos() - (hole + 3));
 			}
 			GetField(id, obj) => {
 				compileAST(obj);
