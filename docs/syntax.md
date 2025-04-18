@@ -172,3 +172,17 @@ if `e1` does not have anything bound to `x` (note: that includes methods which
 have not yet been bound). The value of the entire expression is the value from
 `e2`.
 
+## List
+
+```
+[e1 e2 ... en]
+```
+
+Lists can be created by writing expressions inside of square brackets. Note:
+the only delimiter is whitespace as expressions are successively read until
+a `]` character is captured. The list of expressions may be empty, signifying
+an empty list.
+
+Each expression `ei` is evaluated then a new list is created. Every time this
+expression is evaluated the subexpressions are evaluated and thus a new list
+is created every time.

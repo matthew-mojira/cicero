@@ -23,7 +23,6 @@
     class methods implement those for it (for display)
   - Don't use a hashmap for fields!! (but an IC could optimize this--actually no)
 * allow map to be created (maybe define built-in function for the time being)
-* list literals
 * more methods for classes
 * Ensure that internal objects do not have multiple Virgil objects? This is
   easiest when we remove the decoupling we already did...
