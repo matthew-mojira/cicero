@@ -1,5 +1,25 @@
 # Todos
 
+Final list:
+[ ] re-couple Objects and their underlying data, introducing *primitive fields*
+    to represent immutable core information of the object (but accessible
+    through methods)
+[ ] create exception class which holds stacktrace information
+[ ] decide on local vs. global scope
+[ ] make locals of a Frame an array (maybe only needed for tier1). Ensure that
+    semantics in tier0 and tier1 remain the same.
+[ ] make fields of an object stored in an Array where you must lookup in the
+    class for the offset into the Array instead of all HashMap lookups
+[ ] built-in classes should override base class methods for `display` and
+    others
+[ ] allow map literals and/or creation of the map
+[ ] add an exit primitive and make EOF in the repl end nicely
+[ ] make lazy allocation of methods unobservable
+[ ] canonicalize constants and name strings in the bytecode compiler. Ensure
+    that we are properly optimizing PC aligned accesses
+
+* don't cache overly large numbers
+* variable-length bytecode?
 * functions  
   - anonymous functions (closure?)
   - figure out how nested functions should be handled (closures, special
@@ -16,7 +36,6 @@
     location info)
   - return
 * classes
-  - initialization syntax for user-defined classes
   - potentially use an array instead of a map for value lookup (can be used for
     dynamci optimizations?)
   - built-in classes should override base class methods, instead of having base
@@ -34,8 +53,6 @@
   - should we separate set-local/global (like wasm!) SEE BELOW
 * make the lazy allocation of methods unobservable (i.e. return lazy methods
   in `o.fields` and fix incorrect inheritance behavior)
-* split Frames based on tiers (so it can become fields of a class instead of
-  local variables in a method)
 * better tier1 bytecode
   - develop a method of dynamically tiering up tier0 -> tier1
   - tier0 -> tier1 compiler don't use DataWriter (or use it better)
