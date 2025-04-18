@@ -15,6 +15,7 @@ enum Opcode {
 	CREATE_CLASS,  // [1] index into the classhole pool
 	NEW,           // [1]
 	PULL,          // [1] how many values to pull
+	CREATE_LIST,   // [1] how many elements to pull
 
 	// should typechecking be done as a bytecode? or can the bytecodes
 	// just sometimes raise exceptions

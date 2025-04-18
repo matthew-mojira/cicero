@@ -261,6 +261,18 @@ class BytecodeFrame extends Frame {
 						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
 					}
 				}
+				CREATE_LIST => {
+					def values: Vector<Object> = Vector.new();
+					for (i < operand) {
+						values.put(stack.pop());
+					}
+					values.reverse();
+
+					def obj = ListObject.new();
+					obj.list.puta(values.extract());
+
+					stack.push(obj);
+				}
 
 				//_ => System.error("eval error", "unsupported opcode");
 			}

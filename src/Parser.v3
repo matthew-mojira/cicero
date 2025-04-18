@@ -238,6 +238,9 @@ class Parser extends TextReader {
 				req1('{');
 
 				def exprs: Vector<AST> = Vector.new();
+				// ensure non-empty
+				def e = readExpr();
+				exprs.put(e);
 				while (opt1('}') < 0) {
 					def expr = readExpr();
 					exprs.put(expr);
@@ -252,6 +255,27 @@ class Parser extends TextReader {
 			}
 			'}' => {
 				fail("unmatched closing brace");
+				return null;
+			}
+			// list literals
+			'[' => {
+				req1('[');
+
+				def exprs: Vector<AST> = Vector.new();
+				while (opt1(']') < 0) {
+					def expr = readExpr();
+					exprs.put(expr);
+
+					if (pos >= limit) {
+						failRel(startPos - pos, "unmatched opening bracket");
+						return null;
+					}
+				}
+				return AST.new(ASTData.List(exprs.extract()),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
+			']' => {
+				fail("unmatched closing bracket");
 				return null;
 			}
 			'\"' => {

@@ -31,6 +31,8 @@ type ASTData {
 		 { def whichOne() -> string { return "class"; } }
 	case New(expr: AST)
 		 { def whichOne() -> string { return "new"; } }
+	case List(elems: Array<AST>)
+		 { def whichOne() -> string { return "list"; } }
 
 	def whichOne() -> string;
 }

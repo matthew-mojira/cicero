@@ -221,6 +221,12 @@ class Bytecode {
 				putb(Opcode.NEW.tag);
 				putO(0); // no operand
 			}
+			List(elems) => {
+				for (elem in elems)
+					compileAST(elem);
+				putb(Opcode.CREATE_LIST.tag);
+				putO(elems.length);
+			}
 
 //			_ => System.error("compile error", "unsupported AST node");
 		}
