@@ -1,4 +1,4 @@
-class Frame(prev: Frame, code: Code, args: Array<(string, Object)>) {
+class Frame(prev: Frame, code: CodeObject, args: Array<(string, Object)>) {
 	var globals: HashMap<string, Object>;
 	def locals:  HashMap<string, Object> = Strings.newMap();
 
@@ -36,9 +36,9 @@ class Frame(prev: Frame, code: Code, args: Array<(string, Object)>) {
 	def eval();
 	// XXX this is for top-level code. note that this may have a discrepancy
 	// in tiers!
-	def evalCode(code: Code) -> Object;
+	def evalCode(code: CodeObject) -> Object;
 
-	def newFrame(code: Code, args: Array<(string, Object)>) -> Frame {
+	def newFrame(code: CodeObject, args: Array<(string, Object)>) -> Frame {
 		return Frames.newFrame(this, code, args);
 	}
 
@@ -63,7 +63,7 @@ class Frame(prev: Frame, code: Code, args: Array<(string, Object)>) {
 // FIXME find a better way to pass arguments between different tiers. More importantly,
 // we have to figure out indexes for locals instead of looking them up by name.
 component Frames {
-	def newFrame(prev: Frame, code: Code, args: Array<(string, Object)>) -> Frame {
+	def newFrame(prev: Frame, code: CodeObject, args: Array<(string, Object)>) -> Frame {
 		match (code.tier) {
 			-1 => return VirgilFrame.new(prev, code, args);
 			 0 => return ASTFrame.new(prev, code, args);

@@ -1,5 +1,5 @@
 class BytecodeFrame extends Frame {
-	new(prev: Frame, code: Code, args: Array<(string, Object)>) super(prev, code, args) {}
+	new(prev: Frame, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {}
 
 	def stack: ArrayStack<Object> = ArrayStack.new();
 	/* This is a handler stack which stores structure about exceptions:
@@ -16,7 +16,7 @@ class BytecodeFrame extends Frame {
 			val = v;
 	}
 
-	def evalCode(code: Code) -> Object {
+	def evalCode(code: CodeObject) -> Object {
 		stack.clear();
 		def v = evalBytecode(code.bytecode);
 		if (!exn)

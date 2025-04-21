@@ -194,7 +194,7 @@ class Bytecode {
 					}
 					Just(expr) => compileAST(expr);
 				}
-				var init2: Code;
+				var init2: CodeObject;
 				match (init) {
 					Nothing => ;
 					Just(code) => {

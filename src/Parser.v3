@@ -1,5 +1,5 @@
 class Parser extends TextReader {
-	private def exprs: Vector<Code> = Vector<Code>.new();
+	private def exprs: Vector<CodeObject> = Vector<CodeObject>.new();
 
 	new(fileName: string, data: string) super(fileName, data) {
 		skipWs = skipWhitespaceAndComments;
@@ -8,7 +8,7 @@ class Parser extends TextReader {
 		while (pos < limit) {
 			skipWs(this);
 			def expr = readExpr();
-			exprs.put(Codes.fromAST(expr));
+			exprs.put(CodeObjects.fromAST(expr));
 			if (!ok) break;
 		}
 	}
@@ -79,8 +79,8 @@ class Parser extends TextReader {
 							def body = readExpr();
 							req1(')');
 							
-							// XXX creating Code here
-							return AST.new(ASTData.Func(name, params.extract(), Codes.fromAST(body)),
+							// XXX creating CodeObject here
+							return AST.new(ASTData.Func(name, params.extract(), CodeObjects.fromAST(body)),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "set")) {
 							def id = readIdentifier();
@@ -149,9 +149,9 @@ class Parser extends TextReader {
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "class")) {
 							def name = readIdentifier();
-							def fields: Vector<(string, Code)> = Vector.new();
+							def fields: Vector<(string, CodeObject)> = Vector.new();
 							def methods: Vector<ASTData.Func> = Vector.new();
-							var init: Maybe<Code> = Maybe.Nothing;
+							var init: Maybe<CodeObject> = Maybe.Nothing;
 							var superclass: Maybe<AST> = Maybe.Nothing;
 
 							while (opt1(')') < 0) {
@@ -161,7 +161,7 @@ class Parser extends TextReader {
 									def fieldName = readIdentifier();
 									def fieldInit = readExpr();
 									
-									fields.put(fieldName, Codes.fromAST(fieldInit));
+									fields.put(fieldName, CodeObjects.fromAST(fieldInit));
 								} else if (Strings.equal(word, "method")) {
 									req1('(');
 									def methodName = readIdentifier();
@@ -178,14 +178,14 @@ class Parser extends TextReader {
 									}
 									def methodBody = readExpr();
 
-									// XXX creating Code here
-									methods.put(ASTData.Func(methodName, methodParams.extract(), Codes.fromAST(methodBody)));
+									// XXX creating CodeObject here
+									methods.put(ASTData.Func(methodName, methodParams.extract(), CodeObjects.fromAST(methodBody)));
 								} else if (Strings.equal(word, "init")) {
 									if (init.isJust()) {
 										fail("redeclaration of init in class definition");
 										return null;
 									}
-									init = Maybe.Just(Codes.fromAST(readExpr()));
+									init = Maybe.Just(CodeObjects.fromAST(readExpr()));
 								} else if (Strings.equal(word, "extends")) {
 									if (init.isJust()) {
 										fail("redeclaration of extends in class definition");
@@ -347,7 +347,7 @@ class Parser extends TextReader {
 		return str;
 	}
 
-	def getExprs() -> Array<Code> {
+	def getExprs() -> Array<CodeObject> {
 		return exprs.extract();
 	}
 }

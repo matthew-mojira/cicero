@@ -14,5 +14,5 @@ component StrObjects {
 		strObjects[str] = newStr;
 		return newStr;
 	}
-	def classStr = ClassObject.new("str", Objects.classBase, Codes.virgilFail, [], []);
+	def classStr = ClassObject.new("str", Objects.classBase, CodeObjects.virgilFail, [], []);
 }

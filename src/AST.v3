@@ -15,7 +15,7 @@ type ASTData {
 		 { def whichOne() -> string { return "raise"; } }
 	case Catch(try: AST, exn: string, catch: AST)
 		 { def whichOne() -> string { return "catch"; } }
-	case Func(id: string, params: Array<string>, body: Code)
+	case Func(id: string, params: Array<string>, body: CodeObject)
 		 { def whichOne() -> string { return "func"; } }
 	case Assign(id: string, assn: AST)
 		 { def whichOne() -> string { return "assign"; } }
@@ -27,7 +27,7 @@ type ASTData {
 		 { def whichOne() -> string { return "get-field"; } }
 	case SetField(field: string, obj: AST, val: AST)
 		 { def whichOne() -> string { return "set-field"; } }
-	case Class(id: string, superclass: Maybe<AST>, init: Maybe<Code>, fields: Array<(string, Code)>, methods: Array<ASTData.Func>)
+	case Class(id: string, superclass: Maybe<AST>, init: Maybe<CodeObject>, fields: Array<(string, CodeObject)>, methods: Array<ASTData.Func>)
 		 { def whichOne() -> string { return "class"; } }
 	case New(expr: AST)
 		 { def whichOne() -> string { return "new"; } }

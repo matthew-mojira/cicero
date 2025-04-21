@@ -1,7 +1,7 @@
 class ClassObject(name: string, 
 		superclass: ClassObject, // optional field: base class has superclass == null
-		init: Code,
-		classFields: Array<(string, Code)>, 
+		init: CodeObject,        // optional field: built-in classes have init == null, meaning do not initialize
+		classFields: Array<(string, CodeObject)>, 
 		classMethods: Array<FuncObject>) extends Object {
 		// FIXME perhaps we don't specify methods as func *objects* but funcholes
 	new() super(ClassObjects.classClass) {}
@@ -26,13 +26,13 @@ component ClassObjects {
 	def classClass: ClassObject = 
 		ClassObject.new("class", 
 				Objects.classBase, 
-				Codes.virgilFail, 
+				CodeObjects.virgilFail, 
 				[], 
 				[FuncObjects.fromVirgilMethod0("superclass", ClassObject.c_superclass),
 				 FuncObjects.fromVirgilMethod0("name",       ClassObject.c_name)
 				]);
 
-	def classhole(name: string, init: Code, classFields: Array<(string, Code)>, classMethods: Array<FuncObject>) -> (ClassObject -> ClassObject) {
+	def classhole(name: string, init: CodeObject, classFields: Array<(string, CodeObject)>, classMethods: Array<FuncObject>) -> (ClassObject -> ClassObject) {
 		return ClassObject.new(name, _, init, classFields, classMethods);
 	}
 }

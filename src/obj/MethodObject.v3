@@ -1,4 +1,4 @@
-class MethodObject(obj: Object, id_: string, params_: Array<string>, code_: Code) extends FuncObject {
+class MethodObject(obj: Object, id_: string, params_: Array<string>, code_: CodeObject) extends FuncObject {
 	new() super(id_, params_, code_, MethodObjects.classMethod) {}
 	def display() -> string { return "<method>"; }
 	def isTrue()  -> bool   { return true; }
@@ -11,7 +11,7 @@ class MethodObject(obj: Object, id_: string, params_: Array<string>, code_: Code
 component MethodObjects {
 	def classMethod = ClassObject.new("method", 
 			FuncObjects.classFunc, 
-			Codes.virgilFail, 
+			CodeObjects.virgilFail, 
 			[], 
 			[FuncObjects.fromVirgilMethod0("object", MethodObject.m_object)]);
 }

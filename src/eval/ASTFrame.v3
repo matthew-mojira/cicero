@@ -1,5 +1,5 @@
 class ASTFrame extends Frame {
-	new(prev: Frame, code: Code, args: Array<(string, Object)>) super(prev, code, args) {}
+	new(prev: Frame, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {}
 	
 	def eval() {
 		def v = evalAST(code.ast);
@@ -7,7 +7,7 @@ class ASTFrame extends Frame {
 			val = v;
 	}
 
-	def evalCode(code: Code) -> Object {
+	def evalCode(code: CodeObject) -> Object {
 		def v = evalAST(code.ast);
 		if (!exn)
 			val = v;
@@ -110,13 +110,12 @@ class ASTFrame extends Frame {
 				}
 			}
 			Func(id, params, code) => {
-				def c = CodeObject.new(code);
-				def f = FuncObjects.newFO(id, params, c.code);
+				def f = FuncObjects.newFO(id, params, code);
 				locals[id] = f;
 				value = f;
 			}
 			Class(id, superclass, init, fields, methods) => {
-				var i: Code = if(init.isJust(), init.fromJust(), null);
+				var i: CodeObject = if(init.isJust(), init.fromJust(), null);
 				var s: ClassObject;
 				match (superclass) {
 					Just(e) => {
@@ -130,7 +129,7 @@ class ASTFrame extends Frame {
 					}
 					Nothing => s = Objects.classBase;
 				}
-				def f: Array<(string, Code)> = fields;
+				def f: Array<(string, CodeObject)> = fields;
 				def m: Array<FuncObject> = Arrays.map(methods, funcToFunc);
 				def c = ClassObject.new(id, s, i, f, m);
 				locals[id] = c;

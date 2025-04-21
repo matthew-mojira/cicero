@@ -47,7 +47,7 @@ class ListObject extends Object {
 component ListObjects {
 	def classList = ClassObject.new("list", 
 			Objects.classBase, 
-			Codes.virgilFail, 
+			CodeObjects.virgilFail, 
 			[], 
 			[FuncObjects.fromVirgilMethod1("get", [IntObjects.classInt], ListObject.l_get),
 			 FuncObjects.fromVirgilMethod2("set", [IntObjects.classInt, Objects.classBase], ListObject.l_set),
