@@ -3,7 +3,7 @@
 Final list:
 [X] re-couple Objects and their underlying data, introducing *primitive fields*
     to represent immutable core information of the object (but accessible
-    through methods)
+    through methodsX
 [ ] create exception class which holds stacktrace information
 [ ] decide on local vs. global scope
 [ ] make locals of a Frame an array (maybe only needed for tier1). Ensure that
@@ -73,13 +73,17 @@ Final list:
 * decimal/floating-point numbers?
 
 ## Scoping
-Right now, there are two scopes that matter:
+There are two scopes:
 
 * global scope
 * local scope
 
 The global scope is local to the first frame of execution. Each new frame
-creates its own local scope. But perhaps in the case of anonymous or (named)
+creates its own local scope. 
+
+### nonlocal/free variables
+
+Perhaps in the case of anonymous or (named)
 nested functions you might want the higher scope to be accessed:
 
 ```
@@ -117,30 +121,43 @@ you may reference a variable without it being assigned:
 })
 ```
 
-How does Python do this with code objects, since it identifies all local
-variables which are referenced in a function, but still disallows variables
-to be read before it is assigned?
+Sets and gets are now split into local and global scopes (giving `local-get`,
+`local-set`, `global-get`, and `global-set`, much like Wasm!). So if we write
+a variable `x`, how do we know what it is?
 
-Python:
+By default, any access is global:
 ```
-UnboundLocalError: local variable 'y' referenced before assignment on line 4 in main.py
+(func (f x)
+  y) ; access to `y` is global
 ```
-
-Perhaps dynamic optimizations/ICs can determine whether a variable refers to a
-value in the global scope or local scope.
-
-### Mutability
-
-We could require variables to be declared. I think I want to do this. We can
-add a language feature for declaring variables (also forcing it to have an
-initializer) and also specifying mutability:
-
+Unless:
+1. the variable is already a parameter to the function
+2. at *any* point in the function, there is a set.
 ```
-(const x 10)
-(var y (+ x 1))
+(func (f x) {
+  x ; local
+  y ; global
+  z ; local
+  (set z 1) ; local
+  z ; local
+})
 ```
-
-This also means we could check references to undefined variables at parse time.
+We now introduce two features, `global-get` and `global-set`, to get around
+possible restrictions.
+```
+(func (f x) {
+  x ; local
+  y ; global
+  z ; local
+  (set z 1) ; local
+  (global-get z) ; global
+  (global-set z 2) ; global
+  z ; local
+})
+```
+Use of `global-get` is strictly necessary when a `set` turns a variable from
+being global to being local. This is slightly simpler than the `global` feature
+of Python.
 
 # to decouple or not to decouple?
 

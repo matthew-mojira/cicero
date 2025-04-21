@@ -5,6 +5,13 @@ type ASTData {
 		 { def whichOne() -> string { return "lit"; } }
 	case Id(id: string)
 		 { def whichOne() -> string { return "id"; } }
+	// TODO
+	/*
+	 * case LocalGet(id: string);
+	 * case LocalSet(id: string);
+	 * case GlobalGet(id: string);
+	 * case GlobalSet(id: string);
+	*/
 	case Apply(tgt: AST, args: Array<AST>)
 		 { def whichOne() -> string { return "apply"; } }
 	case If(cond: AST, exprT: AST, exprF: AST)
