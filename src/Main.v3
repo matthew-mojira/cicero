@@ -3,7 +3,7 @@ def main(args: Array<string>) -> int {
 	for (builtin in Builtin.set.all) {
 		builtins.put((builtin.id, builtin.val));
 	}
-	def frame = Frames.newTopFrame(builtins.extract());
+	def frame = FrameObjects.newTopFrame(builtins.extract());
 
 	loadLib(frame, "lib/core.co"); // AST evaluation
 
@@ -105,7 +105,7 @@ def main(args: Array<string>) -> int {
 }
 
 // XXX do not expect load lib to fail
-def loadLib(frame: Frame, filename: string) {
+def loadLib(frame: FrameObject, filename: string) {
 	def file = System.fileLoad(filename);
 	if (file == null)
 		System.error("init error", "unable to load library");

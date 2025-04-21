@@ -1,9 +1,12 @@
-class Frame(prev: Frame, code: CodeObject, args: Array<(string, Object)>) {
+/* FrameObject refers to the `frame` type in Cicero, but in Virgil this is
+ * an abstract class extended by Virgil/AST/Bytecode frames internally.
+ */
+class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) extends Object {
 	var globals: HashMap<string, Object>;
 	def locals:  HashMap<string, Object> = Strings.newMap();
 
 	/* Initializing the frame also evaluates it (except for top-level frames). */
-	private new() {
+	private new() super(FrameObjects.classFrame) {
 		// args to locals (XXX should be tier0/1 (really just 0) only)
 		for (arg in args) {
 			locals[arg.0] = arg.1;
@@ -38,8 +41,8 @@ class Frame(prev: Frame, code: CodeObject, args: Array<(string, Object)>) {
 	// in tiers!
 	def evalCode(code: CodeObject) -> Object;
 
-	def newFrame(code: CodeObject, args: Array<(string, Object)>) -> Frame {
-		return Frames.newFrame(this, code, args);
+	def newFrame(code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
+		return FrameObjects.newFrame(this, code, args);
 	}
 
 	// throw sets the exception value in the frame right away
@@ -62,8 +65,8 @@ class Frame(prev: Frame, code: CodeObject, args: Array<(string, Object)>) {
 
 // FIXME find a better way to pass arguments between different tiers. More importantly,
 // we have to figure out indexes for locals instead of looking them up by name.
-component Frames {
-	def newFrame(prev: Frame, code: CodeObject, args: Array<(string, Object)>) -> Frame {
+component FrameObjects {
+	def newFrame(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
 		match (code.tier) {
 			-1 => return VirgilFrame.new(prev, code, args);
 			 0 => return ASTFrame.new(prev, code, args);
@@ -73,11 +76,12 @@ component Frames {
 		}
 		return null;
 	}
-	def newTopFrame(builtins: Array<(string, Object)>) -> Frame {
+	def newTopFrame(builtins: Array<(string, Object)>) -> FrameObject {
 		if (Tiers.enableTier1) {
 			return BytecodeFrame.new(null, null, builtins);
 		} else {
 			return ASTFrame.new(null, null, builtins);
-		}
+		}	
 	}
+	def classFrame = ClassObject.new("frame", Objects.classBase, CodeObjects.virgilFail, [], []);
 }

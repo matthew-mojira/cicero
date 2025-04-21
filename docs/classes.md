@@ -1,12 +1,16 @@
 # Built-in classes
 
-Built-in classes usually wrap around some internal Virgil value or object. All
-accesses to internal information about an object is gathered through methods.
-It never relies on fields (or method calls). This means that you cannot change
-the underlying structore of an object. For example, you cannot change the code
-of a function. Its accessor method `code` is mutable, but this mutates the
-accessor method, not the internal code. Perhaps this is not dynamic enough
-and should be changed?
+Built-in classes usually wrap around some internal Virgil value or object. Some
+of these can only be represented in Virgil (e.g. int) and some of these can
+be represented as Cicero objects. These "primitive fields" are immutable core
+information on an object which would significantly change (read: break) the
+runtime if they were modified. Thus field accesses are done through getter
+methods. For example, you cannot change the code of a function. Its accessor
+method `code` is mutable, but this mutates the accessor method, not the 
+internal code. Interally, these methods are not used by the runtime, and access
+is done directly to the underlying object away from user manipulation. In the
+future, this might change so that primitive fields are treated as regular
+fields and all operations access these fields so that the user might change it.
 
 ## bool
 

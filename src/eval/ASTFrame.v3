@@ -1,5 +1,5 @@
-class ASTFrame extends Frame {
-	new(prev: Frame, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {}
+class ASTFrame extends FrameObject {
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {}
 	
 	def eval() {
 		def v = evalAST(code.ast);

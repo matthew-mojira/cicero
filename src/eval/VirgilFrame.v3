@@ -1,5 +1,5 @@
-class VirgilFrame extends Frame {
-	new(prev: Frame, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {}
+class VirgilFrame extends FrameObject {
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {}
 
 	def eval() {
 		def argv: Range<Object> = Arrays.map(args, snd<string, Object>);

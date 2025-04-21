@@ -1,6 +1,0 @@
-class FrameObject(frame: Frame) extends Object {
-	new() super(FrameObjects.classFrame) {}
-}
-component FrameObjects {
-	def classFrame = ClassObject.new("frame", Objects.classBase, CodeObjects.virgilFail, [], []);
-}
