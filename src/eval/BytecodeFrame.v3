@@ -134,7 +134,7 @@ class BytecodeFrame extends Frame {
 					def top = stack.pop();
 					// function code
 					def fv = FuncObject.!(top); // this cast succeeds because of ASSERT_FUNC
-					def params = fv.func.params, code = fv.func.code;
+					def params = fv.params, code = fv.code;
 
 					// evaluate argument values
 					var argv: Array<(string, Object)>;
@@ -185,7 +185,7 @@ class BytecodeFrame extends Frame {
 					if (exn) continue;
 
 					def classhole = classholes[operand];
-					stack.push(ClassObject.new(Class.new(classhole.name, ClassObject.!(superclass).clazz, classhole.init, classhole.classFields, classhole.classMethods)));
+					stack.push(classhole(ClassObject.!(superclass)));
 				}
 				NEW => {
 					def top = stack.pop();
@@ -194,10 +194,10 @@ class BytecodeFrame extends Frame {
 
 					// duplicated code
 					def clsObj = ClassObject.!(top);
-					def obj = Object.new(clsObj.clazz);
+					def obj = Object.new(clsObj);
 
-					def classes: Vector<Class> = Vector.new();
-					for (cls = clsObj.clazz; cls != null; cls = cls.superclass)
+					def classes: Vector<ClassObject> = Vector.new();
+					for (cls = clsObj; cls != null; cls = cls.superclass)
 						classes.put(cls);
 				
 					// initialization order is from base class downwards, which

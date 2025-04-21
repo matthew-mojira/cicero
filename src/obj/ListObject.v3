@@ -45,15 +45,15 @@ class ListObject extends Object {
 }
 
 component ListObjects {
-	def classList = Class.new("list", 
+	def classList = ClassObject.new("list", 
 			Objects.classBase, 
 			Codes.virgilFail, 
 			[], 
-			[Funcs.fromVirgilMethod1("get", [IntObjects.classInt], ListObject.l_get),
-			 Funcs.fromVirgilMethod2("set", [IntObjects.classInt, Objects.classBase], ListObject.l_set),
-			 Funcs.fromVirgilMethod1("put", [Objects.classBase], ListObject.l_put),
-			 Funcs.fromVirgilMethod0("length",  ListObject.l_length),
-			 Funcs.fromVirgilMethod0("reverse", ListObject.l_reverse)
+			[FuncObjects.fromVirgilMethod1("get", [IntObjects.classInt], ListObject.l_get),
+			 FuncObjects.fromVirgilMethod2("set", [IntObjects.classInt, Objects.classBase], ListObject.l_set),
+			 FuncObjects.fromVirgilMethod1("put", [Objects.classBase], ListObject.l_put),
+			 FuncObjects.fromVirgilMethod0("length",  ListObject.l_length),
+			 FuncObjects.fromVirgilMethod0("reverse", ListObject.l_reverse)
 			]);
 
 	def fromArray(array: Array<Object>) -> ListObject {

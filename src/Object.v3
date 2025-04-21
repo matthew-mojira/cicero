@@ -1,4 +1,4 @@
-class Object(cls: Class) {
+class Object(cls: ClassObject) {
 	// who is responsible for initializing fields?
 	def var fields: HashMap<string, Object> = Strings.newMap();
 	new() {}
@@ -14,7 +14,7 @@ class Object(cls: Class) {
 				// System.puts(func.id);
 				// System.puts(" ");
  				if (Strings.equal(func.id, name)) {
- 					def m = MethodObject.new(this, func);
+ 					def m = MethodObject.new(this, func.id, func.params, func.code);
  					fields[name] = m;
  					return Maybe.Just(m);
  				}
@@ -24,7 +24,7 @@ class Object(cls: Class) {
 		return Maybe.Nothing;
 	}
 
-	def instanceOf(otherCls: Class) -> bool {
+	def instanceOf(otherCls: ClassObject) -> bool {
  		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
 			if (clazz == otherCls) {
 				return true;
@@ -40,26 +40,26 @@ class Object(cls: Class) {
 }
 
 component Objects {
-	def classBase = Class.new("base", null,
+	def classBase = ClassObject.new("base", null,
 			// init
 			null,
 			// fields
 			[],
 			// methods
-			[Funcs.fromVirgil("class", [], o_getclass),
-			 Funcs.fromVirgil("fields", [], o_fields),
-			 Funcs.fromVirgil("display", [], o_display),
-			 Funcs.fromVirgil("=", ["other"], o_eq),
-			 Funcs.fromVirgil("!=", ["other"], o_neq)
+			[FuncObjects.fromVirgil("class", [], o_getclass),
+			 FuncObjects.fromVirgil("fields", [], o_fields),
+			 FuncObjects.fromVirgil("display", [], o_display),
+			 FuncObjects.fromVirgil("=", ["other"], o_eq),
+			 FuncObjects.fromVirgil("!=", ["other"], o_neq)
 			]
 			);
 }
 
-// TODO refactor these to use Funcs.fromVirgilMethod
+// TODO refactor these to use FuncObjects.fromVirgilMethod
 
 def o_getclass(args: Range<Object>) -> (Object, bool) {
 	def obj = args[0];
-	return (ClassObject.new(obj.cls), false);
+	return (obj.cls, false);
 }
 
 def o_fields(args: Range<Object>) -> (Object, bool) {

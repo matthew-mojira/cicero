@@ -37,7 +37,7 @@ class ASTFrame extends Frame {
 
 				// function code
 				def fv = FuncObject.!(tgtVal);
-				def params = fv.func.params, code = fv.func.code;
+				def params = fv.params, code = fv.code;
 
 				// evaluate argument values
 				var argv: Array<(string, Object)>;
@@ -111,13 +111,13 @@ class ASTFrame extends Frame {
 			}
 			Func(id, params, code) => {
 				def c = CodeObject.new(code);
-				def f = FuncObjects.newFO(Func.new(id, params, c.code));
+				def f = FuncObjects.newFO(id, params, c.code);
 				locals[id] = f;
 				value = f;
 			}
 			Class(id, superclass, init, fields, methods) => {
 				var i: Code = if(init.isJust(), init.fromJust(), null);
-				var s: Class;
+				var s: ClassObject;
 				match (superclass) {
 					Just(e) => {
 						var v = evalAST(e);
@@ -126,13 +126,13 @@ class ASTFrame extends Frame {
 						assertType(ClassObjects.classClass, v);
 						if (exn) return value;
 						
-						s = ClassObject.!(v).clazz;
+						s = ClassObject.!(v);
 					}
 					Nothing => s = Objects.classBase;
 				}
 				def f: Array<(string, Code)> = fields;
-				def m: Array<Func> = Arrays.map(methods, funcToFunc);
-				def c = ClassObject.new(Class.new(id, s, i, f, m));
+				def m: Array<FuncObject> = Arrays.map(methods, funcToFunc);
+				def c = ClassObject.new(id, s, i, f, m);
 				locals[id] = c;
 				value = c;
 			}
@@ -224,10 +224,10 @@ class ASTFrame extends Frame {
 				if (exn) return value;
 
 				def clsObj = ClassObject.!(cls);
-				def obj = Object.new(clsObj.clazz);
+				def obj = Object.new(clsObj);
 
-				def classes: Vector<Class> = Vector.new();
-				for (cls = clsObj.clazz; cls != null; cls = cls.superclass)
+				def classes: Vector<ClassObject> = Vector.new();
+				for (cls = ClassObject.!(cls); cls != null; cls = cls.superclass)
 					classes.put(cls);
 			
 				// initialization order is from base class downwards, which
@@ -288,6 +288,6 @@ class ASTFrame extends Frame {
 	}
 }
 
-def funcToFunc(f: ASTData.Func) -> Func {
-	return Func.new(f.id, f.params, f.body);
+def funcToFunc(f: ASTData.Func) -> FuncObject {
+	return FuncObjects.newFO(f.id, f.params, f.body);
 }

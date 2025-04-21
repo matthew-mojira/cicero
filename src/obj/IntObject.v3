@@ -42,25 +42,25 @@ class IntObject(val: long) extends Object {
 	}
 }
 
-def i: Array<Class> = Array.new(1);
+def i: Array<ClassObject> = Array.new(1);
 
 component IntObjects {
-	def classInt = Class.new("int", 
+	def classInt = ClassObject.new("int", 
 			Objects.classBase, 
 			Codes.virgilFail, 
 			[], 
-			[Funcs.fromVirgilMethod0("succ",  IntObject.i_succ),
-			 Funcs.fromVirgilMethod0("pred",  IntObject.i_pred),
-			 Funcs.fromVirgilMethod0("neg",   IntObject.i_neg),
-			 Funcs.fromVirgilMethod1("+",  i, IntObject.i_add),
-			 Funcs.fromVirgilMethod1("-",  i, IntObject.i_sub),
-			 Funcs.fromVirgilMethod1("*",  i, IntObject.i_mul),
-			 Funcs.fromVirgilMethod1("/",  i, IntObject.i_div),
-			 Funcs.fromVirgilMethod1("%",  i, IntObject.i_div),
-			 Funcs.fromVirgilMethod1("<",  i, IntObject.i_lt),
-			 Funcs.fromVirgilMethod1("<=", i, IntObject.i_leq),
-			 Funcs.fromVirgilMethod1(">",  i, IntObject.i_gt),
-			 Funcs.fromVirgilMethod1(">=", i, IntObject.i_geq)
+			[FuncObjects.fromVirgilMethod0("succ",  IntObject.i_succ),
+			 FuncObjects.fromVirgilMethod0("pred",  IntObject.i_pred),
+			 FuncObjects.fromVirgilMethod0("neg",   IntObject.i_neg),
+			 FuncObjects.fromVirgilMethod1("+",  i, IntObject.i_add),
+			 FuncObjects.fromVirgilMethod1("-",  i, IntObject.i_sub),
+			 FuncObjects.fromVirgilMethod1("*",  i, IntObject.i_mul),
+			 FuncObjects.fromVirgilMethod1("/",  i, IntObject.i_div),
+			 FuncObjects.fromVirgilMethod1("%",  i, IntObject.i_div),
+			 FuncObjects.fromVirgilMethod1("<",  i, IntObject.i_lt),
+			 FuncObjects.fromVirgilMethod1("<=", i, IntObject.i_leq),
+			 FuncObjects.fromVirgilMethod1(">",  i, IntObject.i_gt),
+			 FuncObjects.fromVirgilMethod1(">=", i, IntObject.i_geq)
 			]);
 
 	/* canonicalize int value instances */

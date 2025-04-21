@@ -1,8 +1,1 @@
-class Class(name: string, 
-		superclass: Class, 
-		init: Code,
-		classFields: Array<(string, Code)>, 
-		classMethods: Array<Func>) {
-	def display() -> string { return Strings.format1("<class '%s'>", name); }
-}
 

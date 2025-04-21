@@ -1,7 +1,7 @@
 # Todos
 
 Final list:
-[ ] re-couple Objects and their underlying data, introducing *primitive fields*
+[X] re-couple Objects and their underlying data, introducing *primitive fields*
     to represent immutable core information of the object (but accessible
     through methods)
 [ ] create exception class which holds stacktrace information

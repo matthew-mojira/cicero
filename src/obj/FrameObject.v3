@@ -2,5 +2,5 @@ class FrameObject(frame: Frame) extends Object {
 	new() super(FrameObjects.classFrame) {}
 }
 component FrameObjects {
-	def classFrame = Class.new("frame", Objects.classBase, Codes.virgilFail, [], []);
+	def classFrame = ClassObject.new("frame", Objects.classBase, Codes.virgilFail, [], []);
 }

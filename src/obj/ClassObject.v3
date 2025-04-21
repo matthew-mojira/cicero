@@ -1,30 +1,39 @@
-class ClassObject(clazz: Class) extends Object {
+class ClassObject(name: string, 
+		superclass: ClassObject, // optional field: base class has superclass == null
+		init: Code,
+		classFields: Array<(string, Code)>, 
+		classMethods: Array<FuncObject>) extends Object {
+		// FIXME perhaps we don't specify methods as func *objects* but funcholes
 	new() super(ClassObjects.classClass) {}
 	
-	def display() -> string { return Strings.format1("<class '%s'>", clazz.name); }
+	def display() -> string { return Strings.format1("<class '%s'>", name); }
 	def isTrue()  -> bool   { return true; }
 
 	def c_superclass() -> (Object, bool) {
-		if (clazz.superclass == null) {
+		if (superclass == null) {
 			return (StrObjects.getStrObject("no superclass"), true);
 		} else {
-			return (ClassObject.new(clazz.superclass), false);
+			return (superclass, false);
 		}
 	}
 
 	def c_name() -> (Object, bool) {
-		return (StrObjects.getStrObject(clazz.name), false);
+		return (StrObjects.getStrObject(name), false);
 	}
 }
 
 component ClassObjects {
-	def classClass: Class = 
-		Class.new("class", 
+	def classClass: ClassObject = 
+		ClassObject.new("class", 
 				Objects.classBase, 
 				Codes.virgilFail, 
 				[], 
-				[Funcs.fromVirgilMethod0("superclass", ClassObject.c_superclass),
-				 Funcs.fromVirgilMethod0("name",       ClassObject.c_name)
+				[FuncObjects.fromVirgilMethod0("superclass", ClassObject.c_superclass),
+				 FuncObjects.fromVirgilMethod0("name",       ClassObject.c_name)
 				]);
+
+	def classhole(name: string, init: Code, classFields: Array<(string, Code)>, classMethods: Array<FuncObject>) -> (ClassObject -> ClassObject) {
+		return ClassObject.new(name, _, init, classFields, classMethods);
+	}
 }
 

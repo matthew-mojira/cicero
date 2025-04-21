@@ -1,33 +1,84 @@
-class FuncObject(func: Func, cls_: Class) extends Object {
+class FuncObject(id: string, params: Array<string>, code: Code, cls_: ClassObject) extends Object {
 	private new() super(cls_) {}
 
-	def display() -> string { return Strings.format1("<func '%s'>", func.id); }
+	def display() -> string { return Strings.format1("<func '%s'>", id); }
 	def isTrue()  -> bool   { return true; }
 
 	def f_name() -> (Object, bool) {
-		return (StrObjects.getStrObject(func.id), false);
+		return (StrObjects.getStrObject(id), false);
 	}
 	def f_params() -> (Object, bool) {
-		return (ListObjects.fromArray(Arrays.map(func.params, StrObjects.getStrObject)), false);
+		return (ListObjects.fromArray(Arrays.map(params, StrObjects.getStrObject)), false);
 	}
 	def f_code() -> (Object, bool) {
-		return (CodeObject.new(func.code), false);
+		return (CodeObject.new(code), false);
 	}
 }
 
 component FuncObjects {
-	def classFunc = Class.new(
+	def classFunc = ClassObject.new(
 			"func", 
 			Objects.classBase, 
 			Codes.virgilFail, 
 			[], 
-			[Funcs.fromVirgilMethod0("name",   FuncObject.f_name),
-			 Funcs.fromVirgilMethod0("params", FuncObject.f_params),
-			 Funcs.fromVirgilMethod0("code",   FuncObject.f_code)
+			[FuncObjects.fromVirgilMethod0("name",   FuncObject.f_name),
+			 FuncObjects.fromVirgilMethod0("params", FuncObject.f_params),
+			 FuncObjects.fromVirgilMethod0("code",   FuncObject.f_code)
 			]);
 	// XXX hackfix to allow method subclass
-	def newFO(func: Func) -> FuncObject {
-		return FuncObject.new(func, classFunc);
+	def newFO(id: string, params: Array<string>, code: Code) -> FuncObject {
+		return FuncObject.new(id, params, code, classFunc);
+	}
+	def fromVirgil(id: string, params: Array<string>, fn: Range<Object> -> (Object, bool)) -> FuncObject {
+		return newFO(id, params, Codes.fromVirgil(fn));
+	}
+
+	def fromVirgilMethod0<T>(name: string, method: T -> (Object, bool)) -> FuncObject {
+		return fromVirgil(name, [], callMethod0(_, method));
+	}
+	def fromVirgilMethod1<T, A1>(name: string, cst: Array<ClassObject>, method: (T, A1) -> (Object, bool)) -> FuncObject {
+		return fromVirgil(name, ["arg1"], callMethod1(_, cst, method));
+	}
+	def fromVirgilMethod2<T, A1, A2>(name: string, cst: Array<ClassObject>, method: (T, A1, A2) -> (Object, bool)) -> FuncObject {
+		return fromVirgil(name, ["arg1", "arg2"], callMethod2(_, cst, method));
+	}
+	def fromVirgilMethod3<T, A1, A2, A3>(name: string, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> (Object, bool)) -> FuncObject {
+		return fromVirgil(name, ["arg1", "arg2", "arg3"], callMethod3(_, cst, method));
 	}
 }
 
+def callMethod0<T>(args: Range<Object>, method: T -> (Object, bool)) -> (Object, bool) {
+	return method(T.!(args[0]));
+}
+
+// FIXME improve error messages
+
+def callMethod1<T, A1>(args: Range<Object>, cst: Array<ClassObject>, method: (T, A1) -> (Object, bool)) -> (Object, bool) {
+	if (!args[1].instanceOf(cst[0])) {
+		return (StrObjects.getStrObject("type mismatch"), true);
+	}
+	return method(T.!(args[0]), A1.!(args[1]));
+}
+
+def callMethod2<T, A1, A2>(args: Range<Object>, cst: Array<ClassObject>, method: (T, A1, A2) -> (Object, bool)) -> (Object, bool) {
+	if (!args[1].instanceOf(cst[0])) {
+		return (StrObjects.getStrObject("type mismatch"), true);
+	}
+	if (!args[2].instanceOf(cst[1])) {
+		return (StrObjects.getStrObject("type mismatch"), true);
+	}
+	return method(T.!(args[0]), A1.!(args[1]), A2.!(args[2]));
+}
+
+def callMethod3<T, A1, A2, A3>(args: Range<Object>, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> (Object, bool)) -> (Object, bool) {
+	if (!args[1].instanceOf(cst[0])) {
+		return (StrObjects.getStrObject("type mismatch"), true);
+	}
+	if (!args[2].instanceOf(cst[1])) {
+		return (StrObjects.getStrObject("type mismatch"), true);
+	}
+	if (!args[3].instanceOf(cst[2])) {
+		return (StrObjects.getStrObject("type mismatch"), true);
+	}
+	return method(T.!(args[0]), A1.!(args[1]), A2.!(args[2]), A3.!(args[3]));
+}

@@ -9,5 +9,5 @@ component PoopCrapObjects {
 	/* only one poop and one crap */
 	def instance = PoopCrapObject.new();
 
-	def classPoopCrap = Class.new("poopcrap", Objects.classBase, Codes.virgilFail, [], []);
+	def classPoopCrap = ClassObject.new("poopcrap", Objects.classBase, Codes.virgilFail, [], []);
 }
