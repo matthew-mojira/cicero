@@ -1,5 +1,13 @@
 class ASTFrame extends FrameObject {
-	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {}
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {
+		if (args != null) {
+			for (arg in args) {
+				locals[arg.0] = arg.1;
+			}
+		}
+	}
+	
+	def var locals: HashMap<string, Object> = Strings.newMap();
 	
 	def eval() {
 		def v = evalAST(code.ast);
@@ -20,14 +28,32 @@ class ASTFrame extends FrameObject {
 
 		match (ast.data) {
 			Lit(val) => value = val;
-			Id(id) => {
-				if (locals.has(id)) {
-					value = locals[id];
-				} else if (globals.has(id)) {
-					value = globals[id];
-				} else {
-					throw(StrObjects.getStrObject(Strings.format1("unbound identifier: %s", id)));
+			VarGet(id, mode) => match (mode.data) {
+				Local => {
+					if (locals.has(id))
+						value = locals[id];
+					else {
+						throw(StrObjects.getStrObject(Strings.format1("unbound local: %s", id)));
+						return value;
+					}
 				}
+				Global => {
+					if (globals.has(id))
+						value = globals[id];
+					else {
+						throw(StrObjects.getStrObject(Strings.format1("unbound global: %s", id)));
+						return value;
+					}
+				}
+			}
+			VarSet(id, mode, expr) => {
+				def v = evalAST(expr);
+				if (exn) return value;
+				match (mode.data) {
+					Local  => locals[id] = v;
+					Global => globals[id] = v;
+				}
+				value = v;
 			}
 			Apply(tgt, args) => {
 				def tgtVal = evalAST(tgt);
@@ -67,6 +93,7 @@ class ASTFrame extends FrameObject {
 
 				// create new frame (and evaluate)
 				def frame = newFrame(code, argv);
+				frame.eval();
 				if (frame.exn) {
 					// record stacktrace
 					stacktrace.puta(frame.stacktrace.extract());
@@ -96,23 +123,25 @@ class ASTFrame extends FrameObject {
 
 				throw(v);
 			}
-			Catch(try, exnvar, catch) => {
+			Catch(try, exnvar, b, catch) => {
 				def v = evalAST(try);
 				if (!exn) {
 					value = v;
 				} else {
 					// catch exception
 					exn = false;
-					locals[exnvar] = val; // bind exception to variable
+					match (b.data) { // bind exception to variable
+						Local =>  locals[exnvar] = val;
+						Global => globals[exnvar] = val;
+					}
 					def e = evalAST(catch);
 					if (exn) return value;
 					value = e;
 				}
 			}
 			Func(id, params, code) => {
-				def f = FuncObjects.newFO(id, params, code);
-				locals[id] = f;
-				value = f;
+				// future work: capturing free variables
+				value = FuncObjects.newFO(id, params, code);
 			}
 			Class(id, superclass, init, fields, methods) => {
 				var i: CodeObject = if(init.isJust(), init.fromJust(), null);
@@ -131,15 +160,7 @@ class ASTFrame extends FrameObject {
 				}
 				def f: Array<(string, CodeObject)> = fields;
 				def m: Array<FuncObject> = Arrays.map(methods, funcToFunc);
-				def c = ClassObject.new(id, s, i, f, m);
-				locals[id] = c;
-				value = c;
-			}
-			Assign(id, expr) => {
-				def v = evalAST(expr);
-				if (exn) return value;
-				locals[id] = v;
-				value = v;
+				value = ClassObject.new(id, s, i, f, m);
 			}
 			Cond(cases) => {
 				var sat = false;
@@ -240,6 +261,7 @@ class ASTFrame extends FrameObject {
 						if (expr == null) continue;
 						// create new frames here!
 						def frame = newFrame(expr, []);
+						frame.eval();
 						if (frame.exn) {
 							// record stacktrace
 							stacktrace.puta(frame.stacktrace.extract());
@@ -256,6 +278,7 @@ class ASTFrame extends FrameObject {
 
 						// create new frames here!
 						def frame = newFrame(code, args);
+						frame.eval();
 						if (frame.exn) {
 							// record stacktrace
 							stacktrace.puta(frame.stacktrace.extract());

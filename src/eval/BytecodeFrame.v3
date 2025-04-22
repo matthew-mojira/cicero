@@ -1,5 +1,17 @@
 class BytecodeFrame extends FrameObject {
-	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {}
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {
+		if (code != null) {
+			locals = Array.new(code.bytecode.locals.length);
+			// args == null?
+			for (i < args.length) {
+				locals[i] = args[i].1;
+			}
+		} else {
+			locals = Array.new(0);
+		}
+	}
+
+	def var locals: Array<Object>;
 
 	def stack: ArrayStack<Object> = ArrayStack.new();
 	/* This is a handler stack which stores structure about exceptions:
@@ -36,6 +48,7 @@ class BytecodeFrame extends FrameObject {
 		
 		if (debug) {
 			System.puts("Evaluating bytecode:\n");
+			System.puts(Strings.format1("Number of locals: %d\n", locals.length));
 			b.inspect();
 			System.puts("==\n");
 		}
@@ -68,6 +81,14 @@ class BytecodeFrame extends FrameObject {
 
 			if (debug) {
 				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, operand));
+				System.puts("    locals:\n");
+				for (i < locals.length) {
+					if (locals[i] == null) {
+						System.puts(Strings.format1("    %d: NULL\n", i));
+					} else {
+						System.puts(Strings.format2("    %d: %s\n", i, locals[i].display()));
+					}
+				}
 				System.puts("    stack:\n");
 				for (i < stack.top) {
 					System.puts("    ");
@@ -85,18 +106,30 @@ class BytecodeFrame extends FrameObject {
 
 			pc += 4;
 			match (opcode) {
-				LOAD_LIT => stack.push(constants[operand]);
-				LOAD_NAME => {
+				LOAD_CONST => stack.push(constants[operand]);
+				LOAD_GLOBAL => {
 					def id = strings[operand];
-					// XXX this duplicates tier0 code, refactor away (using OO approach)
-					// duplication invalidated if tiers use different local storing mechanis
-					if (locals.has(id)) {
-						stack.push(locals[id]);
-					} else if (globals.has(id)) {
+					if (globals.has(id)) {
 						stack.push(globals[id]);
 					} else {
-						throw(StrObjects.getStrObject(Strings.format1("unbound identifier: %s", id)));
+						throw(StrObjects.getStrObject(Strings.format1("unbound global: %s", id)));
 					}
+				}
+				LOAD_LOCAL => {
+					def local = locals[operand];
+					if (local == null)
+						throw(StrObjects.getStrObject(Strings.format1("unbound local: %s", b.locals[operand])));
+					else
+						stack.push(local);
+				}
+				STORE_GLOBAL => {
+					def id = strings[operand];
+					def top = stack.pop();
+					globals[id] = top;
+				}
+				STORE_LOCAL => {
+					def top = stack.pop();
+					locals[operand] = top;
 				}
 				JUMP => pc += i24.view(operand);
 				JUMP_IF_FALSE => {
@@ -114,11 +147,6 @@ class BytecodeFrame extends FrameObject {
 				RAISE => {
 					def top = stack.pop();
 					throw(top);
-				}
-				STORE_NAME => {
-					def id = strings[operand];
-					def top = stack.pop();
-					locals[id] = top;
 				}
 				ASSERT_FUNC => {
 					def top = stack.peek();
@@ -162,6 +190,7 @@ class BytecodeFrame extends FrameObject {
 
 					// create new frame (and evaluate)
 					def frame = newFrame(code, argv);
+					frame.eval();
 					if (frame.exn) {
 						// record stacktrace
 						stacktrace.puta(frame.stacktrace.extract());
@@ -177,7 +206,8 @@ class BytecodeFrame extends FrameObject {
 				CATCH => {
 					handlers.pop();
 				}
-				PULL => for (i < operand) stack.pop();
+				POP => for (i < operand) stack.pop();
+				DUPE => stack.push(stack.peek());
 				// objects
 				CREATE_CLASS => {
 					def superclass = stack.pop();
@@ -187,7 +217,7 @@ class BytecodeFrame extends FrameObject {
 					def classhole = classholes[operand];
 					stack.push(classhole(ClassObject.!(superclass)));
 				}
-				NEW => {
+				CREATE_OBJECT => {
 					def top = stack.pop();
 					assertType(ClassObjects.classClass, top);
 					if (exn) continue;
@@ -211,6 +241,7 @@ class BytecodeFrame extends FrameObject {
 							if (expr == null) continue;
 							// create new frames here!
 							def frame = newFrame(expr, []);
+							frame.eval();
 							if (frame.exn) {
 								// record stacktrace
 								stacktrace.puta(frame.stacktrace.extract());
@@ -227,6 +258,7 @@ class BytecodeFrame extends FrameObject {
 
 							// create new frames here!
 							def frame = newFrame(code, args);
+							frame.eval();
 							if (frame.exn) {
 								// record stacktrace
 								stacktrace.puta(frame.stacktrace.extract());
@@ -238,7 +270,7 @@ class BytecodeFrame extends FrameObject {
 					}
 					stack.push(obj);
 				}
-				GET_FIELD => {
+				LOAD_FIELD => {
 					def obj = stack.pop();
 					def field = strings[operand];
 
@@ -249,7 +281,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 				}
-				SET_FIELD => {
+				STORE_FIELD => {
 					def val = stack.pop();
 					def obj = stack.pop();
 					def field = strings[operand];

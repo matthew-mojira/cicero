@@ -20,10 +20,10 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 	}
 
 	/* Compile code */
-	def compile() {
+	def compile(params: Array<string>) {
 		if (tier < 0) System.error("compile error", "attempting to compile Virgil code to bytecode");
 		if (tier > 0) System.error("compile error", "compiling what has already been compiled to bytecode");
-		bytecode = Bytecode.new(ast);
+		bytecode = Bytecode.new(ast, params);
 		tier = 1;
 	}
 

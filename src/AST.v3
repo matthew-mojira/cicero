@@ -1,17 +1,17 @@
+type AccessMode {
+	case Local;
+	case Global;
+}
+
 // When a field is of type Code, that indicates that its evaluation occurs in
 // a new frame, hence it should be parsed as a new Code object.
 type ASTData {
 	case Lit(val: Object)
 		 { def whichOne() -> string { return "lit"; } }
-	case Id(id: string)
-		 { def whichOne() -> string { return "id"; } }
-	// TODO
-	/*
-	 * case LocalGet(id: string);
-	 * case LocalSet(id: string);
-	 * case GlobalGet(id: string);
-	 * case GlobalSet(id: string);
-	*/
+
+	case VarGet(id: string, mode: Box<AccessMode>);
+	case VarSet(id: string, mode: Box<AccessMode>, value: AST);
+	
 	case Apply(tgt: AST, args: Array<AST>)
 		 { def whichOne() -> string { return "apply"; } }
 	case If(cond: AST, exprT: AST, exprF: AST)
@@ -20,12 +20,10 @@ type ASTData {
 		 { def whichOne() -> string { return "cond"; } }
 	case Raise(exn: AST)
 		 { def whichOne() -> string { return "raise"; } }
-	case Catch(try: AST, exn: string, catch: AST)
+	case Catch(try: AST, exn: string, mode: Box<AccessMode>, catch: AST) // XXX mode required
 		 { def whichOne() -> string { return "catch"; } }
 	case Func(id: string, params: Array<string>, body: CodeObject)
 		 { def whichOne() -> string { return "func"; } }
-	case Assign(id: string, assn: AST)
-		 { def whichOne() -> string { return "assign"; } }
 	case While(cond: AST, body: AST)
 		 { def whichOne() -> string { return "while"; } }
 	case Begin(exprs: Array<AST>)

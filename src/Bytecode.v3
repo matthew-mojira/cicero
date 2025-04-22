@@ -5,11 +5,13 @@ class Bytecode {
 	def strings:    Vector<string> = Vector.new();
 	def classholes: Vector<ClassObject -> ClassObject>  = Vector.new();
 	def constants:  Vector<Object> = Vector.new();
+	def locals:     Vector<string> = Vector.new();
 
 	/* Source mappings */
 	def source: Vector<FileRange>  = Vector.new();
 
-	new(ast: AST) {
+	new(ast: AST, params: Array<string>) {
+		locals.puta(params);
 		compileAST(ast);
 		bytecode = writer.copy();
 	}
@@ -19,13 +21,38 @@ class Bytecode {
 		match (ast.data) {
 			Lit(obj) => {
 				source.put(loc);
-				putb(Opcode.LOAD_LIT.tag);
+				putb(Opcode.LOAD_CONST.tag);
 				putO(addConstant(obj));
 			}
-			Id(id) => {
+			VarGet(id, mode) => match (mode.data) {
+				Local  => {
+					source.put(loc);
+					putb(Opcode.LOAD_LOCAL.tag);
+					putO(addLocal(id));
+				}
+				Global => {
+					source.put(loc);
+					putb(Opcode.LOAD_GLOBAL.tag);
+					putO(addString(id));
+				}
+			}
+			VarSet(id, mode, code) => {
+				compileAST(code);
 				source.put(loc);
-				putb(Opcode.LOAD_NAME.tag);
-				putO(addString(id));
+				putb(Opcode.DUPE.tag);
+				putO(0); // no operand
+				match (mode.data) {
+					Local  => {
+						source.put(loc);
+						putb(Opcode.STORE_LOCAL.tag);
+						putO(addLocal(id));
+					}
+					Global => {
+						source.put(loc);
+						putb(Opcode.STORE_GLOBAL.tag);
+						putO(addString(id));
+					}
+				}
 			}
 			Apply(tgt, args) => {
 				compileAST(tgt);
@@ -76,7 +103,7 @@ class Bytecode {
 				// XXX object creation in AST compilation!
 				// could be problematic if we object lookup observable
 				source.put(loc);
-				putb(Opcode.LOAD_LIT.tag);
+				putb(Opcode.LOAD_CONST.tag);
 				putO(addConstant(StrObjects.getStrObject("cond error: no true breanch")));
 				source.put(loc);
 				putb(Opcode.RAISE.tag);
@@ -88,32 +115,14 @@ class Bytecode {
 			}
 			Func(id, params, code) => {
 				// XXX compiling code
-				code.compile();
+				code.compile(params);
 				
 				// XXX object creation in AST compilation!
 				def cst = addConstant(FuncObjects.newFO(id, params, code));
-				def str = addString(id);
 			
 				source.put(loc);
-				putb(Opcode.LOAD_LIT.tag);
+				putb(Opcode.LOAD_CONST.tag);
 				putO(cst);
-				source.put(loc);
-				putb(Opcode.STORE_NAME.tag);
-				putO(str);
-				source.put(loc);
-				putb(Opcode.LOAD_NAME.tag);
-				putO(str);
-			}
-			Assign(id, code) => {
-				compileAST(code);
-				
-				def str = addString(id);
-				source.put(loc);
-				putb(Opcode.STORE_NAME.tag);
-				putO(str);
-				source.put(loc);
-				putb(Opcode.LOAD_NAME.tag);
-				putO(str);
 			}
 			Raise(exn) => {
 				compileAST(exn);
@@ -121,24 +130,36 @@ class Bytecode {
 				putb(Opcode.RAISE.tag);
 				putO(0); // no operand
 			}
-			Catch(try, id, catch) => {
+			Catch(try, id, b, catch) => {
 				source.put(loc);
 				putb(Opcode.TRY.tag);
 				def hole1 = pos();
 				skipO();
+
 				compileAST(try);
+
 				source.put(loc);
 				putb(Opcode.CATCH.tag);
 				putO(0); // no operand
+
 				source.put(loc);
 				putb(Opcode.JUMP.tag);
 				def hole2 = pos();
 				skipO();
-				writeO(hole1, pos() - (hole1 + 3));
 
+				writeO(hole1, pos() - (hole1 + 3));
+					
 				source.put(loc);
-				putb(Opcode.STORE_NAME.tag);
-				putO(addString(id));
+				match (b.data) {
+					Local  => {
+						putb(Opcode.STORE_LOCAL.tag);
+						putO(addLocal(id));
+					}
+					Global => {
+						putb(Opcode.STORE_GLOBAL.tag);
+						putO(addString(id));
+					}
+				}
 
 				compileAST(catch);
 				writeO(hole2, pos() - (hole2 + 3));
@@ -147,7 +168,7 @@ class Bytecode {
 				for (i < exprs.length - 1) {
 					compileAST(exprs[i]);
 					source.put(loc);
-					putb(Opcode.PULL.tag);
+					putb(Opcode.POP.tag);
 					putO(1); // ignore eval result
 				}
 				compileAST(exprs[exprs.length - 1]);
@@ -161,7 +182,7 @@ class Bytecode {
 				skipO(); // hole to put jump offset
 				compileAST(body);
 				source.put(loc);
-				putb(Opcode.PULL.tag);
+				putb(Opcode.POP.tag);
 				putO(1);
 				source.put(loc);
 				putb(Opcode.JUMP.tag);
@@ -172,14 +193,14 @@ class Bytecode {
 			GetField(id, obj) => {
 				compileAST(obj);
 				source.put(loc);
-				putb(Opcode.GET_FIELD.tag);
+				putb(Opcode.LOAD_FIELD.tag);
 				putO(addString(id));
 			}
 			SetField(id, obj, val) => {
 				compileAST(obj);
 				compileAST(val);
 				source.put(loc);
-				putb(Opcode.SET_FIELD.tag);
+				putb(Opcode.STORE_FIELD.tag);
 				putO(addString(id));
 			}
 			Class(id, superclass, init, fields, methods) => {
@@ -189,7 +210,7 @@ class Bytecode {
 					Nothing => {
 						def idx = constants.length;
 						source.put(loc);
-						putb(Opcode.LOAD_LIT.tag);
+						putb(Opcode.LOAD_CONST.tag);
 						putO(addConstant(Objects.classBase));
 					}
 					Just(expr) => compileAST(expr);
@@ -198,7 +219,7 @@ class Bytecode {
 				match (init) {
 					Nothing => ;
 					Just(code) => {
-						code.compile();
+						code.compile([]);
 						init2 = code;
 					}
 				}
@@ -207,18 +228,11 @@ class Bytecode {
 				source.put(loc);
 				putb(Opcode.CREATE_CLASS.tag);
 				putO(idx);
-				def str = addString(id);
-				source.put(loc);
-				putb(Opcode.STORE_NAME.tag);
-				putO(str);
-				source.put(loc);
-				putb(Opcode.LOAD_NAME.tag);
-				putO(str);
 			}
 			New(obj) => {
 				compileAST(obj);
 				source.put(loc);
-				putb(Opcode.NEW.tag);
+				putb(Opcode.CREATE_OBJECT.tag);
 				putO(0); // no operand
 			}
 			List(elems) => {
@@ -263,6 +277,16 @@ class Bytecode {
 	def addConstant(const: Object) -> int {
 		def idx = constants.length;
 		constants.put(const);
+		return idx;
+	}
+
+	def addLocal(id: string) -> int {
+		for (i < locals.length) {
+			if (Strings.equal(locals[i], id))
+				return i;
+		}
+		def idx = locals.length;
+		locals.put(id);
 		return idx;
 	}
 

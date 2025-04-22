@@ -3,22 +3,13 @@
  */
 class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) extends Object {
 	var globals: HashMap<string, Object>;
-	def locals:  HashMap<string, Object> = Strings.newMap();
 
-	/* Initializing the frame also evaluates it (except for top-level frames). */
 	private new() super(FrameObjects.classFrame) {
-		// args to locals (XXX should be tier0/1 (really just 0) only)
-		for (arg in args) {
-			locals[arg.0] = arg.1;
-		}
 
-		if (prev == null) { // this is the top-level frame, where locals = globals
-			globals = locals;
+		if (prev == null) {
+			globals = Strings.newMap();
 		} else {
 			globals = prev.globals;
-
-			code.incrementCount();
-			eval(); // perhaps top frame should have dummy code?
 		}
 	}
 
@@ -76,12 +67,17 @@ component FrameObjects {
 		}
 		return null;
 	}
-	def newTopFrame(builtins: Array<(string, Object)>) -> FrameObject {
+	def newTopFrame() -> FrameObject {
+		var frame: FrameObject;
 		if (Tiers.enableTier1) {
-			return BytecodeFrame.new(null, null, builtins);
+			frame = BytecodeFrame.new(null, null, null);
 		} else {
-			return ASTFrame.new(null, null, builtins);
-		}	
+			frame = ASTFrame.new(null, null, null);
+		}
+		for (builtin in Builtin.set.all) {
+			frame.globals[builtin.id] = builtin.val;
+		}
+		return frame;
 	}
 	def classFrame = ClassObject.new("frame", Objects.classBase, CodeObjects.virgilFail, [], []);
 }

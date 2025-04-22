@@ -1,0 +1,67 @@
+(func (fst x y) x)
+(func (snd x y) y)
+
+(fst 1 2)
+(snd 1 2)
+
+(func (test-global) {
+  (try
+    global
+    e e)
+})
+
+(func (test-global2) {
+  (set global 1)
+  global ; local!
+})
+
+(test-global)  ; global not yet bound -> exception
+(test-global2) ; return 1
+(set global "OK")
+(test-global)  ; global bound
+(test-global2) ; return 1
+
+
+(set local 1)
+
+(func (test-local)
+  local)
+(test-local) ; returns 1
+
+(func (test-local2) {
+  (set local 2)
+  local
+})
+(test-local2) ; returns 2
+
+(func (test-local3 local)
+  local)
+(test-local3 3) ; returns 3
+
+(func (test-local4) {
+  local
+  (set local 5)
+  local
+})
+(try
+  (test-local4)
+  e 4)
+
+(func (test-local5) {
+  (set local 0)
+  (+ 4 (get-global local))
+})
+(test-local5)
+
+(func (test-local6) {
+  (set local 6)
+  (get-global local)
+  (set-global local 1)
+  local
+})
+(test-local6)
+
+(func (test-local7) {
+  (+ (get-global local) 6)
+})
+(test-local7)

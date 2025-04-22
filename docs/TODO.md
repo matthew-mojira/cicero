@@ -5,8 +5,8 @@ Final list:
     to represent immutable core information of the object (but accessible
     through methodsX
 [ ] create exception class which holds stacktrace information
-[ ] decide on local vs. global scope
-[ ] make locals of a Frame an array (maybe only needed for tier1). Ensure that
+[X] decide on local vs. global scope
+[X] make locals of a Frame an array (maybe only needed for tier1). Ensure that
     semantics in tier0 and tier1 remain the same.
 [ ] make fields of an object stored in an Array where you must lookup in the
     class for the offset into the Array instead of all HashMap lookups
@@ -280,4 +280,28 @@ class Object {
 }
 ```
 
+# Default values
 
+We can reduce potential boilerplate code and possible exceptions by introducing
+default values and allowing uninitialized variables.
+
+Possible changes:
+* if without else: only trigger evaluation if the true branch is taken (useful
+  for when we care about imperative effects). () is the value if the condition
+  evaluates to false
+* no matching cond: if no case in a cond matches, instead of raising an
+  exception, it evaluates to ()
+* uninitialized fields: do not require an expression to initialize fields in a
+  class. Those fields will be ()
+* uninitialized variables: accessing a variable's value that has not already
+  been set yields (). This is more controversial to add, because it is more
+  likely that an uninitialized variable is read because of a misspelled
+  initialized variable.
+* false loop: the while loop returns the last value of the condition (either
+  false or ()). It makes more sense to return the last value of the body, but
+  if the condition is false during the first evaluation there is no value for
+  the body. Instead, it could evaluate to ().
+* empty begin: an empty begin could evaluate to ().
+* incomplete function arguments: if fewer than the required number of arguments
+  are provided to a function, the remaining arguments could be initialized to
+  (). This seems like a bad idea

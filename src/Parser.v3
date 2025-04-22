@@ -7,11 +7,35 @@ class Parser extends TextReader {
 		skipWs(this);
 		while (pos < limit) {
 			skipWs(this);
+			// readExpr is intentional. The top-level doesn't get value on the
+			// varStack to indicate that all accesses here are on global variables
 			def expr = readExpr();
 			exprs.put(CodeObjects.fromAST(expr));
 			if (!ok) break;
 		}
 	}
+
+	// Box is a pointer to an access mode, so we can retroactively change
+	// access modes when a set is encountered, but also so we need only a
+	// single pass to parse the program.
+	def varStack: ArrayStack<HashMap<string, Box<AccessMode>>> = ArrayStack.new();
+	// all global-set/gets use this to reduce allocations. Don't mutate this
+	def global:   Box<AccessMode> = Box.new(AccessMode.Global);
+
+	private def readCode(locals: Array<string>) -> AST {
+		def map: HashMap<string, Box<AccessMode>> = Strings.newMap();
+		varStack.push(map);
+
+		for (local in locals) {
+			map[local] = Box.new(AccessMode.Local);
+		}
+
+		def expr = readExpr();
+
+		varStack.pop();
+		return expr;
+	}
+
 
 	private def readExpr() -> AST {
 		def startPos = pos;
@@ -30,7 +54,7 @@ class Parser extends TextReader {
 				// XXX A keyword is allowed to be used anywhere. It only takes on special
 				// meaning if it appears as the first identifier in a list.
 				match (head.data) {
-					Id(str) => {
+					VarGet(str, _) => {
 						// check if this is a keyword
 						if (Strings.equal(str, "if")) {
 							def cond = readExpr();
@@ -51,8 +75,11 @@ class Parser extends TextReader {
 							def exn = readIdentifier();
 							def catch = readExpr();
 							req1(')');
+							
+							// make the exception variable a local
+							def b = bindLocal(exn);
 
-							return AST.new(ASTData.Catch(try, exn, catch),
+							return AST.new(ASTData.Catch(try, exn, b, catch),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "func")) {
 							/* The syntax of a function is
@@ -76,18 +103,25 @@ class Parser extends TextReader {
 							}
 							
 							// body expresssion
-							def body = readExpr();
+							def body = readCode(params.copy());
 							req1(')');
+
+							def b = bindLocal(name);
+							def range = FileRange.new(fileName, startLine, startColumn, line, column);
 							
 							// XXX creating CodeObject here
-							return AST.new(ASTData.Func(name, params.extract(), CodeObjects.fromAST(body)),
-								FileRange.new(fileName, startLine, startColumn, line, column));
+							return AST.new(ASTData.VarSet(name, b,
+										                  AST.new(ASTData.Func(name, params.extract(), CodeObjects.fromAST(body)), range)), 
+										   range);
 						} else if (Strings.equal(str, "set")) {
 							def id = readIdentifier();
 							def expr = readExpr();
 							req1(')');
 
-							return AST.new(ASTData.Assign(id, expr),
+							// VarSet: local or global?
+							def b = bindLocal(id);
+
+							return AST.new(ASTData.VarSet(id, b, expr),
 								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "cond")) {
 							def cases: Vector<(AST, AST)> = Vector.new();
@@ -147,6 +181,19 @@ class Parser extends TextReader {
 
 							return AST.new(ASTData.SetField(field, obj, val),
 								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "get-global")) {
+							def id = readIdentifier();
+							req1(')');
+
+							return AST.new(ASTData.VarGet(id, global),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "set-global")) {
+							def id = readIdentifier();
+							def val = readExpr();
+							req1(')');
+
+							return AST.new(ASTData.VarSet(id, global, val),
+								FileRange.new(fileName, startLine, startColumn, line, column));
 						} else if (Strings.equal(str, "class")) {
 							def name = readIdentifier();
 							def fields: Vector<(string, CodeObject)> = Vector.new();
@@ -159,7 +206,7 @@ class Parser extends TextReader {
 								def word = readIdentifier();
 								if (Strings.equal(word, "field")) {
 									def fieldName = readIdentifier();
-									def fieldInit = readExpr();
+									def fieldInit = readCode(["self"]);
 									
 									fields.put(fieldName, CodeObjects.fromAST(fieldInit));
 								} else if (Strings.equal(word, "method")) {
@@ -176,7 +223,15 @@ class Parser extends TextReader {
 											return null;
 										}
 									}
-									def methodBody = readExpr();
+									def methodSelfParams = Array<string>.new(methodParams.length + 1);
+									for (i < methodSelfParams.length) {
+										if (i == 0) {
+											methodSelfParams[i] = "self";
+										} else {
+											methodSelfParams[i] = methodParams[i - 1];
+										}
+									}
+									def methodBody = readCode(methodSelfParams);
 
 									// XXX creating CodeObject here
 									methods.put(ASTData.Func(methodName, methodParams.extract(), CodeObjects.fromAST(methodBody)));
@@ -185,7 +240,7 @@ class Parser extends TextReader {
 										fail("redeclaration of init in class definition");
 										return null;
 									}
-									init = Maybe.Just(CodeObjects.fromAST(readExpr()));
+									init = Maybe.Just(CodeObjects.fromAST(readCode([])));
 								} else if (Strings.equal(word, "extends")) {
 									if (init.isJust()) {
 										fail("redeclaration of extends in class definition");
@@ -204,8 +259,13 @@ class Parser extends TextReader {
 								}
 							}
 
-							return AST.new(ASTData.Class(name, superclass, init, fields.extract(), methods.extract()),
-								FileRange.new(fileName, startLine, startColumn, line, column));
+							def b = bindLocal(name);
+							def range = FileRange.new(fileName, startLine, startColumn, line, column);
+							
+							// XXX creating CodeObject here
+							return AST.new(ASTData.VarSet(name, b,
+										                  AST.new(ASTData.Class(name, superclass, init, fields.extract(), methods.extract()), range)),
+										   range);
 						} else if (Strings.equal(str, "new")) {
 							def expr = readExpr();
 							req1(')');
@@ -303,7 +363,19 @@ class Parser extends TextReader {
 					// any characters that start an integer literal cannot be part of a valid identifier
 					expr = AST.new(ASTData.Lit(IntObjects.getIntObject(value)), range);
 				} else {
-					expr = AST.new(ASTData.Id(str), range);
+					// VarGet: local or global?
+					var b: Box<AccessMode>;
+
+					def map = varStack.peek();
+					if (map == null) {
+						b = global;
+					} else if (map.has(str)) {
+						b = map[str];
+					} else {
+						b = Box.new(AccessMode.Global);
+						map[str] = b;
+					}
+					expr = AST.new(ASTData.VarGet(str, b), range);
 				}
 
 				// remaining strings are field accesses
@@ -346,6 +418,23 @@ class Parser extends TextReader {
 		def str = readToken(len).image;
 		return str;
 	}
+
+	private def bindLocal(name: string) -> Box<AccessMode> {
+		var b: Box<AccessMode>;
+
+		def map = varStack.peek();
+		if (map == null) {
+			b = global;
+		} else if (map.has(name)) {
+			b = map[name];
+			b.data = AccessMode.Local; // set forces local accesses everywhere
+		} else {
+			b = Box.new(AccessMode.Local);
+			map[name] = b;
+		}
+		return b;
+	}
+
 
 	def getExprs() -> Array<CodeObject> {
 		return exprs.extract();

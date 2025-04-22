@@ -1,9 +1,5 @@
 def main(args: Array<string>) -> int {
-	def builtins: Vector<(string, Object)> = Vector.new();
-	for (builtin in Builtin.set.all) {
-		builtins.put((builtin.id, builtin.val));
-	}
-	def frame = FrameObjects.newTopFrame(builtins.extract());
+	def frame = FrameObjects.newTopFrame();
 
 	loadLib(frame, "lib/core.co"); // AST evaluation
 
@@ -19,7 +15,7 @@ def main(args: Array<string>) -> int {
 					for (expr in exprs) {
 						// compile to tier1 bytecode
 						if (Tiers.enableTier1) {
-							expr.compile();
+							expr.compile([]);
 // 							def buf = StringBuilder.new();
 // 							for (i < expr.bytecode.pos) {
 // 								def data = expr.bytecode.data[i];
@@ -62,7 +58,7 @@ def main(args: Array<string>) -> int {
 				for (expr in exprs) {
 					// compile to tier1 bytecode
 					if (Tiers.enableTier1) {
-						expr.compile();
+						expr.compile([]);
 //  						def buf = StringBuilder.new();
 //  						for (i < expr.bytecode.pos) {
 //  							def data = expr.bytecode.data[i];
@@ -112,8 +108,10 @@ def loadLib(frame: FrameObject, filename: string) {
 	def reader = Parser.new(filename, file);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
- 		if (Tiers.enableTier1)
- 			expr.compile();
+ 		if (Tiers.enableTier1) {
+ 			expr.compile([]);
+			// expr.bytecode.inspect();
+		}
 		frame.evalCode(expr);
 	}
 }

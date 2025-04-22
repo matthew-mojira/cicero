@@ -1,0 +1,13 @@
+(func (f x) x)
+
+(set l1 (f.params))
+(l1.put "y")
+
+(set l2 (f.params))
+(if (= (l1.length) (l2.length)) (raise "problem!") true)
+
+f.code
+(f.code)
+(set-field code f 1)
+f.code
+(if (!= 1 f.code) (raise "setfield wrong") true)

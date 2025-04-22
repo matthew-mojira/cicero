@@ -3,4 +3,7 @@
 
 (set x (new X))
 x.f
+x.f.object
+(x.f.object)
+(x.f.code)
 (x.f 1)
