@@ -1,85 +1,84 @@
-# Todos
+# Todo list
 
-Final list:
-[X] re-couple Objects and their underlying data, introducing *primitive fields*
-    to represent immutable core information of the object (but accessible
-    through methodsX
-[X] create exception class which holds stacktrace information
-    [ ] fix tier0 vs. tier1 stacktrace inconsistency
-    [ ] intern exception strings
-[X] decide on local vs. global scope
-    [ ] do not allow `set` in the top level
-[X] make locals of a Frame an array (maybe only needed for tier1). Ensure that
-    semantics in tier0 and tier1 remain the same.
-[X] make fields of an object stored in an Array where you must lookup in the
-    class for the offset into the Array instead of all HashMap lookups
-    [ ] create ICs for field lookups in the bytecode interpreter
-    [ ] research how python does attribute accesses (what is `__getattr__`?)
-[ ] built-in classes should override base class methods for `display` and
-    others
-[ ] allow map literals and/or creation of the map
-[ ] add an exit primitive and make EOF in the repl end nicely
-[X] make lazy allocation of methods unobservable
-[ ] canonicalize constants and name strings in the bytecode compiler. Ensure
-    that we are properly optimizing PC aligned accesses
-[ ] collect a set of design decisions, keeping track of dynamic language
-    features we've added and what languages they model
+Benchmarking/unit tests
+- [ ] add many example programs, unit tests (and expected outputs)
+- [ ] add benchmark programs (each program should stress test a different
+      component and capture a potential bottleneck in the system)
+- [ ] run benchmarks
 
-* don't cache overly large numbers
-* variable-length bytecode?
-* functions  
-  - anonymous functions (closure?)
-  - figure out how nested functions should be handled (closures, special
-    scoping?)
-  - recursive functions: at the top level, a function declaration is added to
-    the global scope, so a function can see itself. if it is a method, it can
-    access itself through `self`. but if it is a nested function, it cannot
-    see itself (perhaps this should be enabled, see above)
-  - coroutines (for loop)
-  - optional, variadic, and keyword arguments
-* frames and exceptions
-  - exception class, and standardize exception names around built-ins
-  - better stacktraces (include file name, methods around exn object to query
-    location info)
-  - return
-* classes
-  - potentially use an array instead of a map for value lookup (can be used for
-    dynamci optimizations?)
-  - built-in classes should override base class methods, instead of having base
-    class methods implement those for it (for display)
-  - Don't use a hashmap for fields!! (but an IC could optimize this--actually no)
-* allow map to be created (maybe define built-in function for the time being)
-* more methods for classes
-* Ensure that internal objects do not have multiple Virgil objects? This is
-  easiest when we remove the decoupling we already did...
-* implement `ObjectOf<T>`
-* CL args, better repl handling
-* debug state stuff?
-* local and global variables
-  - should variables be declared before they are used?
-  - should we separate set-local/global (like wasm!) SEE BELOW
-* make the lazy allocation of methods unobservable (i.e. return lazy methods
-  in `o.fields` and fix incorrect inheritance behavior)
-* better tier1 bytecode
-  - develop a method of dynamically tiering up tier0 -> tier1
-  - tier0 -> tier1 compiler don't use DataWriter (or use it better)
-  - canonicalize constants and strings
-* understand tier1 bytecode
-  - GRP (unable to detect interpreter loop!)
-  - wizard engine profiling
-  - cut down tier1 eval overhead
-* parser
-  - when input is stdin, keep reading on incomplete input
-  - nicer parser error messages
-  - first-class parser (make parser errors exceptions? would mean that loading
-    process is a feature of the language)
-  - clarify keywords, literals, and builtins
-* limits: incorporate limits to settle potentially unbounded weird things
-* arbitary length integers?
-* multiple files, namespaces
-* decimal/floating-point numbers?
+Optimizations in the tier1 bytecode
+- [ ] determine what optimizations are available
+- [ ] create ICs for field lookups
+- [ ] research how python does attribute accesses (what is `__getattr__`?)
+
+Optimize memory usage
+- [ ] don't cache overly large numbers
+- [ ] find what objects/types can be unboxed boxed
+
+CLI
+- [ ] use `Option.v3` and parse them
+- [ ] allow multiple files to be evaluated (simply evaluate them in order)
+- [ ] allow configuring between tiers
+- [ ] tracing, debugging enable flags
+
+Exceptions
+- [ ] fix extra `<Virgil func>` appearing at top of stacktrace
+- [ ] include function names in the stacktrace
+- [ ] maybe add better information about exceptions in Virgil functions?
+- [ ] fix tier0 vs. tier1 stacktrace inconsistency
+- [ ] intern exception strings
+
+Built-in classes
+- [ ] override base class methods for `display` and others
+- [ ] add more operations to many classes
+
+Maps
+- [ ] add methods to the map class
+- [ ] map literals and/or some way to create maps
+
+Better bytecode
+- [ ] reduce operands by one of the following: (1) operand length depends on
+      bytecode, (2) use LEBs, (3) add `EXTENDED_ARG` bytecode
+- [ ] if still using fixed-width instructions, use word-addressed PC to remove
+      redundant alignment bits
+- [ ] error when compilation is not possible (e.g. when the required operand
+      exceeds size)
+- [ ] create better DataWriter wrappers (e.g. combine `source.put`/`putb`/`putO`)
+- [ ] canonicalize constants and name strings in the bytecode compiler
+
+Better functions
+- [ ] anonymous functions
+- [ ] closures (allowing recursion for a function not at the top level)
+- [ ] allow (mutation of) nonlocal variables
+- [ ] optional arguments
+- [ ] variadic functions
+- [ ] keyword arguments
+- [ ] coroutines: figure out what they are
+
+Nicer parsing experience
+- [ ] print out relevant line when a parse error occurs
+- [ ] when input is stdin, keep reading on incomplete input
+- [ ] clarify between keywords, literals, and builtins
+- [ ] do not allow duplicate parameter/field/methods names
+
+More types
+- [ ] floating-point numbers
+- [ ] set
+
+Wasm
+- [ ] Compile VM to Wasm
+- [ ] Analyze compiled Wasm with GRP (update GRP)
+- [ ] compile bytecode to Wasm, link wizard, and execute
+
+Potpourri of potentially bigger things
+- [ ] Makefile/build system
+- [ ] add an exit primitive
+- [ ] do not allow `set` in the top level
+- [ ] collect a set of design decisions, keeping track of dynamic language
+      features we've added and what languages they model
 
 ## Scoping
+
 There are two scopes:
 
 * global scope
@@ -88,31 +87,7 @@ There are two scopes:
 The global scope is local to the first frame of execution. Each new frame
 creates its own local scope. 
 
-### nonlocal/free variables
-
-Perhaps in the case of anonymous or (named)
-nested functions you might want the higher scope to be accessed:
-
-```
-(func (f x) {
-    (func (g y) {
-        ; I want to access `x` here, but can't!
-    })
-})
-```
-
-Python allows non-local access using `nonlocal` which also permits mutation of
-those variables. 
-
-Anonymous functions may be closures which grant access to bound variables as
-part of the closure's environment, but for simplicity's sake (especially when
-the closure outlives the free variables it binds), it saves an immutable copy
-at the time the closure is created.
-
 ### Scope within a function
-
-Read [Chapter 11: Resolving and Binding](https://craftinginterpreters.com/resolving-and-binding.html)
-more closely!
 
 There is only one scope for a function. Sub-clauses may assign variables
 accessible outside the lexical scope of the clause, leading to situations where
@@ -166,7 +141,27 @@ Use of `global-get` is strictly necessary when a `set` turns a variable from
 being global to being local. This is slightly simpler than the `global` feature
 of Python.
 
-# to decouple or not to decouple?
+### Closures
+
+Function expressions are not closures. We should probably capture the
+environment, and use something similar to `nonlocal` in Python to allow
+mutation of the free variables. The tricky part is that a function may outlive
+the outer scope of the variables it has access to.
+
+Also, if there are two functions which use the same free variable, and we
+mutate from one, does that affect the other?
+```
+(func (f x)
+  (set p 1)
+  (func (g x)
+    p) ; nonlocal access
+  (func (h y)
+    (nonlocal-set p)) ; does this set `p` in `g`?
+)
+```
+
+
+## to decouple or not to decouple?
 
 Objects of built-in classes need Virgil-internal data in some cases. For
 example, a boolean requires a Virgil boolean to indicate the actual value.
@@ -225,7 +220,7 @@ dynamic!
 The question is speed. Obviously this is slower in a trivial implementation,
 but how much can dynamic optimizations cut down on this overhead?
 
-## Should fields be a HashMap?
+### Should fields be a HashMap?
 
 Right now, we do not allow fields to be added to a class (you may only set
 fields which have already been set). The HashMap lookup is pretty inefficient
@@ -287,7 +282,7 @@ class Object {
 }
 ```
 
-# Default values
+## Default values
 
 We can reduce potential boilerplate code and possible exceptions by introducing
 default values and allowing uninitialized variables.
