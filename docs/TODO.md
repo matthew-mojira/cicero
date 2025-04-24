@@ -72,6 +72,8 @@ Wasm
 
 Potpourri of potentially bigger things
 - [ ] Makefile/build system
+- [ ] Default values proposal
+- [ ] Object constructors
 - [ ] add an exit primitive
 - [ ] do not allow `set` in the top level
 - [ ] collect a set of design decisions, keeping track of dynamic language
