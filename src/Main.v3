@@ -16,33 +16,17 @@ def main(args: Array<string>) -> int {
 						// compile to tier1 bytecode
 						if (Tiers.enableTier1) {
 							expr.compile([]);
-// 							def buf = StringBuilder.new();
-// 							for (i < expr.bytecode.pos) {
-// 								def data = expr.bytecode.data[i];
-// 								buf.putx_8(data);
-// 							}
-// 							System.puts(buf.extract());
-// 							System.ln();
-// 							Bytecodes.inspect(expr.bytecode.copy());
-// 							System.puts("--\n");
 						}
 
 						// evaluate
 						frame.evalCode(expr);
-						if (frame.exn) {
-							System.puts(Strings.format1("exception: %s\n", frame.val.display()));
-							for (range in frame.stacktrace.extract()) {
-								if (range == null) {
-									System.puts("  <Virgil code>\n");
-								} else {
-									System.puts(Strings.format3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine));
-								}
+						match (frame.result) {
+							Exn(exn) => {
+								exn.print();
+								frame.resetExn();
 							}
-							frame.exn = false;
-						} else {
-							System.puts("=> ");
-							System.puts(frame.val.display());
-							System.ln();
+							OK(val) => System.puts(Strings.format1("=> %s\n", val.display()));
+							_       => System.error("eval error", "frame did not give result");
 						}
 					}
 				} else {
@@ -51,7 +35,10 @@ def main(args: Array<string>) -> int {
 			}
 		}
 		1 => {
-			var reader = Parser.new(args[0], System.fileLoad(args[0]));
+			def file = System.fileLoad(args[0]);
+			if (file == null)
+				System.error("init error", Strings.format1("unable to load file %s", args[0]));
+			var reader = Parser.new(args[0], file);
 			if (reader.ok) {
 				def exprs = reader.getExprs();
 
@@ -59,33 +46,17 @@ def main(args: Array<string>) -> int {
 					// compile to tier1 bytecode
 					if (Tiers.enableTier1) {
 						expr.compile([]);
-//  						def buf = StringBuilder.new();
-//  						for (i < expr.bytecode.pos) {
-//  							def data = expr.bytecode.data[i];
-//  							buf.putx_8(data);
-//  						}
-//  						System.puts(buf.extract());
-//  						System.ln();
-//  						Bytecodes.inspect(expr.bytecode.copy());
-//  						System.puts("--\n");
 					}
 
 					// evaluate
 					frame.evalCode(expr);
-					if (frame.exn) {
-						System.puts(Strings.format1("exception: %s\n", frame.val.display()));
-						for (range in frame.stacktrace.extract()) {
-							if (range == null) {
-								System.puts("  <Virgil code>\n");
-							} else {
-								System.puts(Strings.format3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine));
-							}
+					match (frame.result) {
+						Exn(exn) => {
+							exn.print();
+							return 1;
 						}
-						return 1;
-					} else {
-						System.puts("=> ");
-						System.puts(frame.val.display());
-						System.ln();
+						OK(val) => System.puts(Strings.format1("=> %s\n", val.display()));
+						_       => System.error("eval error", "frame did not give result");
 					}
 				}
 			} else {

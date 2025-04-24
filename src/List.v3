@@ -16,29 +16,28 @@ class ListObject extends Object {
 	}
 	def isTrue()  -> bool   { return true; }
 
-	def l_get(idx: IntObject) -> (Object, bool) {
+	def l_get(idx: IntObject) -> Result {
 		if (idx.val < 0 || idx.val >= list.length)
-			return (StrObjects.getStrObject(Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length)), true);
-		// XXX cast, discrepancy between allowed index values (i.e. length)
-		// and the length of the list
-		return (list.get(int.!(idx.val)), false);
+			return Result.Exn(ExnObjects.fromVirgil(Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length)));
+		// XXX cast, discrepancy between allowed index values (i.e. length) and the length of the list
+		return Result.OK(list.get(int.!(idx.val)));
 	}
- 	def l_set(idx: IntObject, obj: Object) -> (Object, bool) {
+ 	def l_set(idx: IntObject, obj: Object) -> Result {
 		if (idx.val < 0 || idx.val >= list.length)
-			return (StrObjects.getStrObject(Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length)), true);
+			return Result.Exn(ExnObjects.fromVirgil(Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length)));
 		list.set(int.!(idx.val), obj);
-		return (this, false);
+		return Result.OK(this);
 	}
- 	def l_put(obj: Object) -> (Object, bool) {
+ 	def l_put(obj: Object) -> Result {
 		list.put(obj);
-		return (this, false);
+		return Result.OK(this);
 	}
- 	def l_length() -> (Object, bool) {
-		return (IntObjects.getIntObject(list.length), false);
+ 	def l_length() -> Result {
+		return Result.OK(IntObjects.getIntObject(list.length));
 	}
- 	def l_reverse() -> (Object, bool) {
+ 	def l_reverse() -> Result {
 		list.reverse();
-		return (this, false);
+		return Result.OK(this);
 	}
 }
 

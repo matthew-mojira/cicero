@@ -11,14 +11,14 @@ class ASTFrame extends FrameObject {
 	
 	def eval() {
 		def v = evalAST(code.ast);
-		if (!exn)
-			val = v;
+		if (!isExn())
+			result = Result.OK(v);			
 	}
 
 	def evalCode(code: CodeObject) -> Object {
 		def v = evalAST(code.ast);
-		if (!exn)
-			val = v;
+		if (!isExn())
+			result = Result.OK(v);			
 		return v;
 	}
 
@@ -33,7 +33,7 @@ class ASTFrame extends FrameObject {
 					if (locals.has(id))
 						value = locals[id];
 					else {
-						throw(StrObjects.getStrObject(Strings.format1("unbound local: %s", id)));
+						throw(Strings.format1("unbound local: %s", id));
 						return value;
 					}
 				}
@@ -41,14 +41,14 @@ class ASTFrame extends FrameObject {
 					if (globals.has(id))
 						value = globals[id];
 					else {
-						throw(StrObjects.getStrObject(Strings.format1("unbound global: %s", id)));
+						throw(Strings.format1("unbound global: %s", id));
 						return value;
 					}
 				}
 			}
 			VarSet(id, mode, expr) => {
 				def v = evalAST(expr);
-				if (exn) return value;
+				if (isExn()) return value;
 				match (mode.data) {
 					Local  => locals[id] = v;
 					Global => globals[id] = v;
@@ -57,9 +57,9 @@ class ASTFrame extends FrameObject {
 			}
 			Apply(tgt, args) => {
 				def tgtVal = evalAST(tgt);
-				if (exn) return value;
+				if (isExn()) return value;
 				assertType(ClassObjects.classFunc, tgtVal);
-				if (exn) return value;
+				if (isExn()) return value;
 
 				// function code
 				def fv = FuncObject.!(tgtVal);
@@ -72,7 +72,7 @@ class ASTFrame extends FrameObject {
 					argv = Array.new(args.length + 1);
 					for (i < args.length) {
 						def arg = evalAST(args[i]);
-						if (exn) return value;
+						if (isExn()) return value;
 						if (i < params.length) // avoid out of bounds but don't raise exception
 							argv[i + 1] = (params[i], arg);
 					}
@@ -81,7 +81,7 @@ class ASTFrame extends FrameObject {
 					argv = Array.new(args.length);
 					for (i < args.length) {
 						def arg = evalAST(args[i]);
-						if (exn) return value;
+						if (isExn()) return value;
 						if (i < params.length) // avoid out of bounds but don't raise exception
 							argv[i] = (params[i], arg);
 					}
@@ -89,53 +89,55 @@ class ASTFrame extends FrameObject {
 
 				// arity check
 				assertArity(params.length, args);
-				if (exn) return value;
+				if (isExn()) return value;
 
 				// create new frame (and evaluate)
 				def frame = newFrame(code, argv);
 				frame.eval();
-				if (frame.exn) {
-					// record stacktrace
-					stacktrace.puta(frame.stacktrace.extract());
-					// rethrow
-					throw(frame.val);
+				if (frame.isExn()) {
+					rethrow(frame.getExn());
 					return value;
 				}
-				value = frame.val;
+				value = frame.getValue();
 			}
 			If(exprC, exprT, exprF) => {
 				def cond = evalAST(exprC);
-				if (exn) return value;
+				if (isExn()) return value;
 
 				if (cond.isTrue()) {
 					def v = evalAST(exprT);
-					if (exn) return value;
+					if (isExn()) return value;
 					value = v;
 				} else {
 					def v = evalAST(exprF);
-					if (exn) return value;
+					if (isExn()) return value;
 					value = v;
 				}
 			}
 			Raise(expr) => {
 				def v = evalAST(expr);
-				if (exn) return value;
+				if (isExn()) return value;
 
-				throw(v);
+				// Raise a string for the message
+				assertType(ClassObjects.classStr, v);
+				if (isExn()) return value;
+
+				throw(StrObject.!(v).str);
 			}
 			Catch(try, exnvar, b, catch) => {
 				def v = evalAST(try);
-				if (!exn) {
+				if (!isExn()) {
 					value = v;
 				} else {
 					// catch exception
-					exn = false;
+					def val = getExn();
+					resetExn();
 					match (b.data) { // bind exception to variable
-						Local =>  locals[exnvar] = val;
+						Local =>  locals[exnvar]  = val;
 						Global => globals[exnvar] = val;
 					}
 					def e = evalAST(catch);
-					if (exn) return value;
+					if (isExn()) return value;
 					value = e;
 				}
 			}
@@ -149,10 +151,10 @@ class ASTFrame extends FrameObject {
 				match (superclass) {
 					Just(e) => {
 						var v = evalAST(e);
-						if (exn) return value;
+						if (isExn()) return value;
 						
 						assertType(ClassObjects.classClass, v);
-						if (exn) return value;
+						if (isExn()) return value;
 						
 						s = ClassObject.!(v);
 					}
@@ -170,10 +172,10 @@ class ASTFrame extends FrameObject {
 
 					// check cond
 					def t = evalAST(cond);
-					if (exn) return value;
+					if (isExn()) return value;
 					if (t.isTrue()) {
 						def v = evalAST(expr);
-						if (exn) return value;
+						if (isExn()) return value;
 						value = v;
 
 						sat = true;
@@ -182,13 +184,13 @@ class ASTFrame extends FrameObject {
 				}
 
 				if (!sat) {
-					throw(StrObjects.getStrObject("cond error: no true branch"));
+					throw("cond error: no true branch");
 				}
 			}
 			While(cond, body) => {
 				while (true) {
 					def v = evalAST(cond);
-					if (exn) return value;
+					if (isExn()) return value;
 
 					if (!v.isTrue()) {
 						value = v;
@@ -196,14 +198,14 @@ class ASTFrame extends FrameObject {
 					}
 
 					evalAST(body);
-					if (exn) return value;
+					if (isExn()) return value;
 				}
 			}
 			Begin(exprs) => {
 				var last: Object;
 				for (expr in exprs) {
 					def v = evalAST(expr);
-					if (exn) return value;
+					if (isExn()) return value;
 
 					last = v;
 				}
@@ -211,11 +213,11 @@ class ASTFrame extends FrameObject {
 			}
 			GetField(field, expr) => {
 				var obj = evalAST(expr);
-				if (exn) return value;
+				if (isExn()) return value;
 
 				def v = obj.getField(field);
 				if (v == null) {
-					throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+					throw1("unknown field: %s", field);
 					return value;
 				} else {
 					value = v;
@@ -223,24 +225,24 @@ class ASTFrame extends FrameObject {
 			}
 			SetField(field, expr, newCode) => {
 				var obj = evalAST(expr);
-				if (exn) return value;
+				if (isExn()) return value;
 
 				var val = evalAST(newCode);
-				if (exn) return value;
+				if (isExn()) return value;
 
 				if (obj.setField(field, val)) {
 					value = val;
 				} else {
-					throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+					throw1("unknown field: %s", field);
 					return value;
 				}
 			}
 			New(expr) => {
 				var cls = evalAST(expr);
-				if (exn) return value;
+				if (isExn()) return value;
 
 				assertType(ClassObjects.classClass, cls);
-				if (exn) return value;
+				if (isExn()) return value;
 
 				def clsObj = ClassObject.!(cls);
 				def obj = Objects.newObject(clsObj);
@@ -261,14 +263,11 @@ class ASTFrame extends FrameObject {
 						// create new frames here!
 						def frame = newFrame(expr, []);
 						frame.eval();
-						if (frame.exn) {
-							// record stacktrace
-							stacktrace.puta(frame.stacktrace.extract());
-							// rethrow
-							throw(frame.val);
+						if (frame.isExn()) {
+							rethrow(frame.getExn());
 							return value;
 						}
-						obj.setField(name, frame.val);
+						obj.setField(name, frame.getValue());
 					}
 					// call initializer
 					if (cls.init != null) {
@@ -278,11 +277,8 @@ class ASTFrame extends FrameObject {
 						// create new frames here!
 						def frame = newFrame(code, args);
 						frame.eval();
-						if (frame.exn) {
-							// record stacktrace
-							stacktrace.puta(frame.stacktrace.extract());
-							// rethrow
-							throw(frame.val);
+						if (frame.isExn()) {
+							rethrow(frame.getExn());
 							return value;
 						}
 					} 
@@ -293,7 +289,7 @@ class ASTFrame extends FrameObject {
 				def vals: Vector<Object> = Vector.new();
 				for (expr in exprs) {
 					def v = evalAST(expr);
-					if (exn) return value;
+					if (isExn()) return value;
 
 					vals.put(v);
 				}

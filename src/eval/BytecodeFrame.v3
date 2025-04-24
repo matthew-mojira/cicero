@@ -26,15 +26,15 @@ class BytecodeFrame extends FrameObject {
 
 	def eval() {
 		def v = evalBytecode(code.bytecode);
-		if (!exn)
-			val = v;
+		if (!isExn())
+			result = Result.OK(v);
 	}
 
 	def evalCode(code: CodeObject) -> Object {
 		stack.clear();
 		def v = evalBytecode(code.bytecode);
-		if (!exn)
-			val = v;
+		if (!isExn())
+			result = Result.OK(v);
 		return v;
 	}
 
@@ -56,12 +56,13 @@ class BytecodeFrame extends FrameObject {
 		}
 
 		var pc = 0;
-		while (pc < code.length || exn) {
+		while (pc < code.length || isExn()) {
 			// sanity check
 			if ((pc & 0b11) != 0) System.error("eval error", Strings.format1("unaligned pc access: %d", pc));
 
 			// if frame is in an exceptional state, try to handle it!
-			if (exn) {
+			// Should this go after the handlers?
+			if (isExn()) {
 				if (handlers.empty()) {
 					if (debug) System.puts("returned with exception\n");
 					return null;
@@ -71,8 +72,8 @@ class BytecodeFrame extends FrameObject {
 				while (stack.top != p.1)
 					stack.pop();
 				// push error value
-				stack.push(val);
-				exn = false; // handled
+				stack.push(getExn());
+				resetExn();
 			}
 
 			// Fetch
@@ -114,13 +115,13 @@ class BytecodeFrame extends FrameObject {
 					if (globals.has(id)) {
 						stack.push(globals[id]);
 					} else {
-						throw(StrObjects.getStrObject(Strings.format1("unbound global: %s", id)));
+						throw1("unbound global: %s", id);
 					}
 				}
 				LOAD_LOCAL => {
 					def local = locals[operand];
 					if (local == null)
-						throw(StrObjects.getStrObject(Strings.format1("unbound local: %s", b.locals[operand])));
+						throw1("unbound local: %s", b.locals[operand]);
 					else
 						stack.push(local);
 				}
@@ -148,7 +149,10 @@ class BytecodeFrame extends FrameObject {
 				}
 				RAISE => {
 					def top = stack.pop();
-					throw(top);
+					assertType(ClassObjects.classStr, top);
+					if (isExn()) continue;
+
+					throw(StrObject.!(top).str);
 				}
 				ASSERT_FUNC => {
 					def top = stack.peek();
@@ -188,19 +192,16 @@ class BytecodeFrame extends FrameObject {
 
 					// arity check
 					assertArity(params.length, args.extract()); // XXX extract
-					if (exn) continue;
+					if (isExn()) continue;
 
 					// create new frame (and evaluate)
 					def frame = newFrame(code, argv);
 					frame.eval();
-					if (frame.exn) {
-						// record stacktrace
-						stacktrace.puta(frame.stacktrace.extract());
-						// rethrow
-						throw(frame.val);
+					if (frame.isExn()) {
+						rethrow(frame.getExn());
 						continue;
 					}
-					stack.push(frame.val);
+					stack.push(frame.getValue());
 				}
 				TRY => {
 					handlers.push((pc + operand, stack.top));
@@ -224,7 +225,7 @@ class BytecodeFrame extends FrameObject {
 				CREATE_CLASS => {
 					def superclass = stack.pop();
 					assertType(ClassObjects.classClass, superclass);
-					if (exn) continue;
+					if (isExn()) continue;
 
 					def classhole = classholes[operand];
 					stack.push(classhole(ClassObject.!(superclass)));
@@ -232,7 +233,7 @@ class BytecodeFrame extends FrameObject {
 				CREATE_OBJECT => {
 					def top = stack.pop();
 					assertType(ClassObjects.classClass, top);
-					if (exn) continue;
+					if (isExn()) continue;
 
 					// duplicated code
 					def clsObj = ClassObject.!(top);
@@ -254,14 +255,11 @@ class BytecodeFrame extends FrameObject {
 							// create new frames here!
 							def frame = newFrame(expr, []);
 							frame.eval();
-							if (frame.exn) {
-								// record stacktrace
-								stacktrace.puta(frame.stacktrace.extract());
-								// rethrow
-								throw(frame.val);
+							if (frame.isExn()) {
+								rethrow(frame.getExn());
 								continue;
 							}
-							obj.setField(name, frame.val);
+							obj.setField(name, frame.getValue());
 						}
 						// call initializer
 						if (cls.init != null) {
@@ -271,11 +269,8 @@ class BytecodeFrame extends FrameObject {
 							// create new frames here!
 							def frame = newFrame(code, args);
 							frame.eval();
-							if (frame.exn) {
-								// record stacktrace
-								stacktrace.puta(frame.stacktrace.extract());
-								// rethrow
-								throw(frame.val);
+							if (frame.isExn()) {
+								rethrow(frame.getExn());
 								continue;
 							}
 						} 
@@ -288,7 +283,7 @@ class BytecodeFrame extends FrameObject {
 
 					def v = obj.getField(field);
 					if (v == null) {
-						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+						throw1("name error: unknown field %s", field);
 					} else {
 						stack.push(v);
 					}
@@ -299,7 +294,7 @@ class BytecodeFrame extends FrameObject {
 					def field = strings[operand];
 
 					if (!obj.setField(field, val)) {
-						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+						throw1("name error: unknown field %s", field);
 					}
 				}
 				CREATE_LIST => {

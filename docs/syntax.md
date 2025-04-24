@@ -86,7 +86,8 @@ expression is the value from `e`.
 (raise e)
 ```
 
-Evaluates `e` and raises its value as an exception. 
+Evaluates `e` and raises its value as an exception. `e` must evaluate to a
+string.
 
 ### `try`
 

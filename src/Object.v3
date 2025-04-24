@@ -176,23 +176,23 @@ class Object {
 	def display() -> string { return "<object>"; }
 	def isTrue() -> bool;
 
-	def o_getclass() -> (Object, bool) {
-		return (cls, false);
+	def o_getclass() -> Result {
+		return Result.OK(cls);
 	}
-	def o_fields() -> (Object, bool) {
+	def o_fields() -> Result {
 		def list = ListObject.new();
 		def fList = Maps.keyList(fieldMap);
 		Lists.apply(fList, putList(list, _));
-		return (list, false);
+		return Result.OK(list);
 	}
-	def o_display() -> (Object, bool) {
-		return (StrObjects.getStrObject(display()), false);
+	def o_display() -> Result {
+		return Result.OK(StrObjects.getStrObject(display()));
 	}
-	def o_eq(other: Object) -> (Object, bool) {
-		return (BoolObjects.getBoolObject(this == other), false);
+	def o_eq(other: Object) -> Result {
+		return Result.OK(BoolObjects.getBoolObject(this == other));
 	}
-	def o_neq(other: Object) -> (Object, bool) {
-		return (BoolObjects.getBoolObject(this != other), false);
+	def o_neq(other: Object) -> Result {
+		return Result.OK(BoolObjects.getBoolObject(this != other));
 	}
 }
 

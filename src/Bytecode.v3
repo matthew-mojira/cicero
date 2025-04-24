@@ -104,7 +104,7 @@ class Bytecode {
 				// could be problematic if we object lookup observable
 				source.put(loc);
 				putb(Opcode.LOAD_CONST.tag);
-				putO(addConstant(StrObjects.getStrObject("cond error: no true breanch")));
+				putO(addConstant(StrObjects.getStrObject("cond error: no true branch")));
 				source.put(loc);
 				putb(Opcode.RAISE.tag);
 				putO(0); // no operand

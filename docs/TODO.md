@@ -4,7 +4,9 @@ Final list:
 [X] re-couple Objects and their underlying data, introducing *primitive fields*
     to represent immutable core information of the object (but accessible
     through methodsX
-[ ] create exception class which holds stacktrace information
+[X] create exception class which holds stacktrace information
+    [ ] fix tier0 vs. tier1 stacktrace inconsistency
+    [ ] intern exception strings
 [X] decide on local vs. global scope
     [ ] do not allow `set` in the top level
 [X] make locals of a Frame an array (maybe only needed for tier1). Ensure that

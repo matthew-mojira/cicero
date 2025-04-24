@@ -1,0 +1,43 @@
+class ExnObject extends Object {
+	var message: StrObject;
+	def stacktrace: Vector<FileRange> = Vector.new();
+	// TODO handle Virgil locations better?
+	
+	new(msg: string, loc: FileRange) {
+		message = StrObjects.getStrObject(msg);
+		stacktrace.put(loc);
+	}
+
+	def display() -> string {
+		return Strings.format1("exception: %s", message.str);
+	}
+
+	def print() {
+		def str = StringBuilder.new();
+		str.puts(Strings.format1("exception: %s\n", message.str));
+		for (i = stacktrace.length; i >= 0; i--) {
+			def range = stacktrace[i];
+			if (range == null) {
+				str.puts("  <Virgil code>\n");
+			} else {
+				str.put3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine);
+			}
+		}
+		System.puts(str.extract());
+	}
+}
+
+component ExnObjects {
+	// def typeMismatch(exp: ClassObject, act: ClassObject)
+
+	def fromVirgil(msg: string) -> ExnObject {
+		return ExnObject.new(msg, null);
+	}
+
+	// TODO use this
+	def fromStrObject(str: StrObject, loc: FileRange) -> ExnObject {
+		def obj = ExnObject.new(null, loc);
+		obj.message = str;
+		return obj;
+	}
+}

@@ -1,0 +1,73 @@
+class FuncObject(id: string, params: Array<string>, code: CodeObject) extends Object {
+	def display() -> string { return Strings.format1("<func '%s'>", id); }
+	def isTrue()  -> bool   { return true; }
+
+	def f_name() -> Result {
+		return Result.Exn(ExnObjects.fromVirgil(id));
+	}
+	def f_params() -> Result {
+		return Result.OK(ListObjects.fromArray(Arrays.map(params, StrObjects.getStrObject)));
+	}
+	def f_code() -> Result {
+		return Result.OK(code);
+	}
+}
+
+component FuncObjects {
+	// XXX hackfix to allow method subclass
+	def newFO(id: string, params: Array<string>, code: CodeObject) -> FuncObject {
+		return FuncObject.new(id, params, code);
+	}
+	def fromVirgil(id: string, params: Array<string>, fn: Range<Object> -> Result) -> FuncObject {
+		return newFO(id, params, CodeObjects.fromVirgil(fn));
+	}
+
+	def fromVirgilMethod0<T>(name: string, method: T -> Result) -> FuncObject {
+		return fromVirgil(name, [], callMethod0(_, method));
+	}
+	def fromVirgilMethod1<T, A1>(name: string, cst: Array<ClassObject>, method: (T, A1) -> Result) -> FuncObject {
+		return fromVirgil(name, ["arg1"], callMethod1(_, cst, method));
+	}
+	def fromVirgilMethod2<T, A1, A2>(name: string, cst: Array<ClassObject>, method: (T, A1, A2) -> Result) -> FuncObject {
+		return fromVirgil(name, ["arg1", "arg2"], callMethod2(_, cst, method));
+	}
+	def fromVirgilMethod3<T, A1, A2, A3>(name: string, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> Result) -> FuncObject {
+		return fromVirgil(name, ["arg1", "arg2", "arg3"], callMethod3(_, cst, method));
+	}
+}
+
+def callMethod0<T>(args: Range<Object>, method: T -> Result) -> Result {
+	return method(T.!(args[0]));
+}
+
+// FIXME improve error messages
+
+def callMethod1<T, A1>(args: Range<Object>, cst: Array<ClassObject>, method: (T, A1) -> Result) -> Result {
+	if (!args[1].instanceOf(cst[0])) {
+		return Result.Exn(ExnObjects.fromVirgil("type mismatch"));
+	}
+	return method(T.!(args[0]), A1.!(args[1]));
+}
+
+def callMethod2<T, A1, A2>(args: Range<Object>, cst: Array<ClassObject>, method: (T, A1, A2) -> Result) -> Result {
+	if (!args[1].instanceOf(cst[0])) {
+		return Result.Exn(ExnObjects.fromVirgil("type mismatch"));
+	}
+	if (!args[2].instanceOf(cst[1])) {
+		return Result.Exn(ExnObjects.fromVirgil("type mismatch"));
+	}
+	return method(T.!(args[0]), A1.!(args[1]), A2.!(args[2]));
+}
+
+def callMethod3<T, A1, A2, A3>(args: Range<Object>, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> Result) -> Result {
+	if (!args[1].instanceOf(cst[0])) {
+		return Result.Exn(ExnObjects.fromVirgil("type mismatch"));
+	}
+	if (!args[2].instanceOf(cst[1])) {
+		return Result.Exn(ExnObjects.fromVirgil("type mismatch"));
+	}
+	if (!args[3].instanceOf(cst[2])) {
+		return Result.Exn(ExnObjects.fromVirgil("type mismatch"));
+	}
+	return method(T.!(args[0]), A1.!(args[1]), A2.!(args[2]), A3.!(args[3]));
+}

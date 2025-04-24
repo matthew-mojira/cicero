@@ -9,16 +9,16 @@ class ClassObject(
 	def display() -> string { return Strings.format1("<class '%s'>", name); }
 	def isTrue()  -> bool   { return true; }
 
-	def c_superclass() -> (Object, bool) {
+	def c_superclass() -> Result {
 		if (superclass == null) {
-			return (StrObjects.getStrObject("no superclass"), true);
+			return Result.Exn(ExnObjects.fromVirgil("no superclass"));
 		} else {
-			return (superclass, false);
+			return Result.OK(superclass);
 		}
 	}
 
-	def c_name() -> (Object, bool) {
-		return (StrObjects.getStrObject(name), false);
+	def c_name() -> Result {
+		return Result.OK(StrObjects.getStrObject(name));
 	}
 }
 
@@ -36,6 +36,7 @@ component ClassObjects {
 			null,
 			[],
 			// cannot initialize Func (or underlying Code) because the class doesn't exist yet
+			// we can refactor to reduce the need for the FuncObject, but not the CodeObject
 			[FuncObjects.fromVirgilMethod0("class",   Object.o_getclass), 
 			 FuncObjects.fromVirgilMethod0("fields",  Object.o_fields),
 			 FuncObjects.fromVirgilMethod0("display", Object.o_display),
@@ -56,6 +57,7 @@ component ClassObjects {
  			 FuncObjects.fromVirgilMethod0("name",       ClassObject.c_name)
  			]);
 	def classCode  = ClassObject.new("code",  classBase, CodeObjects.virgilFail, [], []);
+	def classExn   = ClassObject.new("exn",   classBase, CodeObjects.virgilFail, [], []);
 	def classFrame = ClassObject.new("frame", classBase, CodeObjects.virgilFail, [], []);
 	def classFunc = ClassObject.new("func", classBase, 
 			CodeObjects.virgilFail,

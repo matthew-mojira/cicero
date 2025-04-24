@@ -38,6 +38,10 @@ Methods:
 
 Wrapper for code.
 
+## exn
+
+Represents an exception, which holds a message and a stacktrace.
+
 ## frame
 
 Wrapper for a frame of execution.

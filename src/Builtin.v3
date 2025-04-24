@@ -5,6 +5,7 @@ enum Builtin(id: string, val: Object) {
  	BOOL    ("bool",     ClassObjects.classBool),
  	CLASS   ("class",    ClassObjects.classClass),
 	CODE    ("code",     ClassObjects.classCode),
+	EXN     ("exn",      ClassObjects.classExn),
  	FRAME   ("frame",    ClassObjects.classFrame),
  	FUNC    ("func",     ClassObjects.classFunc),
  	INT     ("int",      ClassObjects.classInt),
@@ -16,9 +17,8 @@ enum Builtin(id: string, val: Object) {
 	PRINT   ("print",    FuncObjects.fromVirgil("print", ["o"], print))
 }
 
-def print(args: Range<Object>) -> (Object, bool) {
+def print(args: Range<Object>) -> Result {
 	def obj = args[0];
 	System.puts(obj.display());
-	System.ln();
-	return (PoopCrapObjects.instance, false);
+	return Result.OK(PoopCrapObjects.instance);
 }

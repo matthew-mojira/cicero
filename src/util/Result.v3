@@ -1,0 +1,5 @@
+type Result #unboxed {
+	case Uncomputed;
+	case OK(value: Object);
+	case Exn(exn: ExnObject);
+}

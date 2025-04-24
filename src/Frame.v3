@@ -5,7 +5,6 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 	var globals: HashMap<string, Object>;
 
 	private new() {
-
 		if (prev == null) {
 			globals = Strings.newMap();
 		} else {
@@ -14,22 +13,26 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 	}
 
 	// status flags as the result of evaluation
-	var exn: bool = false;  // whether evaluation threw uncaught exception
-	var val: Object;        // result of evaluation or exception value
+	var result: Result;
+
+	// retrieving results, but check first!
+	def getValue() -> Object {
+		return Result.OK.!(result).value;
+	}
+
+	def getExn() -> ExnObject {
+		return Result.Exn.!(result).exn;
+	}
 
 	/* Current location of the evaluation. This doesn't need to be exact, but it
 	 * should be correct whenever an exception is raised so that the stacktrace
 	 * is accurate.
 	 */
 	var loc: FileRange;
-	def stacktrace = Vector<FileRange>.new();
 
-	/* How to evaluate this frame. It must set {exn} and {val} based on what
-	 * happens.
-    */
+	/* How to evaluate this frame. It must set {result} based on what happens. */
 	def eval();
-	// XXX this is for top-level code. note that this may have a discrepancy
-	// in tiers!
+	// XXX this is for top-level code. note that this may have a discrepancy in tiers!
 	def evalCode(code: CodeObject) -> Object;
 
 	def newFrame(code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
@@ -37,20 +40,34 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 	}
 
 	// throw sets the exception value in the frame right away
-	def throw(value: Object) {
-		stacktrace.put(loc); // FIXME figure out proper error reporting for tier1
-		exn = true;
-		val = value;
+	def throw(msg: string) {
+		result = Result.Exn(ExnObject.new(msg, loc));
+	}
+	def throw1<T>(msg: string, t1: T) {
+		result = Result.Exn(ExnObject.new(Strings.format1(msg, t1), loc));
+	}
+
+	def rethrow(exn: ExnObject) {
+		exn.stacktrace.put(loc);
+		result = Result.Exn(exn);
+	}
+
+	def isExn() -> bool {
+		return Result.Exn.?(result);
+	}
+
+	def resetExn() {
+		result = Result.Uncomputed;
 	}
 
 	def assertType(exp: ClassObject, val: Object) {
 		if (!val.instanceOf(exp))
-			throw(StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.getClass().display())));
+			throw(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.getClass().display()));
 	}
 
 	def assertArity<T>(argc: int, vals: Range<T>) {
 		if (vals.length != argc)
-			throw(StrObjects.getStrObject(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length)));
+			throw(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length));
 	}
 }
 
