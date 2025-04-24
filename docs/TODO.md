@@ -17,6 +17,7 @@ Optimize memory usage
 
 CLI
 - [ ] use `Option.v3` and parse them
+- [ ] help message
 - [ ] allow multiple files to be evaluated (simply evaluate them in order)
 - [ ] allow configuring between tiers
 - [ ] tracing, debugging enable flags
