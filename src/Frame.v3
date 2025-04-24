@@ -4,7 +4,7 @@
 class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) extends Object {
 	var globals: HashMap<string, Object>;
 
-	private new() super(FrameObjects.classFrame) {
+	private new() {
 
 		if (prev == null) {
 			globals = Strings.newMap();
@@ -45,7 +45,7 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 
 	def assertType(exp: ClassObject, val: Object) {
 		if (!val.instanceOf(exp))
-			throw(StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.cls.display())));
+			throw(StrObjects.getStrObject(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.getClass().display())));
 	}
 
 	def assertArity<T>(argc: int, vals: Range<T>) {
@@ -79,5 +79,4 @@ component FrameObjects {
 		}
 		return frame;
 	}
-	def classFrame = ClassObject.new("frame", Objects.classBase, CodeObjects.virgilFail, [], []);
 }

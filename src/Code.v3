@@ -1,8 +1,6 @@
 def TIER_UP = 10;
 
 class CodeObject(range: FileRange) extends Object { // XXX range is null if code is virgil
-	new() super(CodeObjects.classCode) {}
-
 	def var runCount = 0;
 	
 	def var virgil: Range<Object> -> (Object, bool);
@@ -32,7 +30,6 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 }
 
 component CodeObjects {
-	def classCode = ClassObject.new("code", Objects.classBase, virgilFail, [], []);
 
 	def fromVirgil(func: Range<Object> -> (Object, bool)) -> CodeObject {
 		def code = CodeObject.new(null); // XXX null

@@ -232,6 +232,7 @@ class Parser extends TextReader {
 										}
 									}
 									def methodBody = readCode(methodSelfParams);
+									// FIXME null check exception when method has no body
 
 									// XXX creating CodeObject here
 									methods.put(ASTData.Func(methodName, methodParams.extract(), CodeObjects.fromAST(methodBody)));

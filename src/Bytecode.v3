@@ -40,7 +40,7 @@ class Bytecode {
 				compileAST(code);
 				source.put(loc);
 				putb(Opcode.DUPE.tag);
-				putO(0); // no operand
+				putO(0);
 				match (mode.data) {
 					Local  => {
 						source.put(loc);
@@ -200,6 +200,12 @@ class Bytecode {
 				compileAST(obj);
 				compileAST(val);
 				source.put(loc);
+				putb(Opcode.SWAP.tag);
+				putO(1);
+				source.put(loc);
+				putb(Opcode.DUPE.tag);
+				putO(1);
+				source.put(loc);
 				putb(Opcode.STORE_FIELD.tag);
 				putO(addString(id));
 			}
@@ -211,7 +217,7 @@ class Bytecode {
 						def idx = constants.length;
 						source.put(loc);
 						putb(Opcode.LOAD_CONST.tag);
-						putO(addConstant(Objects.classBase));
+						putO(addConstant(ClassObjects.classBase));
 					}
 					Just(expr) => compileAST(expr);
 				}
@@ -219,7 +225,7 @@ class Bytecode {
 				match (init) {
 					Nothing => ;
 					Just(code) => {
-						code.compile([]);
+						code.compile(["self"]);
 						init2 = code;
 					}
 				}

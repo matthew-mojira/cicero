@@ -19,3 +19,26 @@ x.x
 
 x.both     ; accessing method
 (x.both)   ; accessing then calling field
+
+; methods
+
+(set m 1.fields)
+(m.object)
+m.fields
+(m.fields)
+
+; operations on classes
+
+Poop
+(Poop.fields)
+(set c (Poop.class))
+c.fields
+(c.fields)
+c.class
+(c.class)
+(get-field fields (c.class))
+((get-field fields (c.class)))
+(get-field fields c.class)
+((get-field fields c.class))
+(= c.class (Poop.class))
+

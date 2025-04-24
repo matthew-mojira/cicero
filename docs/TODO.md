@@ -6,17 +6,22 @@ Final list:
     through methodsX
 [ ] create exception class which holds stacktrace information
 [X] decide on local vs. global scope
+    [ ] do not allow `set` in the top level
 [X] make locals of a Frame an array (maybe only needed for tier1). Ensure that
     semantics in tier0 and tier1 remain the same.
-[ ] make fields of an object stored in an Array where you must lookup in the
+[X] make fields of an object stored in an Array where you must lookup in the
     class for the offset into the Array instead of all HashMap lookups
+    [ ] create ICs for field lookups in the bytecode interpreter
+    [ ] research how python does attribute accesses (what is `__getattr__`?)
 [ ] built-in classes should override base class methods for `display` and
     others
 [ ] allow map literals and/or creation of the map
 [ ] add an exit primitive and make EOF in the repl end nicely
-[ ] make lazy allocation of methods unobservable
+[X] make lazy allocation of methods unobservable
 [ ] canonicalize constants and name strings in the bytecode compiler. Ensure
     that we are properly optimizing PC aligned accesses
+[ ] collect a set of design decisions, keeping track of dynamic language
+    features we've added and what languages they model
 
 * don't cache overly large numbers
 * variable-length bytecode?

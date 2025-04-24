@@ -1,0 +1,7 @@
+((get-field fields 1)) ; double (()) means call result of call
+(get-field class 1)
+((get-field class 1))
+((get-field fields ((get-field class 1))))
+((get-field fields ((get-field class 1)))) ; double (()) means call result of call
+
+(class A)

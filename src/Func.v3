@@ -1,6 +1,4 @@
-class FuncObject(id: string, params: Array<string>, code: CodeObject, cls_: ClassObject) extends Object {
-	private new() super(cls_) {}
-
+class FuncObject(id: string, params: Array<string>, code: CodeObject) extends Object {
 	def display() -> string { return Strings.format1("<func '%s'>", id); }
 	def isTrue()  -> bool   { return true; }
 
@@ -16,18 +14,9 @@ class FuncObject(id: string, params: Array<string>, code: CodeObject, cls_: Clas
 }
 
 component FuncObjects {
-	def classFunc = ClassObject.new(
-			"func", 
-			Objects.classBase, 
-			CodeObjects.virgilFail, 
-			[], 
-			[FuncObjects.fromVirgilMethod0("name",   FuncObject.f_name),
-			 FuncObjects.fromVirgilMethod0("params", FuncObject.f_params),
-			 FuncObjects.fromVirgilMethod0("code",   FuncObject.f_code)
-			]);
 	// XXX hackfix to allow method subclass
 	def newFO(id: string, params: Array<string>, code: CodeObject) -> FuncObject {
-		return FuncObject.new(id, params, code, classFunc);
+		return FuncObject.new(id, params, code);
 	}
 	def fromVirgil(id: string, params: Array<string>, fn: Range<Object> -> (Object, bool)) -> FuncObject {
 		return newFO(id, params, CodeObjects.fromVirgil(fn));

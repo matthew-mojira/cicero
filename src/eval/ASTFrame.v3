@@ -58,7 +58,7 @@ class ASTFrame extends FrameObject {
 			Apply(tgt, args) => {
 				def tgtVal = evalAST(tgt);
 				if (exn) return value;
-				assertType(FuncObjects.classFunc, tgtVal);
+				assertType(ClassObjects.classFunc, tgtVal);
 				if (exn) return value;
 
 				// function code
@@ -68,7 +68,7 @@ class ASTFrame extends FrameObject {
 				// evaluate argument values
 				var argv: Array<(string, Object)>;
 
-				if (fv.instanceOf(MethodObjects.classMethod)) {
+				if (fv.instanceOf(ClassObjects.classMethod)) {
 					argv = Array.new(args.length + 1);
 					for (i < args.length) {
 						def arg = evalAST(args[i]);
@@ -156,7 +156,7 @@ class ASTFrame extends FrameObject {
 						
 						s = ClassObject.!(v);
 					}
-					Nothing => s = Objects.classBase;
+					Nothing => s = ClassObjects.classBase;
 				}
 				def f: Array<(string, CodeObject)> = fields;
 				def m: Array<FuncObject> = Arrays.map(methods, funcToFunc);
@@ -213,11 +213,12 @@ class ASTFrame extends FrameObject {
 				var obj = evalAST(expr);
 				if (exn) return value;
 
-				match (obj.getField(field)) {
-					Just(v) => value = v;
-				} else {
+				def v = obj.getField(field);
+				if (v == null) {
 					throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
 					return value;
+				} else {
+					value = v;
 				}
 			}
 			SetField(field, expr, newCode) => {
@@ -227,9 +228,7 @@ class ASTFrame extends FrameObject {
 				var val = evalAST(newCode);
 				if (exn) return value;
 
-				value = obj.fields[field];
-				if (obj.fields.has(field)) {
-					obj.fields[field] = val;
+				if (obj.setField(field, val)) {
 					value = val;
 				} else {
 					throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
@@ -244,7 +243,7 @@ class ASTFrame extends FrameObject {
 				if (exn) return value;
 
 				def clsObj = ClassObject.!(cls);
-				def obj = Object.new(clsObj);
+				def obj = Objects.newObject(clsObj);
 
 				def classes: Vector<ClassObject> = Vector.new();
 				for (cls = ClassObject.!(cls); cls != null; cls = cls.superclass)
@@ -269,7 +268,7 @@ class ASTFrame extends FrameObject {
 							throw(frame.val);
 							return value;
 						}
-						obj.fields[name] = frame.val;
+						obj.setField(name, frame.val);
 					}
 					// call initializer
 					if (cls.init != null) {

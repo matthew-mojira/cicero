@@ -1,30 +1,170 @@
-class Object(cls: ClassObject) {
-	// who is responsible for initializing fields?
-	def var fields: HashMap<string, Object> = Strings.newMap();
+/* cls represents a linked list of classes up to the base class
+ * 
+ * fields is an array of Objects which hold each field, starting from the
+ * base class down to the lowest class (cls).
+ * 
+ * For each class, we separate fields and methods (since they're separated
+ * like that in the field), but here they are stored in the same array. The
+ * bona-fide fields are stored first, then the methods, for each class from
+ * base down to the lowest class.
+ *
+ * As an example:
+ *   (class A
+ *      (field a1)
+ *      (method (a2 ...) ...)
+ *      (method (a3 ...) ...)
+ *      (field a4))
+ *   (class B
+ *      (extends A)
+ *      (field b1)
+ *      (field b2)
+ *      (method (a2 ...) ..))
+ * is stored as
+ *   from base:
+ *     0: class
+ *     1: fields
+ *     2: display
+ *     3: =
+ *     4: !=
+ *   from A:
+ *     5: a1
+ *     6: a4
+ *     7: a3 <- method is last
+ *     8: a2 <- this method is overwritten from B and still goes here
+ *   from B:
+ *     8: b1
+ *     9: b2
+ *
+ * Note that methods are lazily allocated (since they're objects, allocating
+ * them eagerly means allocating its methods, creating an infinite loop). These
+ * are represented by `null` values. These are the only null values allowed
+ * in the array, as the language requires that all fields be initialized (they
+ * may be initialized with the language-level poopcrap).
+ */
+class Object {
+	private var cls: ClassObject;
+	private def fieldMap: HashMap<string, int> = Strings.newMap();
+	private var fields:   Array<Object>;
+
 	new() {}
 
-	def getField(name: string) -> Maybe<Object> {
-		if (fields.has(name)) return Maybe.Just(fields[name]);
-		// Methods are lazily bound, that is, they are not initialized until
-		// it is requested for the first time.
+	/* Objects of the built-in classes are eagerly allocated (as needed),
+	 * but lazily initialized. This is because of depedencies between 
+	 * objects of the built-in classes, where allocation is sufficient to
+	 * glue the objects together. This means, however, that we must be
+	 * careful not to perform an operation on an uninitialized object.
+	 *
+	 * The objects that always exist because of the runtime system are:
+	 * - the built-in classes
+	 * - initializer functions for the built-in classes
+	 * - functions which represent possible methods on the built-in
+	 *   classes (note: we should probably make this not a function *object*)
+	 *
+	 * Objects of user-defined classes are eagerly initialized.
+	 */
+	private def initClass() {
+		/* Built-in class? Set the class. */
+		/* XXX: you cannot extend a built-in class, so this is fine, but
+		 * maybe we want to allow this */
+		match (this) {
+ 	 		x: MethodObject => cls = ClassObjects.classMethod;
+ 	 		x: BoolObject  => cls = ClassObjects.classBool;
+ 	 		x: ClassObject => cls = ClassObjects.classClass;
+	 		x: CodeObject  => cls = ClassObjects.classCode;
+ 	 		x: FrameObject => cls = ClassObjects.classFrame;
+ 	 		x: FuncObject  => cls = ClassObjects.classFunc;
+ 	 		x: IntObject   => cls = ClassObjects.classInt;
+ 	 		x: ListObject  => cls = ClassObjects.classList;
+ 	 		x: MapObject   => cls = ClassObjects.classMap;
+ 	 		x: PoopCrapObject => cls = ClassObjects.classPoopCrap;
+ 	 		x: StrObject   => cls = ClassObjects.classStr;
+		}
+
+		/* Get the sequence of superclasses up to base */
+		def classes = Vector<ClassObject>.new();
  		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
-			// System.puts(clazz.name);
-			// System.puts(": ");
+// 			System.puts(clazz.name);
+// 			System.ln();
+			classes.put(clazz);
+		}
+		/* Figure out how much space needs to be allocated for fields. */
+		var i = 0;
+		for (clazz in classes.reverse().copy()) {
+			for (field in clazz.classFields) {
+				if (!fieldMap.has(field.0))
+					fieldMap[field.0] = i++;
+			}
+			// methods are not initialized but a slot is allocated
+			for (method in clazz.classMethods) {
+				if (!fieldMap.has(method.id))
+					
+					fieldMap[method.id] = i++;
+			}
+		}
+		fields = Array.new(i);
+		/* Initialization only sets classes and allocates space for fields.
+		 * Setting the fields are done later. Methods are always lazily
+		 * initialized; a lookup on a method will always fail the first time.
+		 * When, the lookup fails, it goes to the class where it expects a
+		 * method definition to be available by that name. Non-method fields
+		 * are eagerly initialized by the runtime for user-defined classes.
+		 * No built-in class makes use of non-method fields, but maybe this
+		 * could change if we expose *primitive* fields which are also
+		 * Cicero objects.
+		 */
+	}
+
+	// returns success
+	// FALSE = FAILURE
+	def setField(name: string, obj: Object) -> bool {
+		if (cls == null) initClass();
+
+		if (!fieldMap.has(name)) return false;
+		fields[fieldMap[name]] = obj;
+		return true;
+	}
+
+// 	def setFieldByIndex(idx: int) -> Object {
+// 
+// 	}
+// 
+// 
+// 	def getFieldByIndex(idx: int) -> Object {
+// 
+// 	}
+
+	// returns null on failure
+	def getField(name: string) -> Object {
+		if (cls == null) initClass();
+
+		// not a field of this class
+		if (!fieldMap.has(name)) return null;
+
+		def obj = fields[fieldMap[name]];
+		if (obj != null) return obj; // allocated
+
+		// null if and only if lazy (uninitialized) method
+ 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
  			for (func in clazz.classMethods) {
-				// System.puts(func.id);
-				// System.puts(" ");
  				if (Strings.equal(func.id, name)) {
  					def m = MethodObject.new(this, func.id, func.params, func.code);
- 					fields[name] = m;
- 					return Maybe.Just(m);
+ 					fields[fieldMap[name]] = m;
+ 					return m;
  				}
  			}
-			// System.ln();
  		}
-		return Maybe.Nothing;
+
+		System.error("object error", Strings.format1("uninitialized field not a lazy method: %s", name));
+		return null;
+	}
+
+	def getClass() -> ClassObject {
+		if (cls == null) initClass();
+		return cls;
 	}
 
 	def instanceOf(otherCls: ClassObject) -> bool {
+		if (cls == null) initClass();
  		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
 			if (clazz == otherCls) {
 				return true;
@@ -33,42 +173,38 @@ class Object(cls: ClassObject) {
 		return false;
 	}
 
-	def getClass() -> ClassObject;
 	def display() -> string { return "<object>"; }
 	def isTrue() -> bool;
 
+	def o_getclass() -> (Object, bool) {
+		return (cls, false);
+	}
+	def o_fields() -> (Object, bool) {
+		def list = ListObject.new();
+		def fList = Maps.keyList(fieldMap);
+		Lists.apply(fList, putList(list, _));
+		return (list, false);
+	}
+	def o_display() -> (Object, bool) {
+		return (StrObjects.getStrObject(display()), false);
+	}
+	def o_eq(other: Object) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this == other), false);
+	}
+	def o_neq(other: Object) -> (Object, bool) {
+		return (BoolObjects.getBoolObject(this != other), false);
+	}
 }
+
 
 component Objects {
-	def classBase = ClassObject.new("base", null,
-			// init
-			null,
-			// fields
-			[],
-			// methods
-			[FuncObjects.fromVirgil("class", [], o_getclass),
-			 FuncObjects.fromVirgil("fields", [], o_fields),
-			 FuncObjects.fromVirgil("display", [], o_display),
-			 FuncObjects.fromVirgil("=", ["other"], o_eq),
-			 FuncObjects.fromVirgil("!=", ["other"], o_neq)
-			]
-			);
-}
 
-// TODO refactor these to use FuncObjects.fromVirgilMethod
-
-def o_getclass(args: Range<Object>) -> (Object, bool) {
-	def obj = args[0];
-	return (obj.cls, false);
-}
-
-def o_fields(args: Range<Object>) -> (Object, bool) {
-	def obj = args[0];
-	def list = ListObject.new();
-	def fList = Maps.keyList(obj.fields);
-	// FIXME add lazy fields
-	Lists.apply(fList, putList(list, _));
-	return (list, false);
+	def newObject(cls: ClassObject) -> Object {
+		def obj = Object.new();
+		obj.cls = cls;
+		obj.initClass();
+		return obj;
+	}
 }
 
 def putList(list: ListObject, str: string) {
@@ -76,15 +212,3 @@ def putList(list: ListObject, str: string) {
 	list.list.put(obj);
 }
 
-def o_display(args: Range<Object>) -> (Object, bool) {
-	def obj = args[0];
-	return (StrObjects.getStrObject(obj.display()), false);
-}
-
-def o_eq(args: Range<Object>) -> (Object, bool) {
-	return (BoolObjects.getBoolObject(args[0] == args[1]), false);
-}
-
-def o_neq(args: Range<Object>) -> (Object, bool) {
-	return (BoolObjects.getBoolObject(args[0] != args[1]), false);
-}

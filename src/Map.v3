@@ -1,6 +1,4 @@
 class MapObject extends Object {
-	new() super(MapObjects.classMap) {}
-
 	def map: Map<string, Object> = Strings.newMap();
 
 	def display() -> string { return "map"; }
@@ -8,5 +6,4 @@ class MapObject extends Object {
 }
 
 component MapObjects {
-	def classMap = ClassObject.new("map", Objects.classBase, null, [], []);
 }

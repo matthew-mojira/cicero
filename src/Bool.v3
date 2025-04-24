@@ -1,6 +1,4 @@
 class BoolObject(val: bool) extends Object {
-	private new () super(BoolObjects.classBool) {}
-	
 	def display() -> string { return if(val, "true", "false"); }
 	def isTrue()  -> bool   { return val; }
 
@@ -15,19 +13,8 @@ class BoolObject(val: bool) extends Object {
 	}
 }
 
-def b: Array<ClassObject> = Array.new(1);
 
 component BoolObjects {
-	def classBool: ClassObject = 
-		ClassObject.new("bool", 
-				Objects.classBase, 
-				CodeObjects.virgilFail, 
-				[], 
-				[FuncObjects.fromVirgilMethod0("not",    BoolObject.b_not),
-				 FuncObjects.fromVirgilMethod1("and", b, BoolObject.b_and),
-				 FuncObjects.fromVirgilMethod1("or",  b, BoolObject.b_or)
-				]);
-
 	/* canonical instances of bool values */
 	def trueObject  = BoolObject.new(true);
 	def falseObject = BoolObject.new(false);
@@ -37,4 +24,3 @@ component BoolObjects {
 	}
 }
 
-def stuff = b[0] = BoolObjects.classBool;

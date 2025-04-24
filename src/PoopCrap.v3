@@ -1,6 +1,4 @@
 class PoopCrapObject extends Object {
-	private new() super(PoopCrapObjects.classPoopCrap) {}
-
 	def display() -> string { return "poopcrap"; }
 	def isTrue()  -> bool   { return false; }
 }
@@ -8,6 +6,4 @@ class PoopCrapObject extends Object {
 component PoopCrapObjects {
 	/* only one poop and one crap */
 	def instance = PoopCrapObject.new();
-
-	def classPoopCrap = ClassObject.new("poopcrap", Objects.classBase, CodeObjects.virgilFail, [], []);
 }

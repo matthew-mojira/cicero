@@ -2,8 +2,10 @@ class BytecodeFrame extends FrameObject {
 	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {
 		if (code != null) {
 			locals = Array.new(code.bytecode.locals.length);
+			//System.puts(Strings.format1("length: %d\n", code.bytecode.locals.length));
 			// args == null?
 			for (i < args.length) {
+				//System.puts(Strings.format1("arg: %s\n", args[i].0));
 				locals[i] = args[i].1;
 			}
 		} else {
@@ -150,7 +152,7 @@ class BytecodeFrame extends FrameObject {
 				}
 				ASSERT_FUNC => {
 					def top = stack.peek();
-					assertType(FuncObjects.classFunc, top);
+					assertType(ClassObjects.classFunc, top);
 				}
 				CALL => {
 					var args: Vector<Object> = Vector.new();
@@ -167,7 +169,7 @@ class BytecodeFrame extends FrameObject {
 					// evaluate argument values
 					var argv: Array<(string, Object)>;
 
-					if (fv.instanceOf(MethodObjects.classMethod)) {
+					if (fv.instanceOf(ClassObjects.classMethod)) {
 						argv = Array.new(args.length + 1);
 						for (i < args.length) {
 							def arg = args[i];
@@ -206,8 +208,18 @@ class BytecodeFrame extends FrameObject {
 				CATCH => {
 					handlers.pop();
 				}
+				// stack manipulation
 				POP => for (i < operand) stack.pop();
-				DUPE => stack.push(stack.peek());
+				DUPE => {
+					// special path, operand = 0
+					stack.push(stack.elems[stack.top - operand - 1]);
+				}
+				SWAP => {
+					def top = stack.peek();
+					def val = stack.elems[stack.top - operand - 1];
+					stack.elems[stack.top - 1] = val;
+					stack.elems[stack.top - operand - 1] = top;
+				}
 				// objects
 				CREATE_CLASS => {
 					def superclass = stack.pop();
@@ -224,7 +236,7 @@ class BytecodeFrame extends FrameObject {
 
 					// duplicated code
 					def clsObj = ClassObject.!(top);
-					def obj = Object.new(clsObj);
+					def obj = Objects.newObject(clsObj);
 
 					def classes: Vector<ClassObject> = Vector.new();
 					for (cls = clsObj; cls != null; cls = cls.superclass)
@@ -249,7 +261,7 @@ class BytecodeFrame extends FrameObject {
 								throw(frame.val);
 								continue;
 							}
-							obj.fields[name] = frame.val;
+							obj.setField(name, frame.val);
 						}
 						// call initializer
 						if (cls.init != null) {
@@ -274,22 +286,19 @@ class BytecodeFrame extends FrameObject {
 					def obj = stack.pop();
 					def field = strings[operand];
 
-					match (obj.getField(field)) {
-						Just(v) => stack.push(v);
-					} else {
+					def v = obj.getField(field);
+					if (v == null) {
 						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
+					} else {
+						stack.push(v);
 					}
-
 				}
 				STORE_FIELD => {
 					def val = stack.pop();
 					def obj = stack.pop();
 					def field = strings[operand];
 
-					if (obj.fields.has(field)) {
-						obj.fields[field] = val;
-						stack.push(val);
-					} else {
+					if (!obj.setField(field, val)) {
 						throw(StrObjects.getStrObject(Strings.format1("name error: unknown field %s", field)));
 					}
 				}
