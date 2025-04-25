@@ -1,0 +1,218 @@
+(class Matrix
+  (field rows 0)
+  (field cols 0)
+  (field data ())
+  ; initializes matrix, calling f with the row and column index to determine
+  ; what value to initialize each entry of the matrix with
+  (method (init rows cols f) {
+    (cond
+      ((!= self.data ()) (raise "Matrix already initialized"))
+      ((< rows 1) (raise "Must be positive number of rows"))
+      ((< cols 1) (raise "Must be positive number of columns"))
+      (true {
+        (set data [])
+	(set i 0)
+	(while (< i rows) {
+          (set row [])
+	  (set j 0)
+	  (while (< j cols) {
+	    (row.put (f i j)) ; call to initializer function f
+            (set j (+ j 1))
+	  })
+	  (data.put row)
+	  (set i (+ i 1))
+	})
+        ; set fields
+	(set-field rows self rows)
+	(set-field cols self cols)
+	(set-field data self data)
+      })
+    )
+  })
+  ; initializes matrix with all zeros
+  (method (zeros rows cols) (self.init rows cols (func (f i j) 0)))
+  ; initializes matrix with all ones
+  (method (ones rows cols) (self.init rows cols (func (f i j) 1)))
+  ; initialies with the identity matrix
+  (method (id n) (self.init n n (func (eq i j) (if (= i j) 1 0))))
+
+  (method (display) {
+    (set i 0)
+    (while (< i self.rows) {
+      (set row (self.data.get i))
+      (print row)
+      (print "\n")
+      (set i (+ i 1))
+    })
+  })
+
+  (method (get row col) {
+    (set x (self.data.get row))
+    (x.get col)
+  })
+  
+  (method (set row col elem) {
+    (set x (self.data.get row))
+    (x.set col elem)
+  })
+
+  (method (+ other)
+    (cond
+      ((!= self.rows other.rows) (raise "Number of rows does not match"))
+      ((!= self.cols other.cols) (raise "Number of columns does not match"))
+      (true {
+        (set m (new Matrix))
+        (m.zeros self.rows self.cols)
+
+	; can't do this: functions are not closures!!
+        ;(m.init self.rows self.cols (func (add-elem i j) (+ (self.get i j) (other.get i j))))
+	(set i 0)
+	(while (< i self.rows) {
+	  (set j 0)
+	  (while (< j self.cols) {
+	    ; addition here
+	    (m.set i j (+ (self.get i j) (other.get i j)))
+            (set j (+ j 1))
+	  })
+	  (set i (+ i 1))
+	})
+	m
+      })
+    )
+  )
+
+  (method (* other)
+    (if (!= self.cols other.rows)
+      (raise "Incompatible dimensions for mulitplication")
+      {
+        (set m (new Matrix))
+        (m.zeros self.rows other.cols)
+
+	(set i 0)
+	(while (< i self.rows) {
+	  (set j 0)
+	  (while (< j other.cols) {
+	    ; core multiplication
+            (set k 0)
+            (set sum 0)
+	    (while (< k self.cols) {
+              (set sum (+ sum (* (self.get i k) (other.get k j))))
+	      (set k (+ k 1))
+	    })
+	    (m.set i j sum)
+            (set j (+ j 1))
+	  })
+	  (set i (+ i 1))
+	})
+	m
+      }
+    )
+  )
+)
+
+; basic examples
+
+(set m1 (new Matrix))
+(m1.zeros 2 4)
+(m1.display)
+(m1.get 1 3)
+
+(set m2 (new Matrix))
+(m2.id 4)
+(m2.display)
+
+(set m3 (+ m2 m2))
+(m3.display)
+
+(set m4 (* m2 m2))
+(m4.display)
+
+(set m5 (* m3 m3))
+(m5.display)
+
+;;;;;;;;;;;;;;
+
+(func (min x y)
+  (if (< x y) x y))
+
+(func (max x y)
+  (if (> x y) x y))
+
+(set x1 (new Matrix))
+(x1.init 10 5 min)
+(x1.display)
+
+(set x2 (new Matrix))
+(x2.init 5 7 max)
+(x2.display)
+
+(set x3 (* x1 x2))
+(x3.display)
+
+;;;;;;;;;;;
+
+(set x1 (new Matrix))
+(x1.init 5 3 min)
+(x1.display)
+
+(set x2 (new Matrix))
+(x2.init 3 4 max)
+(x2.display)
+
+(set x3 (* x1 x2))
+(x3.display)
+
+;;;;;;;;;;;
+
+(func (init1 x y)
+  (* x (+ y 3)))
+
+(func (init2 x y)
+  (+ (* y y) x))
+
+(set x1 (new Matrix))
+(x1.init 4 17 init1)
+(x1.display)
+
+(set x2 (new Matrix))
+(x2.init 17 5 init2)
+(x2.display)
+
+(set x3 (* x1 x2))
+(x3.display)
+
+;;; very large intensive example hopefully
+
+(func (init1 x y)
+  (+ 1 (* (+ x (* y x)) (* y (+ x y)))))
+
+(func (init2 x y)
+  (+ (* x (* x y)) (* y (+ x (* y y)))))
+
+(set x1 (new Matrix))
+(x1.init 15 15 init1)
+(x1.display)
+
+(set x2 (new Matrix))
+(x2.init 15 15 init2)
+(x2.display)
+
+(set x3 (* x1 x2))
+(x3.display)
+
+;; same initializers but extremely large matrix
+
+(set x1 (new Matrix))
+(x1.init 105 75 init1)
+(x1.display)
+
+(set x2 (new Matrix))
+(x2.init 75 35 init2)
+(x2.display)
+
+(set x3 (* x1 x2))
+(x3.display)
+
+
+
+

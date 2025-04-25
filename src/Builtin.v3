@@ -19,6 +19,10 @@ enum Builtin(id: string, val: Object) {
 
 def print(args: Range<Object>) -> Result {
 	def obj = args[0];
-	System.puts(obj.display());
+	if (StrObject.?(obj)) {
+		System.puts(StrObject.!(obj).str);
+	} else {
+		System.puts(obj.display());
+	}
 	return Result.OK(PoopCrapObjects.instance);
 }

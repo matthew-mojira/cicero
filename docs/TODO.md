@@ -25,6 +25,8 @@ CLI
 Exceptions
 - [ ] fix extra `<Virgil func>` appearing at top of stacktrace
 - [ ] include function names in the stacktrace
+- [ ] the stacktrace is reversed?
+- [ ] column numbers in stacktrace is incorrect (matches rows)
 - [ ] maybe add better information about exceptions in Virgil functions?
 - [ ] fix tier0 vs. tier1 stacktrace inconsistency
 - [ ] intern exception strings
@@ -57,6 +59,7 @@ Better functions
 - [ ] coroutines: figure out what they are
 
 Nicer parsing experience
+- [ ] fix hang when parsing mismatched parentheses in method definition
 - [ ] print out relevant line when a parse error occurs
 - [ ] when input is stdin, keep reading on incomplete input
 - [ ] clarify between keywords, literals, and builtins

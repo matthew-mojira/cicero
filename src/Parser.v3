@@ -10,8 +10,8 @@ class Parser extends TextReader {
 			// readExpr is intentional. The top-level doesn't get value on the
 			// varStack to indicate that all accesses here are on global variables
 			def expr = readExpr();
-			exprs.put(CodeObjects.fromAST(expr));
 			if (!ok) break;
+			exprs.put(CodeObjects.fromAST(expr));
 		}
 	}
 

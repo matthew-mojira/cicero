@@ -15,6 +15,6 @@
 (fib 10)
 (fib 15)
 (fib 20)
-;(fib 25)
+(fib 25)
 ;(fib 29)
 (try { (fib -1) false } e e) 
