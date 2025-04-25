@@ -45,7 +45,6 @@ component IntObjects {
 	/* canonicalize int value instances */
 	def intObjects = HashMap<long, IntObject>.new(int.!, long.==);
 	def getIntObject(val: long) -> IntObject {
-		if (val > 1000) return IntObject.new(val);
 		if (intObjects.has(val)) return intObjects[val];
 		def newInt = IntObject.new(val);
 		intObjects[val] = newInt;

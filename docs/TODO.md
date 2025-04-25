@@ -70,6 +70,7 @@ Nicer parsing experience
 - [ ] when input is stdin, keep reading on incomplete input
 - [ ] clarify between keywords, literals, and builtins
 - [ ] do not allow duplicate parameter/field/methods names
+- [ ] do not allow self as a parameter in methods
 
 More types
 - [ ] floating-point numbers

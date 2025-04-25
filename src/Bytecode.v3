@@ -229,6 +229,8 @@ class Bytecode {
 						init2 = code;
 					}
 				}
+				// XXX compiling subcode
+				for (field in fields) field.1.compile([]);
 				//                                   XXX
 				def idx = addClasshole(ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc)));
 				source.put(loc);
@@ -344,14 +346,8 @@ component Bytecodes {
 	}
 }
 
-
-// def main(args: Array<string>) -> int {
-// 	def code: Array<byte> = [0, 0, 0, 1, 0, 2, 1, byte.view(-3)];
-// 
-// 	inspect(code);
-// 
-// 	return 0;
-// }
 def funcToFunc(f: ASTData.Func) -> FuncObject {
+	// XXX compilation here
+	f.body.compile(Arrays.prepend("self", f.params));
 	return FuncObjects.newFO(f.id, f.params, f.body);
 }
