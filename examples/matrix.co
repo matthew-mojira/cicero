@@ -11,21 +11,21 @@
       ((< cols 1) (raise "Must be positive number of columns"))
       (true {
         (set data [])
-	(set i 0)
-	(while (< i rows) {
+        (set i 0)
+        (while (< i rows) {
           (set row [])
-	  (set j 0)
-	  (while (< j cols) {
-	    (row.put (f i j)) ; call to initializer function f
+          (set j 0)
+          (while (< j cols) {
+            (row.put (f i j)) ; call to initializer function f
             (set j (+ j 1))
-	  })
-	  (data.put row)
-	  (set i (+ i 1))
-	})
+          })
+          (data.put row)
+          (set i (+ i 1))
+        })
         ; set fields
-	(set-field rows self rows)
-	(set-field cols self cols)
-	(set-field data self data)
+        (set-field rows self rows)
+        (set-field cols self cols)
+        (set-field data self data)
       })
     )
   })
@@ -64,19 +64,19 @@
         (set m (new Matrix))
         (m.zeros self.rows self.cols)
 
-	; can't do this: functions are not closures!!
+        ; can't do this: functions are not closures!!
         ;(m.init self.rows self.cols (func (add-elem i j) (+ (self.get i j) (other.get i j))))
-	(set i 0)
-	(while (< i self.rows) {
-	  (set j 0)
-	  (while (< j self.cols) {
-	    ; addition here
-	    (m.set i j (+ (self.get i j) (other.get i j)))
+        (set i 0)
+        (while (< i self.rows) {
+          (set j 0)
+          (while (< j self.cols) {
+            ; addition here
+            (m.set i j (+ (self.get i j) (other.get i j)))
             (set j (+ j 1))
-	  })
-	  (set i (+ i 1))
-	})
-	m
+          })
+          (set i (+ i 1))
+        })
+        m
       })
     )
   )
@@ -88,23 +88,23 @@
         (set m (new Matrix))
         (m.zeros self.rows other.cols)
 
-	(set i 0)
-	(while (< i self.rows) {
-	  (set j 0)
-	  (while (< j other.cols) {
-	    ; core multiplication
+        (set i 0)
+        (while (< i self.rows) {
+          (set j 0)
+          (while (< j other.cols) {
+            ; core multiplication
             (set k 0)
             (set sum 0)
-	    (while (< k self.cols) {
+            (while (< k self.cols) {
               (set sum (+ sum (* (self.get i k) (other.get k j))))
-	      (set k (+ k 1))
-	    })
-	    (m.set i j sum)
+              (set k (+ k 1))
+            })
+            (m.set i j sum)
             (set j (+ j 1))
-	  })
-	  (set i (+ i 1))
-	})
-	m
+          })
+          (set i (+ i 1))
+        })
+        m
       }
     )
   )
