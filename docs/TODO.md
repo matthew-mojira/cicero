@@ -2,6 +2,12 @@
 
 Benchmarking/unit tests
 - [ ] add many example programs, unit tests (and expected outputs)
+  - [X] matrix
+  - [ ] list sorting algorithms
+  - [ ] hot-swapping a function at runtime
+  - [ ] duck typine test
+  - [ ] higher-order functions (map, fold)
+  - [ ] prime sieve
 - [ ] add benchmark programs (each program should stress test a different
       component and capture a potential bottleneck in the system)
 - [ ] run benchmarks
