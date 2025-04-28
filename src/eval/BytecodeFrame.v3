@@ -58,7 +58,7 @@ class BytecodeFrame extends FrameObject {
 		var pc = 0;
 		while (pc < code.length || isExn()) {
 			// sanity check
-			if ((pc & 0b11) != 0) System.error("eval error", Strings.format1("unaligned pc access: %d", pc));
+			// if ((pc & 0b11) != 0) System.error("eval error", Strings.format1("unaligned pc access: %d", pc));
 
 			// if frame is in an exceptional state, try to handle it!
 			// Should this go after the handlers?
@@ -81,6 +81,11 @@ class BytecodeFrame extends FrameObject {
 			def opcode   = bytecode.opcode;
 			def operand  = bytecode.operand;
 			loc = source.get(pc >> 2);
+
+			/* Inline caches */
+			var cache: HashMap<ClassObject, int>;
+			if (Tiers.enableIC)
+				cache = b.cache[pc >> 2];
 
 			if (debug) {
 				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, operand));
@@ -281,11 +286,28 @@ class BytecodeFrame extends FrameObject {
 					def obj = stack.pop();
 					def field = strings[operand];
 
-					def v = obj.getField(field);
-					if (v == null) {
-						throw1("name error: unknown field %s", field);
+					if (Tiers.enableIC) {
+						/* Inline cache */
+						if (cache.has(obj.getClass())) {
+							System.puts("[CACHE] cache hit\n");
+							stack.push(obj.getFieldByIndex(cache[obj.getClass()]));
+						} else {
+							System.puts("[CACHE] cache miss\n");
+							def v = obj.getField(field);
+							if (v == null) {
+								throw1("name error: unknown field %s", field);
+							} else {
+								cache[obj.getClass()] = obj.getIndex(field);
+								stack.push(v);
+							}
+						}
 					} else {
-						stack.push(v);
+						def v = obj.getField(field);
+						if (v == null) {
+							throw1("name error: unknown field %s", field);
+						} else {
+							stack.push(v);
+						}
 					}
 				}
 				STORE_FIELD => {

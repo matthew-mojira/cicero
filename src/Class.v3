@@ -5,13 +5,18 @@ class ClassObject(
 		classFields: Array<(string, CodeObject)>, 
 		classMethods: Array<FuncObject>) extends Object {
 		// FIXME perhaps we don't specify methods as func *objects* but funcholes
-	
+
+	def nameH = Strings.hash(name);
+	def hash() -> int {
+		return nameH;
+	}
+
 	def display() -> string { return Strings.format1("<class '%s'>", name); }
 	def isTrue()  -> bool   { return true; }
 
 	def c_superclass() -> Result {
 		if (superclass == null) {
-			return Result.Exn(ExnObjects.fromVirgil("no superclass"));
+			return Result.Exn(ExnObjects.fromVirgil("no superclass", Strings.format1("%s.superclass", name)));
 		} else {
 			return Result.OK(superclass);
 		}

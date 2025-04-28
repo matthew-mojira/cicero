@@ -7,13 +7,23 @@ class Bytecode {
 	def constants:  Vector<Object> = Vector.new();
 	def locals:     Vector<string> = Vector.new();
 
+
 	/* Source mappings */
 	def source: Vector<FileRange>  = Vector.new();
+	/* Inline cache */
+	var cache: Array<HashMap<ClassObject, int>>;
 
 	new(ast: AST, params: Array<string>) {
 		locals.puta(params);
 		compileAST(ast);
 		bytecode = writer.copy();
+		if (Tiers.enableIC) {
+			cache = Array.new(source.length);
+			// Wow a lot of initialization
+			for (i < cache.length) {
+				cache[i] = HashMap.new(ClassObject.hash, ClassObject.==);
+			}
+		}
 	}
 
 	def compileAST(ast: AST) {

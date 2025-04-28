@@ -112,6 +112,12 @@ class Object {
 		 * could change if we expose *primitive* fields which are also
 		 * Cicero objects.
 		 */
+ 		for (clazz in classes.copy()) {
+ 			for (func in clazz.classMethods) {
+				def m = MethodObject.new(this, func.id, func.params, func.code);
+				fields[fieldMap[func.id]] = m;
+ 			}
+ 		}
 	}
 
 	// returns success
@@ -124,14 +130,21 @@ class Object {
 		return true;
 	}
 
-// 	def setFieldByIndex(idx: int) -> Object {
-// 
-// 	}
-// 
-// 
-// 	def getFieldByIndex(idx: int) -> Object {
-// 
-// 	}
+ 	def setFieldByIndex(idx: int, obj: Object) {
+ 		fields[idx] = obj;
+ 	}
+ 
+ 	def getFieldByIndex(idx: int) -> Object {
+ 		return fields[idx];
+ 	}
+
+ 	def getIndex(field: string) -> int {
+		if (fieldMap.has(field)) {
+			return fieldMap[field];
+		}
+		System.error("object error", Strings.format1("getting index of field not present: %s", field));
+		return -999;
+ 	}
 
 	// returns null on failure
 	def getField(name: string) -> Object {
@@ -141,21 +154,7 @@ class Object {
 		if (!fieldMap.has(name)) return null;
 
 		def obj = fields[fieldMap[name]];
-		if (obj != null) return obj; // allocated
-
-		// null if and only if lazy (uninitialized) method
- 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
- 			for (func in clazz.classMethods) {
- 				if (Strings.equal(func.id, name)) {
- 					def m = MethodObject.new(this, func.id, func.params, func.code);
- 					fields[fieldMap[name]] = m;
- 					return m;
- 				}
- 			}
- 		}
-
-		System.error("object error", Strings.format1("uninitialized field not a lazy method: %s", name));
-		return null;
+		return obj; // allocated
 	}
 
 	def getClass() -> ClassObject {
