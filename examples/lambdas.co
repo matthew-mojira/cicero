@@ -1,0 +1,46 @@
+(lambda () ())
+(lambda (x y z) (+ x y z))
+
+(func (map xs f) {
+  (set i 0)
+  (set ys [])
+  (while (< i (xs.length)) {
+    (ys.put (f (xs.get i)))
+	(set i (i.succ))
+  })
+  ys
+})
+
+; lambdas are not closures (yet)
+(map [1 2 3 4 5] (lambda (x) (* x 2)))
+(map [1 2 3 4 5 6 7 8 9 10 9 8 7 6 5 4 3 2 1] (lambda (x) (* x 3)))
+(try
+  (map [1 2 3 4 5 6 7 8 9 10 9 8 7 6 5 4 3 2 1] (lambda (x y) (+ x y)))
+  e e)
+
+(class Cons
+  (field head ())
+  (field tail ())
+  (method (display) {
+    (print "(")
+    (print self.head)
+	(if (!= () self.tail) {
+      (print (self.tail.display))
+	  (print " ")
+	}
+	  () 
+	)
+	(print ")")
+	" " ; FIXME: why is this printed every time?
+  })
+)
+
+(func (cons x xs) {
+  (set ys (new Cons))
+  (set-field head ys x)
+  (set-field tail ys xs)
+  ys
+})
+
+((get-field display (cons 3 (cons 2 (cons 1 ())))))
+(print "\n")

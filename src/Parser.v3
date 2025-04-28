@@ -81,6 +81,8 @@ class Parser extends TextReader {
 
 							return AST.new(ASTData.Catch(try, exn, b, catch),
 								FileRange.new(fileName, startLine, startColumn, line, column));
+
+						/* functions and lambdas */
 						} else if (Strings.equal(str, "func")) {
 							/* The syntax of a function is
 							 *   (func (f x y z)
@@ -113,6 +115,29 @@ class Parser extends TextReader {
 							return AST.new(ASTData.VarSet(name, b,
 										                  AST.new(ASTData.Func(name, params.extract(), CodeObjects.fromAST(body)), range)), 
 										   range);
+						} else if (Strings.equal(str, "lambda")) {
+							/* lambdas */
+							req1('(');
+							// params to function
+							def params: Vector<string> = Vector<string>.new();
+							while (opt1(')') < 0) {
+								def param = readIdentifier();
+								params.put(param);
+
+								if (pos >= limit) {
+									failRel(startPos - pos, "unmatched opening parentheses");
+									return null;
+								}
+							}
+							
+							// body expresssion
+							def body = readCode(params.copy());
+							req1(')');
+
+							def range = FileRange.new(fileName, startLine, startColumn, line, column);
+							
+							// XXX creating CodeObject here
+							return AST.new(ASTData.Func("lambda", params.extract(), CodeObjects.fromAST(body)), range);
 						} else if (Strings.equal(str, "set")) {
 							def id = readIdentifier();
 							def expr = readExpr();

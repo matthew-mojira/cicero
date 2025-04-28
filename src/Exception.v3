@@ -22,7 +22,7 @@ class ExnObject extends Object {
 			if (range == null) {
 				str.puts("<Virgil code>");
 			} else {
-				str.put3("%s:%d:%d", range.fileName, range.beginLine, range.endLine);
+				str.put3("%s:%d:%d", range.fileName, range.beginLine, range.beginColumn);
 			}
 			str.puts(")\n");
 		}

@@ -32,14 +32,16 @@ Exceptions
 - [X] fix extra `<Virgil func>` appearing at top of stacktrace
 - [X] include function names in the stacktrace
 - [X] the stacktrace is reversed?
-- [ ] column numbers in stacktrace is incorrect (matches rows)
+- [X] column numbers in stacktrace is incorrect (matches rows)
 - [X] maybe add better information about exceptions in Virgil functions? (name got added)
-- [ ] fix tier0 vs. tier1 stacktrace inconsistency
+- [?] fix tier0 vs. tier1 stacktrace inconsistency
 - [ ] intern exception strings
+- [ ] allow reflection over stacktrace information
 
 Built-in classes
 - [ ] override base class methods for `display` and others
 - [ ] add more operations to many classes
+- [ ] element-wise comparison of lists
 
 Maps
 - [ ] add methods to the map class
@@ -56,7 +58,7 @@ Better bytecode
 - [ ] canonicalize constants and name strings in the bytecode compiler
 
 Better functions
-- [ ] anonymous functions
+- [X] anonymous functions
 - [ ] closures (allowing recursion for a function not at the top level)
 - [ ] allow (mutation of) nonlocal variables
 - [ ] optional arguments
@@ -71,6 +73,7 @@ Nicer parsing experience
 - [ ] clarify between keywords, literals, and builtins
 - [ ] do not allow duplicate parameter/field/methods names
 - [ ] do not allow self as a parameter in methods
+- [ ] do not require {} for blocks inside functions (and whiles too)
 
 More types
 - [ ] floating-point numbers
@@ -89,6 +92,7 @@ Potpourri of potentially bigger things
 - [ ] do not allow `set` in the top level
 - [ ] collect a set of design decisions, keeping track of dynamic language
       features we've added and what languages they model
+- [ ] print should call field display, not internal Virgil object's 
 
 ## Scoping
 
