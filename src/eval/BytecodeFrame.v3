@@ -200,7 +200,7 @@ class BytecodeFrame extends FrameObject {
 					if (isExn()) continue;
 
 					// create new frame (and evaluate)
-					def frame = newFrame(code, argv);
+					def frame = newFrame(fv.id, code, argv);
 					frame.eval();
 					if (frame.isExn()) {
 						rethrow(frame.getExn());
@@ -258,7 +258,7 @@ class BytecodeFrame extends FrameObject {
 							// XXX hackfix
 							if (expr == null) continue;
 							// create new frames here!
-							def frame = newFrame(expr, []);
+							def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, []);
 							frame.eval();
 							if (frame.isExn()) {
 								rethrow(frame.getExn());
@@ -272,7 +272,7 @@ class BytecodeFrame extends FrameObject {
 							def code = cls.init;
 
 							// create new frames here!
-							def frame = newFrame(code, args);
+							def frame = newFrame(Strings.format1("%s.init", cls.name), code, args);
 							frame.eval();
 							if (frame.isExn()) {
 								rethrow(frame.getExn());

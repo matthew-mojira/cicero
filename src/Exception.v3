@@ -1,11 +1,11 @@
 class ExnObject extends Object {
 	var message: StrObject;
-	def stacktrace: Vector<FileRange> = Vector.new();
+	def stacktrace: Vector<(string, FileRange)> = Vector.new();
 	// TODO handle Virgil locations better?
 	
-	new(msg: string, loc: FileRange) {
+	new(msg: string, fn: string, loc: FileRange) {
 		message = StrObjects.getStrObject(msg);
-		stacktrace.put(loc);
+		stacktrace.put((fn, loc));
 	}
 
 	def display() -> string {
@@ -15,13 +15,16 @@ class ExnObject extends Object {
 	def print() {
 		def str = StringBuilder.new();
 		str.puts(Strings.format1("exception: %s\n", message.str));
-		for (i = stacktrace.length; i >= 0; i--) {
-			def range = stacktrace[i];
+		for (i < stacktrace.length) {
+			def range = stacktrace[i].1;
+			def fn = stacktrace[i].0;
+			str.put1("  at %s (", fn);
 			if (range == null) {
-				str.puts("  <Virgil code>\n");
+				str.puts("<Virgil code>");
 			} else {
-				str.put3("  %s:%d:%d\n", range.fileName, range.beginLine, range.endLine);
+				str.put3("%s:%d:%d", range.fileName, range.beginLine, range.endLine);
 			}
+			str.puts(")\n");
 		}
 		System.puts(str.extract());
 	}
@@ -30,13 +33,13 @@ class ExnObject extends Object {
 component ExnObjects {
 	// def typeMismatch(exp: ClassObject, act: ClassObject)
 
-	def fromVirgil(msg: string) -> ExnObject {
-		return ExnObject.new(msg, null);
+	def fromVirgil(fn: string, msg: string) -> ExnObject {
+		return ExnObject.new(msg, fn, null);
 	}
 
 	// TODO use this
-	def fromStrObject(str: StrObject, loc: FileRange) -> ExnObject {
-		def obj = ExnObject.new(null, loc);
+	def fromStrObject(str: StrObject, fn: string, loc: FileRange) -> ExnObject {
+		def obj = ExnObject.new(null, fn, loc);
 		obj.message = str;
 		return obj;
 	}

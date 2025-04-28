@@ -29,11 +29,11 @@ CLI
 - [ ] tracing, debugging enable flags
 
 Exceptions
-- [ ] fix extra `<Virgil func>` appearing at top of stacktrace
-- [ ] include function names in the stacktrace
-- [ ] the stacktrace is reversed?
+- [X] fix extra `<Virgil func>` appearing at top of stacktrace
+- [X] include function names in the stacktrace
+- [X] the stacktrace is reversed?
 - [ ] column numbers in stacktrace is incorrect (matches rows)
-- [ ] maybe add better information about exceptions in Virgil functions?
+- [X] maybe add better information about exceptions in Virgil functions? (name got added)
 - [ ] fix tier0 vs. tier1 stacktrace inconsistency
 - [ ] intern exception strings
 
@@ -77,7 +77,7 @@ More types
 - [ ] set
 
 Wasm
-- [ ] Compile VM to Wasm
+- [X] Compile VM to Wasm
 - [ ] Analyze compiled Wasm with GRP (update GRP)
 - [ ] compile bytecode to Wasm, link wizard, and execute
 

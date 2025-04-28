@@ -56,5 +56,5 @@ def justReturnPoopCrap(range: Range<Object>) -> Result {
 }
 
 def doNotInstantiateThisClass(range: Range<Object>) -> Result {
-	return Result.Exn(ExnObjects.fromVirgil("do not use `new` to instantiate this class"));
+	return Result.Exn(ExnObjects.fromVirgil("do not use `new` to instantiate this class", "doNotInstantiateThisClass"));
 }

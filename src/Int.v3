@@ -16,13 +16,13 @@ class IntObject(val: long) extends Object {
 	}
 	def i_div(that: IntObject) -> Result {
 		if (that.val == 0) {
-			return Result.Exn(ExnObjects.fromVirgil("divide by zero"));
+			return Result.Exn(ExnObjects.fromVirgil("divide by zero", "int.div"));
 		}
 		return Result.OK(IntObjects.getIntObject(this.val / that.val));
 	}
 	def i_mod(that: IntObject) -> Result {
 		if (that.val == 0) {
-			return Result.Exn(ExnObjects.fromVirgil("divide by zero"));
+			return Result.Exn(ExnObjects.fromVirgil("divide by zero", "int.mod"));
 		}
 		return Result.OK(IntObjects.getIntObject(this.val % that.val));
 	}

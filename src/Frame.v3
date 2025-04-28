@@ -3,6 +3,7 @@
  */
 class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) extends Object {
 	var globals: HashMap<string, Object>;
+	def var name: string;
 
 	private new() {
 		if (prev == null) {
@@ -35,20 +36,20 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 	// XXX this is for top-level code. note that this may have a discrepancy in tiers!
 	def evalCode(code: CodeObject) -> Object;
 
-	def newFrame(code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
-		return FrameObjects.newFrame(this, code, args);
+	def newFrame(name: string, code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
+		return FrameObjects.newFrame(this, name, code, args);
 	}
 
 	// throw sets the exception value in the frame right away
 	def throw(msg: string) {
-		result = Result.Exn(ExnObject.new(msg, loc));
+		result = Result.Exn(ExnObject.new(msg, name, loc));
 	}
 	def throw1<T>(msg: string, t1: T) {
-		result = Result.Exn(ExnObject.new(Strings.format1(msg, t1), loc));
+		result = Result.Exn(ExnObject.new(Strings.format1(msg, t1), name, loc));
 	}
 
 	def rethrow(exn: ExnObject) {
-		exn.stacktrace.put(loc);
+		exn.stacktrace.put((name, loc));
 		result = Result.Exn(exn);
 	}
 
@@ -71,18 +72,18 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 	}
 }
 
-// FIXME find a better way to pass arguments between different tiers. More importantly,
-// we have to figure out indexes for locals instead of looking them up by name.
 component FrameObjects {
-	def newFrame(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
+	def newFrame(prev: FrameObject, name: string, code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
+		var frame: FrameObject;
 		match (code.tier) {
-			-1 => return VirgilFrame.new(prev, code, args);
-			 0 => return ASTFrame.new(prev, code, args);
-			 1 => return BytecodeFrame.new(prev, code, args);
+			-1 => frame = VirgilFrame.new(prev, code, args);
+			 0 => frame = ASTFrame.new(prev, code, args);
+			 1 => frame = BytecodeFrame.new(prev, code, args);
 		} else {
 			System.error("eval error", Strings.format1("unrecognized tier: %d", code.tier));
 		}
-		return null;
+		frame.name = name;
+		return frame;
 	}
 	def newTopFrame() -> FrameObject {
 		var frame: FrameObject;
@@ -94,6 +95,7 @@ component FrameObjects {
 		for (builtin in Builtin.set.all) {
 			frame.globals[builtin.id] = builtin.val;
 		}
+		frame.name = "repl";
 		return frame;
 	}
 }
