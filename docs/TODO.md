@@ -6,7 +6,7 @@ Benchmarking/unit tests
   - [ ] list sorting algorithms
   - [ ] hot-swapping a function at runtime
   - [ ] duck typine test
-  - [ ] higher-order functions (map, fold)
+  - [~] higher-order functions (map, fold)
   - [ ] prime sieve
 - [ ] add benchmark programs (each program should stress test a different
       component and capture a potential bottleneck in the system)
@@ -22,11 +22,12 @@ Optimize memory usage
 - [ ] find what objects/types can be unboxed boxed
 
 CLI
-- [ ] use `Option.v3` and parse them
-- [ ] help message
-- [ ] allow multiple files to be evaluated (simply evaluate them in order)
-- [ ] allow configuring between tiers
+- [X] use `Option.v3` and parse them
+- [X] help message
+- [X] allow multiple files to be evaluated (simply evaluate them in order)
+- [X] allow configuring between tiers
 - [ ] tracing, debugging enable flags
+- [ ] use option groups (from Aeneas) and refactor
 
 Exceptions
 - [X] fix extra `<Virgil func>` appearing at top of stacktrace
@@ -93,6 +94,7 @@ Potpourri of potentially bigger things
 - [ ] collect a set of design decisions, keeping track of dynamic language
       features we've added and what languages they model
 - [ ] print should call field display, not internal Virgil object's 
+- [ ] rename XObjects component (e.g. getIntObject -> fromLong)
 
 ## Scoping
 

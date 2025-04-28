@@ -1,74 +1,97 @@
 def main(args: Array<string>) -> int {
+	def opt = getOptions();
+	def files = opt.parse(args);
+	if (Option<bool>.!(opt.map["help"]).get()) {
+		// Show help text option.
+		System.puts("Cicero\n");
+		System.puts("Usage: cicero [options]\n");
+		System.puts("Usage: cicero [options] <co files>\n");
+
+		System.puts("\nOptions:\n");
+		System.puts("  -help: print this help text\n");
+		System.puts("  -tier=0: evaluation tier (0=AST, 1=bytecode)\n");
+		System.puts("  -cache=false: use inline cache in tier1 interpreter\n");
+		System.puts("  -max-int=int.max: maximum absolute canonicalized int object\n");
+		System.puts("  -repl=false: when files are provided, open repl after evaluation\n");
+		System.puts("  -lib=lib/core.co: library file to load before evaluation\n");
+
+		return 0;
+	}
+	Tiers.maxCachedInt = Option<int>.!(opt.map["max-int"]).get();
+	match (Option<int>.!(opt.map["tier"]).get()) {
+		0 => Tiers.enableTier1 = false;
+		1 => {
+			Tiers.enableTier1 = true;
+			Tiers.enableIC = Option<bool>.!(opt.map["cache"]).get();
+		}
+		_ => System.error("arg error", Strings.format1("unrecognized tier: %d", Option<int>.!(opt.map["tier"]).get()));
+	}
+
 	def frame = FrameObjects.newTopFrame();
 
-	loadLib(frame, "lib/core.co"); // AST evaluation
+	loadLib(frame, Option<string>.!(opt.map["lib"]).get()); // AST evaluation
 
-	match (args.length) {
-		0 => {
-			var scanner = Scanner.new();
-			while (true) {
-				System.puts("cicero> ");
-				var reader = Parser.new("<repl>", scanner.nextLine());
-				if (reader.ok) {
-					def exprs = reader.getExprs();
+	// evaluate files (if present)
+	for (filename in files) {
+		// read in file
+		def file = System.fileLoad(filename);
+		if (file == null) System.error("init error", Strings.format1("unable to load file %s", filename));
+		// parse
+		var reader = Parser.new(filename, file);
+		if (reader.ok) {
+			def exprs = reader.getExprs();
+			for (expr in exprs) {
+				// compile to tier1 bytecode
+				if (Tiers.enableTier1) expr.compile([]);
 
-					for (expr in exprs) {
-						// compile to tier1 bytecode
-						if (Tiers.enableTier1) {
-							expr.compile([]);
-						}
-
-						// evaluate
-						frame.evalCode(expr);
-						match (frame.result) {
-							Exn(exn) => {
-								exn.print();
-								frame.resetExn();
-							}
-							OK(val) => System.puts(Strings.format1("=> %s\n", val.display()));
-							_       => System.error("eval error", "frame did not give result");
-						}
+				// evaluate
+				frame.evalCode(expr);
+				match (frame.result) {
+					Exn(exn) => {
+						exn.print();
+						return 1;
 					}
-				} else {
-					System.puts(Strings.format1("parse error: %s\n", reader.error_msg));
+					OK(val) => System.puts(Strings.format1("=> %s\n", val.display()));
+					_       => System.error("eval error", "frame did not give result");
 				}
 			}
+		} else {
+			System.puts(reader.fileName);
+			System.puts(Strings.format3(":%d:%d: parse error: %s\n", reader.error_line, reader.error_column, reader.error_msg));
+			return 1;
 		}
-		1 => {
-			def file = System.fileLoad(args[0]);
-			if (file == null)
-				System.error("init error", Strings.format1("unable to load file %s", args[0]));
-			var reader = Parser.new(args[0], file);
+	}
+
+	// run repl (if requested)
+	if (files.length == 0 || Option<bool>.!(opt.map["repl"]).get()) {
+		var scanner = Scanner.new();
+		while (true) {
+			System.puts("cicero> ");
+			var reader = Parser.new("<repl>", scanner.nextLine());
 			if (reader.ok) {
 				def exprs = reader.getExprs();
 
 				for (expr in exprs) {
 					// compile to tier1 bytecode
-					if (Tiers.enableTier1) {
-						expr.compile([]);
-					}
+					if (Tiers.enableTier1) expr.compile([]);
 
 					// evaluate
 					frame.evalCode(expr);
 					match (frame.result) {
 						Exn(exn) => {
 							exn.print();
-							return 1;
+							frame.resetExn();
 						}
 						OK(val) => System.puts(Strings.format1("=> %s\n", val.display()));
 						_       => System.error("eval error", "frame did not give result");
 					}
 				}
 			} else {
-				System.puts(reader.fileName);
-				System.puts(Strings.format3(":%d:%d: parse error: %s\n", reader.error_line, reader.error_column, reader.error_msg));
-				return 1;
+				System.puts(Strings.format1("parse error: %s\n", reader.error_msg));
 			}
-			return 0;
 		}
-		_ => System.error("argument error", "invalid use of program (too many arguments)");
 	}
-	return 1;
+	return 0;
 }
 
 // XXX do not expect load lib to fail
@@ -85,4 +108,18 @@ def loadLib(frame: FrameObject, filename: string) {
 		}
 		frame.evalCode(expr);
 	}
+}
+
+// TODO steal OptionsGroup from virgil or wizard
+def getOptions() -> Options {
+	def opt = BasicOptions.new(null);
+
+	opt.newBoolOption("help", false);
+	opt.newIntOption("tier", 0);
+	opt.newIntOption("max-int", int.max);
+	opt.newBoolOption("cache", false);
+	opt.newBoolOption("repl", false);
+	opt.newStringOption("lib", "lib/core.co");
+
+	return opt;
 }

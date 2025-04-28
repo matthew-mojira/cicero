@@ -1,4 +1,5 @@
 component Tiers {
-	var enableTier1: bool = true;
-	var enableIC:    bool = false;
+	var enableTier1:  bool;
+	var enableIC:     bool;
+	var maxCachedInt: long; /* x <= |maxCachedInt| */
 }
