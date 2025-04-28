@@ -156,11 +156,8 @@ e.x
 ```
 
 Accesses the field `x` of the object evaluated in `e`. If the object contains 
-the field, then that field value is the value of the entire expression. If 
-there is nothing bound to `x`, then the runtime looks into the class of the 
-object for its methods, searching superclasses until it reaches the base object. 
-If it finds a method with that name, it creates a method object and binds it as
-a field of the object, returning that value. Otherwise, it raises an exception.
+the field, then that field value is the value of the entire expression.
+Otherwise, it is an exception.
 
 ### `set-field`
 
@@ -169,9 +166,8 @@ a field of the object, returning that value. Otherwise, it raises an exception.
 ```
 
 Sets the field `x` of the object `e1` to the value in `e2`. Throws an exception
-if `e1` does not have anything bound to `x` (note: that includes methods which
-have not yet been bound). The value of the entire expression is the value from
-`e2`.
+if `e1` does not have anything bound to `x`. The value of the entire expression
+is the value from `e2`.
 
 ## List
 

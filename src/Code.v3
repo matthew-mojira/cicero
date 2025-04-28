@@ -27,6 +27,10 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 
 	def display() -> string { return "<code>"; }
 	def isTrue()  -> bool   { return true; }
+	
+	def co_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
+	}
 }
 
 component CodeObjects {

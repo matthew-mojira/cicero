@@ -1,10 +1,13 @@
 class MethodObject(obj: Object, id_: string, params_: Array<string>, code_: CodeObject) extends FuncObject {
 	new() super(id_, params_, code_) {}
-	def display() -> string { return "<method>"; }
+	def display() -> string { return Strings.format1("<method '%s'>", id); }
 	def isTrue()  -> bool   { return true; }
 
 	def m_object() -> Result {
 		return Result.OK(obj);
+	}
+	def m_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
 	}
 }
 

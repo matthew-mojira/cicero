@@ -9,7 +9,7 @@ class ExnObject extends Object {
 	}
 
 	def display() -> string {
-		return Strings.format1("exception: %s", message.str);
+		return Strings.format1("<exception '%s'>", message.str);
 	}
 
 	def print() {
@@ -27,6 +27,10 @@ class ExnObject extends Object {
 			str.puts(")\n");
 		}
 		System.puts(str.extract());
+	}
+	
+	def e_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
 	}
 }
 

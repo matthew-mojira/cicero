@@ -16,9 +16,15 @@ Optimizations in the tier1 bytecode
 - [ ] determine what optimizations are available
 - [ ] create ICs for field lookups
 - [ ] research how python does attribute accesses (what is `__getattr__`?)
+- [ ] peephole optimizations in the bytecode. For example:
+      ```
+      STORE_LOCAL 1
+      LOAD_LOCAL  1 \ these are redundant and can be removed
+      POP         1 / (store above must be = to ensure that variable is bound)
+      ```
 
 Optimize memory usage
-- [ ] don't cache overly large numbers
+- [X] don't cache overly large numbers (command line option)
 - [ ] find what objects/types can be unboxed boxed
 
 CLI

@@ -39,6 +39,9 @@ class ListObject extends Object {
 		list.reverse();
 		return Result.OK(this);
 	}
+	def l_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
+	}
 }
 
 component ListObjects {

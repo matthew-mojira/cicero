@@ -11,6 +11,9 @@ class BoolObject(val: bool) extends Object {
 	def b_or(that: BoolObject) -> Result {
 		return Result.OK(BoolObjects.getBoolObject(this.val || that.val));
 	}
+	def b_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
+	}
 }
 
 

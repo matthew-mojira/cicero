@@ -1,12 +1,22 @@
 class StrObject(str: string) extends Object {
 	def display() -> string { return Strings.format1("\"%s\"", str); }
 	def isTrue()  -> bool   { return true; }
+
+	/* methods */
+
+	def s_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
+	}
 }
 
 component StrObjects {
 	/* canonical instances of strings */
 	def strObjects: HashMap<string, StrObject> = Strings.newMap();
+	// FIXME deprecated, rename everything to `fromString`
 	def getStrObject(str: string) -> StrObject {
+		return fromString(str);
+	}
+	def fromString(str: string) -> StrObject {
 		if (strObjects.has(str)) return strObjects[str];
 		def newStr = StrObject.new(str);
 		strObjects[str] = newStr;

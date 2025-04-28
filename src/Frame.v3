@@ -70,6 +70,12 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 		if (vals.length != argc)
 			throw(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length));
 	}
+
+	/* methods */
+
+	def fr_display() -> Result {
+		return Result.OK(StrObjects.fromString(Strings.format1("<frame '%s'>", name)));
+	}
 }
 
 component FrameObjects {

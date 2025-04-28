@@ -1,8 +1,12 @@
 class MapObject extends Object {
 	def map: Map<string, Object> = Strings.newMap();
 
-	def display() -> string { return "map"; }
+	def display() -> string { return "<map>"; }
 	def isTrue()  -> bool   { return true; }
+	
+	def p_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
+	}
 }
 
 component MapObjects {

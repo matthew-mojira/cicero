@@ -185,7 +185,7 @@ class Object {
 		return Result.OK(list);
 	}
 	def o_display() -> Result {
-		return Result.OK(StrObjects.getStrObject(display()));
+		return Result.OK(StrObjects.getStrObject("<object>"));
 	}
 	def o_eq(other: Object) -> Result {
 		return Result.OK(BoolObjects.getBoolObject(this == other));
@@ -197,7 +197,6 @@ class Object {
 
 
 component Objects {
-
 	def newObject(cls: ClassObject) -> Object {
 		def obj = Object.new();
 		obj.cls = cls;

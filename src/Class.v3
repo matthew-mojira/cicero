@@ -21,9 +21,11 @@ class ClassObject(
 			return Result.OK(superclass);
 		}
 	}
-
 	def c_name() -> Result {
 		return Result.OK(StrObjects.getStrObject(name));
+	}
+	def c_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
 	}
 }
 
@@ -51,58 +53,70 @@ component ClassObjects {
 	def classBool =	ClassObject.new("bool", classBase, 
 			CodeObjects.virgilFail, 
 			[], 
-			[FuncObjects.fromVirgilMethod0("not",    BoolObject.b_not),
-			 FuncObjects.fromVirgilMethod1("and", b, BoolObject.b_and),
-			 FuncObjects.fromVirgilMethod1("or",  b, BoolObject.b_or)
+			[FuncObjects.fromVirgilMethod0("display", BoolObject.b_display),
+			 FuncObjects.fromVirgilMethod0("not",     BoolObject.b_not),
+			 FuncObjects.fromVirgilMethod1("and", b,  BoolObject.b_and),
+			 FuncObjects.fromVirgilMethod1("or",  b,  BoolObject.b_or)
 			]);
 	def classClass = ClassObject.new("class", classBase,
 			CodeObjects.virgilFail, 
  			[], 
- 			[FuncObjects.fromVirgilMethod0("superclass", ClassObject.c_superclass),
+ 			[FuncObjects.fromVirgilMethod0("display",    ClassObject.c_display),
+ 			 FuncObjects.fromVirgilMethod0("superclass", ClassObject.c_superclass),
  			 FuncObjects.fromVirgilMethod0("name",       ClassObject.c_name)
  			]);
-	def classCode  = ClassObject.new("code",  classBase, CodeObjects.virgilFail, [], []);
-	def classExn   = ClassObject.new("exn",   classBase, CodeObjects.virgilFail, [], []);
-	def classFrame = ClassObject.new("frame", classBase, CodeObjects.virgilFail, [], []);
+	def classCode  = ClassObject.new("code",  classBase, CodeObjects.virgilFail, [],
+			[FuncObjects.fromVirgilMethod0("display", CodeObject.co_display)]);
+	def classExn   = ClassObject.new("exn",   classBase, CodeObjects.virgilFail, [], 
+			[FuncObjects.fromVirgilMethod0("display", ExnObject.e_display)]);
+	def classFrame = ClassObject.new("frame", classBase, CodeObjects.virgilFail, [],
+			[FuncObjects.fromVirgilMethod0("display", FrameObject.fr_display)]);
 	def classFunc = ClassObject.new("func", classBase, 
 			CodeObjects.virgilFail,
 			[],
-			[FuncObjects.fromVirgilMethod0("name",   FuncObject.f_name),
-			 FuncObjects.fromVirgilMethod0("params", FuncObject.f_params),
-			 FuncObjects.fromVirgilMethod0("code",   FuncObject.f_code)
+			[FuncObjects.fromVirgilMethod0("display", FuncObject.f_display),
+			 FuncObjects.fromVirgilMethod0("name",    FuncObject.f_name),
+			 FuncObjects.fromVirgilMethod0("params",  FuncObject.f_params),
+			 FuncObjects.fromVirgilMethod0("code",    FuncObject.f_code)
 			]);
 	def classInt = ClassObject.new("int", classBase, 
 			CodeObjects.virgilFail, 
 			[], 
-			[FuncObjects.fromVirgilMethod0("succ",  IntObject.i_succ),
-			 FuncObjects.fromVirgilMethod0("pred",  IntObject.i_pred),
-			 FuncObjects.fromVirgilMethod0("neg",   IntObject.i_neg),
-			 FuncObjects.fromVirgilMethod1("+",  i, IntObject.i_add),
-			 FuncObjects.fromVirgilMethod1("-",  i, IntObject.i_sub),
-			 FuncObjects.fromVirgilMethod1("*",  i, IntObject.i_mul),
-			 FuncObjects.fromVirgilMethod1("/",  i, IntObject.i_div),
-			 FuncObjects.fromVirgilMethod1("%",  i, IntObject.i_mod),
-			 FuncObjects.fromVirgilMethod1("<",  i, IntObject.i_lt),
-			 FuncObjects.fromVirgilMethod1("<=", i, IntObject.i_leq),
-			 FuncObjects.fromVirgilMethod1(">",  i, IntObject.i_gt),
-			 FuncObjects.fromVirgilMethod1(">=", i, IntObject.i_geq)
+			[FuncObjects.fromVirgilMethod0("display", IntObject.i_display),
+			 FuncObjects.fromVirgilMethod0("succ",    IntObject.i_succ),
+			 FuncObjects.fromVirgilMethod0("pred",    IntObject.i_pred),
+			 FuncObjects.fromVirgilMethod0("neg",     IntObject.i_neg),
+			 FuncObjects.fromVirgilMethod1("+",  i,   IntObject.i_add),
+			 FuncObjects.fromVirgilMethod1("-",  i,   IntObject.i_sub),
+			 FuncObjects.fromVirgilMethod1("*",  i,   IntObject.i_mul),
+			 FuncObjects.fromVirgilMethod1("/",  i,   IntObject.i_div),
+			 FuncObjects.fromVirgilMethod1("%",  i,   IntObject.i_mod),
+			 FuncObjects.fromVirgilMethod1("<",  i,   IntObject.i_lt),
+			 FuncObjects.fromVirgilMethod1("<=", i,   IntObject.i_leq),
+			 FuncObjects.fromVirgilMethod1(">",  i,   IntObject.i_gt),
+			 FuncObjects.fromVirgilMethod1(">=", i,   IntObject.i_geq)
 			]);
 	def classList = ClassObject.new("list", classBase, 
 			CodeObjects.virgilFail, 
 			[], 
-			[FuncObjects.fromVirgilMethod1("get", i,  ListObject.l_get),
+			[FuncObjects.fromVirgilMethod0("display", ListObject.l_display),
+			 FuncObjects.fromVirgilMethod1("get", i,  ListObject.l_get),
 			 FuncObjects.fromVirgilMethod2("set", io, ListObject.l_set),
 			 FuncObjects.fromVirgilMethod1("put", o,  ListObject.l_put),
 			 FuncObjects.fromVirgilMethod0("length",  ListObject.l_length),
 			 FuncObjects.fromVirgilMethod0("reverse", ListObject.l_reverse)
 			]);
-	def classMap = ClassObject.new("map", classBase, CodeObjects.virgilFail, [], []);
+	def classMap = ClassObject.new("map", classBase, CodeObjects.virgilFail, [],
+			[FuncObjects.fromVirgilMethod0("display", MapObject.p_display)]);
 	def classMethod = ClassObject.new("method", classFunc, 
 			CodeObjects.virgilFail,
 			[], 
-			[FuncObjects.fromVirgilMethod0("object", MethodObject.m_object)]);
-	def classPoopCrap = ClassObject.new("poopcrap", classBase, CodeObjects.virgilFail, [], []);
-	def classStr = ClassObject.new("str", classBase, CodeObjects.virgilFail, [], []);
+			[FuncObjects.fromVirgilMethod0("display", MethodObject.m_display),
+			 FuncObjects.fromVirgilMethod0("object",  MethodObject.m_object)]);
+	def classPoopCrap = ClassObject.new("poopcrap", classBase, CodeObjects.virgilFail, [], 
+			[FuncObjects.fromVirgilMethod0("display", PoopCrapObject.pc_display)]);
+	def classStr = ClassObject.new("str", classBase, CodeObjects.virgilFail, [],
+			[FuncObjects.fromVirgilMethod0("display", StrObject.s_display)]);
 
 
 	/* --- */

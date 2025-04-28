@@ -182,5 +182,5 @@ c.increment
 (c.increment)
 => 1
 c.value
-=> 1
+"doNotInstantiateThisClass", => 1
 ```

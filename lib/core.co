@@ -12,3 +12,11 @@
 (func (<= x y) (x.<= y))
 (func (> x y) (x.> y))
 (func (>= x y) (x>= y))
+
+; printing utility (wraps around the call to display needed to convert object
+; to string)
+(func (print o) (puts (o.display)))
+(func (println o) {
+  (puts (o.display))
+  (puts "\n")
+})

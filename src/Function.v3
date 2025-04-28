@@ -11,6 +11,9 @@ class FuncObject(id: string, params: Array<string>, code: CodeObject) extends Ob
 	def f_code() -> Result {
 		return Result.OK(code);
 	}
+	def f_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
+	}
 }
 
 component FuncObjects {

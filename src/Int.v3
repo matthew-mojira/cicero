@@ -38,6 +38,9 @@ class IntObject(val: long) extends Object {
 	def i_geq(that: IntObject) -> Result {
 		return Result.OK(BoolObjects.getBoolObject(this.val >= that.val));
 	}
+	def i_display() -> Result {
+		return Result.OK(StrObjects.fromString(display()));
+	}
 }
 
 

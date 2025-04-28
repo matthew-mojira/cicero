@@ -14,15 +14,15 @@ enum Builtin(id: string, val: Object) {
  	METHOD  ("method",   ClassObjects.classMethod),
  	POOPCRAP("poopcrap", ClassObjects.classPoopCrap),
  	STR     ("str",      ClassObjects.classStr),
-	PRINT   ("print",    FuncObjects.fromVirgil("print", ["o"], print))
+	PUTS    ("puts",     FuncObjects.fromVirgil("puts", ["o"], puts))
 }
 
-def print(args: Range<Object>) -> Result {
+def puts(args: Range<Object>) -> Result {
 	def obj = args[0];
-	if (StrObject.?(obj)) {
-		System.puts(StrObject.!(obj).str);
+	if (!obj.instanceOf(ClassObjects.classStr)) {
+		return Result.Exn(ExnObjects.fromVirgil("puts", "type mismatch"));
 	} else {
-		System.puts(obj.display());
+		System.puts(StrObject.!(obj).str);
+		return Result.OK(PoopCrapObjects.instance);
 	}
-	return Result.OK(PoopCrapObjects.instance);
 }
