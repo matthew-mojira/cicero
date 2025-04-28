@@ -46,9 +46,11 @@ Exceptions
 - [ ] allow reflection over stacktrace information
 
 Built-in classes
-- [ ] override base class methods for `display` and others
+- [X] override base class methods for `display` and others
+- [ ] allow mixed virgil and cicero code in methods
 - [ ] add more operations to many classes
-- [ ] element-wise comparison of lists
+- [ ] element-wise comparison of lists (might require virgil frames to create
+      more frames!)
 
 Maps
 - [ ] add methods to the map class
@@ -101,6 +103,7 @@ Potpourri of potentially bigger things
       features we've added and what languages they model
 - [ ] print should call field display, not internal Virgil object's 
 - [ ] rename XObjects component (e.g. getIntObject -> fromLong)
+- [ ] return, break, continue
 
 ## Scoping
 
