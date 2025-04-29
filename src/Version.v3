@@ -1,0 +1,6 @@
+component Version {
+	def version: string = "25\xCE\xB3";
+	var minorVersion: int;
+	var buildData: string;
+}
+
