@@ -112,6 +112,10 @@ class BytecodeFrame extends FrameObject {
 				System.puts("--\n");
 			}
 
+			if (Profiling.profileBytecode) {
+				Profiling.bytecodeMap[opcode.tag] += 1;
+			}
+
 			pc += 4;
 			match (opcode) {
 				LOAD_CONST => stack.push(constants[operand]);

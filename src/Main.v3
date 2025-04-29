@@ -94,6 +94,16 @@ def main(args: Array<string>) -> int {
 			}
 		}
 	}
+
+	if (Profiling.profileBytecode) {
+		/* Output Cicero's profiling */
+		var i = 0;
+		for (op in Opcode.set.all) {
+			System.puts(Strings.format2("%s: %d\n", op.name, Profiling.bytecodeMap[i++]));
+		}
+	}
+
+
 	return 0;
 }
 
