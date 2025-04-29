@@ -12,7 +12,7 @@ def main(args: Array<string>) -> int {
 		System.puts("  -tier=0: evaluation tier (0=AST, 1=bytecode)\n");
 		System.puts("  -cache=false: use inline cache in tier1 interpreter\n");
 		System.puts("  -max-int=int.max: maximum absolute canonicalized int object\n");
-		System.puts("  -suppress-output=false: do not print out results of evaluation\n");
+		System.puts("  -suppress-output=false: do not print out results of evaluation (useful for benchmarking)\n");
 		System.puts("  -repl=false: when files are provided, open repl after evaluation\n");
 		System.puts("  -lib=lib/core.co: library file to load before evaluation\n");
 
