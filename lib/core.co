@@ -11,7 +11,10 @@
 (func (< x y) (x.< y))
 (func (<= x y) (x.<= y))
 (func (> x y) (x.> y))
-(func (>= x y) (x>= y))
+(func (>= x y) (x.>= y))
+
+(func (and p q) (p.and q))
+(func (or p q) (p.or q))
 
 ; printing utility (wraps around the call to display needed to convert object
 ; to string)

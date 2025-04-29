@@ -18,13 +18,13 @@ class ListObject extends Object {
 
 	def l_get(idx: IntObject) -> Result {
 		if (idx.val < 0 || idx.val >= list.length)
-			return Result.Exn(ExnObjects.fromVirgil(Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length), "list.get"));
+			return Result.Exn(ExnObjects.fromVirgil("list.get", Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length)));
 		// XXX cast, discrepancy between allowed index values (i.e. length) and the length of the list
 		return Result.OK(list.get(int.!(idx.val)));
 	}
  	def l_set(idx: IntObject, obj: Object) -> Result {
 		if (idx.val < 0 || idx.val >= list.length)
-			return Result.Exn(ExnObjects.fromVirgil(Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length), "list.set"));
+			return Result.Exn(ExnObjects.fromVirgil("list.set", Strings.format2("index %d out of bounds for list of length %d", idx.val, list.length)));
 		list.set(int.!(idx.val), obj);
 		return Result.OK(this);
 	}

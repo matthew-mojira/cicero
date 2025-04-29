@@ -3,7 +3,7 @@
 Benchmarking/unit tests
 - [ ] add many example programs, unit tests (and expected outputs)
   - [X] matrix
-  - [ ] list sorting algorithms
+  - [X] list sorting algorithms
   - [ ] hot-swapping a function at runtime
   - [ ] duck typine test
   - [~] higher-order functions (map, fold)
@@ -41,7 +41,7 @@ Exceptions
 - [X] the stacktrace is reversed?
 - [X] column numbers in stacktrace is incorrect (matches rows)
 - [X] maybe add better information about exceptions in Virgil functions? (name got added)
-- [?] fix tier0 vs. tier1 stacktrace inconsistency
+- [ ] fix tier0 vs. tier1 stacktrace inconsistency
 - [ ] intern exception strings
 - [ ] allow reflection over stacktrace information
 

@@ -12,6 +12,7 @@ def main(args: Array<string>) -> int {
 		System.puts("  -tier=0: evaluation tier (0=AST, 1=bytecode)\n");
 		System.puts("  -cache=false: use inline cache in tier1 interpreter\n");
 		System.puts("  -max-int=int.max: maximum absolute canonicalized int object\n");
+		System.puts("  -suppress-output=false: do not print out results of evaluation\n");
 		System.puts("  -repl=false: when files are provided, open repl after evaluation\n");
 		System.puts("  -lib=lib/core.co: library file to load before evaluation\n");
 
@@ -30,6 +31,8 @@ def main(args: Array<string>) -> int {
 	def frame = FrameObjects.newTopFrame();
 
 	loadLib(frame, Option<string>.!(opt.map["lib"]).get()); // AST evaluation
+	
+	def output = !Option<bool>.!(opt.map["suppress-output"]).get();
 
 	// evaluate files (if present)
 	for (filename in files) {
@@ -51,7 +54,7 @@ def main(args: Array<string>) -> int {
 						exn.print();
 						return 1;
 					}
-					OK(val) => System.puts(Strings.format1("=> %s\n", val.display()));
+					OK(val) => if (output) System.puts(Strings.format1("=> %s\n", val.display()));
 					_       => System.error("eval error", "frame did not give result");
 				}
 			}
@@ -119,6 +122,7 @@ def getOptions() -> Options {
 	opt.newIntOption("max-int", int.max);
 	opt.newBoolOption("cache", false);
 	opt.newBoolOption("repl", false);
+	opt.newBoolOption("suppress-output", false);
 	opt.newStringOption("lib", "lib/core.co");
 
 	return opt;
