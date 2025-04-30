@@ -3,7 +3,8 @@ def main(args: Array<string>) -> int {
 	def files = opt.parse(args);
 	if (Option<bool>.!(opt.map["help"]).get()) {
 		// Show help text option.
-		System.puts("Cicero\n");
+		System.puts(Strings.format2("Cicero %s.%d\n", Version.version, Version.minorVersion));
+		System.puts(Strings.format1("Build data: %s\n", Version.buildData));
 		System.puts("Usage: cicero [options]\n");
 		System.puts("Usage: cicero [options] <co files>\n");
 
