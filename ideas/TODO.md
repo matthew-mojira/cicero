@@ -87,6 +87,7 @@ Nicer parsing experience
 - [ ] do not allow duplicate parameter/field/methods names
 - [ ] do not allow self as a parameter in methods
 - [ ] do not require {} for blocks inside functions (and whiles too)
+- [ ] warn on redefinition? (runtime's responsibility?)
 
 More types
 - [ ] floating-point numbers
@@ -109,6 +110,7 @@ Potpourri of potentially bigger things
 - [ ] rename XObjects component (e.g. getIntObject -> fromLong)
 - [ ] return, break, continue
 - [ ] short-circuiting boolean operators (not methods of bool class)
+- [ ] namespaces?
 
 ## Scoping
 

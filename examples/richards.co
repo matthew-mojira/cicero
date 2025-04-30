@@ -1,0 +1,422 @@
+; Richards benchmark, based on the Virgil version by Ben Titzer (c) 2011 Google
+; Inc., based on the Java version by Jonathan Gibbons (c) 1995 Sun Microsystems.
+
+(set richards/I_IDLE 1)
+(set richards/I_WORK 2)
+(set richards/I_HANDLERA 3)
+(set richards/I_HANDLERB 4)
+(set richards/I_DEVA 5)
+(set richards/I_DEVB 6)
+
+(set richards/K_DEV 1000)
+(set richards/K_WORK 1001)
+
+(set richards/qlayout 0)
+(set richards/tracing false)
+
+(class packet
+  (field BUFSIZE 3)
+  (field link ())
+  (field id 0)
+  (field kind 0)
+  (field a1 0)
+  (field a2 [0 0 0 0])
+  (method (append-to list) {
+    (set-field link self ())
+    (if (= list ())
+      self
+      {
+        (set p list)
+	(while (!= p.link ())
+	  (set p p.link) 
+	)
+	(set-field link p self)
+	list
+      }
+    )
+  })
+)
+
+(func (packet/new link id kind) {
+  (set p (new packet))
+  (set-field link p link)
+  (set-field id   p id)
+  (set-field kind p kind)
+  p
+})
+
+; task
+(class task
+  (field link ())
+  (field id 0)
+  (field pri 0)
+  (field wkq ())
+  (field state 0)
+
+  ; omit abstract method `fn`
+
+  (method (wait-task) {
+    (set-field state self (self.state.| task/WAITBIT))
+    self
+  })
+  (method (hold) {
+    (set-global task/hold-count (task/hold-count.succ))
+    (set-field state self (self.state.| task/HOLDBIT))
+    self.link
+  })
+  (method (release i) {
+    (set t (task/findtcb i))
+    (set-field state t (t.state.& (-1.^ task/HOLDBIT)))
+    (if (> t.pri self.pri) t self)
+  })
+  (method (qpkt pkt) {
+    (set t (task/findtcb pkt.id))
+    (if (= t ())
+      t
+      {
+        (set-global task/qpkt-count (task/qpkt-count.succ))
+	(set-field link pkt ())
+	(set-field id pkt self.id)
+
+	(if (= t.wkq ())
+	  {
+            (set-field wkq t pkt)
+	    (set-field state t (t.state.| task/PKTBIT))
+            (if (> t.pri self.pri) t self)
+	  }
+	; else
+	  {
+            (set-field wkq t (pkt.append-to t.wkq))
+	    self
+	  }
+	)
+      }
+    )
+  })
+)
+
+(func (task/new id pri wkq state) {
+  (set t (new task))
+  (set-field id t id)
+  (set-field pri t wkq)
+  (set-field wkq t wkq)
+  (set-field state t state)
+  ; task contructor
+  (set-field link t task/task-list)
+  (set-global task/task-list t)
+  (set x task/task-tab)
+  (x.set id t)
+  t
+})
+
+; static parts of the task class
+(set task/PKTBIT  1)
+(set task/WAITBIT 2)
+(set task/HOLDBIT 4)
+
+(set task/S_RUN         0)
+(set task/S_RUNPKT      1)
+(set task/S_WAIT        2)
+(set task/S_WAITPKT     3)
+(set task/S_HOLD        4)
+(set task/S_HOLDPKT     5)
+(set task/S_HOLDWAIT    6)
+(set task/S_HOLDWAITPKT 7)
+
+(set task/task-tab [() () () () () () () () () ()]) ; 10
+(set task/task-list ())
+(set task/hold-count 0)
+(set task/qpkt-count 0)
+
+(func (task/findtcb id) (task/task-tab.get id))
+(func (task/reset) {
+  (set-global task/hold-count 0)
+  (set-global task/qpkt-count 0)
+  (set-global task/task-list ())
+})
+(func (task/schedule) {
+  (set t task/task-list)
+  (while (!= t ()) {
+    (puts "\nCount:\n")
+    (println task/qpkt-count)
+    (println task/hold-count)
+    (println (t.class))
+    (println t.state)
+    (cond 
+      ((= t.state task/S_WAITPKT) {
+        (set pkt t.wkq)
+	(set-field wkq t pkt.link)
+	(set-field state t (if (= t.wkq ()) task/S_RUN task/S_RUNPKT))
+	(if richards/tracing
+	  (richards/trace "0")
+	  ()
+	)
+        (set t (t.fn pkt))
+      })
+      ((= t.state task/S_RUN) {
+	(if richards/tracing
+	  (richards/trace "0")
+	  ()
+	)
+        (set t (t.fn pkt))
+      })
+      ((= t.state task/S_RUNPKT) {
+	(if richards/tracing
+	  (richards/trace "0")
+	  ()
+	)
+        (set t (t.fn pkt))
+      })
+      ((= t.state task/S_WAIT) (set t t.link))
+      ((= t.state task/S_HOLD) (set t t.link))
+      ((= t.state task/S_HOLDPKT) (set t t.link))
+      ((= t.state task/S_HOLDWAIT) (set t t.link))
+      ((= t.state task/S_HOLDWAITPKT) (set t t.link))
+      (true (set t ())) ; break -> return
+    )
+  })
+})
+
+; subclasses
+
+; DEVICE TASK
+
+(class device-task (extends task)
+  (field v1 ())
+
+  (method (fn pkt) {
+    (if (= pkt ())
+      {
+        (if (= v1 ())
+	  (self.wait-task)
+	  ;else
+	  {
+            (set pkt self.v1)
+	    (set-field v1 self ())
+            (self.qpkt pkt)
+	  }
+	)
+      }
+    ; else
+      {
+        (set-field v1 self pkt)
+	(if richards/tracing
+	  (richards/trace pkt.a1)
+	  ()
+	)
+	(self.hold)
+      }
+    )
+  })
+)
+
+(func (device-task/new id pri wkq) {
+  (set t (new device-task))
+  (set-field id t id)
+  (set-field pri t pri)
+  (set-field wkq t wkq)
+  (set-field state t (if (!= wkq ()) task/S_WAITPKT task/S_WAIT))
+  ; task contructor
+  (set-field link t task/task-list)
+  (set-global task/task-list t)
+  (set x task/task-tab)
+  (x.set id t)
+  t
+})
+
+; HANDLER TASK
+
+(class handler-task (extends task)
+  (field workpkts ())
+  (field devpkts ())
+
+  (method (fn pkt) {
+    (if (!= pkt ())
+      (if (= pkt.kind richards/K_WORK)
+        (set-field workpkts self (pkt.append-to self.workpkts))
+	(set-field devpkts self (pkt.append-to self.devpkts))
+      )
+      () ; no else
+    )
+
+    (if (!= self.workpkts ())
+      {
+        (set workpkt self.workpkts)
+	(set count workpkt.a1)
+
+        (cond
+          ((> count 3) {
+            (set-field workpkts self self.workpkts.link)
+	    (self.qpkt workpkt)
+	  })
+	  ((!= self.devpkts ()) {
+            (set devpkt self.devpkts)
+	    (set-field devpkts self self.devpkts.link)
+	    (set a2 workpkt.a2)
+	    (set-field a1 devpkt (a2.get count))
+	    (set-field a1 workpkt (count.succ))
+	    (self.qpkt devpkt)
+	  })
+	  (true (self.wait-task))
+	)
+      }
+      (self.wait-task)
+    )
+  })
+)
+
+(func (handler-task/new id pri wkq) {
+  (set t (new handler-task))
+  (set-field id t id)
+  (set-field pri t pri)
+  (set-field wkq t wkq)
+  (set-field state t (if (!= wkq ()) task/S_WAITPKT task/S_WAIT))
+  ; task contructor
+  (set-field link t task/task-list)
+  (set-global task/task-list t)
+  (set x task/task-tab)
+  (x.set id t)
+  t
+})
+
+; IDLE TASK
+
+(class idle-task (extends task)
+  (field v1 0)
+  (field v2 0)
+
+  (method (fn pkt) {
+    (set-field v2 self (self.v2.pred))
+    (cond
+      ((= self.v2 0) (self.hold))
+      ((= (self.v1.& 1) 0) {
+        (set-field v1 self (self.v1.>>> 1))
+	(self.release richards/I_DEVA)
+      })
+      (true {
+        (set-field v1 self (^ (self.v1.>>> 1) 53256)) ; 0xD008
+	(self.release richards/I_DEVB)
+      })
+    )
+  })
+)
+
+(func (idle-task/new id v1 v2) {
+  (set t (new idle-task))
+  (set-field id t id)
+  (set-field v1 t v1)
+  (set-field v2 t v2)
+  (set-field pri t 0)
+  (set-field wkq t ())
+  (set-field state t task/S_RUN)
+  ; task contructor
+  (set-field link t task/task-list)
+  (set-global task/task-list t)
+  (set x task/task-tab)
+  (x.set id t)
+  t
+})
+
+; WORK TASK
+
+(class work-task (extends task)
+  (field handler 0)
+  (field n 0)
+
+  (method (fn pkt) {
+    (if (= pkt ())
+      (self.wait-task)
+      {
+        (set-field handler self (if (= self.handler richards/I_HANDLERA) richards/I_HANDLERB richards/I_HANDLERA))
+        (set-field id pkt self.handler)
+
+        (set-field a1 pkt 0)
+	(set i 0)
+	(while (< i 4) {
+	  (set-field n self (self.n.succ))
+	  (if (> self.n 26)
+	    (set-field n self 1)
+	    () ; no else
+          )
+	  (set a2 pkt.a2)
+	  (a2.set i (+ 65 (- self.n 1)))
+	  (set i (i.succ))
+	})
+	(self.qpkt pkt)
+      }
+    )
+  })
+)
+
+(func (work-task/new id pri wkq) {
+  (set t (new work-task))
+  (set-field id t id)
+  (set-field pri t pri)
+  (set-field wkq t wkq)
+  (set-field state t (if (!= wkq ()) task/S_WAITPKT task/S_WAIT))
+  (set-field handler t richards/I_HANDLERA)
+  ; task contructor
+  (set-field link t task/task-list)
+  (set-global task/task-list t)
+  (set x task/task-tab)
+  (x.set id t)
+  t
+})
+
+; main
+(func (richards/main) {
+  (set iterations 1)
+  (while (> iterations 0) {
+    (if (richards/run)
+      () ; continue
+      (raise "richards error: incorrect results")
+    )
+    (set iterations (iterations.pred))
+  })
+  0
+})
+
+(func (richards/run) {
+  (task/reset)
+
+  (idle-task/new richards/I_IDLE 1 1000)
+
+  (set wkq (packet/new ()  0 richards/K_WORK))
+  (set wkq (packet/new wkq 0 richards/K_WORK))
+  (work-task/new richards/I_WORK 1000 wkq)
+
+  (set wkq (packet/new ()  richards/I_DEVA richards/K_DEV))
+  (set wkq (packet/new wkq richards/I_DEVA richards/K_DEV))
+  (set wkq (packet/new wkq richards/I_DEVA richards/K_DEV))
+  (handler-task/new richards/I_HANDLERA 2000 wkq)
+
+  (set wkq (packet/new ()  richards/I_DEVB richards/K_DEV))
+  (set wkq (packet/new wkq richards/I_DEVB richards/K_DEV))
+  (set wkq (packet/new wkq richards/I_DEVB richards/K_DEV))
+  (handler-task/new richards/I_HANDLERB 3000 wkq)
+
+  (set wkq ())
+  (device-task/new richards/I_DEVA 4000 wkq)
+  (device-task/new richards/I_DEVB 5000 wkq)
+
+  (task/schedule)
+
+  (puts "\nCount:\n")
+  (println task/qpkt-count)
+  (println task/hold-count)
+  (and (= task/qpkt-count 2322) (= task/hold-count 928))
+})
+
+(func (richards/trace a) {
+  (set-global richards/qlayout (- richards/qlayout 1))
+  (if (<= richards/qlayout 0)
+    {
+      (puts "\n")
+      (set-global richards/qlayout 50)
+    }
+    ()
+  ) ; no else
+  (print a)
+})
+
+(richards/main)

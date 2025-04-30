@@ -266,7 +266,7 @@ class Parser extends TextReader {
 										fail("redeclaration of init in class definition");
 										return null;
 									}
-									init = Maybe.Just(CodeObjects.fromAST(readCode([])));
+									init = Maybe.Just(CodeObjects.fromAST(readCode(["self"])));
 								} else if (Strings.equal(word, "extends")) {
 									if (init.isJust()) {
 										fail("redeclaration of extends in class definition");

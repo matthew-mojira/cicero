@@ -1,0 +1,65 @@
+(class A
+  (field a1 1)
+  (field a2 2)
+  (method (evens) (+ self.a2 self.a4))
+  (field a3 3)
+  (field a4 4)
+  (method (odds) (+ self.a1 self.a3)))
+
+(class B (extends A)
+  (field b1 5)
+  (method (ones) (+ self.a1 self.b1))
+  (field b2 6)
+  (field b3 7)
+  (method (twos) (+ self.a2 self.b2)))
+
+;(class C (extends A)
+;  (field c1 8)
+;  (field c2 9)
+;  (field c3 10))
+
+(set x (new A))
+x.a1
+x.a2
+x.a3
+x.a4
+(set-field a1 x (* x.a1 2))
+(set-field a2 x (* x.a2 2))
+(set-field a3 x (* x.a3 2))
+(set-field a4 x (* x.a4 2))
+x.a1
+x.a2
+x.a3
+x.a4
+
+(set y (new B))
+y.a1
+y.a2
+y.a3
+y.a4
+y.b1
+y.b2
+y.b3
+(set-field a1 y (* y.a1 2))
+(set-field a2 y (* y.a2 2))
+(set-field a3 y (* y.a3 2))
+(set-field a4 y (* y.a4 2))
+(set-field b1 y (* y.b1 2))
+(set-field b2 y (* y.b2 2))
+(set-field b3 y (* y.b3 2))
+y.a1
+y.a2
+y.a3
+y.a4
+y.b1
+y.b2
+y.b3
+
+;(set z (new C))
+;z.a1
+;z.a2
+;z.a3
+;z.a4
+;z.c1
+;z.c2
+;z.c3
