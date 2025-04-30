@@ -94,7 +94,13 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod1("<",  i,   IntObject.i_lt),
 			 FuncObjects.fromVirgilMethod1("<=", i,   IntObject.i_leq),
 			 FuncObjects.fromVirgilMethod1(">",  i,   IntObject.i_gt),
-			 FuncObjects.fromVirgilMethod1(">=", i,   IntObject.i_geq)
+			 FuncObjects.fromVirgilMethod1(">=", i,   IntObject.i_geq),
+			 FuncObjects.fromVirgilMethod1("&",  i,   IntObject.i_and),
+			 FuncObjects.fromVirgilMethod1("|",  i,   IntObject.i_ora),
+			 FuncObjects.fromVirgilMethod1("^",  i,   IntObject.i_eor),
+			 FuncObjects.fromVirgilMethod1(">>", i,   IntObject.i_asr),
+			 FuncObjects.fromVirgilMethod1("<<", i,   IntObject.i_asl),
+			 FuncObjects.fromVirgilMethod1(">>>",i,   IntObject.i_lsr)
 			]);
 	def classList = ClassObject.new("list", classBase, 
 			CodeObjects.virgilFail, 

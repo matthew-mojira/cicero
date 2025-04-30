@@ -8,6 +8,9 @@ Benchmarking/unit tests
   - [ ] duck typine test
   - [~] higher-order functions (map, fold)
   - [ ] prime sieve
+  - [ ] Richards
+  - [ ] DeltaBlue
+  - [ ] Other virgil benchmarks?
 - [ ] add benchmark programs (each program should stress test a different
       component and capture a potential bottleneck in the system)
 - [ ] run benchmarks
@@ -34,6 +37,7 @@ CLI
 - [X] allow configuring between tiers
 - [ ] tracing, debugging enable flags
 - [ ] use option groups (from Aeneas) and refactor
+- [ ] pass command line arguments to program
 
 Exceptions
 - [X] fix extra `<Virgil func>` appearing at top of stacktrace

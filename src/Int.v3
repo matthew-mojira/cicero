@@ -38,6 +38,27 @@ class IntObject(val: long) extends Object {
 	def i_geq(that: IntObject) -> Result {
 		return Result.OK(BoolObjects.getBoolObject(this.val >= that.val));
 	}
+
+	/* logical */
+	def i_and(that: IntObject) -> Result {
+		return Result.OK(IntObjects.getIntObject(this.val & that.val));
+	}
+	def i_ora(that: IntObject) -> Result {
+		return Result.OK(IntObjects.getIntObject(this.val | that.val));
+	}
+	def i_eor(that: IntObject) -> Result {
+		return Result.OK(IntObjects.getIntObject(this.val ^ that.val));
+	}
+	def i_asl(that: IntObject) -> Result {
+		return Result.OK(IntObjects.getIntObject(this.val << byte.!(that.val)));
+	}
+	def i_lsr(that: IntObject) -> Result {
+		return Result.OK(IntObjects.getIntObject(this.val >>> byte.!(that.val)));
+	}
+	def i_asr(that: IntObject) -> Result {
+		return Result.OK(IntObjects.getIntObject(this.val >> byte.!(that.val)));
+	}
+
 	def i_display() -> Result {
 		return Result.OK(StrObjects.fromString(display()));
 	}
