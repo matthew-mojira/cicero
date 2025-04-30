@@ -1,4 +1,4 @@
-all: x86-linux x86-64-linux jvm
+all: x86-linux x86-64-linux jvm wasm-wave
 
 .PHONY: clean x86-linux x86-64-linux jvm wasm-wave
 clean:
