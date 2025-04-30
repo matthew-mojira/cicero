@@ -1,0 +1,44 @@
+class Object {
+	def var fields: Vector<Object> = Vector.new();
+
+	def display() {
+		System.puts("{");
+		for (field in fields.copy()) {
+			System.puts("field ");
+		}
+		System.puts("}");
+	}
+}
+
+class ObjectOf<T> extends Object {
+	def var data: T;
+
+	new(data: T, clazz: Class) {
+		this.data = data;
+		fields.put(clazz);
+	}
+}
+
+class Class extends ObjectOf<ListObject> {
+	new() super(ListObject.new(), classClass) {
+	}
+}
+
+class ListObject extends ObjectOf<Vector<Object>> {
+	new() super(Vector.new(), null) {}
+}
+
+var classClass: Class = null;
+
+def getClassClass() -> Object {
+	if (classClass == null)
+		classClass = Class.new();
+		classClass.fields[0] = classClass;
+	return classClass;
+}
+
+def main(args: Array<string>) -> int {
+	getClassClass().display();
+
+	return 0;
+}
