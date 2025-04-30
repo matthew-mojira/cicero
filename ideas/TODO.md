@@ -50,7 +50,7 @@ Built-in classes
 - [ ] allow mixed virgil and cicero code in methods
 - [ ] add more operations to many classes
 - [ ] element-wise comparison of lists (might require virgil frames to create
-      more frames!)
+      more frames!)--at least there is an example program for now
 
 Maps
 - [ ] add methods to the map class
@@ -94,7 +94,7 @@ Wasm
 - [ ] compile bytecode to Wasm, link wizard, and execute
 
 Potpourri of potentially bigger things
-- [ ] Makefile/build system
+- [X] Makefile/build system
 - [ ] Default values proposal
 - [ ] Object constructors
 - [ ] add an exit primitive
