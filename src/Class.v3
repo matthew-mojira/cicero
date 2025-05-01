@@ -92,6 +92,8 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod1("*",  i,   IntObject.i_mul),
 			 FuncObjects.fromVirgilMethod1("/",  i,   IntObject.i_div),
 			 FuncObjects.fromVirgilMethod1("%",  i,   IntObject.i_mod),
+			 FuncObjects.fromVirgilMethod1("=",  i,   IntObject.i_eq),
+			 FuncObjects.fromVirgilMethod1("!=", i,   IntObject.i_neq),
 			 FuncObjects.fromVirgilMethod1("<",  i,   IntObject.i_lt),
 			 FuncObjects.fromVirgilMethod1("<=", i,   IntObject.i_leq),
 			 FuncObjects.fromVirgilMethod1(">",  i,   IntObject.i_gt),

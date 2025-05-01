@@ -1,67 +1,41 @@
 class IntObject(val: long) extends Object {
-	def display() -> string { return Strings.format1("%d", val); }
-	def isTrue()  -> bool   { return true; }
+	def display() =>Strings.format1("%d", val);
+	def isTrue()  => true;
 
-	def i_succ() -> Result { return Result.OK(IntObjects.getIntObject(val + 1)); }
-	def i_pred() -> Result { return Result.OK(IntObjects.getIntObject(val - 1)); }
-	def i_neg()  -> Result { return Result.OK(IntObjects.getIntObject(-val)); }
-	def i_add(that: IntObject) -> Result {
-		return Result.OK(IntObjects.getIntObject(this.val + that.val));
-	}
-	def i_sub(that: IntObject) -> Result {
-		return Result.OK(IntObjects.getIntObject(this.val - that.val));
-	}
-	def i_mul(that: IntObject) -> Result {
-		return Result.OK(IntObjects.getIntObject(this.val * that.val));
-	}
-	def i_div(that: IntObject) -> Result {
-		if (that.val == 0) {
-			return Result.Exn(ExnObjects.fromVirgil("int.div", divideByZero));
-		}
-		return Result.OK(IntObjects.getIntObject(this.val / that.val));
-	}
-	def i_mod(that: IntObject) -> Result {
-		if (that.val == 0) {
-			return Result.Exn(ExnObjects.fromVirgil("int.mod", divideByZero));
-		}
-		return Result.OK(IntObjects.getIntObject(this.val % that.val));
-	}
-	def i_lt(that: IntObject) -> Result {
-		return Result.OK(BoolObjects.getBoolObject(this.val < that.val));
-	}
-	def i_leq(that: IntObject) -> Result {
-		return Result.OK(BoolObjects.getBoolObject(this.val <= that.val));
-	}
-	def i_gt(that: IntObject) -> Result {
-		return Result.OK(BoolObjects.getBoolObject(this.val > that.val));
-	}
-	def i_geq(that: IntObject) -> Result {
-		return Result.OK(BoolObjects.getBoolObject(this.val >= that.val));
-	}
+	/* arithmetic */
+	def i_succ() => Result.OK(IntObjects.getIntObject(val + 1));
+	def i_pred() => Result.OK(IntObjects.getIntObject(val - 1));
+	def i_neg()  => Result.OK(IntObjects.getIntObject(-val));
+	def i_add(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val + that.val));
+	def i_sub(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val - that.val));
+	def i_mul(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val * that.val));
+	def i_div(that: IntObject) => if (that.val == 0,
+			Result.Exn(ExnObjects.fromVirgil("int.div", divideByZero)),
+			Result.OK(IntObjects.getIntObject(this.val / that.val)));
+	def i_mod(that: IntObject) => if (that.val == 0,
+			Result.Exn(ExnObjects.fromVirgil("int.mod", divideByZero)),
+			Result.OK(IntObjects.getIntObject(this.val % that.val)));
+
+	/* comparisons */
+	/* previously, we didn't need eq/neq defined here because all integer
+	 * objects were canonicalized. Now, only small ones are, hence we still
+	 * need to do a structural comparison */
+	def i_eq(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val == that.val));
+	def i_neq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val != that.val));
+	def i_lt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val <  that.val));
+	def i_leq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val <= that.val));
+	def i_gt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val >  that.val));
+	def i_geq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val >= that.val));
 
 	/* logical */
-	def i_and(that: IntObject) -> Result {
-		return Result.OK(IntObjects.getIntObject(this.val & that.val));
-	}
-	def i_ora(that: IntObject) -> Result {
-		return Result.OK(IntObjects.getIntObject(this.val | that.val));
-	}
-	def i_eor(that: IntObject) -> Result {
-		return Result.OK(IntObjects.getIntObject(this.val ^ that.val));
-	}
-	def i_asl(that: IntObject) -> Result {
-		return Result.OK(IntObjects.getIntObject(this.val << byte.!(that.val)));
-	}
-	def i_lsr(that: IntObject) -> Result {
-		return Result.OK(IntObjects.getIntObject(this.val >>> byte.!(that.val)));
-	}
-	def i_asr(that: IntObject) -> Result {
-		return Result.OK(IntObjects.getIntObject(this.val >> byte.!(that.val)));
-	}
+	def i_and(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val & that.val));
+	def i_ora(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val | that.val));
+	def i_eor(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val ^ that.val));
+	def i_asl(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val <<  byte.!(that.val)));
+	def i_lsr(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val >>> byte.!(that.val)));
+	def i_asr(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val >>  byte.!(that.val)));
 
-	def i_display() -> Result {
-		return Result.OK(StrObjects.fromString(display()));
-	}
+	def i_display() => Result.OK(StrObjects.fromString(display()));
 }
 
 
@@ -70,7 +44,6 @@ component IntObjects {
 	def intObjects = HashMap<long, IntObject>.new(int.!, long.==);
 	def getIntObject(val: long) -> IntObject {
 		if (val > Tiers.maxCachedInt || val < -Tiers.maxCachedInt) {
-			// System.puts(Strings.format1("Uncanonicalized integer: %d\n", val));
 			return IntObject.new(val);
 		}
 
