@@ -15,12 +15,11 @@
 (set richards/tracing false)
 
 (class packet
-  (field BUFSIZE 3)
   (field link ())
-  (field id 0)
+  (field id   0)
   (field kind 0)
-  (field a1 0)
-  (field a2 [0 0 0 0])
+  (field a1   0)
+  (field a2   [0 0 0 0])
   (method (append-to list) {
     (set-field link self ())
     (if (= list ())
@@ -47,10 +46,10 @@
 
 ; task
 (class task
-  (field link ())
-  (field id 0)
-  (field pri 0)
-  (field wkq ())
+  (field link  ())
+  (field id    0)
+  (field pri   0)
+  (field wkq   ())
   (field state 0)
 
   ; omit abstract method `fn`
@@ -76,11 +75,11 @@
       {
         (set-global task/qpkt-count (task/qpkt-count.succ))
 	(set-field link pkt ())
-	(set-field id pkt self.id)
+	(set-field id   pkt self.id)
 
 	(if (= t.wkq ())
 	  {
-            (set-field wkq t pkt)
+            (set-field wkq   t pkt)
 	    (set-field state t (t.state.| task/PKTBIT))
             (if (> t.pri self.pri) t self)
 	  }
@@ -132,16 +131,13 @@
 (func (task/reset) {
   (set-global task/hold-count 0)
   (set-global task/qpkt-count 0)
-  (set-global task/task-list ())
+  (set-global task/task-list  ())
 })
 (func (task/schedule) {
   (set t task/task-list)
   (while (!= t ()) {
-    (puts "\nCount:\n")
-    (println task/qpkt-count)
-    (println task/hold-count)
-    (println (t.class))
-    (println t.state)
+    ; Without this `set`, the program hangs. Why?
+    (set pkt ())
     (cond 
       ((= t.state task/S_WAITPKT) {
         (set pkt t.wkq)
@@ -187,7 +183,7 @@
   (method (fn pkt) {
     (if (= pkt ())
       {
-        (if (= v1 ())
+        (if (= self.v1 ())
 	  (self.wait-task)
 	  ;else
 	  {
@@ -365,13 +361,13 @@
 
 ; main
 (func (richards/main) {
-  (set iterations 1)
-  (while (> iterations 0) {
+  (set iterations 0)
+  (while (< iterations 300) {
     (if (richards/run)
       () ; continue
       (raise "richards error: incorrect results")
     )
-    (set iterations (iterations.pred))
+    (set iterations (iterations.succ))
   })
   0
 })
@@ -401,9 +397,9 @@
 
   (task/schedule)
 
-  (puts "\nCount:\n")
-  (println task/qpkt-count)
-  (println task/hold-count)
+  ;(puts "\nCount:\n")
+  ;(println task/qpkt-count)
+  ;(println task/hold-count)
   (and (= task/qpkt-count 2322) (= task/hold-count 928))
 })
 
