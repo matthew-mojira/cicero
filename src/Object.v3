@@ -68,17 +68,20 @@ class Object {
 		 * maybe we want to allow this */
 		match (this) {
  	 		x: MethodObject => cls = ClassObjects.classMethod;
- 	 		x: BoolObject  => cls = ClassObjects.classBool;
- 	 		x: ClassObject => cls = ClassObjects.classClass;
-	 		x: CodeObject  => cls = ClassObjects.classCode;
- 	 		x: FrameObject => cls = ClassObjects.classFrame;
- 	 		x: FuncObject  => cls = ClassObjects.classFunc;
- 	 		x: IntObject   => cls = ClassObjects.classInt;
- 	 		x: ListObject  => cls = ClassObjects.classList;
- 	 		x: MapObject   => cls = ClassObjects.classMap;
+ 	 		x: BoolObject   => cls = ClassObjects.classBool;
+ 	 		x: ClassObject  => cls = ClassObjects.classClass;
+	 		x: CodeObject   => cls = ClassObjects.classCode;
+	 		x: ExnObject    => cls = ClassObjects.classExn;
+ 	 		x: FrameObject  => cls = ClassObjects.classFrame;
+ 	 		x: FuncObject   => cls = ClassObjects.classFunc;
+ 	 		x: IntObject    => cls = ClassObjects.classInt;
+ 	 		x: ListObject   => cls = ClassObjects.classList;
+ 	 		x: MapObject    => cls = ClassObjects.classMap;
  	 		x: PoopCrapObject => cls = ClassObjects.classPoopCrap;
- 	 		x: StrObject   => cls = ClassObjects.classStr;
+ 	 		x: StrObject    => cls = ClassObjects.classStr;
 		}
+		// sanity check
+		if (cls == null) System.error("init error", "class is still null after initialization");
 
 		/* Get the sequence of superclasses up to base */
 		def classes = Vector<ClassObject>.new();
@@ -117,7 +120,7 @@ class Object {
 				def m = MethodObject.new(this, func.id, func.params, func.code);
 				fields[fieldMap[func.id]] = m;
  			}
- 		}
+		}
 	}
 
 	// returns success

@@ -49,6 +49,7 @@ Represents an exception, which holds a message and a stacktrace.
 
 Methods:
 * `(e.display)`: returns a string representation of the object
+* `(e.stacktrace)`: returns the stacktrace as a list of strings
 
 ## frame
 

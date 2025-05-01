@@ -10,4 +10,10 @@
 (func (tenth) (ninth))
 (func (eleventh) (tenth))
 (func (twelfth) (eleventh))
+
+(try
+  (eighth)
+  e (println (e.stacktrace))
+)
+
 (twelfth)

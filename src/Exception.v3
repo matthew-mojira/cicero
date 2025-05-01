@@ -18,13 +18,8 @@ class ExnObject extends Object {
 		for (i < stacktrace.length) {
 			def range = stacktrace[i].1;
 			def fn = stacktrace[i].0;
-			str.put1("  at %s (", fn);
-			if (range == null) {
-				str.puts("<Virgil code>");
-			} else {
-				str.put3("%s:%d:%d", range.fileName, range.beginLine, range.beginColumn);
-			}
-			str.puts(")\n");
+			str.puts(formatLine(fn, range));
+			str.ln();
 		}
 		System.puts(str.extract());
 	}
@@ -32,19 +27,35 @@ class ExnObject extends Object {
 	def e_display() -> Result {
 		return Result.OK(StrObjects.fromString(display()));
 	}
+	def e_stacktrace() -> Result {
+		return Result.OK(ListObjects.fromArray(stacktrace.send(Ranges.map(_, compose(formatLine, StrObjects.fromString, Object.!<StrObject>)))));
+	}
 }
 
 component ExnObjects {
-	// def typeMismatch(exp: ClassObject, act: ClassObject)
-
 	def fromVirgil(fn: string, msg: string) -> ExnObject {
 		return ExnObject.new(msg, fn, null);
 	}
-
 	// TODO use this
 	def fromStrObject(str: StrObject, fn: string, loc: FileRange) -> ExnObject {
 		def obj = ExnObject.new(null, fn, loc);
 		obj.message = str;
 		return obj;
 	}
+}
+
+def formatLine(fn: string, range: FileRange) -> string {
+	def str = StringBuilder.new();
+	str.put1("  at %s (", fn);
+	if (range == null) {
+		str.puts("<Virgil code>");
+	} else {
+		str.put3("%s:%d:%d", range.fileName, range.beginLine, range.beginColumn);
+	}
+	str.puts(")");
+	return str.extract();
+}
+
+def compose<A, B, C, D>(f: A -> B, g: B -> C, h: C -> D) -> (A -> D) {
+	return fun (x: A) => h(g(f(x)));
 }

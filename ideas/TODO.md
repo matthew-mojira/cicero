@@ -8,7 +8,7 @@ Benchmarking/unit tests
   - [ ] duck typine test
   - [~] higher-order functions (map, fold)
   - [ ] prime sieve
-  - [ ] Richards
+  - [X] Richards
   - [ ] DeltaBlue
   - [ ] Other virgil benchmarks?
 - [ ] add benchmark programs (each program should stress test a different
@@ -45,9 +45,10 @@ Exceptions
 - [X] the stacktrace is reversed?
 - [X] column numbers in stacktrace is incorrect (matches rows)
 - [X] maybe add better information about exceptions in Virgil functions? (name got added)
-- [ ] fix tier0 vs. tier1 stacktrace inconsistency
-- [ ] intern exception strings
-- [ ] allow reflection over stacktrace information
+- [X] fix tier0 vs. tier1 stacktrace inconsistency (=> better bytecode writer!!)
+- [X] intern exception strings
+- [~] allow reflection over stacktrace information (just returns list of lines
+      as strings, not very useful)
 
 Built-in classes
 - [X] override base class methods for `display` and others

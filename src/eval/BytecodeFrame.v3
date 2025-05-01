@@ -38,8 +38,6 @@ class BytecodeFrame extends FrameObject {
 		return v;
 	}
 
-	def debug = false;
-	
 	/* BYTECODE EVALUATOR */
 	def evalBytecode(b: Bytecode) -> Object {
 		def code       = b.bytecode;
@@ -48,7 +46,7 @@ class BytecodeFrame extends FrameObject {
 		def constants  = b.constants;
 		def source     = b.source;
 		
-		if (debug) {
+		if (Tracing.traceBytecodeEvaluation) {
 			System.puts("Evaluating bytecode:\n");
 			System.puts(Strings.format1("Number of locals: %d\n", locals.length));
 			b.inspect();
@@ -64,7 +62,7 @@ class BytecodeFrame extends FrameObject {
 			// Should this go after the handlers?
 			if (isExn()) {
 				if (handlers.empty()) {
-					if (debug) System.puts("returned with exception\n");
+					if (Tracing.traceBytecodeEvaluation) System.puts("returned with exception\n");
 					return null;
 				}
 				def p = handlers.pop();
@@ -80,14 +78,14 @@ class BytecodeFrame extends FrameObject {
 			def bytecode = Ref<Instruction>.at(code, pc);
 			def opcode   = bytecode.opcode;
 			def operand  = bytecode.operand;
-			loc = source.get(pc >> 2);
+			loc = source.get(pc >> 2); // XXX Expensive!
 
 			/* Inline caches */
 			var cache: HashMap<ClassObject, int>;
 			if (Tiers.enableIC)
 				cache = b.cache[pc >> 2];
 
-			if (debug) {
+			if (Tracing.traceBytecodeEvaluation) {
 				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, operand));
 				System.puts("    locals:\n");
 				for (i < locals.length) {
@@ -124,13 +122,13 @@ class BytecodeFrame extends FrameObject {
 					if (globals.has(id)) {
 						stack.push(globals[id]);
 					} else {
-						throw1("unbound global: %s", id);
+						throw(Exceptions.unboundGlobal(id));
 					}
 				}
 				LOAD_LOCAL => {
 					def local = locals[operand];
 					if (local == null)
-						throw1("unbound local: %s", b.locals[operand]);
+						throw(Exceptions.unboundLocal(b.locals[operand]));
 					else
 						stack.push(local);
 				}
@@ -293,13 +291,13 @@ class BytecodeFrame extends FrameObject {
 					if (Tiers.enableIC) {
 						/* Inline cache */
 						if (cache.has(obj.getClass())) {
-							System.puts("[CACHE] cache hit\n");
+							//System.puts("[CACHE] cache hit\n");
 							stack.push(obj.getFieldByIndex(cache[obj.getClass()]));
 						} else {
-							System.puts("[CACHE] cache miss\n");
+							//System.puts("[CACHE] cache miss\n");
 							def v = obj.getField(field);
 							if (v == null) {
-								throw1("name error: unknown field %s", field);
+								throw(Exceptions.missingField(obj, field));
 							} else {
 								cache[obj.getClass()] = obj.getIndex(field);
 								stack.push(v);
@@ -308,7 +306,7 @@ class BytecodeFrame extends FrameObject {
 					} else {
 						def v = obj.getField(field);
 						if (v == null) {
-							throw1("name error: unknown field %s", field);
+							throw(Exceptions.missingField(obj, field));
 						} else {
 							stack.push(v);
 						}
@@ -320,7 +318,7 @@ class BytecodeFrame extends FrameObject {
 					def field = strings[operand];
 
 					if (!obj.setField(field, val)) {
-						throw1("name error: unknown field %s", field);
+						throw(Exceptions.missingField(obj, field));
 					}
 				}
 				CREATE_LIST => {
@@ -341,7 +339,7 @@ class BytecodeFrame extends FrameObject {
 		}
 
 		if (stack.empty()) System.error("eval error", "stack is empty");
-		if (debug) System.puts("RETURN\n");
+		if (Tracing.traceBytecodeEvaluation) System.puts("RETURN\n");
 		return stack.peek();
 	}
 }

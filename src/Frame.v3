@@ -44,10 +44,6 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 	def throw(msg: string) {
 		result = Result.Exn(ExnObject.new(msg, name, loc));
 	}
-	def throw1<T>(msg: string, t1: T) {
-		result = Result.Exn(ExnObject.new(Strings.format1(msg, t1), name, loc));
-	}
-
 	def rethrow(exn: ExnObject) {
 		exn.stacktrace.put((name, loc));
 		result = Result.Exn(exn);
@@ -63,12 +59,12 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 
 	def assertType(exp: ClassObject, val: Object) {
 		if (!val.instanceOf(exp))
-			throw(Strings.format2("type mismatch: expected %s, got %s", exp.display(), val.getClass().display()));
+			throw(Exceptions.typeMismatch(exp, val));
 	}
 
 	def assertArity<T>(argc: int, vals: Range<T>) {
 		if (vals.length != argc)
-			throw(Strings.format2("arity mismatch: expected %d, got %d", argc, vals.length));
+			throw(Exceptions.arityMismatch(argc, vals.length));
 	}
 
 	/* methods */

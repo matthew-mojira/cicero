@@ -1,0 +1,18 @@
+/* common exception strings */
+component Exceptions {
+	def unboundLocal(name: string)              => Strings.format1("unbound local variable: %s", name); 
+	def unboundGlobal(name: string)             => Strings.format1("unbound global variable: %s", name); 
+	def missingField(obj: Object, name: string) => Strings.format2("object of class %s has no field %s", obj.getClass().name, name); 
+	
+	def typeMismatch(exp: ClassObject, act: Object) -> string {
+		return Strings.format2("object of class %s is incompatible with class %s", act.getClass().name, exp.name);
+	}
+	def arityMismatch(exp: int, act: int) -> string {
+		return Strings.format2("expected %d arguments but got %d", exp, act);
+	}
+
+	def noTrueBranch = "cond expression has no true branch";
+	def doNotInstantiateThisClass = "object cannot be instantiated using new expression";
+
+	/* class-specific strings are with the class definitions */
+}

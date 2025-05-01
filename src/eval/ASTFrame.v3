@@ -33,7 +33,7 @@ class ASTFrame extends FrameObject {
 					if (locals.has(id))
 						value = locals[id];
 					else {
-						throw(Strings.format1("unbound local: %s", id));
+						throw(Exceptions.unboundLocal(id));
 						return value;
 					}
 				}
@@ -41,7 +41,7 @@ class ASTFrame extends FrameObject {
 					if (globals.has(id))
 						value = globals[id];
 					else {
-						throw(Strings.format1("unbound global: %s", id));
+						throw(Exceptions.unboundGlobal(id));
 						return value;
 					}
 				}
@@ -184,7 +184,7 @@ class ASTFrame extends FrameObject {
 				}
 
 				if (!sat) {
-					throw("cond error: no true branch");
+					throw(Exceptions.noTrueBranch);
 				}
 			}
 			While(cond, body) => {
@@ -217,7 +217,7 @@ class ASTFrame extends FrameObject {
 
 				def v = obj.getField(field);
 				if (v == null) {
-					throw1("unknown field: %s", field);
+					throw(Exceptions.missingField(obj, field));
 					return value;
 				} else {
 					value = v;
@@ -233,7 +233,7 @@ class ASTFrame extends FrameObject {
 				if (obj.setField(field, val)) {
 					value = val;
 				} else {
-					throw1("unknown field: %s", field);
+					throw(Exceptions.missingField(obj, field));
 					return value;
 				}
 			}

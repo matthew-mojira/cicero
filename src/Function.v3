@@ -47,30 +47,30 @@ def callMethod0<T>(args: Range<Object>, method: T -> Result) -> Result {
 
 def callMethod1<T, A1>(name: string, args: Range<Object>, cst: Array<ClassObject>, method: (T, A1) -> Result) -> Result {
 	if (!args[1].instanceOf(cst[0])) {
-		return Result.Exn(ExnObjects.fromVirgil(name, "type mismatch"));
+		return Result.Exn(ExnObjects.fromVirgil(name, Exceptions.typeMismatch(cst[0], args[1])));
 	}
 	return method(T.!(args[0]), A1.!(args[1]));
 }
 
 def callMethod2<T, A1, A2>(name: string, args: Range<Object>, cst: Array<ClassObject>, method: (T, A1, A2) -> Result) -> Result {
 	if (!args[1].instanceOf(cst[0])) {
-		return Result.Exn(ExnObjects.fromVirgil(name, "type mismatch"));
+		return Result.Exn(ExnObjects.fromVirgil(name, Exceptions.typeMismatch(cst[0], args[1])));
 	}
 	if (!args[2].instanceOf(cst[1])) {
-		return Result.Exn(ExnObjects.fromVirgil(name, "type mismatch"));
+		return Result.Exn(ExnObjects.fromVirgil(name, Exceptions.typeMismatch(cst[1], args[2])));
 	}
 	return method(T.!(args[0]), A1.!(args[1]), A2.!(args[2]));
 }
 
 def callMethod3<T, A1, A2, A3>(name: string, args: Range<Object>, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> Result) -> Result {
 	if (!args[1].instanceOf(cst[0])) {
-		return Result.Exn(ExnObjects.fromVirgil(name, "type mismatch"));
+		return Result.Exn(ExnObjects.fromVirgil(name, Exceptions.typeMismatch(cst[0], args[1])));
 	}
 	if (!args[2].instanceOf(cst[1])) {
-		return Result.Exn(ExnObjects.fromVirgil(name, "type mismatch"));
+		return Result.Exn(ExnObjects.fromVirgil(name, Exceptions.typeMismatch(cst[1], args[2])));
 	}
 	if (!args[3].instanceOf(cst[2])) {
-		return Result.Exn(ExnObjects.fromVirgil(name, "type mismatch"));
+		return Result.Exn(ExnObjects.fromVirgil(name, Exceptions.typeMismatch(cst[2], args[3])));
 	}
 	return method(T.!(args[0]), A1.!(args[1]), A2.!(args[2]), A3.!(args[3]));
 }

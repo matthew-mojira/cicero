@@ -24,6 +24,9 @@ class Bytecode {
 				cache[i] = HashMap.new(ClassObject.hash, ClassObject.==);
 			}
 		}
+		if (Tracing.traceBytecodeCompilation) {
+			inspect();
+		}
 	}
 
 	def compileAST(ast: AST) {
@@ -114,7 +117,7 @@ class Bytecode {
 				// could be problematic if we object lookup observable
 				source.put(loc);
 				putb(Opcode.LOAD_CONST.tag);
-				putO(addConstant(StrObjects.getStrObject("cond error: no true branch")));
+				putO(addConstant(StrObjects.getStrObject(Exceptions.noTrueBranch)));
 				source.put(loc);
 				putb(Opcode.RAISE.tag);
 				putO(0); // no operand
@@ -256,6 +259,7 @@ class Bytecode {
 			List(elems) => {
 				for (elem in elems)
 					compileAST(elem);
+				source.put(loc);
 				putb(Opcode.CREATE_LIST.tag);
 				putO(elems.length);
 			}

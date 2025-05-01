@@ -16,7 +16,7 @@ class ClassObject(
 
 	def c_superclass() -> Result {
 		if (superclass == null) {
-			return Result.Exn(ExnObjects.fromVirgil("no superclass", Strings.format1("%s.superclass", name)));
+			return Result.Exn(ExnObjects.fromVirgil(Strings.format1("%s.superclass", name), "class has no superclass"));
 		} else {
 			return Result.OK(superclass);
 		}
@@ -68,7 +68,8 @@ component ClassObjects {
 	def classCode  = ClassObject.new("code",  classBase, CodeObjects.virgilFail, [],
 			[FuncObjects.fromVirgilMethod0("display", CodeObject.co_display)]);
 	def classExn   = ClassObject.new("exn",   classBase, CodeObjects.virgilFail, [], 
-			[FuncObjects.fromVirgilMethod0("display", ExnObject.e_display)]);
+			[FuncObjects.fromVirgilMethod0("display",    ExnObject.e_display),
+			 FuncObjects.fromVirgilMethod0("stacktrace", ExnObject.e_stacktrace)]);
 	def classFrame = ClassObject.new("frame", classBase, CodeObjects.virgilFail, [],
 			[FuncObjects.fromVirgilMethod0("display", FrameObject.fr_display)]);
 	def classFunc = ClassObject.new("func", classBase, 

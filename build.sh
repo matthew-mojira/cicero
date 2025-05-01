@@ -68,17 +68,17 @@ BUILD_FILE=$(make_build_file)
 
 PREGEN=${PREGEN:=1}
 
-# no language options yet
-LANG_OPTS=""
+LANG_OPTS="-simple-bodies -fun-exprs"
+V3C_OPTS="-symbols -heap-size=999M -stack-size=16M -O3"
 
 # build
 exe=${PROGRAM}.${TARGET}
 if [[ "$TARGET" = "x86-linux" || "$TARGET" = "x86_linux" ]]; then
-    exec v3c-x86-linux -symbols -heap-size=512m -stack-size=1m $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-linux -output=bin/ $SOURCES $BUILD_FILE $TARGET_V3
+    exec v3c-x86-linux $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-linux -output=bin/ $SOURCES $BUILD_FILE $TARGET_V3
 elif [[ "$TARGET" = "x86-64-darwin" || "$TARGET" = "x86_64_darwin" ]]; then
-    exec v3c-x86-64-darwin -symbols -heap-size=700m -stack-size=1m $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-64-darwin -output=bin/ $SOURCES $BUILD_FILE $TARGET_V3
+    exec v3c-x86-64-darwin $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-64-darwin -output=bin/ $SOURCES $BUILD_FILE $TARGET_V3
 elif [[ "$TARGET" = "x86-64-linux" || "$TARGET" = "x86_64_linux" ]]; then
-    v3c-x86-64-linux -symbols -heap-size=700m -stack-size=2m $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $TARGET_X86_64
+    v3c-x86-64-linux $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $TARGET_X86_64
     STATUS=$?
     if [ $STATUS != 0 ]; then
 	exit $STATUS
@@ -94,7 +94,7 @@ elif [[ "$TARGET" == wasm-* ]]; then
 	ls -a ${V3C_PATH/bin\/v3c/bin\/dev\/v3c-wasm-*} | cat
 	exit 1
     fi
-    exec $V3C_WASM_TARGET -symbols -heap-size=200m $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM} -output=bin/ $SOURCES $BUILD_FILE $TARGET_V3
+    exec $V3C_WASM_TARGET $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM} -output=bin/ $SOURCES $BUILD_FILE $TARGET_V3
 elif [ "$TARGET" = "v3i" ]; then
     # check that the sources typecheck
     $V3C $LANG_OPTS $V3C_OPTS $SOURCES $TARGET_V3
