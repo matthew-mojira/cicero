@@ -112,6 +112,7 @@ Potpourri of potentially bigger things
 - [ ] return, break, continue
 - [ ] short-circuiting boolean operators (not methods of bool class)
 - [ ] namespaces?
+- [ ] rename PoopCrap to something more school-appropriate (and maybe Classhole too)
 
 ## Scoping
 
@@ -343,3 +344,48 @@ Possible changes:
 * incomplete function arguments: if fewer than the required number of arguments
   are provided to a function, the remaining arguments could be initialized to
   (). This seems like a bad idea
+
+# Short-circuiting boolean operators
+
+`and` and `or` are usually short-circuiting, but right now they are not since
+it is an operation on the boolean type only. We propose a new syntax feature
+`and` and `or` which prescribe short-circuiting boolean operations on *all*
+values, using the established truthiness rules.
+
+`(and p q)`
+* evaluate `p => v1`
+* if `v1` is a falsy value, the entire expression is `v1`
+* if `v1` is a truthy value, evaluate `p => v2`, the entire expression is `v2`
+
+`(or p q)`
+* evaluate `p => v1`
+* if `v1` is a truth value, the entire expression is `v1`
+* if `v1` is a falsy value, evaluate `p => v2`, the entire expression is `v2`
+
+## How to compile to bytecode
+
+`(and p q)`:
+* evaluate `p`
+* `JUMP_IF_FALSE_PEEK L1` -- reused from while loops
+* evaluate `q`
+`L1`:
+
+`(or p q)`
+* evaluate `p`
+* `JUMP_IF_TRUE_PEEK L2` -- new opcode proposal
+* evaluate `q`
+`L1`:
+
+## Sub-proposal: universal not
+
+`(not x)`
+
+evaluate `x => v`:
+* if `v` is truthy: `false`
+* if `v` is falsy: `true`
+
+## Sub-proposal: custom truthiness definitions
+
+Expose `is-true` as a method which is called on implicitly by the runtime (this
+might be complicated) to allow user-defined classes to define their own methods
+of determining truth.

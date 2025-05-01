@@ -11,6 +11,9 @@ type ASTData {
 
 	case VarGet(id: string, mode: Box<AccessMode>);
 	case VarSet(id: string, mode: Box<AccessMode>, value: AST);
+
+	case And(left: AST, right: AST);
+	case Or(left: AST, right: AST);
 	
 	case Apply(tgt: AST, args: Array<AST>)
 		 { def whichOne() -> string { return "apply"; } }
