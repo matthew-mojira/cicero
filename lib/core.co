@@ -16,6 +16,10 @@
 (func (and p q) (p.and q))
 (func (or p q) (p.or q))
 
+(func (& a b) (a.& b))
+(func (| a b) (a.| b))
+(func (^ a b) (a.^ b))
+
 ; printing utility (wraps around the call to display needed to convert object
 ; to string)
 (func (print o) (puts (o.display)))
