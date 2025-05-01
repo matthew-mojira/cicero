@@ -80,6 +80,20 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 
 component FrameObjects {
 	def newFrame(prev: FrameObject, name: string, code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
+		if (Tracing.traceFunctionCalls) {
+			System.puts(name);
+			System.puts("(");
+			for (i < args.length) {
+				def arg = args[i];
+				System.puts(arg.0);
+				System.puts(" = ");
+				System.puts(arg.1.display());
+				if (i < args.length - 1)
+					System.puts(", ");
+			}
+			System.puts(")\n");
+		}
+
 		var frame: FrameObject;
 		match (code.tier) {
 			-1 => frame = VirgilFrame.new(prev, code, args);
