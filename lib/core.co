@@ -17,6 +17,9 @@
 (func (| a b) (a.| b))
 (func (^ a b) (a.^ b))
 
+; logical not
+(func (not x) (if x false true))
+
 ; printing utility (wraps around the call to display needed to convert object
 ; to string)
 (func (print o) (puts (o.display)))
