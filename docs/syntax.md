@@ -47,6 +47,26 @@ Evaluates `e1`. If it is a truthy value, evaluate `e2`. Loop until `e1`
 evaluates to a falsey value. The value of the entire expression is the value
 from evaluating `e1` during the one time it is false.
 
+## Conditional expressions
+
+## conjunction (and)
+
+```
+(and e1 e2)
+```
+
+This is the short-circuiting logical and operator, using truthiness (so that it
+can handle any object).
+
+## disjunction (or)
+
+```
+(or e1 e2)
+```
+
+This is the short-circuiting logical or operator, using truthiness (so that it
+can handle any object).
+
 ## Chaining evaluation
 
 ```

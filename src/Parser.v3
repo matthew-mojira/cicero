@@ -298,6 +298,20 @@ class Parser extends TextReader {
 
 							return AST.new(ASTData.New(expr),
 								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "and")) {
+							def left = readExpr();
+							def right = readExpr();
+							req1(')');
+
+							return AST.new(ASTData.And(left, right),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+						} else if (Strings.equal(str, "or")) {
+							def left = readExpr();
+							def right = readExpr();
+							req1(')');
+
+							return AST.new(ASTData.Or(left, right),
+								FileRange.new(fileName, startLine, startColumn, line, column));
 						}
 					}
 					_ => ;

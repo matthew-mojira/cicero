@@ -110,7 +110,7 @@ Potpourri of potentially bigger things
 - [ ] print should call field display, not internal Virgil object's 
 - [ ] rename XObjects component (e.g. getIntObject -> fromLong)
 - [ ] return, break, continue
-- [ ] short-circuiting boolean operators (not methods of bool class)
+- [X] short-circuiting boolean operators (not methods of bool class)
 - [ ] namespaces?
 - [ ] rename PoopCrap to something more school-appropriate (and maybe Classhole too)
 

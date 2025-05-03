@@ -67,6 +67,24 @@ class Bytecode {
 					}
 				}
 			}
+			And(left, right) => {
+				compileAST(left);
+				source.put(loc);
+				putb(Opcode.JUMP_IF_FALSE_PEEK.tag);
+				def hole = pos();
+				skipO(); // hole to put jump offset
+				compileAST(right);
+				writeO(hole, pos() - (hole + 3));
+			}
+			Or(left, right) => {
+				compileAST(left);
+				source.put(loc);
+				putb(Opcode.JUMP_IF_TRUE_PEEK.tag);
+				def hole = pos();
+				skipO(); // hole to put jump offset
+				compileAST(right);
+				writeO(hole, pos() - (hole + 3));
+			}
 			Apply(tgt, args) => {
 				compileAST(tgt);
 				source.put(loc);

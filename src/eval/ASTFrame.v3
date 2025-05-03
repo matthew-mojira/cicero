@@ -55,6 +55,30 @@ class ASTFrame extends FrameObject {
 				}
 				value = v;
 			}
+			And(left, right) => {
+				def lval = evalAST(left);
+				if (isExn()) return value;
+
+				if (lval.isTrue()) {
+					def rval = evalAST(right);
+					if (isExn()) return value;
+					value = rval;
+				} else {
+					value = lval;
+				}
+			}
+			Or(left, right) => {
+				def lval = evalAST(left);
+				if (isExn()) return value;
+
+				if (lval.isTrue()) {
+					value = lval;
+				} else {
+					def rval = evalAST(right);
+					if (isExn()) return value;
+					value = rval;
+				}
+			}
 			Apply(tgt, args) => {
 				def tgtVal = evalAST(tgt);
 				if (isExn()) return value;

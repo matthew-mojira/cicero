@@ -146,6 +146,14 @@ class BytecodeFrame extends FrameObject {
 					def top = stack.pop();
 					if (!top.isTrue()) pc += i24.view(operand);
 				}
+				JUMP_IF_TRUE_PEEK => {
+					def top = stack.peek();
+					if (!top.isTrue()) {
+						stack.pop();
+					} else {
+						pc += i24.view(operand);
+					}
+				}
 				JUMP_IF_FALSE_PEEK => {
 					def top = stack.peek();
 					if (top.isTrue()) {

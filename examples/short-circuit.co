@@ -1,0 +1,15 @@
+; and and or are now short-circuiting operators
+
+(and false false)
+(and true false)
+(and false true)
+(and true true)
+(and false (raise "do not evaluate this"))
+(and true "do evaluate this")
+
+(or false false)
+(or true false)
+(or false true)
+(or true true)
+(or true (raise "do not evaluate this"))
+(or false "do evaluate this")

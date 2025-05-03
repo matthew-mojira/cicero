@@ -12,6 +12,7 @@ enum Opcode {
 	CALL,          // [n] number of arguments (not including function!)
 	JUMP,          // [0] offset of pc
 	JUMP_IF_FALSE, // [1] offset of pc
+	JUMP_IF_TRUE_PEEK,  // [1] offset of pc
 	JUMP_IF_FALSE_PEEK, // [1] offset of pc
 	// Exceptions
 	RAISE,         // [1]
