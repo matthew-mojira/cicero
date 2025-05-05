@@ -45,7 +45,6 @@ class ListObject extends Object {
 }
 
 component ListObjects {
-	def l_eq = "(lambda (self other) (cond ((!= (other.class) list) false)    ((!= (self.length) (other.length)) false)    (true {      (set i 0)      (while (< i (self.length)) (if (!= (self.get i) (other.get i)) (set i (+ (self.length) 1)) (set i (i.succ))))      (= i (self.length))    })  ))";
 	def fromArray(array: Array<Object>) -> ListObject {
 		def obj = ListObject.new();
 		obj.list.puta(array);
