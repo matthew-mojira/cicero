@@ -101,6 +101,7 @@ Represents a growable list of objects. The internal structure of the object
 
 Methods:
 * `(l.display)`: returns a string representation of the object
+* `(l.=)`: element-wise equality on another list
 * `(l.get i)`: gets the element of the list at index `i` where `i` is a int
   object. Raises exception if index is out of bounds.
 * `(l.set i o)`: sets object `o` at index `i` (if in bounds)
@@ -138,6 +139,8 @@ Methods:
 * `(o.getclass)`: gets the underlying class for this object. Note that even
   though this is defined only in the base class, it will return the lowest
   subclass.
+* `(o.get-field)`: dynamic field lookup on an object, where the argument must
+  be a string of the name of the field to look up
 * `(o1.= o2)`: returns if `o2` is exactly the same object (compared through
   internal reference comparison). Note that some classes canonicalize their
   possible values, so that this form of equality is sufficient.

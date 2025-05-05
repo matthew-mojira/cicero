@@ -31,6 +31,7 @@ class ClassObject(
 
 def b:  Array<ClassObject> = Array.new(1);
 def o:  Array<ClassObject> = Array.new(1);
+def s:  Array<ClassObject> = Array.new(1);
 def i:  Array<ClassObject> = Array.new(1);
 def io: Array<ClassObject> = Array.new(2);
 
@@ -45,12 +46,12 @@ component ClassObjects {
 			// cannot initialize Func (or underlying Code) because the class doesn't exist yet
 			// we can refactor to reduce the need for the FuncObject, but not the CodeObject
 
-			// These are the first five fields of any object.
-			[FuncObjects.fromVirgilMethod0("class",   Object.o_getclass), // 0
-			 FuncObjects.fromVirgilMethod0("fields",  Object.o_fields),   // 1
-			 FuncObjects.fromVirgilMethod0("display", Object.o_display),  // 2
-			 FuncObjects.fromVirgilMethod1("=",  o,   Object.o_eq),       // 3
-			 FuncObjects.fromVirgilMethod1("!=", o,   Object.o_neq)       // 4
+			[FuncObjects.fromVirgilMethod0("class",        Object.o_getclass), // 0
+			 FuncObjects.fromVirgilMethod0("fields",       Object.o_fields),   // 1
+			 FuncObjects.fromVirgilMethod0("display",      Object.o_display),  // 2
+			 FuncObjects.fromVirgilMethod1("get-field", s, Object.o_getfield), // 3
+			 FuncObjects.fromVirgilMethod1("=",  o,        Object.o_eq),       // 4
+			 FuncObjects.fromVirgilMethod1("!=", o,        Object.o_neq)       // 5
 			]);
 	def classBool =	ClassObject.new("bool", classBase, 
 			CodeObjects.virgilFail, 
@@ -142,5 +143,6 @@ def stuff2 = b[0]  = ClassObjects.classBool;
 def stuff3 = i[0]  = ClassObjects.classInt;
 def stuff4 = io[0] = ClassObjects.classInt;
 def stuff5 = io[1] = ClassObjects.classBase;
+def stuff6 = s[0] = ClassObjects.classStr;
 
 

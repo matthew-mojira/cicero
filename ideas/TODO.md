@@ -113,6 +113,7 @@ Potpourri of potentially bigger things
 - [X] short-circuiting boolean operators (not methods of bool class)
 - [ ] namespaces?
 - [ ] rename PoopCrap to something more school-appropriate (and maybe Classhole too)
+- [ ] check if `=` and `!=` will type error on ints (be consistent)
 
 ## Scoping
 
