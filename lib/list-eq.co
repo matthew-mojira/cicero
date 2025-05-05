@@ -1,0 +1,18 @@
+; list equality implementation
+; note that since this implementation is in cicero, it uses the same accessor
+; methods which are at risk of being overwritten by the user!
+(lambda (self other)
+  (cond
+    ((!= (other.class) list) false)
+    ((!= (self.length) (other.length)) false)
+    (true {
+      (set i 0)
+      (while (< i (self.length))
+        (if (!= (self.get i) (other.get i))
+          (set i (+ (self.length) 1))
+  	  (set i (i.succ)))
+      )
+      (= i (self.length))
+    })
+  )
+)

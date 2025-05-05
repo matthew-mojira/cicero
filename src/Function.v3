@@ -37,6 +37,20 @@ component FuncObjects {
 	def fromVirgilMethod3<T, A1, A2, A3>(name: string, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> Result) -> FuncObject {
 		return fromVirgil(name, ["arg1", "arg2", "arg3"], callMethod3(name, _, cst, method));
 	}
+	def fromCiceroMethod(id: string, cicero: string) -> FuncObject {
+		// parse
+		var reader = Parser.new(null, cicero);
+		if (reader.ok) {
+			def code = reader.getExprs()[0]; // XXX only use first read item
+			def fn = ASTData.Func.!(code.ast.data);
+
+			if (Tiers.enableTier1) fn.body.compile(Arrays.prepend("self", fn.params));
+			return newFO(id, Arrays.deleteAt(fn.params, 0), fn.body);
+		} else {
+			System.error("init error", "failed to parse built-in cicero method");
+			return null;
+		}
+	}
 }
 
 def callMethod0<T>(args: Range<Object>, method: T -> Result) -> Result {

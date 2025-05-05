@@ -52,9 +52,9 @@ Exceptions
 
 Built-in classes
 - [X] override base class methods for `display` and others
-- [ ] allow mixed virgil and cicero code in methods
+- [X] allow mixed virgil and cicero code in methods
 - [ ] add more operations to many classes
-- [ ] element-wise comparison of lists (might require virgil frames to create
+- [X] element-wise comparison of lists (might require virgil frames to create
       more frames!)--at least there is an example program for now
 
 Maps

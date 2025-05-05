@@ -81,13 +81,12 @@ class Object {
  	 		x: StrObject    => cls = ClassObjects.classStr;
 		}
 		// sanity check
-		if (cls == null) System.error("init error", "class is still null after initialization");
+		if (CompileOptions.sanityChecks)
+			if (cls == null) System.error("init error", "class is still null after initialization");
 
 		/* Get the sequence of superclasses up to base */
 		def classes = Vector<ClassObject>.new();
  		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
-// 			System.puts(clazz.name);
-// 			System.ln();
 			classes.put(clazz);
 		}
 		/* Figure out how much space needs to be allocated for fields. */
@@ -100,21 +99,19 @@ class Object {
 			// methods are not initialized but a slot is allocated
 			for (method in clazz.classMethods) {
 				if (!fieldMap.has(method.id))
-					
 					fieldMap[method.id] = i++;
 			}
 		}
 		fields = Array.new(i);
-		/* Initialization only sets classes and allocates space for fields.
-		 * Setting the fields are done later. Methods are always lazily
-		 * initialized; a lookup on a method will always fail the first time.
-		 * When, the lookup fails, it goes to the class where it expects a
-		 * method definition to be available by that name. Non-method fields
+		/* Initialization sets classes, allocates space for fields, and
+		 * initializes methods. Setting the fields are done later. 
+		 * Non-method fields
 		 * are eagerly initialized by the runtime for user-defined classes.
 		 * No built-in class makes use of non-method fields, but maybe this
 		 * could change if we expose *primitive* fields which are also
 		 * Cicero objects.
 		 */
+		// Methods are initialized when class is initialized
  		for (clazz in classes.copy()) {
  			for (func in clazz.classMethods) {
 				def m = MethodObject.new(this, func.id, func.params, func.code);
@@ -200,6 +197,9 @@ class Object {
 
 
 component Objects {
+	def display = 2;
+	def eq = 3;
+	
 	def newObject(cls: ClassObject) -> Object {
 		def obj = Object.new();
 		obj.cls = cls;

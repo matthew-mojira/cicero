@@ -69,7 +69,7 @@ BUILD_FILE=$(make_build_file)
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="-symbols -heap-size=999M -stack-size=16M -O3"
+V3C_OPTS="-symbols -heap-size=999M -stack-size=16M"
 
 # build
 exe=${PROGRAM}.${TARGET}

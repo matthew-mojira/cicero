@@ -1,4 +1,4 @@
 component Profiling {
 	def profileBytecode = false;
-	def bytecodeMap: Array<int> = Array.new(21);
+	def bytecodeMap: Array<int> = Array.new(22);
 }

@@ -22,7 +22,11 @@ component BoolObjects {
 	def trueObject  = BoolObject.new(true);
 	def falseObject = BoolObject.new(false);
 
+	// TODO deprecate this
 	def getBoolObject(b: bool) -> BoolObject {
+		return fromBool(b);
+	}
+	def fromBool(b: bool) -> BoolObject {
 		return if(b, trueObject, falseObject);
 	}
 }

@@ -44,11 +44,13 @@ component ClassObjects {
 			[],
 			// cannot initialize Func (or underlying Code) because the class doesn't exist yet
 			// we can refactor to reduce the need for the FuncObject, but not the CodeObject
-			[FuncObjects.fromVirgilMethod0("class",   Object.o_getclass), 
-			 FuncObjects.fromVirgilMethod0("fields",  Object.o_fields),
-			 FuncObjects.fromVirgilMethod0("display", Object.o_display),
-			 FuncObjects.fromVirgilMethod1("=",  o,   Object.o_eq),
-			 FuncObjects.fromVirgilMethod1("!=", o,   Object.o_neq)
+
+			// These are the first five fields of any object.
+			[FuncObjects.fromVirgilMethod0("class",   Object.o_getclass), // 0
+			 FuncObjects.fromVirgilMethod0("fields",  Object.o_fields),   // 1
+			 FuncObjects.fromVirgilMethod0("display", Object.o_display),  // 2
+			 FuncObjects.fromVirgilMethod1("=",  o,   Object.o_eq),       // 3
+			 FuncObjects.fromVirgilMethod1("!=", o,   Object.o_neq)       // 4
 			]);
 	def classBool =	ClassObject.new("bool", classBase, 
 			CodeObjects.virgilFail, 
@@ -109,6 +111,7 @@ component ClassObjects {
 			CodeObjects.virgilFail, 
 			[], 
 			[FuncObjects.fromVirgilMethod0("display", ListObject.l_display),
+			 FuncObjects.fromCiceroMethod ("=",       ListObjects.l_eq),
 			 FuncObjects.fromVirgilMethod1("get", i,  ListObject.l_get),
 			 FuncObjects.fromVirgilMethod2("set", io, ListObject.l_set),
 			 FuncObjects.fromVirgilMethod1("put", o,  ListObject.l_put),
