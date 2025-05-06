@@ -20,8 +20,17 @@ class IntObject(val: long) extends Object {
 	/* previously, we didn't need eq/neq defined here because all integer
 	 * objects were canonicalized. Now, only small ones are, hence we still
 	 * need to do a structural comparison */
-	def i_eq(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val == that.val));
-	def i_neq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val != that.val));
+	def i_eq(that: Object) -> Result {
+		if (!that.instanceOf(ClassObjects.classInt))
+			return Result.OK(BoolObjects.falseObject);
+		return Result.OK(BoolObjects.getBoolObject(this.val == IntObject.!(that).val));
+	}
+	def i_neq(that: Object) -> Result {
+		if (!that.instanceOf(ClassObjects.classInt))
+			return Result.OK(BoolObjects.falseObject);
+		return Result.OK(BoolObjects.getBoolObject(this.val != IntObject.!(that).val));
+	}
+
 	def i_lt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val <  that.val));
 	def i_leq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val <= that.val));
 	def i_gt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val >  that.val));
