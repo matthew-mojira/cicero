@@ -27,7 +27,7 @@ class IntObject(val: long) extends Object {
 	}
 	def i_neq(that: Object) -> Result {
 		if (!that.instanceOf(ClassObjects.classInt))
-			return Result.OK(BoolObjects.falseObject);
+			return Result.OK(BoolObjects.trueObject);
 		return Result.OK(BoolObjects.getBoolObject(this.val != IntObject.!(that).val));
 	}
 
