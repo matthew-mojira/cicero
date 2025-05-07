@@ -1,4 +1,5 @@
 enum Opcode {
+	NOP,
 	// Loads
 	LOAD_CONST,    // [0] index into the constant pool
 	LOAD_GLOBAL,   // [0] index into the string pool
@@ -27,7 +28,18 @@ enum Opcode {
 	POP,           // [1] how many values to pull
 	DUPE,          // index of element to dupe to top of stack (0 = top)
 	SWAP,          // index of element to swap top of stack with (0 = top)
-
 	// should typechecking be done as a bytecode? or can the bytecodes
 	// just sometimes raise exceptions
 }
+
+component Opcodes {
+	def map: Array<Opcode> = Array.new(23); // XXX update this with the number of opcodes
+}
+
+def nothing() -> int {
+	for (op in Opcode) {
+		Opcodes.map[op.tag] = op;
+	}
+	return 1;
+}
+def nothing2 = nothing();

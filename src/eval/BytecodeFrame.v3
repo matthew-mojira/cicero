@@ -76,14 +76,17 @@ class BytecodeFrame extends FrameObject {
 
 			// Fetch
 			def bytecode = Ref<Instruction>.at(code, pc);
-			def opcode   = bytecode.opcode;
 			def operand  = bytecode.operand;
 			loc = source.get(pc >> 2); // XXX Expensive!
 
 			/* Inline caches */
 			var cache: HashMap<ClassObject, int>;
-			if (Tiers.enableIC)
-				cache = b.cache[pc >> 2];
+
+			// FIXME GRP believes this read is the opcode
+ 			if (Tiers.enableIC)
+ 				cache = b.cache[pc >> 2];
+
+			def opcode   = bytecode.opcode;
 
 			if (Tracing.traceBytecodeEvaluation) {
 				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, operand));
@@ -116,6 +119,7 @@ class BytecodeFrame extends FrameObject {
 
 			pc += 4;
 			match (opcode) {
+				NOP => ;
 				LOAD_CONST => stack.push(constants[operand]);
 				LOAD_GLOBAL => {
 					def id = strings[operand];

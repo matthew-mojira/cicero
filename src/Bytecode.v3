@@ -15,6 +15,12 @@ class Bytecode {
 
 	new(ast: AST, params: Array<string>) {
 		locals.puta(params);
+		// put a bunch of NOPs at start of function
+		for (i < 100) {
+			source.put(null);
+			putb(Opcode.NOP.tag);
+			putO(0x123456);
+		}
 		compileAST(ast);
 		bytecode = writer.copy();
 		if (Tiers.enableIC) {
@@ -25,6 +31,7 @@ class Bytecode {
 			}
 		}
 		if (Tracing.traceBytecodeCompilation) {
+			System.puts("== Bytecode compilation ==\n");
 			inspect();
 		}
 	}
@@ -341,7 +348,9 @@ class Bytecode {
 			def loc = source[pc >> 2];
 
 			System.puts(Strings.format3("+%d: %s %d", pc, opcode.name, operand));
-			System.puts(Strings.format2(" (%d:%d)\n", loc.beginLine, loc.beginColumn));
+			if (loc != null)
+				System.puts(Strings.format2(" (%d:%d)", loc.beginLine, loc.beginColumn));
+			System.ln();
 			
 			pc += 4;
 			// dispatch on bytecode
