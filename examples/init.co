@@ -1,0 +1,9 @@
+(class X
+  (field x self.y)
+  (field y "thing"))
+
+(new X)
+(set a (new X))
+a.x
+a.y
+a.x

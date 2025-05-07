@@ -150,6 +150,15 @@ Methods:
 
 Class of the unit value, PoopCrap.
 
+Methods:
+* `(u.display)`: returns a string representation for this object.
+
 ## str
 
 Represents a string.
+
+Methods:
+* `(s.display)`: returns a string representation for this object.
+* `(s.+ s)`: concatenates this string with another string
+
+

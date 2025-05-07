@@ -74,6 +74,7 @@ Better bytecode
 Better functions
 - [X] anonymous functions
 - [ ] closures (allowing recursion for a function not at the top level)
+  - [ ] two-pass nonlocal detection
 - [ ] allow (mutation of) nonlocal variables
 - [ ] optional arguments
 - [ ] variadic functions
@@ -101,6 +102,7 @@ Wasm
 
 Potpourri of potentially bigger things
 - [X] Makefile/build system
+- [ ] anonymous classes
 - [ ] Default values proposal
 - [ ] Object constructors
 - [ ] add an exit primitive
@@ -113,91 +115,89 @@ Potpourri of potentially bigger things
 - [X] short-circuiting boolean operators (not methods of bool class)
 - [ ] namespaces?
 - [ ] rename PoopCrap to something more school-appropriate (and maybe Classhole too)
-- [ ] check if `=` and `!=` will type error on ints (be consistent)
+- [X] check if `=` and `!=` will type error on ints (be consistent)
 
-## Scoping
+## nonlocal variables
 
-There are two scopes:
+The final plan for nonlocal variables:
 
-* global scope
-* local scope
-
-The global scope is local to the first frame of execution. Each new frame
-creates its own local scope. 
-
-### Scope within a function
-
-There is only one scope for a function. Sub-clauses may assign variables
-accessible outside the lexical scope of the clause, leading to situations where
-you may reference a variable without it being assigned:
+A variable is nonlocal if it is not a local in the current scope but it is
+local in the enclosing scope (note that if the enclosing scope is the top-level
+all variables declared in that scope are global, so there can be no nonlocals).
+We might find it useful in situations like this:
 
 ```
-(func (f x) {
-    (if (= x 0)
-        (set y x)
-        () ; PoopCrap
-    )
-    y  ; not defined if x != 0
-})
+(func (add-n n)
+  (lambda (x) (+ x n))) ; n is non-local captured from above scope
 ```
 
-Sets and gets are now split into local and global scopes (giving `local-get`,
-`local-set`, `global-get`, and `global-set`, much like Wasm!). So if we write
-a variable `x`, how do we know what it is?
+Nonlocal variables must be captured from the enclosing scope. The following
+items are eligible for capture:
+* `func`
+* `lambda`
+* in a class definition (maybe not preferable?)
+  * `field`
+  * `init`
+  * `method`
 
-By default, any access is global:
-```
-(func (f x)
-  y) ; access to `y` is global
-```
-Unless:
-1. the variable is already a parameter to the function
-2. at *any* point in the function, there is a set.
-```
-(func (f x) {
-  x ; local
-  y ; global
-  z ; local
-  (set z 1) ; local
-  z ; local
-})
-```
-We now introduce two features, `global-get` and `global-set`, to get around
-possible restrictions.
-```
-(func (f x) {
-  x ; local
-  y ; global
-  z ; local
-  (set z 1) ; local
-  (global-get z) ; global
-  (global-set z 2) ; global
-  z ; local
-})
-```
-Use of `global-get` is strictly necessary when a `set` turns a variable from
-being global to being local. This is slightly simpler than the `global` feature
-of Python.
+Unlike Python, we will not allow the enclosing scope to modify a nonlocal
+variable, that is, no `set-nonlocal` or anything like that.
 
-### Closures
+What has to be updated?
 
-Function expressions are not closures. We should probably capture the
-environment, and use something similar to `nonlocal` in Python to allow
-mutation of the free variables. The tricky part is that a function may outlive
-the outer scope of the variables it has access to.
+### AST
 
-Also, if there are two functions which use the same free variable, and we
-mutate from one, does that affect the other?
+In the AST, `Func` and `Class` need to be updated to include the list of
+variables that need to be captured. We must also add a `Nonlocal` access mode
+to variable accesses.
+
+### Parser
+
+In the Parser, we must detect nonlocal accesses. This is tricky because a
+naive single-pass approach will fail to detect local set later:
+
 ```
-(func (f x)
-  (set p 1)
-  (func (g x)
-    p) ; nonlocal access
-  (func (h y)
-    (nonlocal-set p)) ; does this set `p` in `g`?
-)
+{ 
+  (lambda (y) (+ x y)) ; x is parsed as a global access
+  (set x 1) ; x now local!
+}
 ```
 
+The parser must also collect the set of nonlocal variables which need to be
+captured.
+
+### Objects
+
+Function and class Objects (in Cicero) must now include a mapping of the
+captured variables to the value that was captured. Note that built-in classes
+and functions don't have any captured variables (yet?).
+
+Classes need to be changed so that it doesn't use `FuncObjects` as holes for
+methods.
+
+### AST evaluator
+
+The AST evaluator currently does a trivial restructuring from AST to
+`FuncObject`. That will need to be augmented with a capturing process. Same
+for constructing `ClassObject`s. Notably, this may now fail if the captured
+variable has not yet been bound!
+
+### Bytecode evaluator
+
+This is going to be more complicated. Currently, functions are translated into
+`FuncObject`s at compile time. Classes are translated into classholes. We will
+need to do a similar thing in turning functions into funcholes.
+
+We add a new opcode, `CREATE_FUNCTION`, that handles this. Its operand is an
+index into a funchole table that determines how many locals to pop from the
+stack to put as nonlocals in the function object. That also means we need to
+either (1) load the bound variables on the stack or (2) use the information
+in the funchole to determine how to grab the bound variables from the locals.
+
+Something similar for upgrading classholes to handle bound variables too,
+except that there are three places where bound variables can be used.
+
+Also, we need a `LOAD_FREE_VAR` instruction for nonlocal reads.
 
 ## to decouple or not to decouple?
 
@@ -346,7 +346,7 @@ Possible changes:
   are provided to a function, the remaining arguments could be initialized to
   (). This seems like a bad idea
 
-# Short-circuiting boolean operators
+## Short-circuiting boolean operators
 
 `and` and `or` are usually short-circuiting, but right now they are not since
 it is an operation on the boolean type only. We propose a new syntax feature
@@ -363,7 +363,7 @@ values, using the established truthiness rules.
 * if `v1` is a truth value, the entire expression is `v1`
 * if `v1` is a falsy value, evaluate `p => v2`, the entire expression is `v2`
 
-## How to compile to bytecode
+### How to compile to bytecode
 
 `(and p q)`:
 * evaluate `p`
@@ -377,7 +377,7 @@ values, using the established truthiness rules.
 * evaluate `q`
 `L1`:
 
-## Sub-proposal: universal not
+### Sub-proposal: universal not
 
 `(not x)`
 
@@ -385,7 +385,7 @@ evaluate `x => v`:
 * if `v` is truthy: `false`
 * if `v` is falsy: `true`
 
-## Sub-proposal: custom truthiness definitions
+### Sub-proposal: custom truthiness definitions
 
 Expose `is-true` as a method which is called on implicitly by the runtime (this
 might be complicated) to allow user-defined classes to define their own methods

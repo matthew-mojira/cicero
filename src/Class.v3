@@ -129,7 +129,8 @@ component ClassObjects {
 	def classPoopCrap = ClassObject.new("poopcrap", classBase, CodeObjects.virgilFail, [], 
 			[FuncObjects.fromVirgilMethod0("display", PoopCrapObject.pc_display)]);
 	def classStr = ClassObject.new("str", classBase, CodeObjects.virgilFail, [],
-			[FuncObjects.fromVirgilMethod0("display", StrObject.s_display)]);
+			[FuncObjects.fromVirgilMethod0("display", StrObject.s_display),
+			 FuncObjects.fromVirgilMethod1("+", s, StrObject.s_concat)]);
 
 
 	/* --- */
