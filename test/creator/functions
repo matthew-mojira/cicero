@@ -1,0 +1,27 @@
+; functions
+(func (id x) x)
+(func (apply f x) (f x))
+--
+=> <func 'id'>
+=> <func 'apply'>
+==
+(id 10)
+--
+=> 10
+--
+(id id)
+--
+=> <func 'id'>
+--
+(apply id 10)
+--
+=> 10
+--
+(apply id apply)
+--
+=> <func 'apply'>
+--
+(apply id id)
+--
+=> <func 'id'>
+--

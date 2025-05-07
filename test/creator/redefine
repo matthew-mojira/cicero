@@ -1,0 +1,9 @@
+; redefine things for the base classes
+==
+(set-field not false false)
+false.not
+--
+=> false
+=> false
+--
+

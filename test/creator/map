@@ -1,0 +1,42 @@
+; map as in map over a list, not the unimplemented map type!
+(func (map xs f) {
+  (set i 0)
+  (set ys [])
+  (while (< i (xs.length)) {
+    (ys.put (f (xs.get i)))
+    (set i (i.succ))
+  })
+  ys
+})
+--
+=> <func 'map'>
+==
+; identity
+(map [1 2 3] (lambda (x) x))
+--
+=> [1, 2, 3]
+--
+; identity
+(map [1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 ] (lambda (x) x))
+--
+=> [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
+--
+; display
+(map [1 2 3 false "bingo" map] (lambda (x) x.display))
+--
+=> [<method 'display'>, <method 'display'>, <method 'display'>, <method 'display'>, <method 'display'>, <method 'display'>]
+--
+; display
+(map [1 2 3 false "bingo" map] (lambda (x) (x.display)))
+--
+=> ["1", "2", "3", "false", ""bingo"", "<func 'map'>"]
+--
+; get all types
+(map [1 2 3 false "bingo" map] (lambda (x) ((get-field name (x.class)))))
+--
+=> ["int", "int", "int", "bool", "str", "func"]
+--
+(map [] (lambda (x) (puts "no talking!")))
+--
+=> []
+--

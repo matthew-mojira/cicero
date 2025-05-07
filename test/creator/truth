@@ -1,0 +1,151 @@
+(func (istrue b)
+  (if b () (raise "this is not true!")))
+(func (isfalse b)
+  (if b (raise "this is so wrong!") ()))
+--
+=> <func 'istrue'>
+=> <func 'isfalse'>
+==
+(istrue true)
+--
+=> <poopcrap>
+--
+(istrue 1)
+--
+=> <poopcrap>
+--
+(istrue -1)
+--
+=> <poopcrap>
+--
+(istrue 0)
+--
+=> <poopcrap>
+--
+(istrue (+ 349343 (- 384 (* 3 93570))))
+--
+=> <poopcrap>
+--
+(istrue "true")
+--
+=> <poopcrap>
+--
+(istrue "false")
+--
+=> <poopcrap>
+--
+(istrue (lambda (please be not true) false))
+--
+=> <poopcrap>
+--
+(istrue istrue)
+--
+=> <poopcrap>
+--
+(istrue isfalse)
+--
+=> <poopcrap>
+--
+(istrue ((lambda (x) { false x }) true))
+--
+=> <poopcrap>
+--
+(istrue ((lambda (x) { false false false false false false false false x }) true))
+--
+=> <poopcrap>
+--
+(istrue { false false false false false false false false false false false 1 })
+--
+=> <poopcrap>
+--
+(istrue { (set flase true) false false false false flase false false flase })
+--
+=> <poopcrap>
+--
+(istrue (try { false (raise "false") false } e e))
+--
+=> <poopcrap>
+--
+(class X)
+(istrue X)
+--
+=> <class 'X'>
+=> <poopcrap>
+--
+(class X)
+(istrue (new X))
+--
+=> <class 'X'>
+=> <poopcrap>
+--
+(class X
+  (method (bad world) ()))
+(set x (new X))
+(istrue x.bad)
+--
+=> <class 'X'>
+=> <object>
+=> <poopcrap>
+--
+(istrue [])
+--
+=> <poopcrap>
+--
+(istrue [false])
+--
+=> <poopcrap>
+--
+(istrue [false false false])
+--
+=> <poopcrap>
+--
+(istrue (istrue.fields))
+--
+=> <poopcrap>
+--
+(istrue (istrue.name))
+--
+=> <poopcrap>
+--
+(istrue (istrue.code))
+--
+=> <poopcrap>
+--
+(istrue base)
+--
+=> <poopcrap>
+--
+(istrue class)
+--
+=> <poopcrap>
+--
+(isfalse false)
+--
+=> <poopcrap>
+--
+(isfalse ())
+--
+=> <poopcrap>
+--
+(isfalse ((lambda (poop crap) ()) 76 81))
+--
+=> <poopcrap>
+--
+(isfalse { (set x false) (set y x) })
+--
+=> <poopcrap>
+--
+(set x 100000)
+(isfalse (while (!= x 0) (set x (x.pred))))
+--
+=> 100000
+=> <poopcrap>
+--
+(isfalse (not true))
+--
+=> <poopcrap>
+--
+(isfalse (true.not))
+--
+=> <poopcrap>
+--

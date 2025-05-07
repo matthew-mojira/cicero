@@ -1,0 +1,83 @@
+; fibonacci, two versions
+
+; recursive and slow
+(func (fib n) (cond
+  ((< n 0) (raise "negative number passed to fib"))
+  ((< n 2) n)
+  (true (+ (fib (- n 1)) (fib (- n 2))))))
+
+; memoized
+(set values [0 1])
+(func (fib-memo n) (cond
+  ((< n 0) (raise "negative number passed to fib"))
+  ((< n (values.length)) (values.get n))
+  (true {
+    (values.put (+ (fib-memo (- n 1)) (fib-memo (- n 2))))
+    (values.get n)
+  })
+))
+--
+=> <func 'fib'>
+=> [0, 1]
+=> <func 'fib-memo'>
+==
+(= (fib 0) (fib-memo 0))
+(fib-memo 0)
+--
+=> true
+=> 0
+--
+(= (fib 1) (fib-memo 1))
+(fib-memo 1)
+--
+=> true
+=> 1
+--
+(= (fib 2) (fib-memo 2))
+(fib-memo 2)
+--
+=> true
+=> 1
+--
+(= (fib 3) (fib-memo 3))
+(fib-memo 3)
+--
+=> true
+=> 2
+--
+(= (fib 4) (fib-memo 4))
+(fib-memo 4)
+--
+=> true
+=> 3
+--
+(= (fib 5) (fib-memo 5))
+(fib-memo 5)
+--
+=> true
+=> 5
+--
+(= (fib 10) (fib-memo 10))
+(fib-memo 10)
+--
+=> true
+=> 55
+--
+(= (fib 15) (fib-memo 15))
+(fib-memo 15)
+--
+=> true
+=> 610
+--
+(= (fib 20) (fib-memo 20))
+(fib-memo 20)
+--
+=> true
+=> 6765
+--
+(= (fib 25) (fib-memo 25))
+(fib-memo 25)
+--
+=> true
+=> 75025
+--

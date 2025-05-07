@@ -1,0 +1,49 @@
+==
+true
+--
+=> true
+--
+false
+--
+=> false
+--
+(false.not)
+--
+=> true
+--
+(true.not)
+--
+=> false
+--
+(false.and false)
+--
+=> false
+--
+(false.and true)
+--
+=> false
+--
+(true.and false)
+--
+=> false
+--
+(true.and true)
+--
+=> true
+--
+(false.or false)
+--
+=> false
+--
+(false.or true)
+--
+=> true
+--
+(true.or false)
+--
+=> true
+--
+(true.or true)
+--
+=> true
+--

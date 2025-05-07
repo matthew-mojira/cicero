@@ -14,6 +14,11 @@ Benchmarking/unit tests
 - [ ] add benchmark programs (each program should stress test a different
       component and capture a potential bottleneck in the system)
 - [ ] run benchmarks
+- [ ] test suite holes
+  - [ ] ints: all methods, overflow/underflow, direct method access, bitshifts,
+        large + arithmetic comparisons
+  - [ ] redefining things in the base class, especially determining what is
+        canoncalized
 
 Optimizations in the tier1 bytecode
 - [ ] determine what optimizations are available

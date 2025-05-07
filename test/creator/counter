@@ -1,0 +1,76 @@
+; simple class and method
+(class counter
+  (field value 0)
+  (method (increment)
+    (set-field value self (self.value.succ)))
+  (method (reset)
+    (set-field value self 0))
+)
+(set c (new counter))
+--
+=> <class 'counter'>
+=> <object>
+==
+c.value
+c.increment
+--
+=> 0
+=> <method 'increment'>
+--
+(c.increment)
+(c.increment)
+(c.increment)
+(c.increment)
+(c.increment)
+(c.increment)
+c.value
+--
+=> 1
+=> 2
+=> 3
+=> 4
+=> 5
+=> 6
+=> 6
+--
+;; stress test
+(set i 0)
+(while (< i 10000) {
+  (c.increment)
+  (set i (i.succ))
+})
+c.value
+--
+=> 0
+=> false
+=> 10000
+--
+;; 2d stress test
+(set i 0)
+(while (< i 1000) {
+  (set j 0)
+  (c.reset)
+  (while (< j 10000) {
+    (c.increment)
+    (set j (j.succ))
+  })
+  (set i (i.succ))
+})
+c.value
+--
+=> 0
+=> false
+=> 10000
+--
+;; stress test
+(set i 0)
+(while (< i 100000) {
+  (c.increment)
+  (set i (i.succ))
+})
+c.value
+--
+=> 0
+=> false
+=> 100000
+--

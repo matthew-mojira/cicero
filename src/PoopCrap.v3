@@ -1,7 +1,7 @@
 class PoopCrapObject extends Object {
 	def display() -> string { return "<poopcrap>"; }
 	def isTrue()  -> bool   { return false; }
-	def u_display() => return Result.OK(StrObjects.fromString(display()));
+	def u_display() => Result.OK(StrObjects.fromString(display()));
 }
 
 component PoopCrapObjects {

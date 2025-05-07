@@ -89,7 +89,7 @@ echo "}" >> "$CICERO_METHODS"
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="-symbols -heap-size=999M -stack-size=16M"
+V3C_OPTS="-symbols -heap-size=1024M -stack-size=16M"
 
 # build
 exe=${PROGRAM}.${TARGET}
