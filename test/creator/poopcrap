@@ -1,0 +1,11 @@
+==
+()
+--
+=> <poopcrap>
+--
+(set x ())
+(x.class)
+--
+=> <poopcrap>
+=> <class 'poopcrap'>
+--

@@ -1,0 +1,25 @@
+(func (get-x o) o.x)
+(func (get.y o) o.y)
+--
+=> <func 'get-x'>
+=> <func 'get-y'>
+==
+(class A
+  (field x 25))
+(get-x (new A))
+--
+=> <class 'A'>
+=> 25
+--
+(class A
+  (field x 25))
+(class B
+  (field x 35))
+(get-x (new A))
+(get-x (new B))
+--
+=> <class 'A'>
+=> <class 'B'>
+=> 25
+=> 35
+--

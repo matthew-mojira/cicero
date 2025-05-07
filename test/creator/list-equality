@@ -1,0 +1,134 @@
+(class point
+ (field x 0)
+ (field y 0)
+ (method (= other)
+   (and (= self.x other.x) (= self.y other.y)))
+)
+(func (point/new x y) {
+  (set p (new point))
+  (set-field x p x)
+  (set-field y p y)
+  p
+})
+--
+=> <class 'point'>
+=> <func 'point/new'>
+==
+(set x [1 2 3])
+(= x x)
+--
+=> [1, 2, 3]
+=> true
+--
+(= [] [])
+--
+=> true
+--
+(= [1] [])
+--
+=> false
+--
+(= [] [1])
+--
+=> false
+--
+(= [1] [1])
+--
+=> true
+--
+(= [2] [2])
+--
+=> true
+--
+(= [1] [2])
+--
+=> false
+--
+(= [2] [1])
+--
+=> false
+--
+(= [1 2 3 4 5 6 7 8] [1 2 3 4 5 6 7 8 9])
+--
+=> false
+--
+(= [1 2 3 4 5 6 7 8] [1 2 3 4 5 6 7 8]) ; true
+--
+=> true
+--
+(= [1 2 4 4 5 6 7 8] [1 2 3 4 5 6 7 8])
+--
+=> false
+--
+(= [1 2 3 4 5 6 7 8] [9 2 3 4 5 6 7 8])
+--
+=> false
+--
+(= [1 2 3 4 5 6 7 8] [1 2 3 4 5 6 7 9])
+--
+=> false
+--
+(= [1 2 3] [false 2 3])
+--
+=> false
+--
+(= [false 2 3] [1 2 3])
+--
+=> false
+--
+(= [1 2 3] ["1" "2" "3"])
+--
+=> false
+--
+(= [[]] [[]])
+--
+=> true
+--
+(= [[] [] []] [[]])
+--
+=> false
+--
+(= [[] [] []] [[] [1] []])
+--
+=> false
+--
+(= [[] [] []] [[] [[]] []])
+--
+=> false
+--
+(= [[] [] []] [[] [] ()])
+--
+=> false
+--
+(= [[] [] [] [[[[[[] []] [] [[]]] [] [] [] [[[[]] []] [] [[] []]]]]]] [[] [] [] [[[[[[] []] [] [[]]] [] [] [] [[[[]] []] [] [[] []]]]]]])
+--
+=> true
+--
+(= [(point/new 1 2)] [(point/new 1 2)])
+--
+=> true
+--
+(set p (point/new 5 6))
+(= [p] [p])
+--
+=> <object>
+=> true
+--
+(set p (point/new 5 6))
+(= [p p] [p p])
+--
+=> <object>
+=> true
+--
+(= [(point/new 2 2)] [(point/new 1 2)])
+--
+=> false
+--
+(= [(point/new 1 2) (point/new 3 4)] [(point/new 1 2) (point/new 3 4)])
+--
+=> true
+--
+(= [(point/new 1 2) (point/new 3 4)] [(point/new 1 2) (point/new 5 4)])
+--
+=> false
+--

@@ -1,0 +1,70 @@
+; testing out short circuiting and and or, syntax objects
+==
+(and false false)
+--
+=> false
+--
+(and () false)
+--
+=> <poopcrap>
+--
+(and true false)
+--
+=> false
+--
+(and true ())
+--
+=> <poopcrap>
+--
+(and false true)
+--
+=> false
+--
+(and true true)
+--
+=> true
+--
+(and false (raise "do not evaluate this"))
+--
+=> false
+--
+(and true "do evaluate this")
+--
+=> "do evaluate this"
+--
+(or false false)
+--
+=> false
+--
+(or false ())
+--
+=> <poopcrap>
+--
+(or true false)
+--
+=> true
+--
+(or false true)
+--
+=> true
+--
+(or false 6)
+--
+=> 6
+--
+(or true true)
+--
+=> true
+--
+(or true (raise "do not evaluate this"))
+--
+=> true
+--
+(or 125 (raise "do not evaluate this"))
+--
+=> 125
+--
+(or false "do evaluate this")
+--
+=> "do evaluate this"
+--
