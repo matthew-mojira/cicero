@@ -1,0 +1,104 @@
+(set a 1)
+(set b 2)
+(set c 3)
+--
+=> 1
+=> 2
+=> 3
+==
+(func (f a) {
+  a
+})
+(f 78)
+--
+=> <func 'f'>
+=> 78
+--
+(func (g b) {
+  (set a 11)
+  (+ a b)
+})
+(g 18)
+--
+=> <func 'g'>
+=> 29
+--
+(func (h a) {
+  (+ a (get-global a))
+})
+(h 81)
+--
+=> <func 'h'>
+=> 82
+--
+(func (i a) {
+  (set-global a a)
+  (+ a a)
+})
+a
+(i 21)
+a
+--
+=> <func 'i'>
+=> 1
+=> 42
+=> 21
+--
+(func (j a) {
+  (set-global a a)
+  (set a 10)
+  (+ a a)
+})
+a
+(j 21)
+a
+--
+=> <func 'j'>
+=> 1
+=> 20
+=> 21
+--
+(func (k a) {
+  (set-global a a)
+  (set a 10)
+  (+ (get-global a) (get-global a))
+})
+a
+(k 21)
+a
+--
+=> <func 'k'>
+=> 1
+=> 42
+=> 21
+--
+(func (l a) {
+  (set-global a a)
+  (set a 10)
+  [(+ (get-global a) a) b c]
+})
+a
+(l 21)
+a
+--
+=> <func 'l'>
+=> 1
+=> [31, 2, 3]
+=> 21
+--
+(func (m c) [(+ c b) (+ c (get-global b))])
+(m 20)
+--
+=> <func 'm'>
+=> [22, 22]
+--
+(func (n x)
+  (set-global d x)
+)
+(n 20)
+d
+--
+=> <func 'n'>
+=> 20
+=> 20
+--

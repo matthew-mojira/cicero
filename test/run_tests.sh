@@ -1,6 +1,16 @@
 #!/bin/bash
 
+function exit_usage() {
+    echo "Usage: run_tests.sh <tier>"
+    exit 1
+}
+
+if [ "$#" -lt 1 ]; then
+    exit_usage
+fi
+
 CICERO=bin/cicero.x86-64-linux
+TIER=$1
 
 pass_count=0
 total_count=0
@@ -9,21 +19,14 @@ cd ..
 
 for file in test/*.co; do
   ((total_count++))
-  ((total_count++))
   
   base=$(basename "$file" .co)
-  $CICERO -tier=0 "$file" > "test/output/${base}_tier0.out"
-  $CICERO -tier=1 "$file" > "test/output/${base}_tier1.out"
+  $CICERO -tier=$TIER "$file" > "test/output/${base}_tier$TIER.out" 2> "test/output/${base}_tier$TIER.err"
   
-  if diff "test/output/${base}_tier0.out" "test/expect/$base.expect" &>/dev/null; then
+  if diff "test/output/${base}_tier$TIER.out" "test/expect/$base.expect" &>/dev/null; then
     ((pass_count++))
   else
-    echo "$file: FAIL (tier0)"
-  fi
-  if diff "test/output/${base}_tier1.out" "test/expect/$base.expect" &>/dev/null; then
-    ((pass_count++))
-  else
-    echo "$file: FAIL (tier1)"
+    echo "$file: FAIL (tier$TIER)"
   fi
 done
 

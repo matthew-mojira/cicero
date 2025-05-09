@@ -1,0 +1,43 @@
+==
+(cond
+  (true 61))
+--
+=> 61
+--
+(cond
+  (true 12)
+  (false 23))
+--
+=> 12
+--
+(cond
+  (false 11)
+  (true 63))
+--
+=> 63
+--
+(cond
+  ((true.not) (raise "do not evaluate me"))
+  (() "poopcrap")
+  (() (if 123 13423423 234098))
+  ((if 9324 () true) (class X))
+  (((lambda (x) false) 3) games)
+  (18 18))
+--
+=> 18
+--
+(cond
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5)))
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5)))
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5)))
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5)))
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5)))
+  ((cond (false true) (true 3))     (cond (false 1) (false 2) (false 3) (false 4) (() 5) (7 7) (False 6)))
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5)))
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5)))
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5)))
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5)))
+  ((cond (false true) (true false)) (cond (false 1) (false 2) (false 3) (false 4) (False 5))))
+--
+=> 7
+-

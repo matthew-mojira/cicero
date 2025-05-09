@@ -1,0 +1,40 @@
+(set i 0)
+--
+=> 0
+==
+(while (< i 10000) {
+  (set i (i.succ))
+})
+--
+=> false
+--
+(while (if (< i 10000) i ()) {
+  (set i (i.succ))
+})
+--
+=> <poopcrap>
+--
+(while (< i 1000) {
+  (set j 0)
+  (while (< j 1000) {
+    (set j (j.succ))
+  })
+  (set i (i.succ))
+})
+--
+=> false
+--
+(while (< i 100) {
+  (set j 0)
+  (while (< j 100) {
+    (set k 0)
+    (while (< k 100) {
+      (set k (k.succ))
+    })
+    (set j (j.succ))
+  })
+  (set i (i.succ))
+})
+--
+=> false
+--

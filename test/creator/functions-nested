@@ -1,0 +1,99 @@
+(func (give-fns) {
+  (func (double x) (* x 2))
+  (func (triple x) (* x 3))
+  (func (halve x) (/ x 2))
+  (func (add1 x) (+ x 1))
+  (func (sub1 x) (- x 1))
+  [double halve add1 triple halve sub1 double]
+})
+(func (do n) {
+  (set list (give-fns))
+  (set i 0)
+  (while (< i 7) {
+    (println ((list.get i) n))
+    (set i (i.succ))
+  })
+  n
+})
+--
+=> <func 'give-fns'>
+=> <func 'do'>
+==
+(do 5)
+--
+10
+2
+6
+15
+2
+4
+10
+=> 5
+--
+(do -20)
+--
+-40
+-10
+-19
+-60
+-10
+-21
+-40
+=> -20
+--
+(do 5)
+(do 5)
+(do 5)
+(do -20)
+(do -20)
+(do -20)
+--
+10
+2
+6
+15
+2
+4
+10
+=> 5
+10
+2
+6
+15
+2
+4
+10
+=> 5
+10
+2
+6
+15
+2
+4
+10
+=> 5
+-40
+-10
+-19
+-60
+-10
+-21
+-40
+=> -20
+-40
+-10
+-19
+-60
+-10
+-21
+-40
+=> -20
+-40
+-10
+-19
+-60
+-10
+-21
+-40
+=> -20
+--

@@ -23,3 +23,75 @@
 => 25
 => 35
 --
+(class A
+  (field x 25))
+(class B
+  (field y 10)
+  (field x 35))
+(get-x (new A))
+(get-x (new B))
+--
+=> <class 'A'>
+=> <class 'B'>
+=> 25
+=> 35
+--
+(class A
+  (field x 25))
+(class B
+  (field y 10)
+  (field x 35)
+  (field z 61))
+(get-x (new A))
+(get-x (new B))
+--
+=> <class 'A'>
+=> <class 'B'>
+=> 25
+=> 35
+--
+(class A
+  (field x 25))
+(class B
+  (extends A)
+  (field z 61))
+(get-x (new A))
+(get-x (new B))
+--
+=> <class 'A'>
+=> <class 'B'>
+=> 25
+=> 25
+--
+(class A
+  (field x 25))
+(class B
+  (extends A)
+  (field y 10)
+  (field x 35)
+  (field z 61))
+(get-x (new A))
+(get-x (new B))
+--
+=> <class 'A'>
+=> <class 'B'>
+=> 25
+=> 35
+--
+(class A
+  (field x 25))
+(class B
+  (extends A)
+  (field y 10)
+  (field x 35)
+  (field z 61))
+(set b (new B))
+(set-field x b 200)
+(get-x b)
+--
+=> <class 'A'>
+=> <class 'B'>
+=> <object>
+=> 200
+=> 200
+--

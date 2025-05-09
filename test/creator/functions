@@ -4,6 +4,7 @@
 --
 => <func 'id'>
 => <func 'apply'>
+=> <func 'compose'>
 ==
 (id 10)
 --
@@ -25,3 +26,4 @@
 --
 => <func 'id'>
 --
+

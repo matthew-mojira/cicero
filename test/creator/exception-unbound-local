@@ -1,0 +1,58 @@
+==
+(func (foo1) {
+  x ; global
+})
+(try {
+  (foo1)
+  "fail"
+}
+e "pass")
+--
+=> <func 'foo1'>
+=> "pass"
+--
+(func (foo2 n)
+  (if n
+    x ; global
+    10)
+)
+(foo2 false)
+(try {
+  (foo2 true)
+  "fail"
+}
+e "pass")
+--
+=> <func 'foo2'>
+=> 10
+=> "pass"
+--
+(func (foo3 n) {
+  x
+  (set x n)
+})
+(try { 
+  (foo3 100)
+  "fail"
+}
+e "pass")
+--
+=> <func 'foo3'>
+=> "pass"
+--
+(func (foo4 n) {
+  (if n
+    (set x n)
+    "do nothing")
+  x
+})
+(foo4 10)
+(try { 
+  (foo4 false)
+  "fail"
+}
+e "pass")
+--
+=> <func 'foo4'>
+=> 10
+=> "pass"
