@@ -1,5 +1,5 @@
 (func (get-x o) o.x)
-(func (get.y o) o.y)
+(func (get-y o) o.y)
 --
 => <func 'get-x'>
 => <func 'get-y'>

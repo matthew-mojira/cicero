@@ -1,2 +1,6 @@
 (func (get-x o) o.x)
 (func (get.y o) o.y)
+(class A
+  (field x 25))
+(get-x (new A))
+
