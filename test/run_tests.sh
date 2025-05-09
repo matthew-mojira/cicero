@@ -61,7 +61,7 @@ for suite in $SCRIPT_LOC/suites/*; do
 
     # move to tmp
     mv $SCRIPT_LOC/suites/*.co $T
-    mv $SCRIPT_LOC/suites/*.expect $T/expect
+    mv $SCRIPT_LOC/suites/*.expect $T
 done
 
 function run_tests() {
@@ -72,7 +72,7 @@ function run_tests() {
         # run test
         $BINARY -tier=$TEST_TIER $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
 
-        if cmp -s "$U/$TEST_PROG.out" "$T/expect/$TEST_PROG.expect"; then
+        if cmp -s "$U/$TEST_PROG.out" "$T/$TEST_PROG.expect"; then
             echo "##-ok"
         else
             echo "##-fail"
