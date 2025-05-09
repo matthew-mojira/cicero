@@ -16,7 +16,8 @@ wasm-wave: bin/cicero.wasm
 v3i: bin/cicero.v3i
 
 ENGINE=src/*.v3 src/eval/*.v3 src/util/*.v3
-CICERO=$(ENGINE)
+CORE=lib/*.co
+CICERO=$(ENGINE) $(LIB)
 
 TAGS: $(CICERO)
 	vctags -e $(CICERO)

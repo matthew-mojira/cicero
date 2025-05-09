@@ -1,4 +1,4 @@
-
+(func (+ x y) (x.+ y))
 (func (- x y) (x.- y))
 (func (* x y) (x.* y))
 (func (/ x y) (x./ y))

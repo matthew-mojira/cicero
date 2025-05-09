@@ -95,9 +95,9 @@ V3C_OPTS="-symbols -heap-size=1024M -stack-size=16M"
 # build
 exe=${PROGRAM}.${TARGET}
 if [[ "$TARGET" = "x86-linux" || "$TARGET" = "x86_linux" ]]; then
-    exec v3c-x86-linux $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-linux -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
+    exec v3c-x86-linux $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [[ "$TARGET" = "x86-64-darwin" || "$TARGET" = "x86_64_darwin" ]]; then
-    exec v3c-x86-64-darwin $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-64-darwin -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
+    exec v3c-x86-64-darwin $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [[ "$TARGET" = "x86-64-linux" || "$TARGET" = "x86_64_linux" ]]; then
     v3c-x86-64-linux $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_X86_64
     STATUS=$?
@@ -105,7 +105,7 @@ elif [[ "$TARGET" = "x86-64-linux" || "$TARGET" = "x86_64_linux" ]]; then
 	exit $STATUS
     fi
 elif [ "$TARGET" = "jvm" ]; then
-    v3c-jar $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.jvm -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
+    v3c-jar $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [[ "$TARGET" == wasm-* ]]; then
     # Compile to a wasm target
     V3C_PATH=$(which v3c)
@@ -118,7 +118,7 @@ elif [[ "$TARGET" == wasm-* ]]; then
     exec $V3C_WASM_TARGET $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [ "$TARGET" = "v3i" ]; then
     # check that the sources typecheck
-    $V3C $LANG_OPTS $V3C_OPTS $SOURCES $TARGET_V3
+    $V3C $LANG_OPTS $V3C_OPTS $SOURCES $TARGET_V3 $CICERO_TEXT
     RET=$?
     if [ $RET != 0 ]; then
 	exit $RET
@@ -135,7 +135,7 @@ elif [ "$TARGET" = "v3i" ]; then
     echo "v3i $LANG_OPTS \$V3C_OPTS $LIST" '$@' >> bin/$PROGRAM.v3i
     chmod 755 bin/$PROGRAM.v3i
     # run v3c just to check for compile errors
-    exec $V3C $LANG_OPTS $V3C_OPTS $LIST
+    exec $V3C $LANG_OPTS $V3C_OPTS $LIST $CICERO_TEXT
 else
     exit_usage
 fi
