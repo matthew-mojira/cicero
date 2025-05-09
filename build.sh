@@ -66,11 +66,11 @@ fi
 # make build file with target
 BUILD_FILE=$(make_build_file)
 
-# build cicero methods
-CICERO_METHODS="bin/CiceroMethods.v3"
-echo "component CiceroMethods {" > "$CICERO_METHODS"
+# build cicero text
+CICERO_TEXT="bin/CiceroTexts.v3"
+echo "component CiceroTexts {" > "$CICERO_TEXT"
 
-cicero_input="src/cicero-methods.txt"
+cicero_input="src/cicero-texts.txt"
 
 cat $cicero_input | while read p; do
   cicero_filepath=./$(echo "$p" | awk '{print $1}')
@@ -78,13 +78,14 @@ cat $cicero_input | while read p; do
 
   if [[ -f "$cicero_filepath" ]]; then
       cicero_content=$(tr -d '\n' < "$cicero_filepath")
+      cicero_content=$(printf "%s" "$cicero_content" | sed 's/\\/\\\\/g')
       cicero_content=$(printf "%s" "$cicero_content" | sed 's/"/\\"/g')
-      echo "	def $cicero_output: string = \"$cicero_content\";" >> "$CICERO_METHODS"
+      echo "	def $cicero_output: string = \"$cicero_content\";" >> "$CICERO_TEXT"
   else
       echo "Warning: File '$cicero_filepath' not found." >&2
   fi
 done
-echo "}" >> "$CICERO_METHODS"
+echo "}" >> "$CICERO_TEXT"
 
 PREGEN=${PREGEN:=1}
 
@@ -94,17 +95,17 @@ V3C_OPTS="-symbols -heap-size=1024M -stack-size=16M"
 # build
 exe=${PROGRAM}.${TARGET}
 if [[ "$TARGET" = "x86-linux" || "$TARGET" = "x86_linux" ]]; then
-    exec v3c-x86-linux $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-linux -output=bin/ $SOURCES $BUILD_FILE $CICERO_METHODS $TARGET_V3
+    exec v3c-x86-linux $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-linux -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [[ "$TARGET" = "x86-64-darwin" || "$TARGET" = "x86_64_darwin" ]]; then
-    exec v3c-x86-64-darwin $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-64-darwin -output=bin/ $SOURCES $BUILD_FILE $CICERO_METHODS $TARGET_V3
+    exec v3c-x86-64-darwin $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.x86-64-darwin -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [[ "$TARGET" = "x86-64-linux" || "$TARGET" = "x86_64_linux" ]]; then
-    v3c-x86-64-linux $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $CICERO_METHODS $TARGET_X86_64
+    v3c-x86-64-linux $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_X86_64
     STATUS=$?
     if [ $STATUS != 0 ]; then
 	exit $STATUS
     fi
 elif [ "$TARGET" = "jvm" ]; then
-    v3c-jar $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.jvm -output=bin/ $SOURCES $BUILD_FILE $CICERO_METHODS $TARGET_V3
+    v3c-jar $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM}.jvm -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [[ "$TARGET" == wasm-* ]]; then
     # Compile to a wasm target
     V3C_PATH=$(which v3c)
@@ -114,7 +115,7 @@ elif [[ "$TARGET" == wasm-* ]]; then
 	ls -a ${V3C_PATH/bin\/v3c/bin\/dev\/v3c-wasm-*} | cat
 	exit 1
     fi
-    exec $V3C_WASM_TARGET $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM} -output=bin/ $SOURCES $BUILD_FILE $CICERO_METHODS $TARGET_V3
+    exec $V3C_WASM_TARGET $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [ "$TARGET" = "v3i" ]; then
     # check that the sources typecheck
     $V3C $LANG_OPTS $V3C_OPTS $SOURCES $TARGET_V3

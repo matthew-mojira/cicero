@@ -15,7 +15,6 @@ def main(args: Array<string>) -> int {
 		System.puts("  -max-int=int.max: maximum absolute canonicalized int object\n");
 		System.puts("  -suppress-output=false: do not print out results of evaluation (useful for benchmarking)\n");
 		System.puts("  -repl=false: when files are provided, open repl after evaluation\n");
-		System.puts("  -lib=lib/core.co: library file to load before evaluation\n");
 
 		return 0;
 	}
@@ -31,7 +30,7 @@ def main(args: Array<string>) -> int {
 
 	def frame = FrameObjects.newTopFrame();
 
-	loadLib(frame, Option<string>.!(opt.map["lib"]).get()); // AST evaluation
+	loadCore(frame);
 	
 	def output = !Option<bool>.!(opt.map["suppress-output"]).get();
 
@@ -108,17 +107,12 @@ def main(args: Array<string>) -> int {
 	return 0;
 }
 
-// XXX do not expect load lib to fail
-def loadLib(frame: FrameObject, filename: string) {
-	def file = System.fileLoad(filename);
-	if (file == null)
-		System.error("init error", "unable to load library");
-	def reader = Parser.new(filename, file);
+def loadCore(frame: FrameObject) {
+	def reader = Parser.new("core", CiceroTexts.core);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
  		if (Tiers.enableTier1) {
  			expr.compile([]);
-			// expr.bytecode.inspect();
 		}
 		frame.evalCode(expr);
 	}
@@ -134,7 +128,6 @@ def getOptions() -> Options {
 	opt.newBoolOption("cache", false);
 	opt.newBoolOption("repl", false);
 	opt.newBoolOption("suppress-output", false);
-	opt.newStringOption("lib", "lib/core.co");
 
 	return opt;
 }

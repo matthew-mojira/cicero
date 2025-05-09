@@ -1,1 +1,2 @@
+lib/core.co core
 lib/list-eq.co l_eq

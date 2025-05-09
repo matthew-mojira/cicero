@@ -112,7 +112,7 @@ component ClassObjects {
 			CodeObjects.virgilFail, 
 			[], 
 			[FuncObjects.fromVirgilMethod0("display", ListObject.l_display),
-			 FuncObjects.fromCiceroMethod ("=",       CiceroMethods.l_eq),
+			 FuncObjects.fromCiceroMethod ("=",       CiceroTexts.l_eq),
 			 FuncObjects.fromVirgilMethod1("get", i,  ListObject.l_get),
 			 FuncObjects.fromVirgilMethod2("set", io, ListObject.l_set),
 			 FuncObjects.fromVirgilMethod1("put", o,  ListObject.l_put),
