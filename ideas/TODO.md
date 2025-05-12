@@ -19,7 +19,7 @@ Benchmarking/unit tests
         large + arithmetic comparisons
   - [ ] redefining things in the base class, especially determining what is
         canoncalized
-  - [ ] more on classes, duck typing
+  - [ ] more on classes, duck typing, simple tests on setting fields
 
 Optimizations in the tier1 bytecode
 - [ ] determine what optimizations are available
