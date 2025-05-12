@@ -132,7 +132,7 @@ elif [ "$TARGET" = "v3i" ]; then
 	LIST="$LIST $(ls $f)"
     done
     echo '#!/bin/bash' > bin/$PROGRAM.v3i
-    echo "v3i $LANG_OPTS \$V3C_OPTS $LIST" '$@' >> bin/$PROGRAM.v3i
+    echo "v3i $LANG_OPTS \$V3C_OPTS $LIST $CICERO_TEXT" '$@' >> bin/$PROGRAM.v3i
     chmod 755 bin/$PROGRAM.v3i
     # run v3c just to check for compile errors
     exec $V3C $LANG_OPTS $V3C_OPTS $LIST $CICERO_TEXT

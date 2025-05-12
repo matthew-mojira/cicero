@@ -13,10 +13,10 @@
   (field b3 7)
   (method (twos) (+ self.a2 self.b2)))
 
-;(class C (extends A)
-;  (field c1 8)
-;  (field c2 9)
-;  (field c3 10))
+(class C (extends A)
+  (field c1 8)
+  (field c2 9)
+  (field c3 10))
 
 (set x (new A))
 x.a1
@@ -55,11 +55,11 @@ y.b1
 y.b2
 y.b3
 
-;(set z (new C))
-;z.a1
-;z.a2
-;z.a3
-;z.a4
-;z.c1
-;z.c2
-;z.c3
+(set z (new C))
+z.a1
+z.a2
+z.a3
+z.a4
+z.c1
+z.c2
+z.c3

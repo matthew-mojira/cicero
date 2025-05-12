@@ -6,8 +6,18 @@
   a
   b
   a
-} e "pass"
-)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try { 
+  a
+  b
+  (set b "unbound")
+  a
+  "fail"
+} e "pass")
 --
 => "pass"
 --

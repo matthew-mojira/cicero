@@ -1,0 +1,80 @@
+(class A
+  (field a "A.a")
+  (field b "A.b")
+  (field c "A.c"))
+(class B (extends A)
+  (field b "B.b")
+  (field c "B.c")
+  (field d "B.d")
+  (field e "B.e"))
+(class C (extends A)
+  (field c "C.c")
+  (field d "C.d")
+  (field f "C.f"))
+(class D (extends B)
+  (field a "D.a")
+  (field c "D.c")
+  (field g "D.g")
+  (field h "D.h"))
+--
+=> <class 'A'>
+=> <class 'B'>
+=> <class 'C'>
+=> <class 'D'>
+==
+(set x (new A))
+x.a
+x.b
+x.c
+--
+=> <object>
+=> "A.a"
+=> "A.b"
+=> "A.c"
+--
+(set x (new B))
+x.a
+x.b
+x.c
+x.d
+x.e
+--
+=> <object>
+=> "A.a"
+=> "B.b"
+=> "B.c"
+=> "B.d"
+=> "B.e"
+--
+(set x (new C))
+x.a
+x.b
+x.c
+x.d
+x.f
+--
+=> <object>
+=> "A.a"
+=> "A.b"
+=> "C.c"
+=> "C.d"
+=> "C.f"
+--
+(set x (new D))
+x.a
+x.b
+x.c
+x.d
+x.e
+x.g
+x.h
+--
+=> <object>
+=> "D.a"
+=> "B.b"
+=> "D.c"
+=> "B.d"
+=> "B.e"
+=> "D.g"
+=> "D.h"
+--

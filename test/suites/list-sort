@@ -1,0 +1,91 @@
+(func (insertion-sort xs lo hi) {
+  (set i (lo.succ))
+  (while (<= i hi) {
+    (set j i)
+    (try
+      ; and is not a short-circuit operator
+      (while (and (> j lo) (> (xs.get (j.pred)) (xs.get j))) {
+        (set tmp (xs.get (j.pred)))
+        (xs.set (j.pred) (xs.get j))
+        (xs.set j tmp)
+        (set j (j.pred))
+      })
+      ; use exceptions to catch array access failure
+      e ()
+    )
+    (set i (i.succ))
+  })
+  xs
+})
+
+(func (quick-sort xs lo hi)
+  (cond
+    ((>= lo hi) xs)
+    ((< lo 0) xs)
+    (true {
+      (set p (partition xs lo hi))
+      (quick-sort xs lo (p.pred))
+      (quick-sort xs (p.succ) hi)
+    })
+  )
+)
+
+(func (partition xs lo hi) {
+  (set pivot (xs.get hi))
+  (set i lo)
+  (set j lo)
+  (while (< j hi) {
+    (if (< (xs.get j) pivot) {
+      ; swap xs[i] with xs[j]
+      (set tmp (xs.get i))
+      (xs.set i (xs.get j))
+      (xs.set j tmp)
+      (set i (i.succ))
+    } ())
+    (set j (j.succ))
+  })
+  (set tmp (xs.get i))
+  (xs.set i (xs.get hi))
+  (xs.set hi tmp)
+  i
+})
+
+(func (sort1 xs) (insertion-sort xs 0 (- (xs.length) 1)))
+(func (sort2 xs) (quick-sort xs 0 (- (xs.length) 1)))
+--
+=> <func 'insertion-sort'>
+=> <func 'quick-sort'>
+=> <func 'partition'>
+=> <func 'sort1'>
+=> <func 'sort2'>
+==
+(sort1 [])
+(sort2 [])
+--
+=> []
+=> []
+--
+(sort1 [1])
+(sort2 [1])
+--
+=> [1]
+=> [1]
+--
+(sort1 [2 1])
+(sort2 [2 1])
+--
+=> [1, 2]
+=> [1, 2]
+--
+(sort1 [73 56 88 45 92 39 61 77 54 27])
+(sort2 [73 56 88 45 92 39 61 77 54 27])
+--
+=> [27, 39, 45, 54, 56, 61, 73, 77, 88, 92]
+=> [27, 39, 45, 54, 56, 61, 73, 77, 88, 92]
+--
+(sort1 [81 62 37 91 50 17 74 88 26 54 99 63 70 38 41 16 19 45 82 72])
+(sort2 [81 62 37 91 50 17 74 88 26 54 99 63 70 38 41 16 19 45 82 72])
+--
+=> [16, 17, 19, 26, 37, 38, 41, 45, 50, 54, 62, 63, 70, 72, 74, 81, 82, 88, 91, 99]
+=> [16, 17, 19, 26, 37, 38, 41, 45, 50, 54, 62, 63, 70, 72, 74, 81, 82, 88, 91, 99]
+--

@@ -1,0 +1,109 @@
+;class-related exceptions
+(func (try-new class)
+  (try {
+    (new class)
+    "fail"
+  } e "pass")
+)
+--
+=> <func 'try-new'>
+==
+; extending something which is not a class
+(try {
+  (class X
+    (extends 1)
+    (field wowie 72)
+    (method (stuff) (self.wowie))
+    (field nothing 31)
+  )
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+; getting superclass of base, directly
+(try {
+  (class X)
+  (set x (new X))
+  (x.superclass)
+  ((get-field superclass (x.superclass)))
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+; getting superclass of base, indirectly
+(try {
+  (class X)
+  (set x (new X))
+  (x.superclass)
+  ((get-field superclass (x.superclass)))
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+; trying to instantiate a built-in class using `new`
+(try-new base)
+--
+=> "pass"
+--
+(try-new bool)
+--
+=> "pass"
+--
+(try-new class)
+--
+=> "pass"
+--
+(try-new code)
+--
+=> "pass"
+--
+(try-new exn)
+--
+=> "pass"
+--
+(try-new frame)
+--
+=> "pass"
+--
+(try-new func)
+--
+=> "pass"
+--
+(try-new int)
+--
+=> "pass"
+--
+(try-new list)
+--
+=> "pass"
+--
+(try-new map)
+--
+=> "pass"
+--
+(try-new method)
+--
+=> "pass"
+--
+(try-new poopcrap)
+--
+=> "pass"
+--
+(try-new str)
+--
+=> "pass"
+--
+; extending a built-in class
+(class A
+  (extends int)) ; this is actually fine, but initializing it will fail!
+(try {
+  (new A)
+  "fail"
+} e "pass")
+--
+=> <class 'A'>
+=> "pass"
+--

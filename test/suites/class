@@ -1,0 +1,34 @@
+(class X)
+(class Y (extends X))
+--
+=> <class 'X'>
+=> <class 'Y'>
+==
+X.display
+X.superclass
+X.name
+--
+=> <method 'display'>
+=> <method 'superclass'>
+=> <method 'name'>
+--
+(X.display)
+--
+=> "<class 'X'>"
+--
+(X.superclass)
+--
+=> <class 'base'>
+--
+(X.name)
+--
+=> "X"
+--
+(Y.superclass)
+--
+=> <class 'X'>
+--
+((get-field superclass (Y.superclass)))
+--
+=> <class 'base'>
+--

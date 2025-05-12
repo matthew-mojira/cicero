@@ -1,0 +1,29 @@
+; Tests the underlying data of objects. Built-in classes have underlying data
+; accessible through methods which actually create Virgil objects from them.
+; Those methods can be modified but the underlying representation cannot.
+(func (f x) x)
+--
+=> <func 'f'>
+==
+(set l1 (f.params))
+(l1.put "y")
+(set l2 (f.params))
+(if (= (l1.length) (l2.length)) (raise "problem!") true)
+--
+=> ["x"]
+=> ["x", "y"]
+=> ["x"]
+=> true
+--
+f.code
+(f.code)
+(set-field code f 1)
+f.code
+(if (!= 1 f.code) (raise "setfield wrong") true)
+--
+=> <method 'code'>
+=> <code>
+=> 1
+=> 1
+=> true
+--

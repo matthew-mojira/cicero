@@ -1,0 +1,159 @@
+; type errors (mismatched types for methods in built-in classes)
+--
+==
+(try {
+  (1.+ false)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (puts 1)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (1.get-field 1)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (1.- false)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (1.* "1")
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (52./ base)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (61.% "percent")
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.< (= 5 5))
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (6.<= "throw")
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (9.> "gt")
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (133.>= >=)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (9.& (23.display))
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (3333.| 3333.display)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (22.^ "up")
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (16.>> [])
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (59.<< [59])
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (202020.>>> ())
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set x [1 2 3])
+  (x.get "1")
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set y [3 2 1])
+  (y.get "1" 1)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (+ "string" 1)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (false.and 1)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (true.or "false")
+  "fail"
+} e "pass")
+--
+=> "pass"
+--

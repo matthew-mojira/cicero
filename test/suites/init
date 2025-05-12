@@ -1,0 +1,77 @@
+(class A
+  (init (puts "Initializing A!\n")))
+
+(class B (extends A)
+  (init (puts "Initializing B!\n")))
+
+(class C (extends A)
+  (init (puts "Initializing C!\n")))
+
+(class D (extends C)
+  (init (puts "Initializing D!\n")))
+
+(class E (extends C)
+  (init (puts "Initializing E!\n")))
+
+(class F (extends E)
+  (init (puts "Initializing F!\n")))
+
+(class G (extends F)
+  (init (puts "Initializing G!\n")))
+--
+=> <class 'A'>
+=> <class 'B'>
+=> <class 'C'>
+=> <class 'D'>
+=> <class 'E'>
+=> <class 'F'>
+=> <class 'G'>
+==
+(new A)
+--
+Initializing A!
+=> <object>
+--
+(new B)
+--
+Initializing A!
+Initializing B!
+=> <object>
+--
+(new C)
+--
+Initializing A!
+Initializing C!
+=> <object>
+--
+(new D)
+--
+Initializing A!
+Initializing C!
+Initializing D!
+=> <object>
+--
+(new E)
+--
+Initializing A!
+Initializing C!
+Initializing E!
+=> <object>
+--
+(new F)
+--
+Initializing A!
+Initializing C!
+Initializing E!
+Initializing F!
+=> <object>
+--
+(new G)
+--
+Initializing A!
+Initializing C!
+Initializing E!
+Initializing F!
+Initializing G!
+=> <object>
+--

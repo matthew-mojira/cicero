@@ -29,7 +29,7 @@ function print_testing() {
     else
         tier=""
     fi
-    printf "%-6s " $tier
+    printf "%-5s " $tier
     printf "| "
 }
 
@@ -71,13 +71,21 @@ function run_tests() {
 
         # run test
         $BINARY -tier=$TEST_TIER $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
+        RET=$?
 
         if cmp -s "$U/$TEST_PROG.out" "$T/$TEST_PROG.expect"; then
             echo "##-ok"
         else
-            echo "##-fail"
+	    echo "##-fail"
+	    # FIXME discriminate between different error types
+	    #if [ -s "$U/$TEST_PROG.err" ]; then
+            #    echo "##-fail: failed to parse or virgil exception"
+            #elif [ $RET -eq 0 ]; then
+	    #    echo "##-fail: mismatched output"
+	    #else
+	    #    echo "##-fail: raised cicero exception"
+	    #fi
         fi
-
     done
 }
 

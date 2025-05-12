@@ -5,14 +5,18 @@
 (while (< i 10000) {
   (set i (i.succ))
 })
+i
 --
 => false
+=> 10000
 --
 (while (if (< i 10000) i ()) {
   (set i (i.succ))
 })
+i
 --
 => <poopcrap>
+=> 10000
 --
 (while (< i 1000) {
   (set j 0)
@@ -21,8 +25,12 @@
   })
   (set i (i.succ))
 })
+i
+j
 --
 => false
+=> 1000
+=> 1000
 --
 (while (< i 100) {
   (set j 0)
@@ -35,6 +43,12 @@
   })
   (set i (i.succ))
 })
+i
+j
+k
 --
 => false
+=> 100
+=> 100
+=> 100
 --
