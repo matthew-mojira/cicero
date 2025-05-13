@@ -61,6 +61,10 @@ def main(args: Array<string>) -> int {
 		} else {
 			System.puts(reader.fileName);
 			System.puts(Strings.format3(":%d:%d: parse error: %s\n", reader.error_line, reader.error_column, reader.error_msg));
+			def sb = StringBuilder.new();
+			reader.renderCurrentLineWithCaret(sb, reader.error_column);
+			System.puts(sb.extract());
+			System.ln();
 			return 1;
 		}
 	}
@@ -91,6 +95,10 @@ def main(args: Array<string>) -> int {
 				}
 			} else {
 				System.puts(Strings.format1("parse error: %s\n", reader.error_msg));
+				def sb = StringBuilder.new();
+				reader.renderCurrentLineWithCaret(sb, reader.error_column);
+				System.puts(sb.extract());
+				System.ln();
 			}
 		}
 	}
