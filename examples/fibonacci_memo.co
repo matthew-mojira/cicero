@@ -10,17 +10,14 @@
       (values.put (+ (fib-memo (- n 1)) (fib-memo (- n 2))))
       (values.get n)})))
 
-(fib-memo 0)
-(fib-memo 1)
-(fib-memo 2)
-(fib-memo 3)
-(fib-memo 4)
-(fib-memo 5)
-(fib-memo 10)
-(fib-memo 15)
-(fib-memo 20)
-(fib-memo 25)
-(fib-memo 40)
-(fib-memo 46) ; >= 47 causes a Virgil exception!
 
-values
+(set i 0)
+(while true {
+  (puts "fib(")
+  (print i)
+  (puts ") = ")
+  (print (fib-memo i))
+  (puts "\n")
+  (set i (i.succ))
+})
+
