@@ -122,6 +122,7 @@ Potpourri of potentially bigger things
 - [ ] namespaces?
 - [ ] rename PoopCrap to something more school-appropriate (and maybe Classhole too)
 - [X] check if `=` and `!=` will type error on ints (be consistent)
+- [X] BIG INTEGERS!!
 
 ## nonlocal variables
 

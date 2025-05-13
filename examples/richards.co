@@ -286,11 +286,11 @@
     (cond
       ((= self.v2 0) (self.hold))
       ((= (self.v1.& 1) 0) {
-        (set-field v1 self (self.v1.>>> 1))
+        (set-field v1 self (self.v1.>> 1))
 	(self.release richards/I_DEVA)
       })
       (true {
-        (set-field v1 self (^ (self.v1.>>> 1) 53256)) ; 0xD008
+        (set-field v1 self (^ (self.v1.>> 1) 53256)) ; 0xD008
 	(self.release richards/I_DEVB)
       })
     )

@@ -17,15 +17,15 @@ class ListObject extends Object {
 	def isTrue()  -> bool   { return true; }
 
 	def l_get(idx: IntObject) -> Result {
-		if (idx.val < 0 || idx.val >= list.length)
-			return Result.Exn(ExnObjects.fromVirgil("list.get", outOfBounds(idx.val, list.length)));
+		if (idx.val.longValue() < 0 || idx.val.longValue() >= list.length)
+			return Result.Exn(ExnObjects.fromVirgil("list.get", outOfBounds(idx.val.longValue(), list.length)));
 		// XXX cast, discrepancy between allowed index values (i.e. length) and the length of the list
-		return Result.OK(list.get(int.!(idx.val)));
+		return Result.OK(list.get(int.!(idx.val.longValue())));
 	}
  	def l_set(idx: IntObject, obj: Object) -> Result {
-		if (idx.val < 0 || idx.val >= list.length)
-			return Result.Exn(ExnObjects.fromVirgil("list.set", outOfBounds(idx.val, list.length)));
-		list.set(int.!(idx.val), obj);
+		if (idx.val.longValue() < 0 || idx.val.longValue() >= list.length)
+			return Result.Exn(ExnObjects.fromVirgil("list.set", outOfBounds(idx.val.longValue(), list.length)));
+		list.set(int.!(idx.val.longValue()), obj);
 		return Result.OK(this);
 	}
  	def l_put(obj: Object) -> Result {
@@ -33,7 +33,7 @@ class ListObject extends Object {
 		return Result.OK(this);
 	}
  	def l_length() -> Result {
-		return Result.OK(IntObjects.getIntObject(list.length));
+		return Result.OK(IntObjects.fromLong(list.length));
 	}
  	def l_reverse() -> Result {
 		list.reverse();

@@ -1,66 +1,50 @@
-class IntObject(val: long) extends Object {
-	def display() =>Strings.format1("%d", val);
+class IntObject(val: BigInteger) extends Object {
+	//def display() => Strings.format3("%s = %s (%d)", val.displayDec(), val.displayHex(), val.signum);
+	def display() => val.displayDec();
 	def isTrue()  => true;
 
 	/* arithmetic */
-	def i_succ() => Result.OK(IntObjects.getIntObject(val + 1));
-	def i_pred() => Result.OK(IntObjects.getIntObject(val - 1));
-	def i_neg()  => Result.OK(IntObjects.getIntObject(-val));
-	def i_add(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val + that.val));
-	def i_sub(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val - that.val));
-	def i_mul(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val * that.val));
-	def i_div(that: IntObject) => if (that.val == 0,
+	def i_neg()  => Result.OK(IntObject.new(val.negate()));
+	def i_add(that: IntObject) => Result.OK(IntObject.new(this.val.add(that.val)));
+	def i_sub(that: IntObject) => Result.OK(IntObject.new(this.val.subtract(that.val)));
+	def i_mul(that: IntObject) => Result.OK(IntObject.new(this.val.multiply(that.val)));
+	def i_div(that: IntObject) => if (that.val.signum == 0,
 			Result.Exn(ExnObjects.fromVirgil("int.div", divideByZero)),
-			Result.OK(IntObjects.getIntObject(this.val / that.val)));
-	def i_mod(that: IntObject) => if (that.val == 0,
+			Result.OK(IntObject.new(this.val.divide(that.val))));
+	def i_mod(that: IntObject) => if (that.val.signum == 0,
 			Result.Exn(ExnObjects.fromVirgil("int.mod", divideByZero)),
-			Result.OK(IntObjects.getIntObject(this.val % that.val)));
+			Result.OK(IntObject.new(this.val.remainder(that.val))));
 
 	/* comparisons */
-	/* previously, we didn't need eq/neq defined here because all integer
-	 * objects were canonicalized. Now, only small ones are, hence we still
-	 * need to do a structural comparison */
 	def i_eq(that: Object) -> Result {
 		if (!that.instanceOf(ClassObjects.classInt))
 			return Result.OK(BoolObjects.falseObject);
-		return Result.OK(BoolObjects.getBoolObject(this.val == IntObject.!(that).val));
+		return Result.OK(BoolObjects.getBoolObject(this.val.equals(IntObject.!(that).val)));
 	}
 	def i_neq(that: Object) -> Result {
 		if (!that.instanceOf(ClassObjects.classInt))
 			return Result.OK(BoolObjects.trueObject);
-		return Result.OK(BoolObjects.getBoolObject(this.val != IntObject.!(that).val));
+		return Result.OK(BoolObjects.getBoolObject(!this.val.equals(IntObject.!(that).val)));
 	}
 
-	def i_lt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val <  that.val));
-	def i_leq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val <= that.val));
-	def i_gt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val >  that.val));
-	def i_geq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val >= that.val));
+	def i_lt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val.compareTo(that.val) <  0));
+	def i_leq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val.compareTo(that.val) <= 0));
+	def i_gt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val.compareTo(that.val) >  0));
+	def i_geq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val.compareTo(that.val) >= 0));
 
 	/* logical */
-	def i_and(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val & that.val));
-	def i_ora(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val | that.val));
-	def i_eor(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val ^ that.val));
-	def i_asl(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val <<  byte.!(that.val)));
-	def i_lsr(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val >>> byte.!(that.val)));
-	def i_asr(that: IntObject) => Result.OK(IntObjects.getIntObject(this.val >>  byte.!(that.val)));
+	def i_and(that: IntObject) => Result.OK(IntObject.new(this.val.and(that.val)));
+	def i_ora(that: IntObject) => Result.OK(IntObject.new(this.val.or(that.val)));
+	def i_eor(that: IntObject) => Result.OK(IntObject.new(this.val.xor(that.val)));
+	def i_shl(that: IntObject) => Result.OK(IntObject.new(this.val.shiftLeft(int.view(that.val.longValue()))));
+	def i_shr(that: IntObject) => Result.OK(IntObject.new(this.val.shiftRight(int.view(that.val.longValue()))));
 
 	def i_display() => Result.OK(StrObjects.fromString(display()));
 }
 
 
 component IntObjects {
-	/* canonicalize int value instances */
-	def intObjects = HashMap<long, IntObject>.new(int.!, long.==);
-	def getIntObject(val: long) -> IntObject {
-		if (val > Tiers.maxCachedInt || val < -Tiers.maxCachedInt) {
-			return IntObject.new(val);
-		}
-
-		if (intObjects.has(val)) return intObjects[val];
-		def newInt = IntObject.new(val);
-		intObjects[val] = newInt;
-		return newInt;
-	}
+	def fromLong(val: long) => IntObject.new(BigIntegers.fromLong(val));
 }
 
 def divideByZero = "division by zero";

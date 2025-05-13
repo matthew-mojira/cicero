@@ -391,6 +391,7 @@ class Parser extends TextReader {
 
 				// parse first identifier for decimal integer literal
 				def str = strs[0];
+				// TODO implement parsing big ints
 				def res = Ints.parseDecimal(str, 0);
 				def status = res.0, value = res.1;
 				if (status > 0) {
@@ -401,7 +402,7 @@ class Parser extends TextReader {
 						return null;
 					}
 					// any characters that start an integer literal cannot be part of a valid identifier
-					expr = AST.new(ASTData.Lit(IntObjects.getIntObject(value)), range);
+					expr = AST.new(ASTData.Lit(IntObjects.fromLong(value)), range);
 				} else {
 					// VarGet: local or global?
 					var b: Box<AccessMode>;

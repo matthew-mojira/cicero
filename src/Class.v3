@@ -87,8 +87,8 @@ component ClassObjects {
 			CodeObjects.virgilFail, 
 			[], 
 			[FuncObjects.fromVirgilMethod0("display", IntObject.i_display),
-			 FuncObjects.fromVirgilMethod0("succ",    IntObject.i_succ),
-			 FuncObjects.fromVirgilMethod0("pred",    IntObject.i_pred),
+			 FuncObjects.fromCiceroMethod ("succ",    CiceroTexts.i_succ),
+			 FuncObjects.fromCiceroMethod ("pred",    CiceroTexts.i_pred),
 			 FuncObjects.fromVirgilMethod0("neg",     IntObject.i_neg),
 			 FuncObjects.fromVirgilMethod1("+",  i,   IntObject.i_add),
 			 FuncObjects.fromVirgilMethod1("-",  i,   IntObject.i_sub),
@@ -104,9 +104,8 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod1("&",  i,   IntObject.i_and),
 			 FuncObjects.fromVirgilMethod1("|",  i,   IntObject.i_ora),
 			 FuncObjects.fromVirgilMethod1("^",  i,   IntObject.i_eor),
-			 FuncObjects.fromVirgilMethod1(">>", i,   IntObject.i_asr),
-			 FuncObjects.fromVirgilMethod1("<<", i,   IntObject.i_asl),
-			 FuncObjects.fromVirgilMethod1(">>>",i,   IntObject.i_lsr)
+			 FuncObjects.fromVirgilMethod1(">>", i,   IntObject.i_shr),
+			 FuncObjects.fromVirgilMethod1("<<", i,   IntObject.i_shl)
 			]);
 	def classList = ClassObject.new("list", classBase, 
 			CodeObjects.virgilFail, 

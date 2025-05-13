@@ -1,2 +1,4 @@
 lib/core.co core
 lib/list-eq.co l_eq
+lib/int-succ.co i_succ
+lib/int-pred.co i_pred

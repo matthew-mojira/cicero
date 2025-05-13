@@ -1,0 +1,1272 @@
+/* This code is a Virgil adaptation of select methods from java.math.BigInteger,
+ * java.math.MutableBigInteger, and java.lang.Integer.
+ *
+ */
+
+def LONG_MASK: long = 0xffffffffL;
+
+def KARATSUBA_THRESHOLD = 80;
+def SCHOENHAGE_BASE_CONVERSION_THRESHOLD = 20;
+
+def ZERO = BigInteger.new([], 0);
+def ONE  = BigInteger.new([1], 1);
+
+/* Some mutable big integer thing. Currently only used in division, presumably
+ * to reduce memory allocations/garbage.
+ */
+private class MutableBigInteger {
+	var value: Array<int> = Array<int>.new(1);
+	var intLen: int = 0;
+	var offset: int = 0;
+
+	def clear() {
+		offset = intLen = 0;
+		for (index < value.length)
+			value[index] = 0;
+	}
+
+	def divide(b: MutableBigInteger, q: MutableBigInteger) -> MutableBigInteger {
+		/* skip check for burnikel-ziegler */
+		return divideKnuth(b, q);
+	}
+
+	def divideKnuth(b: MutableBigInteger, quotient: MutableBigInteger) -> MutableBigInteger {
+		trace("divideKnuth");
+		if (b.intLen == 0) System.error("arithmetic error", "divide by zero");
+
+		// Dividend is zero
+		if (intLen == 0) {
+			trace("intLen == 0");
+			quotient.intLen = quotient.offset = 0;
+			return MutableBigInteger.new();
+		}
+
+		def cmp = compare(b);
+		// Dividend less than divisor
+		if (cmp < 0) {
+			trace("cmp < 0");
+			quotient.intLen = quotient.offset = 0;
+			return MutableBigIntegers.fromMutableBigInteger(this);
+		}
+
+		// Dividend equal to divisor
+		if (cmp == 0) {
+			trace("cmp == 0");
+			quotient.value[0] = quotient.intLen = 1;
+			quotient.offset = 0;
+			return MutableBigInteger.new();
+		}
+
+		quotient.clear();
+
+		// Special case one word divisor
+		if (b.intLen == 1) {
+			def r: int = divideOneWord(b.value[b.offset], quotient);
+			if (r == 0)
+				return MutableBigInteger.new();
+			return MutableBigIntegers.fromInt(r);
+		}
+
+		// Cancel common powers of two if we're above the KNUTH_POW2_* thresholds
+		/* SKIPPED */
+
+		return divideMagnitude(b, quotient);
+	}
+
+	def divideOneWord(divisor: int, quotient: MutableBigInteger) -> int {
+		def divisorLong: long = divisor & LONG_MASK;
+
+		// Special case of one word dividend
+		if (intLen == 1) {
+			def dividendValue: long = value[offset] & LONG_MASK;
+			def q: int = int.view(dividendValue / divisorLong);
+			def r: int = int.view(dividendValue - q * divisorLong);
+			quotient.value[0] = q;
+			quotient.intLen = if(q == 0, 0, 1);
+			quotient.offset = 0;
+			return r;
+		}
+
+		if (quotient.value.length < intLen)
+			quotient.value = Array<int>.new(intLen);
+		quotient.offset = 0;
+		quotient.intLen = intLen;
+
+		// Normalize the divisor
+		def shift: int = numberOfLeadingZeros(divisor);
+
+		var rem: int = value[offset];
+		var remLong: long = rem & LONG_MASK;
+		if (remLong < divisorLong) {
+			quotient.value[0] = 0;
+		} else {
+			quotient.value[0] = int.view(remLong / divisorLong);
+			rem = int.view(remLong - (quotient.value[0] * divisorLong));
+			remLong = rem & LONG_MASK;
+		}
+		var xlen: int = intLen;
+		while (--xlen > 0) {
+			def dividendEstimate: long = (remLong << 32) | (value[offset + intLen - xlen] & LONG_MASK);
+			var q: int;
+			if (dividendEstimate >= 0) {
+				q = int.view(dividendEstimate / divisorLong);
+				rem = int.view(dividendEstimate - q * divisorLong);
+			} else {
+				def tmp: long = divWord(dividendEstimate, divisor);
+				q = int.view(tmp & LONG_MASK);
+				rem = int.view(tmp >>> 32);
+			}
+			quotient.value[intLen - xlen] = q;
+			remLong = rem & LONG_MASK;
+		}
+
+		quotient.normalize();
+		// Unnormalize
+		if (shift > 0)
+			return rem % divisor;
+		else
+			return rem;
+	}
+
+	def divideMagnitude(div: MutableBigInteger, quotient: MutableBigInteger) -> MutableBigInteger {
+		trace("divideMagnitude");
+		// D1 normalize the divisor
+		trace("D1");
+		def shift = numberOfLeadingZeros(div.value[div.offset]);
+		// Copy divisor value to protect divisor
+		def dlen = div.intLen;
+		var divisor: Array<int>;
+		var rem: MutableBigInteger; // Remainder starts as dividend with space for a leading zero
+		if (shift > 0) {
+			trace("shift > 0");
+			divisor = Array<int>.new(dlen);
+			copyAndShift(div.value, div.offset, dlen, divisor, 0, shift);
+			if (numberOfLeadingZeros(value[offset]) >= shift) {
+				trace("numberOfLeadingZeros(value[offset]) >= shift");
+				def remarr = Array<int>.new(intLen + 1);
+				rem = MutableBigIntegers.fromIntArray(remarr);
+				rem.intLen = intLen;
+				rem.offset = 1;
+				copyAndShift(value, offset, intLen, remarr, 1, shift);
+			} else {
+				def remarr = Array<int>.new(intLen + 2);
+				rem = MutableBigIntegers.fromIntArray(remarr);
+				rem.intLen = intLen + 1;
+				rem.offset = 1;
+				var rFrom = offset;
+				var c = 0;
+				def n2 = 32 - shift;
+				var i = 1;
+				while (i < intLen + 1) {
+					var b = c;
+					c = value[rFrom];
+					remarr[i] = (b << byte.!(shift)) | (c >>> byte.!(n2));
+					i++;
+					rFrom++;
+				}
+				remarr[intLen+1] = c << byte.!(shift);
+			}
+		} else {
+			divisor = Ranges.dup(div.value[div.offset ... div.offset + div.intLen]);
+			rem = MutableBigIntegers.fromIntArray(Array.new(intLen + 1));
+			Arrays.copyInto(Ranges.dup(value[offset ... offset + intLen]), rem.value, 1);
+			rem.intLen = intLen;
+			rem.offset = 1;
+		}
+
+		def nlen = rem.intLen;
+
+		// Set the quotient size
+		def limit = nlen - dlen + 1;
+		if (quotient.value.length < limit) {
+			quotient.value = Array<int>.new(limit);
+			quotient.offset = 0;
+		}
+		quotient.intLen = limit;
+		def q = quotient.value;
+
+
+		// Must insert leading 0 in rem if its length did not change
+		if (rem.intLen == nlen) {
+			rem.offset = 0;
+			rem.value[0] = 0;
+			rem.intLen++;
+		}
+
+		def dh = divisor[0];
+		def dhLong: long = dh & LONG_MASK;
+		def dl = divisor[1];
+
+		// D2 Initialize j
+		for (j < limit - 1) {
+			// D3 Calculate qhat
+			// estimate qhat
+			var qhat = 0;
+			var qrem = 0;
+			var skipCorrection = false;
+			var nh = rem.value[j + rem.offset];
+			var nh2 = nh + 0x80000000;
+			var nm = rem.value[j + 1 + rem.offset];
+
+			if (nh == dh) {
+				qhat = ~0;
+				qrem = nh + nm;
+				skipCorrection = qrem + 0x80000000 < nh2;
+			} else {
+				def nChunk: long = ((long.!(nh)) << 32) | (nm & LONG_MASK);
+				if (nChunk >= 0) {
+					qhat = int.view(nChunk / dhLong);
+					qrem = int.view(nChunk - (qhat * dhLong));
+				} else {
+					def tmp: long = divWord(nChunk, dh);
+					qhat = int.view(tmp & LONG_MASK);
+					qrem = int.view(tmp >>> 32);
+				}
+			}
+
+			if (qhat == 0)
+				continue;
+
+			if (!skipCorrection) { // Correct qhat
+				def nl: long = rem.value[j+2+rem.offset] & LONG_MASK;
+				var rs: long = ((qrem & LONG_MASK) << 32) | nl;
+				var estProduct: long = (dl & LONG_MASK) * (qhat & LONG_MASK);
+
+				if (unsignedLongCompare(estProduct, rs)) {
+					qhat--;
+					qrem = int.view((qrem & LONG_MASK) + dhLong);
+					if ((qrem & LONG_MASK) >= dhLong) {
+						estProduct -= (dl & LONG_MASK);
+						rs = ((qrem & LONG_MASK) << 32) | nl;
+						if (unsignedLongCompare(estProduct, rs))
+							qhat--;
+					}
+				}
+			}
+
+			// D4 Multiply and subtract
+			rem.value[j + rem.offset] = 0;
+			def borrow = mulsub(rem.value, divisor, qhat, dlen, j+rem.offset);
+
+			// D5 Test remainder
+			if (borrow + 0x80000000 > nh2) {
+				// D6 Add back
+				divadd(divisor, rem.value, j+1+rem.offset);
+				qhat--;
+			}
+
+			// Store the quotient digit
+			q[j] = qhat;
+		} // D7 loop on j
+		// D3 Calculate qhat
+		// estimate qhat
+		var qhat: int = 0;
+		var qrem: int = 0;
+		var skipCorrection: bool = false;
+		def nh: int  = rem.value[limit - 1 + rem.offset];
+		def nh2: int = nh + 0x80000000;
+		def nm: int  = rem.value[limit + rem.offset];
+
+		if (nh == dh) {
+			qhat = ~0;
+			qrem = nh + nm;
+			skipCorrection = qrem + 0x80000000 < nh2;
+		} else {
+			def nChunk: long = ((long.!(nh)) << 32) | (nm & LONG_MASK);
+			if (nChunk >= 0) {
+				qhat = int.view(nChunk / dhLong);
+				qrem = int.view(nChunk - (qhat * dhLong));
+			} else {
+				def tmp: long = divWord(nChunk, dh);
+				qhat = int.view(tmp & LONG_MASK);
+				qrem = int.view(tmp >>> 32);
+			}
+		}
+		if (qhat != 0) {
+			if (!skipCorrection) { // Correct qhat
+				def nl: long = rem.value[limit + 1 + rem.offset] & LONG_MASK;
+				var rs: long = ((qrem & LONG_MASK) << 32) | nl;
+				var estProduct: long = (dl & LONG_MASK) * (qhat & LONG_MASK);
+
+				if (unsignedLongCompare(estProduct, rs)) {
+					qhat--;
+					qrem = int.view((qrem & LONG_MASK) + dhLong);
+					if ((qrem & LONG_MASK) >= dhLong) {
+						estProduct -= (dl & LONG_MASK);
+						rs = ((qrem & LONG_MASK) << 32) | nl;
+						if (unsignedLongCompare(estProduct, rs))
+							qhat--;
+					}
+				}
+			}
+
+
+			// D4 Multiply and subtract
+			var borrow: int;
+			rem.value[limit - 1 + rem.offset] = 0;
+			borrow = mulsub(rem.value, divisor, qhat, dlen, limit - 1 + rem.offset);
+
+			// D5 Test remainder
+			if (borrow + 0x80000000 > nh2) {
+				// D6 Add back
+				divadd(divisor, rem.value, limit - 1 + 1 + rem.offset);
+				qhat--;
+			}
+
+			// Store the quotient digit
+			q[(limit - 1)] = qhat;
+		}
+
+		// D8 Unnormalize
+		if (shift > 0)
+			rem.rightShift(shift);
+		rem.normalize();
+		quotient.normalize();
+		return rem;
+	}
+
+	def compare(b: MutableBigInteger) -> int {
+		def blen = b.intLen;
+		if (intLen < blen)
+			return -1;
+		if (intLen > blen)
+			return 1;
+
+		// Add Integer.MIN_VALUE to make the comparison act as unsigned integer
+		// comparison.
+		def bval: Array<int> = b.value;
+		var i = offset;
+		var j = b.offset;
+		while (i < intLen + offset) {
+			def b1: int = value[i] + 0x80000000;
+			def b2: int = bval[j]  + 0x80000000;
+			if (b1 < b2)
+				return -1;
+			if (b1 > b2)
+				return 1;
+			i++;
+			j++;
+		}
+		return 0;
+	}
+
+	def rightShift(n: int) {
+		if (intLen == 0)
+			return;
+		def nInts: int = n >>> 5;
+		def nBits: int = n & 0x1F;
+		this.intLen -= nInts;
+		if (nBits == 0)
+			return;
+		def bitsInHighWord: int = bitLengthForInt(value[offset]);
+		if (nBits >= bitsInHighWord) {
+			this.primitiveLeftShift(byte.!(32 - nBits));
+			this.intLen--;
+		} else {
+			primitiveRightShift(byte.!(nBits));
+		}
+	}
+
+	def primitiveLeftShift(n: int) {
+		def val: Array<int> = value;
+		def n2: int = 32 - n;
+		var i: int = offset;
+		var c: int = val[i];
+		def m: int = i + intLen - 1;
+		while (i < m) {
+			def b = c;
+			c = val[i + 1];
+			val[i] = (b << byte.!(n)) | (c >>> byte.!(n2));
+			i++;
+		}
+		val[offset + intLen - 1] <<= byte.!(n);
+	}
+
+	def primitiveRightShift(n: int) {
+		def val: Array<int> = value;
+		def n2: int = 32 - n;
+		var i: int = offset + intLen - 1;
+		var c: int = val[i];
+		while (i > offset) {
+			def b = c;
+			c = val[i - 1];
+			val[i] = (c << byte.!(n2)) | (b >>> byte.!(n));
+			i--;
+		}
+		val[offset] >>>= byte.!(n);
+	}
+
+	def normalize() {
+		if (intLen == 0) {
+			offset = 0;
+			return;
+		}
+
+		var index: int = offset;
+		if (value[index] != 0)
+			return;
+
+		def indexBound: int = index + intLen;
+		index++;
+		while (index < indexBound && value[index] == 0)
+			index++;
+
+		def numZeros = index - offset;
+		intLen -= numZeros;
+		offset = if(intLen == 0, 0, offset + numZeros);
+	}
+
+	def getMagnitudeArray() -> Array<int> {
+		trace("getMagnitudeArray");
+		if (offset > 0 || value.length != intLen) {
+			trace("offset > 0 || value.length != intLen");
+			// Shrink value to be the total magnitude
+			def tmp: Array<int> = Ranges.dup(value[offset ... offset + intLen]);
+			for (i < value.length)
+				value[i] = 0;
+			offset = 0;
+			intLen = tmp.length;
+			value = tmp;
+		}
+		return value;
+	}
+
+	def toBigInteger(sign: int) -> BigInteger {
+		trace("toBigInteger");
+		if (intLen == 0 || sign == 0) {
+			trace("intLen == 0 || sign == 0");
+			return ZERO;
+		}
+		return BigInteger.new(getMagnitudeArray(), sign);
+	}
+
+}
+
+private component MutableBigIntegers {
+	def fromIntArray(val: Array<int>) -> MutableBigInteger {
+		def bigInt = MutableBigInteger.new();
+		bigInt.value = val;
+		bigInt.intLen = val.length;
+		return bigInt;
+	}
+	def fromInt(val: int) -> MutableBigInteger {
+		def bigInt = MutableBigInteger.new();
+		bigInt.value = Array<int>.new(1);
+		bigInt.intLen = 1;
+		bigInt.value[0] = val;
+		return bigInt;
+	}
+	def fromMutableBigInteger(val: MutableBigInteger) -> MutableBigInteger {
+		def bigInt = MutableBigInteger.new();
+		bigInt.intLen = val.intLen;
+		bigInt.value = Ranges.dup(val.value[val.offset ... val.offset + val.intLen]);
+		return bigInt;
+	}
+}
+
+class BigInteger(mag: Array<int>, signum: int) #unboxed {
+	private new() {}
+
+	/* basic arithmetic */
+
+	def add(val: BigInteger) -> BigInteger {
+		if (val.signum == 0) return this;
+		if (signum == 0) return val;
+		if (signum == val.signum)
+			return BigInteger.new(addMag(mag, val.mag), signum);
+		
+		def cmp = compareMagnitude(val);
+		if (cmp == 0) return ZERO;
+		def resultMag = if(cmp > 0, subtractMag(mag, val.mag), subtractMag(val.mag, mag));
+
+		return BigInteger.new(stripLeadingZeros(resultMag), if(cmp == signum, 1, -1));
+	}
+
+	def subtract(val: BigInteger) -> BigInteger {
+		if (val.signum == 0)
+			return this;
+		if (signum == 0)
+			return val.negate();
+		if (val.signum != signum)
+			return BigInteger.new(addMag(mag, val.mag), signum);
+
+		def cmp = compareMagnitude(val);
+		if (cmp == 0)
+			return ZERO;
+		var resultMag: Array<int> = if(cmp > 0, subtractMag(mag, val.mag), subtractMag(val.mag, mag));
+		resultMag = stripLeadingZeros(resultMag);
+		return BigInteger.new(resultMag, if(cmp == signum, 1, -1));
+	}
+
+	def multiply(val: BigInteger) -> BigInteger {
+		if (val.signum == 0 || signum == 0)
+			return ZERO;
+		
+		def xlen = mag.length;
+		def ylen = val.mag.length;
+
+		// There are some other checks/algorithms in the Java code which have been
+		// ignored for the time being.
+		if ((xlen < KARATSUBA_THRESHOLD) || (ylen < KARATSUBA_THRESHOLD)) {
+			def resultSign = if(signum == val.signum, 1, -1);
+			var result = multiplyMag(mag, xlen, val.mag, ylen, null);
+			result = stripLeadingZeros(result);
+			return BigInteger.new(result, resultSign);
+		} else {
+			return multiplyKaratsuba(this, val);
+		}
+	}
+
+
+	/* This is a truncating division, as is the case in C, Java, and Virgil.
+	 * Not like Python or Ruby in that this does not respect the division
+	 * algorithm when the divisor is negative:
+	 *   C, Java, Virgil, cicero: 5 / -2 = -2
+	 *   Ruby, Python		   : 5 / -2 = -3 (because 5 = -2 * -3 + 1)
+	 *
+	 * Deciding on which division algorithm to use: (here length = mag.length)
+	 *   if length of divisor is larger than 80 and length of dividend > length divisor + 80
+	 *							=> use Burnikel-Ziegler division (NOT IMPLEMENTED)
+	 *   if dividend = 0		  => return 0
+	 *   if dividend < divisor	=> return 0
+	 *   if dividend = divisor	=> return 1
+	 *   if length of divisor = 1 => divideOneWord (NOT IMPLEMENTED)
+	 *   **optimization to cancel common powers of two (NOT IMPLEMENTED)**
+	 *   else					 => divideMagnitude
+	 */
+	def divide(val: BigInteger) -> BigInteger {
+		def q = MutableBigInteger.new();
+		def a = MutableBigIntegers.fromIntArray(this.mag);
+		def b = MutableBigIntegers.fromIntArray(val.mag);
+		a.divide(b, q); // ignore return value r
+
+		return q.toBigInteger(this.signum * val.signum);
+	}
+	
+	def remainder(val: BigInteger) -> BigInteger {
+		def q = MutableBigInteger.new();
+		def a = MutableBigIntegers.fromIntArray(this.mag);
+		def b = MutableBigIntegers.fromIntArray(val.mag);
+		return a.divide(b, q).toBigInteger(signum);
+	}
+
+	/* bitwise operators */
+
+	def and(val: BigInteger) -> BigInteger {
+		def result: Array<int> = Array<int>.new(Ints.max(intLength(), val.intLength()));
+		for (i < result.length)
+			result[i] = (getInt(result.length - i - 1) & val.getInt(result.length - i - 1));
+
+		return valueOf(result);
+	}
+
+	def or(val: BigInteger) -> BigInteger {
+		def result: Array<int> = Array<int>.new(Ints.max(intLength(), val.intLength()));
+		for (i < result.length)
+			result[i] = (getInt(result.length - i - 1) | val.getInt(result.length - i - 1));
+
+		return valueOf(result);
+	}
+	
+	def xor(val: BigInteger) -> BigInteger {
+		def result: Array<int> = Array<int>.new(Ints.max(intLength(), val.intLength()));
+		for (i < result.length)
+			result[i] = (getInt(result.length - i - 1) ^ val.getInt(result.length - i - 1));
+
+		return valueOf(result);
+	}
+
+	def shiftLeft(n: int) -> BigInteger {
+		if (signum == 0)
+			return ZERO;
+		if (n > 0) {
+			return BigInteger.new(shiftLeftMag(mag, n), signum);
+		} else if (n == 0) {
+			return this;
+		} else {
+			// Possible int overflow in (-n) is not a trouble,
+			// because shiftRightImpl considers its argument unsigned
+			return shiftRightImpl(-n);
+		}
+	}
+
+	def shiftRight(n: int) -> BigInteger {
+		if (signum == 0)
+			return ZERO;
+		if (n > 0) {
+			return shiftRightImpl(n);
+		} else if (n == 0) {
+			return this;
+		} else {
+			// Possible int overflow in {@code -n} is not a trouble,
+			// because shiftLeft considers its argument unsigned
+			return BigInteger.new(shiftLeftMag(mag, -n), signum);
+		}
+	}
+
+	private def shiftRightImpl(n: int) -> BigInteger {
+		def nInts: int = n >>> 5;
+		def nBits: int  = n & 0x1f;
+		def magLen: int = mag.length;
+		var newMag: Array<int> = null;
+
+		// Special case: entire contents shifted off the end
+		if (nInts >= magLen)
+			return if(signum >= 0, ZERO, BigIntegers.fromLong(-1L));
+
+		if (nBits == 0) {
+			def newMagLen = magLen - nInts;
+			newMag = Array<int>.new(newMagLen);
+			Arrays.copyInto(mag, newMag, 0);
+		} else {
+			var i: int = 0;
+			def highBits: int = mag[0] >>> byte.!(nBits);
+			if (highBits != 0) {
+				newMag = Array<int>.new(magLen - nInts);
+				newMag[i++] = highBits;
+			} else {
+				newMag = Array<int>.new(magLen - nInts - 1);
+			}
+			def numIter: int = magLen - nInts - 1;
+			// Objects.checkFromToIndex(0, numIter + 1, mag.length);
+			// Objects.checkFromToIndex(i, numIter + i, newMag.length);
+			shiftRightImplWorker(newMag, mag, i, nBits, numIter);
+		}
+
+		if (signum < 0) {
+			// Find out whether any one-bits were shifted off the end.
+			var onesLost: bool = false;
+			var i: int = magLen - 1;
+			var j: int = magLen - nInts;
+			while (i >= j && !onesLost) {
+				onesLost = (mag[i] != 0);
+				i--;
+			}
+			if (!onesLost && nBits != 0)
+				onesLost = (mag[magLen - nInts - 1] << byte.!(32 - nBits) != 0);
+
+			if (onesLost)
+				newMag = javaIncrement(newMag);
+		}
+
+		return BigInteger.new(newMag, signum);
+	}
+
+	/* miscellaneous operations */
+
+	def abs() -> BigInteger {
+		return if(signum >= 0, this, this.negate());
+	}
+	
+	def negate() -> BigInteger {
+		return BigInteger.new(mag, -signum); /* XXX always creates new biginteger */
+	}
+
+	/* comparison operators */
+
+	def equals(xInt: BigInteger) -> bool {
+		// This test is just an optimization, which may or may not help
+		if (xInt == this)
+			return true;
+
+		if (xInt.signum != signum)
+			return false;
+
+		def m = mag;
+		def len = m.length;
+		def xm = xInt.mag;
+		if (len != xm.length)
+			return false;
+
+		for (i < len)
+			if (xm[i] != m[i])
+				return false;
+
+		return true;
+	}
+
+	/* Returns -1, 0, or 1 if {this} BigInteger is numerically less than, equal to,
+	 * or greater than {val}, respectively.
+	 */
+	def compareTo(val: BigInteger) -> int{
+		if (signum == val.signum) {
+			match (signum) {
+				 1 => return compareMagnitude(val);
+				-1 => return val.compareMagnitude(this);
+				 _ => return 0;
+			}
+		}
+		return if(signum > val.signum, 1, -1);
+	}
+
+	private def compareMagnitude(val: BigInteger) -> int {
+		def m1 = mag;
+		def len1 = m1.length;
+		def m2 = val.mag;
+		def len2 = m2.length;
+		if (len1 < len2)
+			return -1;
+		if (len1 > len2)
+			return 1;
+		for (i < len1) {
+			def a = m1[i];
+			def b = m2[i];
+			if (a != b)
+				return if((a & LONG_MASK) < (b & LONG_MASK), -1,  1);
+		}
+		return 0;
+	}
+
+	/* display (base 10 only) */
+
+ 	def displayHex() -> string {
+		if (signum == 0) return "0x0";
+
+		def sb = StringBuilder.new();
+		if (signum < 0) sb.putc('-');
+		
+		sb.puts("0x");
+		for (num in mag) {
+			sb.putx(num);
+		}
+
+ 		return sb.extract();
+ 	}
+
+ 	def displayDec() -> string {
+ 		if (signum == 0) return "0";
+ 
+ 		def sb = StringBuilder.new();
+ 
+ 		if (signum < 0) sb.putc('-');
+ 
+ 		abs().schoenhage(sb, 0);
+ 
+ 		return sb.extract();
+ 	}
+ 
+ 	private def schoenhage(sb: StringBuilder, digits: int) {
+ 		if (signum <= 0) System.error("schoenhage", "signum is nonpositive");
+ 
+ 		// if (mag.length <= SCHOENHAGE_BASE_CONVERSION_THRESHOLD) {
+ 			smallToString(sb, digits);
+ 			return;	
+ 		// }
+ 
+ 		// System.error("unimplemented", "m.mag.length > 20");
+ 	}
+ 
+ 	private def smallToString(buf: StringBuilder, digits: int) {
+ 		if (signum <= 0) System.error("schoenhage", "signum is nonpositive");
+ 		
+ 		if (signum == 0) {
+ 			padWithZeros(buf, digits);
+ 			return;
+ 		}
+ 
+ 		def maxNumDigitGroups = (4 * mag.length + 6) / 7;
+ 		def digitGroups = Array<long>.new(maxNumDigitGroups);
+ 
+ 		var tmp = this;
+ 		var numGroups = 0;
+ 		while (tmp.signum != 0) {
+ 			def d = BigIntegers.fromLong(0xde0b6b3a7640000L);
+ 			
+			def q = MutableBigInteger.new();
+			def a = MutableBigIntegers.fromIntArray(tmp.mag);
+			def b = MutableBigIntegers.fromIntArray(d.mag);
+ 			def r = a.divide(b, q);
+ 
+ 			def q2 = q.toBigInteger(tmp.signum * d.signum);
+ 			def r2 = r.toBigInteger(tmp.signum * d.signum);
+ 
+ 			digitGroups[numGroups++] = r2.longValue();
+ 			tmp = q2;
+ 		}
+
+		// Get string version of first digit group
+		def s: string = Strings.format1("%d", digitGroups[numGroups - 1]);
+
+		// Pad with internal zeros if necessary.
+		// digitsPerLong[10] = 18
+		padWithZeros(buf, digits - (s.length + (numGroups - 1) * 18));
+
+		// Put first digit group into result buffer
+		buf.puts(s);
+
+		// Append remaining digit groups each padded with leading zeros
+		for (i = numGroups - 2; i >= 0; i--) {
+			// Prepend (any) leading zeros for this digit group
+			def s: string = Strings.format1("%d", digitGroups[i]);
+			def numLeadingZeros: int = 18 - s.length;
+			if (numLeadingZeros != 0) {
+				for (i < numLeadingZeros)
+					buf.putc('0');
+			}
+			buf.puts(s);
+		}
+ 	}
+ 
+	/* auxiliary methods */
+
+	def longValue() -> long {
+		trace("longValue");
+		var result: long = 0;
+
+		for (i = 1; i >= 0; i--)
+			result = (result << 32) + (getInt(i) & LONG_MASK);
+
+		trace(displayHex());
+		trace(Strings.format1("%d", result));
+		return result;
+	}
+
+	private def bitLength() -> int {
+		var n: int;
+		def m: Array<int> = mag;
+		def len: int = m.length;
+
+		if (len == 0) {
+			n = 0; // offset by one to initialize
+		} else {
+			// Calculate the bit length of the magnitude
+			def magBitLength: int = ((len - 1) << 5) + bitLengthForInt(mag[0]);
+			if (signum < 0) {
+				// Check if magnitude is a power of two
+				var pow2: bool = (Ints.popcnt(u32.view(mag[0])) == 1);
+				for (i = 1; i < len && pow2; i++)
+					pow2 = (mag[i] == 0);
+
+				n = if(pow2, magBitLength - 1,  magBitLength);
+			} else {
+				n = magBitLength;
+			}
+		}
+
+		return n;
+	}
+
+	private def intLength() -> int {
+		return (bitLength() >>> 5) + 1;
+	}
+
+	private def signInt() -> int {
+		return if(signum < 0, -1, 0);
+	}
+
+	private def getInt(n: int) -> int {
+		if (n < 0)
+			return 0;
+		if (n >= mag.length)
+			return signInt();
+
+		def magInt: int = mag[mag.length - n - 1];
+
+		return if(signum >= 0, magInt, if(n <= firstNonzeroIntNum(), -magInt, ~magInt));
+	}
+
+	private def firstNonzeroIntNum() -> int {
+		// Search for the first nonzero int
+		def mlen = mag.length;
+		var i: int;
+		for (i = mlen - 1; i >= 0 && mag[i] == 0; i--);
+		return mlen - i - 1;
+	}
+
+	private def getLower(n: int) -> BigInteger {
+		def len = mag.length;
+
+		if (len <= n) {
+			return abs();
+		}
+
+		def lowerInts: Array<int> = Ranges.dup(mag[len - n ... len]);
+
+		return BigInteger.new(stripLeadingZeros(lowerInts), 1);
+	}
+
+	private def getUpper(n: int) -> BigInteger {
+		def len = mag.length;
+
+		if (len <= n) {
+			return abs();
+		}
+
+		def upperLen = len - n;
+		def upperInts: Array<int> = Ranges.dup(mag[0 ... upperLen]);
+
+		return BigInteger.new(stripLeadingZeros(upperInts), 1);
+	}
+}
+
+
+
+def padWithZeros(sb: StringBuilder, numZeros: int) {
+	while (numZeros --> 0) sb.putc('0');
+}
+
+def addMag(x: Array<int>, y: Array<int>) -> Array<int> {
+	// If x is shorter, swap the two arrays
+	if (x.length < y.length) {
+		def tmp = x;
+		x = y;
+		y = tmp;
+	}
+
+	var xIndex = x.length;
+	var yIndex = y.length;
+	def result = Array<int>.new(xIndex);
+
+	var sum: long;
+	if (yIndex == 1) {
+		sum = (x[--xIndex] & LONG_MASK) + (y[0] & LONG_MASK);
+		result[xIndex] = int.view(sum);
+	} else {
+		// Add common parts of both numbers
+		while (yIndex > 0) {
+			sum = (x[--xIndex] & LONG_MASK) + (y[--yIndex] & LONG_MASK) + (sum >>> 32);
+			result[xIndex] = int.view(sum);
+		}
+	}
+	
+	// Copy remainder of longer number while carry propagation is required
+	var carry: bool = (sum >>> 32 != 0);
+	while (xIndex > 0 && carry)
+		carry = ((result[--xIndex] = x[xIndex] + 1) == 0);
+	
+	// Copy remainder of longer number
+	while (xIndex > 0)
+		result[--xIndex] = x[xIndex];
+
+	// Grow result if necessary
+	if (carry) {
+		return Arrays.prepend(0x01, result);
+	}
+	return result;
+}
+
+def subtractMag(big: Array<int>, little: Array<int>) -> Array<int> {
+	var bigIndex = big.length;
+	def result   = Array<int>.new(bigIndex);
+	var littleIndex = little.length;
+	var difference: long = 0;
+
+	// Subtract common parts of both numbers
+	while (littleIndex > 0) {
+		difference = (big[--bigIndex] & LONG_MASK) -
+					 (little[--littleIndex] & LONG_MASK) +
+					 (difference >> 32);
+		result[bigIndex] = int.view(difference);
+	}
+
+	// Subtract remainder of longer number while borrow propagates
+	var borrow = (difference >> 32 != 0);
+	while (bigIndex > 0 && borrow)
+		borrow = ((result[--bigIndex] = big[bigIndex] - 1) == -1);
+
+	// Copy remainder of longer number
+	while (bigIndex > 0)
+		result[--bigIndex] = big[bigIndex];
+
+	return result;
+}
+
+/**
+ * Returns the input array stripped of any leading zero bytes.
+ * Since the source is trusted the copying may be skipped.
+ */
+def stripLeadingZeros(val: Array<int>) -> Array<int> {
+	var keep: int = 0;
+	while (keep < val.length && val[keep] == 0) {
+		keep++;
+	}
+	return if(keep == 0, val, Ranges.dup(val[keep ... val.length]));
+}
+
+def numberOfLeadingZeros(i: int) -> int {
+	// HD, Count leading 0's
+	if (i <= 0) return if(i == 0, 32, 0);
+	var n = 31;
+	if (i >= 1 << 16) { n -= 16; i >>>= 16; }
+	if (i >= 1 <<  8) { n -=  8; i >>>=  8; }
+	if (i >= 1 <<  4) { n -=  4; i >>>=  4; }
+	if (i >= 1 <<  2) { n -=  2; i >>>=  2; }
+	return n - (i >>> 1);
+}
+
+def copyAndShift(src: Array<int>, srcFrom: int, srcLen: int, dst: Array<int>, dstFrom: int, shift: int) {
+	def n2 = 32 - shift;
+	var c = src[srcFrom];
+	for (i < srcLen - 1) {
+		def b = c;
+		c = src[++srcFrom];
+		dst[dstFrom + i] = (b << byte.!(shift)) | (c >>> byte.!(n2));
+	}
+	dst[dstFrom + srcLen-1] = c << byte.!(shift);
+	
+}
+
+def divWord(n: long, d: int) -> long {
+	def dLong: long = d & LONG_MASK;
+	var r: long;
+	var q: long;
+	if (dLong == 1) {
+		q = int.view(n);
+		r = 0;
+		return (r << 32) | (q & LONG_MASK);
+	}
+
+	// Approximate the quotient and remainder
+	q = (n >>> 1) / (dLong >>> 1);
+	r = n - q * dLong;
+
+	// Correct the approximation
+	while (r < 0) {
+		r += dLong;
+		q--;
+	}
+	while (r >= dLong) {
+		r -= dLong;
+		q++;
+	}
+	// n - q*dlong == r && 0 <= r <dLong, hence we're done.
+	return (r << 32) | (q & LONG_MASK);
+}
+
+def LONG_MIN: long = -9223372036854775808L;
+
+def unsignedLongCompare(one: long, two: long) -> bool {
+	return (one + LONG_MIN) > (two + LONG_MIN);
+}
+
+def mulsub(q: Array<int>, a: Array<int>, x: int, len: int, offset: int) -> int {
+	def xLong: long = x & LONG_MASK;
+	var carry: long = 0;
+	offset += len;
+
+	for (j = len - 1; j >= 0; j--) {
+		def product: long = (a[j] & LONG_MASK) * xLong + carry;
+		def difference: long = q[offset] - product;
+		q[offset--] = int.view(difference);
+		carry = (product >>> 32)
+				 + if(((difference & LONG_MASK) > (((~int.view(product)) & LONG_MASK))), 1, 0);
+	}
+	return int.view(carry);
+}
+
+def divadd(a: Array<int>, result: Array<int>, offset: int) -> int {
+	var carry: long = 0;
+
+	for (j = a.length - 1; j >= 0; j--) {
+		def sum = (a[j] & LONG_MASK) + (result[j + offset] & LONG_MASK) + carry;
+		result[j + offset] = int.view(sum);
+		carry = sum >>> 32;
+	}
+	return int.view(carry);
+}
+
+def bitLengthForInt(n: int) -> int {
+	return 32 - numberOfLeadingZeros(n);
+}
+
+def multiplyMag(x: Array<int>, xlen: int, y: Array<int>, ylen: int, z: Array<int>) -> Array<int> {
+	def xstart = xlen - 1;
+	def ystart = ylen - 1;
+
+	if (z == null || z.length < (xlen + ylen)) {
+		z = Array<int>.new(xlen + ylen);
+	}
+
+	var carry: long = 0;
+	var j: int = ystart;
+	var k: int = ystart + 1 + xstart;
+	while (j >= 0) {
+		def product: long = (y[j] & LONG_MASK) * (x[xstart] & LONG_MASK) + carry;
+		z[k] = int.view(product);
+		carry = product >>> 32;
+		j--;
+		k--;
+	}
+	z[xstart] = int.view(carry);
+
+	for (i = xstart - 1; i >= 0; i--) {
+		carry = 0;
+		var j: int = ystart;
+		var k: int = ystart + 1 + i;
+		while (j >= 0) {
+			def product: long = (y[j] & LONG_MASK) * (x[i] & LONG_MASK) + (z[k] & LONG_MASK) + carry;
+			z[k] = int.view(product);
+			carry = product >>> 32;
+			j--;
+			k--;
+		}
+		z[i] = int.view(carry);
+	}
+	return z;
+}
+
+def multiplyKaratsuba(x: BigInteger, y: BigInteger) -> BigInteger {
+	def xlen = x.mag.length;
+	def ylen = y.mag.length;
+
+	// The number of ints in each half of the number.
+	def half: int = (Ints.max(xlen, ylen) + 1) / 2;
+
+	// xl and yl are the lower halves of x and y respectively,
+	// xh and yh are the upper halves.
+	def xl: BigInteger = x.getLower(half);
+	def xh: BigInteger = x.getUpper(half);
+	def yl: BigInteger = y.getLower(half);
+	def yh: BigInteger = y.getUpper(half);
+
+	def p1: BigInteger = xh.multiply(yh);  // p1 = xh*yh
+	def p2: BigInteger = xl.multiply(yl);  // p2 = xl*yl
+
+	// p3=(xh+xl)*(yh+yl)
+	def p3: BigInteger = xh.add(xl).multiply(yh.add(yl));
+
+	// result = p1 * 2^(32*2*half) + (p3 - p1 - p2) * 2^(32*half) + p2
+	def result: BigInteger = p1.shiftLeft(32 * half).add(p3.subtract(p1).subtract(p2)).shiftLeft(32 * half).add(p2);
+
+	if (x.signum != y.signum) {
+		return result.negate();
+	} else {
+		return result;
+	}
+}
+
+def shiftLeftMag(mag: Array<int>, n: int) -> Array<int> {
+	def nInts: int = n >>> 5;
+	def nBits: int = n & 0x1f;
+	def magLen: int = mag.length;
+	var newMag: Array<int> = null;
+
+	if (nBits == 0) {
+		newMag = Array<int>.new(magLen + nInts);
+		Arrays.copyInto(mag, newMag, 0);
+	} else {
+		var i: int = 0;
+		def nBits2: int = 32 - nBits;
+		def highBits: int = mag[0] >>> byte.!(nBits2);
+		if (highBits != 0) {
+			newMag = Array<int>.new(magLen + nInts + 1);
+			newMag[i++] = highBits;
+		} else {
+			newMag = Array<int>.new(magLen + nInts);
+		}
+		def numIter: int = magLen - 1;
+		// Objects.checkFromToIndex(0, numIter + 1, mag.length);
+		// Objects.checkFromToIndex(i, numIter + i + 1, newMag.length);
+		shiftLeftImplWorker(newMag, mag, i, nBits, numIter);
+		newMag[numIter + i] = mag[numIter] << byte.!(nBits);
+	}
+	return newMag;
+}
+
+def shiftLeftImplWorker(newArr: Array<int>, oldArr: Array<int>, newIdx: int, shiftCount: int, numIter: int) {
+	def shiftCountRight: int = 32 - shiftCount;
+	var oldIdx: int = 0;
+	while (oldIdx < numIter) {
+		newArr[newIdx++] = (oldArr[oldIdx++] << byte.!(shiftCount)) | (oldArr[oldIdx] >>> byte.!(shiftCountRight));
+	}
+}
+
+def shiftRightImplWorker(newArr: Array<int>, oldArr: Array<int>, newIdx: int, shiftCount: int, numIter: int) {
+	def shiftCountLeft: int = 32 - shiftCount;
+	var idx: int = numIter;
+	var nidx: int = if(newIdx == 0, numIter - 1, numIter);
+	while (nidx >= newIdx) {
+		newArr[nidx--] = (oldArr[idx--] >>> byte.!(shiftCount)) | (oldArr[idx] << byte.!(shiftCountLeft));
+	}
+}
+
+def javaIncrement(val: Array<int>) -> Array<int> {
+	var lastSum: int = 0;
+	for (i = val.length - 1; i >= 0 && lastSum == 0; i--)
+		lastSum = (val[i] += 1);
+	if (lastSum == 0) {
+		val = Array<int>.new(val.length + 1);
+		val[0] = 1;
+	}
+	return val;
+}
+
+component BigIntegers {
+	/* BigInteger(long val) */
+	def fromLong(val: long) -> BigInteger {
+		if (val == 0)
+			return ZERO;
+
+		var signum: int;
+		if (val < 0) {
+			val = -val;
+			signum = -1;
+		} else {
+			signum = 1;
+		}
+
+		var mag: Array<int>;
+		def highWord = int.view(val >>> 32);
+		if (highWord == 0) {
+			mag = [int.view(val)];
+		} else {
+			mag = [highWord, int.view(val)];
+		}
+		return BigInteger.new(mag, signum);
+	}
+
+	def fromDecimal: string -> BigInteger;
+}
+
+def valueOf(val: Array<int>) -> BigInteger {
+	// skip empty check
+	if (val[0] > 0) {
+		return BigInteger.new(val, 1);
+	} else {
+		var mag: Array<int>;
+		var signum: int;
+
+		if (val[0] < 0) {
+			mag = makePositive(val);
+			signum = -1;
+		} else {
+			mag = stripLeadingZeros(val);
+			signum = if(mag.length == 0, 0, 1);
+		}
+		// skip range check
+		return BigInteger.new(mag, signum);
+	}
+}
+
+def makePositive(a: Array<int>) -> Array<int> {
+	var keep: int;
+	var j: int;
+
+	// Find first non-sign (0xffffffff) int of input
+	for (keep = 0; keep < a.length && a[keep] == -1; keep++);
+
+	/* Allocate output array.  If all non-sign ints are 0x00, we must
+	 * allocate space for one extra output int. */
+	for (j = keep; j < a.length && a[j] == 0; j++);
+
+	def extraInt = if(j == a.length, 1, 0);
+	def result: Array<int> = Array<int>.new(a.length - keep + extraInt);
+
+	/* Copy one's complement of input into output, leaving extra
+	 * int (if it exists) == 0x00 */
+	for (i = keep; i < a.length; i++)
+		result[i - keep + extraInt] = ~a[i];
+
+	// Add one to one's complement to generate two's complement
+	for (i = result.length - 1; ++result[i] == 0; i--);
+
+	return result;
+}
+
+def TRACE = false;
+def trace(msg: string) {
+	if (TRACE) {
+		System.puts(msg);
+		System.ln();
+	}
+}

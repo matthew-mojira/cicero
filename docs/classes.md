@@ -70,7 +70,7 @@ Methods:
 
 ## int
 
-Represents a 64-bit signed integer.
+Represents an signed integer.
 
 Methods:
 * `(i.display)`: returns a string representation of the object
@@ -90,9 +90,8 @@ Methods:
 * `(i1.& i2)`: bitwise AND
 * `(i1.| i2)`: bitwise OR
 * `(i1.^ i2)`: bitwise XOR
-* `(i1.<< i2)`: arithmetic shift left
-* `(i1.>>> i2)`: logical shift right
-* `(i1.>> i2)`: arithmetic shift right
+* `(i1.<< i2)`: shift left
+* `(i1.>> i2)`: shift right
 
 ## list
 
