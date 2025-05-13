@@ -1,0 +1,1 @@
+(lambda (self) (self.+ 1))
