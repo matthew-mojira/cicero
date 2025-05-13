@@ -868,8 +868,8 @@ class BigInteger(mag: Array<int>, signum: int) #unboxed {
 	private def firstNonzeroIntNum() -> int {
 		// Search for the first nonzero int
 		def mlen = mag.length;
-		var i: int;
-		for (i = mlen - 1; i >= 0 && mag[i] == 0; i--);
+		var i: int = mlen - 1;
+		while (i >= 0 && mag[i] == 0) i--;
 		return mlen - i - 1;
 	}
 
@@ -1239,15 +1239,14 @@ def valueOf(val: Array<int>) -> BigInteger {
 }
 
 def makePositive(a: Array<int>) -> Array<int> {
-	var keep: int;
-	var j: int;
-
 	// Find first non-sign (0xffffffff) int of input
-	for (keep = 0; keep < a.length && a[keep] == -1; keep++);
+	var keep: int = 0;
+	while (keep < a.length && a[keep] == -1) keep++;
 
 	/* Allocate output array.  If all non-sign ints are 0x00, we must
 	 * allocate space for one extra output int. */
-	for (j = keep; j < a.length && a[j] == 0; j++);
+	var j: int = keep;
+	while (j < a.length && a[j] == 0) j++;
 
 	def extraInt = if(j == a.length, 1, 0);
 	def result: Array<int> = Array<int>.new(a.length - keep + extraInt);

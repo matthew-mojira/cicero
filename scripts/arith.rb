@@ -11,10 +11,13 @@ class Integer
       div other
     end
   end
+  def % other
+    self - (self / other) * other
+  end
 end
 
 def rand_op
-  [:+, :-, :*, :+, :-, :*, :+, :-, :*, :/].sample
+  [:+, :-, :*, :&, :|, :^, :%, :/].sample
 end
 
 CONST_PROB    = ARGV[0].to_f
