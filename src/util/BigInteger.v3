@@ -464,7 +464,7 @@ private component MutableBigIntegers {
 	}
 }
 
-class BigInteger(mag: Array<int>, signum: int) #unboxed {
+class BigInteger(mag: Array<int>, signum: int) {
 	private new() {}
 
 	/* basic arithmetic */

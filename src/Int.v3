@@ -1,5 +1,4 @@
 class IntObject(val: BigInteger) extends Object {
-	//def display() => Strings.format3("%s = %s (%d)", val.displayDec(), val.displayHex(), val.signum);
 	def display() => val.displayDec();
 	def isTrue()  => true;
 
@@ -20,11 +19,6 @@ class IntObject(val: BigInteger) extends Object {
 		if (!that.instanceOf(ClassObjects.classInt))
 			return Result.OK(BoolObjects.falseObject);
 		return Result.OK(BoolObjects.getBoolObject(this.val.equals(IntObject.!(that).val)));
-	}
-	def i_neq(that: Object) -> Result {
-		if (!that.instanceOf(ClassObjects.classInt))
-			return Result.OK(BoolObjects.trueObject);
-		return Result.OK(BoolObjects.getBoolObject(!this.val.equals(IntObject.!(that).val)));
 	}
 
 	def i_lt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val.compareTo(that.val) <  0));

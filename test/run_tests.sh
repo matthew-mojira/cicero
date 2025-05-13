@@ -49,6 +49,8 @@ if [ "$TEST_TIERS" = "" ]; then
     fi
 fi
 
+rm -r /tmp/$USER/cicero-test
+
 # find program suites
 for suite in $SCRIPT_LOC/suites/*; do
     SUITE="$(basename "$suite")"

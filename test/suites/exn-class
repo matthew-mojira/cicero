@@ -24,9 +24,8 @@
 ; getting superclass of base, directly
 (try {
   (class X)
-  (set x (new X))
-  (x.superclass)
-  ((get-field superclass (x.superclass)))
+  (X.superclass)
+  ((get-field superclass (X.superclass)))
   "fail"
 } e "pass")
 --
@@ -36,8 +35,8 @@
 (try {
   (class X)
   (set x (new X))
-  (x.superclass)
-  ((get-field superclass (x.superclass)))
+  (set y (x.class))
+  ((get-field superclass (y.superclass)))
   "fail"
 } e "pass")
 --

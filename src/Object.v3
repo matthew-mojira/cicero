@@ -111,13 +111,6 @@ class Object {
 		 * could change if we expose *primitive* fields which are also
 		 * Cicero objects.
 		 */
-		// Methods are initialized when class is initialized
- 		for (clazz in classes.copy()) {
- 			for (func in clazz.classMethods) {
-				def m = MethodObject.new(this, func.id, func.params, func.code);
-				fields[fieldMap[func.id]] = m;
- 			}
-		}
 	}
 
 	// returns success
@@ -154,7 +147,21 @@ class Object {
 		if (!fieldMap.has(name)) return null;
 
 		def obj = fields[fieldMap[name]];
-		return obj; // allocated
+		if (obj != null) return obj; // allocated
+	
+		// null if and only if lazy (uninitialized) method
+ 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
+ 			for (func in clazz.classMethods) {
+ 				if (Strings.equal(func.id, name)) {
+ 					def m = MethodObject.new(this, func.id, func.params, func.code);
+ 					fields[fieldMap[name]] = m;
+ 					return m;
+ 				}
+ 			}
+ 		}
+
+		System.error("object error", Strings.format1("uninitialized field not a lazy method: %s", name));
+		return null;
 	}
 
 	def getClass() -> ClassObject {
@@ -172,8 +179,8 @@ class Object {
 		return false;
 	}
 
-	def display() -> string { return "<object>"; }
-	def isTrue() -> bool;
+	def display() => "<object>";
+	def isTrue()  => true;
 
 	def o_getclass() -> Result {
 		return Result.OK(cls);

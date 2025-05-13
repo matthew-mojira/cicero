@@ -2,6 +2,9 @@
  * an abstract class extended by Virgil/AST/Bytecode frames internally.
  */
 class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) extends Object {
+	def display() -> string { return Strings.format1("<frame '%s'>", name); }
+	def isTrue()  -> bool   { return true; }
+
 	var globals: HashMap<string, Object>;
 	def var name: string;
 
@@ -70,7 +73,7 @@ class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Obje
 	/* methods */
 
 	def fr_display() -> Result {
-		return Result.OK(StrObjects.fromString(Strings.format1("<frame '%s'>", name)));
+		return Result.OK(StrObjects.fromString(display()));
 	}
 }
 

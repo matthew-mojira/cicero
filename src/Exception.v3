@@ -1,4 +1,6 @@
 class ExnObject extends Object {
+	def isTrue()  -> bool   { return true; }
+
 	var message: StrObject;
 	def stacktrace: Vector<(string, FileRange)> = Vector.new();
 	// TODO handle Virgil locations better?

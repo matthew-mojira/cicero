@@ -50,8 +50,7 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod0("fields",       Object.o_fields),   // 1
 			 FuncObjects.fromVirgilMethod0("display",      Object.o_display),  // 2
 			 FuncObjects.fromVirgilMethod1("get-field", s, Object.o_getfield), // 3
-			 FuncObjects.fromVirgilMethod1("=",  o,        Object.o_eq),       // 4
-			 FuncObjects.fromVirgilMethod1("!=", o,        Object.o_neq)       // 5
+			 FuncObjects.fromVirgilMethod1("=",  o,        Object.o_eq)        // 4
 			]);
 	def classBool =	ClassObject.new("bool", classBase, 
 			CodeObjects.virgilFail, 
@@ -96,7 +95,6 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod1("/",  i,   IntObject.i_div),
 			 FuncObjects.fromVirgilMethod1("%",  i,   IntObject.i_mod),
 			 FuncObjects.fromVirgilMethod1("=",  o,   IntObject.i_eq),
-			 FuncObjects.fromVirgilMethod1("!=", o,   IntObject.i_neq),
 			 FuncObjects.fromVirgilMethod1("<",  i,   IntObject.i_lt),
 			 FuncObjects.fromVirgilMethod1("<=", i,   IntObject.i_leq),
 			 FuncObjects.fromVirgilMethod1(">",  i,   IntObject.i_gt),

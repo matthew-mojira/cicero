@@ -1,0 +1,5 @@
+(set x 1)
+(while true {
+       (println x)
+       (set x (+ x 1))
+ })
