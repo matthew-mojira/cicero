@@ -1,0 +1,402 @@
+(func (zero) "fail")
+(func (one a) "fail")
+(func (two a b) "fail")
+(func (three a b c) "fail")
+(func (four a b c d) "fail")
+(func (five a b c d e) "fail")
+(func (six a b c d e f) "fail")
+--
+=> <func 'zero'>
+=> <func 'one'>
+=> <func 'two'>
+=> <func 'three'>
+=> <func 'four'>
+=> <func 'five'>
+=> <func 'six'>
+==
+(try {
+  (zero 1)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (zero 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (one)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (one 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (one (two 1 2 3) (four 1 2 3 4))
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (four 1 2 3)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (four 1 2 3 (six 1 2 3 4 5 6 7))
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set x 0)
+  (while (< x 100000) {
+    (if (= x 48532) (set f two) (set f three))
+    (f 1 2 3)
+    (set x (x.succ))
+  })
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (print "three" "two")
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (= base class class)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (base.= base base)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (true.and true and false)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (false.or false false)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set f base.name)
+  (f 1)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.+)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.+ 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.-)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.- 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.*)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.* 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5./)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5./ 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.%)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.% 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.=)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.= 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.<)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.< 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.>)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.> 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.<=)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.<= 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.>=)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.>= 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.&)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.& 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.|)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.| 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.^)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.^ 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.>>)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.>> 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.<<)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (5.<< 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set x [1 2 3])
+  (x.get)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set x [1 2 3])
+  (x.get 1 2)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set x [1 2 3])
+  (x.set 1)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set x [1 2 3])
+  (x.set)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set x [1 2 3])
+  (x.set 5 6 7)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set x [1 2 3])
+  (x.put)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set x [1 2 3])
+  (x.put 4 5)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set s "string")
+  (s.+)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  (set s "string")
+  (s.+ " string" " another string")
+  "fail"
+} e "pass")
+--
+=> "pass"
+--

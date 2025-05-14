@@ -1,0 +1,26 @@
+; no matching cond = exception
+==
+(try {
+  (cond
+    (() 2)
+    (false 4))
+  "fail"
+  }
+  e "pass")
+--
+=> "pass"
+--
+(try {
+  (cond
+    (false 1)
+    ((= false true) 2)
+    (() 3)
+    ((= 18 14) 4)
+    ((if 11 () ()) 5)
+    ((print "6") 6))
+  "fail"
+} e "pass")
+--
+"6"=> "pass"
+--
+

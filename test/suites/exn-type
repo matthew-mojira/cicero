@@ -2,6 +2,20 @@
 --
 ==
 (try {
+  (1 2 3)
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
+  ((base.name))
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
+(try {
   (1.+ false)
   "fail"
 } e "pass")

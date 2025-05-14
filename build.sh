@@ -90,7 +90,7 @@ echo "}" >> "$CICERO_TEXT"
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="-symbols -heap-size=2047M -stack-size=16M -O3"
+V3C_OPTS="-symbols -heap-size=1000M -stack-size=16M -O3"
 
 # build
 exe=${PROGRAM}.${TARGET}

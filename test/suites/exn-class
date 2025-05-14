@@ -42,11 +42,12 @@
 --
 => "pass"
 --
+; it's okay to instantiate base!
+(new base)
+--
+=> <object>
+--
 ; trying to instantiate a built-in class using `new`
-(try-new base)
---
-=> "pass"
---
 (try-new bool)
 --
 => "pass"

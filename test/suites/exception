@@ -1,0 +1,23 @@
+(func (except b) {
+    (print b)
+    (raise b)
+    (false)
+})
+--
+=> <func 'except'>
+==
+(try { 1 2 3 (raise "exception!") 4 5 false } e true)
+--
+=> true
+--
+(try { 1 (except "raise me") false } e true)
+--
+"raise me"=> true
+--
+(try {
+  (except "text")
+}
+e (e.display))
+--
+"text"=> "<exception 'text'>"
+--

@@ -15,11 +15,10 @@ Benchmarking/unit tests
       component and capture a potential bottleneck in the system)
 - [ ] run benchmarks
 - [ ] test suite holes
-  - [ ] ints: all methods, overflow/underflow, direct method access, bitshifts,
-        large + arithmetic comparisons
   - [ ] redefining things in the base class, especially determining what is
         canoncalized
   - [ ] more on classes, duck typing, simple tests on setting fields
+  - [ ] large integer literals (after porting Java code)
 
 Optimizations in the tier1 bytecode
 - [ ] determine what optimizations are available
