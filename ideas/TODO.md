@@ -1,19 +1,6 @@
 # Todo list
 
 Benchmarking/unit tests
-- [ ] add many example programs, unit tests (and expected outputs)
-  - [X] matrix
-  - [X] list sorting algorithms
-  - [ ] hot-swapping a function at runtime
-  - [ ] duck typine test
-  - [~] higher-order functions (map, fold)
-  - [ ] prime sieve
-  - [X] Richards
-  - [ ] DeltaBlue
-  - [ ] Other virgil benchmarks?
-- [ ] add benchmark programs (each program should stress test a different
-      component and capture a potential bottleneck in the system)
-- [ ] run benchmarks
 - [ ] test suite holes
   - [ ] redefining things in the base class, especially determining what is
         canoncalized
@@ -32,35 +19,20 @@ Optimizations in the tier1 bytecode
       ```
 
 Optimize memory usage
-- [X] don't cache overly large numbers (command line option)
+- [ ] figure out caching of BigInts
 - [ ] find what objects/types can be unboxed boxed
 
 CLI
-- [X] use `Option.v3` and parse them
-- [X] help message
-- [X] allow multiple files to be evaluated (simply evaluate them in order)
-- [X] allow configuring between tiers
 - [ ] tracing, debugging enable flags
 - [ ] use option groups (from Aeneas) and refactor
 - [ ] pass command line arguments to program
 
 Exceptions
-- [X] fix extra `<Virgil func>` appearing at top of stacktrace
-- [X] include function names in the stacktrace
-- [X] the stacktrace is reversed?
-- [X] column numbers in stacktrace is incorrect (matches rows)
-- [X] maybe add better information about exceptions in Virgil functions? (name got added)
-- [X] fix tier0 vs. tier1 stacktrace inconsistency (=> better bytecode writer!!)
-- [X] intern exception strings
 - [~] allow reflection over stacktrace information (just returns list of lines
       as strings, not very useful)
 
 Built-in classes
-- [X] override base class methods for `display` and others
-- [X] allow mixed virgil and cicero code in methods
 - [ ] add more operations to many classes
-- [X] element-wise comparison of lists (might require virgil frames to create
-      more frames!)--at least there is an example program for now
 
 Maps
 - [ ] add methods to the map class
@@ -69,15 +41,10 @@ Maps
 Better bytecode
 - [ ] reduce operands by one of the following: (1) operand length depends on
       bytecode, (2) use LEBs, (3) add `EXTENDED_ARG` bytecode
-- [ ] if still using fixed-width instructions, use word-addressed PC to remove
-      redundant alignment bits
-- [ ] error when compilation is not possible (e.g. when the required operand
-      exceeds size)
 - [ ] create better DataWriter wrappers (e.g. combine `source.put`/`putb`/`putO`)
 - [ ] canonicalize constants and name strings in the bytecode compiler
 
 Better functions
-- [X] anonymous functions
 - [ ] closures (allowing recursion for a function not at the top level)
   - [ ] two-pass nonlocal detection
 - [ ] allow (mutation of) nonlocal variables
@@ -88,7 +55,6 @@ Better functions
 
 Nicer parsing experience
 - [ ] fix hang when parsing mismatched parentheses in method definition
-- [ ] print out relevant line when a parse error occurs
 - [ ] when input is stdin, keep reading on incomplete input
 - [ ] clarify between keywords, literals, and builtins
 - [ ] do not allow duplicate parameter/field/methods names
@@ -101,12 +67,10 @@ More types
 - [ ] set
 
 Wasm
-- [X] Compile VM to Wasm
 - [ ] Analyze compiled Wasm with GRP (update GRP)
-- [ ] compile bytecode to Wasm, link wizard, and execute
+- [ ] Tier II layering: compile bytecode to Wasm, link wizard, and execute
 
 Potpourri of potentially bigger things
-- [X] Makefile/build system
 - [ ] anonymous classes
 - [ ] Default values proposal
 - [ ] Object constructors
@@ -117,11 +81,8 @@ Potpourri of potentially bigger things
 - [ ] print should call field display, not internal Virgil object's 
 - [ ] rename XObjects component (e.g. getIntObject -> fromLong)
 - [ ] return, break, continue
-- [X] short-circuiting boolean operators (not methods of bool class)
 - [ ] namespaces?
 - [ ] rename PoopCrap to something more school-appropriate (and maybe Classhole too)
-- [X] check if `=` and `!=` will type error on ints (be consistent)
-- [X] BIG INTEGERS!!
 
 ## nonlocal variables
 

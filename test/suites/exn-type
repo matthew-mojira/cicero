@@ -15,6 +15,15 @@
 --
 => "pass"
 --
+; function throws exception
+(try {
+  ; evaluate 1, then throw exception
+  (1 (print "fail"))
+  "fail"
+} e "pass")
+--
+=> "pass"
+--
 (try {
   (1.+ false)
   "fail"
