@@ -1,0 +1,118 @@
+(set x (new (class X (field a 1) (field b 2))))
+(set y (new (class Y (field a 1) (field b 2) (field c 3) (method (display) "y"))))
+--
+=> <object>
+=> <object>
+==
+(try {
+  x.c
+  "fail"
+}
+e "pass")
+--
+=> "pass"
+--
+(try {
+  (println x.a)
+  (println x.b)
+  x.c
+  "fail"
+}
+e "pass")
+--
+1
+2
+=> "pass"
+--
+(try {
+  y.d
+  "fail"
+}
+e "pass")
+--
+=> "pass"
+--
+(try {
+  (set i 0)
+  (while (< i 1000) {
+    y.c
+    (set i (i.succ))
+  })
+  x.c
+}
+e "pass")
+--
+=> "pass"
+--
+(func (get-c o) o.c)
+(try {
+  (set i 0)
+  (while (< i 1000) {
+    (get-c y)
+    (set i (i.succ))
+  })
+  (get-c x)
+  "fail"
+}
+e "pass")
+--
+=> <func 'get-c'>
+=> "pass"
+--
+(try {
+  (set sym "a")
+  (set-field a x 9)
+  (set sym "b")
+  (set-field b x 9)
+  (set sym "c")
+  (set-field c x 9)
+  "fail"
+}
+e sym)
+--
+=> "c"
+--
+(try {
+  (set sym "a")
+  (set-field a y 9)
+  (set sym "b")
+  (set-field b y 9)
+  (set sym "c")
+  (set-field c y 9)
+  (set sym "d")
+  (set-field d y 9)
+  "fail"
+}
+e sym)
+--
+=> "d"
+--
+(try {
+  (set sym "display")
+  (set-field display y 9)
+  (set sym "class")
+  (set-field class y 9)
+  (set sym "=")
+  (set-field = y 9)
+  (set sym "fields")
+  (set-field fields y 9)
+  (set sym "get-field")
+  (set-field get-field y 9)
+  (set sym "display")
+  (set-field display y 9)
+  (set sym "class")
+  (set-field class y 9)
+  (set sym "=")
+  (set-field = y 9)
+  (set sym "fields")
+  (set-field fields y 9)
+  (set sym "get-field")
+  (set-field get-field y 9)
+  (set sym "d")
+  (set-field d y 9)
+  "fail"
+}
+e sym)
+--
+=> "d"
+--

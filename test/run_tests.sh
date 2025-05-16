@@ -49,10 +49,18 @@ if [ "$TEST_TIERS" = "" ]; then
     fi
 fi
 
+# find program suites
+if [ "$TEST_SUITES" = "" ]; then
+    if [ "$TEST_SUITE" = "" ]; then
+        TEST_SUITES="$SCRIPT_LOC/suites/*"
+    else
+        TEST_SUITES="$SCRIPT_LOC/suites/$TEST_SUITE"
+    fi
+fi
+
 rm -r /tmp/$USER/cicero-test
 
-# find program suites
-for suite in $SCRIPT_LOC/suites/*; do
+for suite in $TEST_SUITES; do
     SUITE="$(basename "$suite")"
     T=/tmp/$USER/cicero-test/suites/$SUITE
     mkdir -p $T
@@ -99,7 +107,7 @@ for target in $TEST_TARGETS; do
     for tier in $TEST_TIERS; do
         TEST_TIER=$tier
     
-        for suite in $SCRIPT_LOC/suites/*; do
+        for suite in $TEST_SUITES; do
             SUITE="$(basename "$suite")"
             T=/tmp/$USER/cicero-test/suites/$SUITE
             U=/tmp/$USER/cicero-test/$target/tier$TEST_TIER/$SUITE

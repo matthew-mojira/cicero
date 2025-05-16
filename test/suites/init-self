@@ -1,0 +1,22 @@
+(class X
+  (field a "a")
+  (field one 1)
+  (init {
+    (println self.a)
+    (println self.one)
+    (println self.display)
+    (println (self.display))
+    (self.display)
+  })
+)
+--
+=> <class 'X'>
+==
+(new X)
+--
+"a"
+1
+<method 'display'>
+"<object>"
+=> <object>
+--

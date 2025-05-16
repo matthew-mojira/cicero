@@ -1,0 +1,59 @@
+(set i 0)
+(set s "")
+--
+=> 0
+=> ""
+==
+""
+--
+=> ""
+--
+"string"
+--
+=> "string"
+--
+(i.display)
+--
+=> "0"
+--
+(puts "string")
+--
+string=> <poopcrap>
+--
+(puts "string\n")
+--
+string
+=> <poopcrap>
+--
+(puts "\"string\"")
+--
+"string"=> <poopcrap>
+--
+(puts "\'character\'")
+--
+'character'=> <poopcrap>
+--
+(puts "t\ta\tb")
+--
+t	a	b=> <poopcrap>
+--
+(while (< i 10) {
+  (set s (+ s "s"))
+  (set i (i.succ))
+})
+s
+--
+=> false
+=> "ssssssssss"
+--
+(while (< i 100) {
+  (set s (+ s "s"))
+  (set s (+ s "e"))
+  (set s (+ s "a"))
+  (set i (i.succ))
+})
+s
+--
+=> false
+=> "seaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseasea"
+--

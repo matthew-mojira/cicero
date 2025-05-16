@@ -1,0 +1,48 @@
+(func (sum-tree xs)
+  (cond
+    ((= (xs.class) int) xs)
+    ((= (xs.class) list) {
+      (set i 0)
+      (set sum 0)
+      (while (< i (xs.length)) {
+        (set sum (+ sum (sum-tree (xs.get i))))
+        (set i (i.succ))
+      })
+      sum
+    })))
+--
+=> <func 'sum-tree'>
+==
+(sum-tree 0)
+--
+=> 0
+--
+(sum-tree 1)
+--
+=> 1
+--
+(sum-tree [])
+--
+=> 0
+--
+(sum-tree [1])
+--
+=> 1
+--
+(sum-tree [[]])
+--
+=> 0
+--
+(sum-tree [[1]])
+--
+=> 1
+--
+(sum-tree [[] 1])
+--
+=> 1
+--
+(sum-tree [[1] 1])
+--
+=> 2
+--
+
