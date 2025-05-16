@@ -1,14 +1,16 @@
 /* FrameObject refers to the `frame` type in Cicero, but in Virgil this is
  * an abstract class extended by Virgil/AST/Bytecode frames internally.
  */
-class FrameObject(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) extends Object {
+class FrameObject extends Object {
+	def code: CodeObject;
+	def args: Array<(string, Object)>;
 	def display() -> string { return Strings.format1("<frame '%s'>", name); }
 	def isTrue()  -> bool   { return true; }
 
 	var globals: HashMap<string, Object>;
 	def var name: string;
 
-	private new() {
+	private new(prev: FrameObject, code, args) {
 		if (prev == null) {
 			globals = Strings.newMap();
 		} else {

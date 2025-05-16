@@ -1,3 +1,13 @@
+/* Refactor Bytecode class into BytecodeBuilder which creates Bytecode
+ * class Bytecode(instrs:     Array<byte>, 
+ *                stringPool: Array<string>,
+ *                constPool:  Array<Object>,
+ *                classPool:  Array<(ClassObject, ???) -> ClassObject>,
+ *                funcPool:   Array<??? -> FuncObject>,
+ *                sourceMap:  Array<FileRange>) // indexed by what? if we do non-uniform instruction length
+ * ??? = captured variables (by name or by index in previous locals?--troublesome in mixed-tier code, if that ever exists)
+ */ 
+
 class Bytecode {
 	def writer:     DataWriter     = DataWriter.new();
 
