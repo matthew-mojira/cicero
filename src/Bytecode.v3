@@ -3,10 +3,9 @@ class Bytecode {
 
 	var bytecode:   Array<byte>;
 	def strings:    Vector<string> = Vector.new();
-	def classholes: Vector<ClassObject -> ClassObject>  = Vector.new();
+	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
 	def constants:  Vector<Object> = Vector.new();
 	def locals:     Vector<string> = Vector.new();
-
 
 	/* Source mappings */
 	def source: Vector<FileRange>  = Vector.new();
@@ -310,6 +309,11 @@ class Bytecode {
 	}
 
 	def addString(str: string) -> int {
+		// check for existing string
+		for (i = 0; i < strings.length; i++) {
+			if (Strings.equal(strings[i], str))
+				return i;
+		}
 		def idx = strings.length;
 		strings.put(str);
 		return idx;
