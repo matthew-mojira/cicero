@@ -4,8 +4,7 @@ Benchmarking/unit tests
 - [ ] test suite holes
   - [ ] redefining things in the base class, especially determining what is
         canoncalized
-  - [ ] more on classes, duck typing, simple tests on setting fields
-  - [ ] large integer literals (after porting Java code)
+  - [ ] set-field
 
 Optimizations in the tier1 bytecode
 - [ ] determine what optimizations are available
