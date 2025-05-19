@@ -43,6 +43,9 @@ component CodeObjects {
 	}
 
 	def fromAST(ast: AST) -> CodeObject {
+		// XXX should this be allowed?
+		if (ast == null) return null;
+
 		def code = CodeObject.new(ast.loc);
 		code.ast = ast;
 		code.tier = 0;

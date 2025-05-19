@@ -1,8 +1,48 @@
+enum Keyword(id: string) {
+	IF("if"),
+	COND("cond"),
+	WHILE("while"),
+	AND("and"),
+	OR("or"),
+	BEGIN("begin"),
+	FUNC("func"),
+	LAMBDA("lambda"),
+	SET("set"),
+	SET_GLOBAL("set-global"),
+	GET_GLOBAL("get-global"),
+	GET_FIELD("get-field"),
+	SET_FIELD("set-field"),
+	CLASS("class"),
+	NEW("new"),
+	RAISE("raise"),
+	TRY("try")
+}
+
+enum ClassKeyword(id: string) {
+	EXTENDS("extends"),
+	INIT("init"),
+	FIELD("field"),
+	METHOD("method")
+}
+
+component ParseOption {
+	def allowMissingElse: bool = false;
+	//def allowEmptyBegin: bool  = false;
+}
+
+def missingCloseParentheses: string = "expected closing parentheses but reached end of file";
+def duplicatedParameter: string     = "parameter redefined";
+def duplicatedFieldMethod: string   = "field/method redefined";
+def duplicatedExtends: string       = "extends clause defined";
+def duplicatedInit: string          = "init clause defined";
+
 class Parser extends TextReader {
-	private def exprs: Vector<CodeObject> = Vector<CodeObject>.new();
+	private def exprs: Vector<CodeObject>          = Vector.new();
+	def errors: Vector<(int, int, string)> = Vector.new();
 
 	new(fileName: string, data: string) super(fileName, data) {
 		skipWs = skipWhitespaceAndComments;
+	   onError = fun (x: TextReader, a: int, b: int, c: string) => Parser.!(x).addError(a, b, c);
 
 		skipWs(this);
 		while (pos < limit) {
@@ -42,295 +82,317 @@ class Parser extends TextReader {
 		def startLine = line, startColumn = column;
 		match (char) {
 			'(' => {
+				// consume matched token
 				req1('(');
+				
+				// check for unit
 				if (opt1(')') >= 0) {
-					// () case
 					return AST.new(ASTData.Lit(PoopCrapObjects.instance), FileRange.new(fileName, startLine, startColumn, line, column));
 				}
 
-				// check first word to indicate KW-syntax expression
-				def head = readExpr();
+				// check for keyword
+				def kw = readKeyword();
 
-				// XXX A keyword is allowed to be used anywhere. It only takes on special
-				// meaning if it appears as the first identifier in a list.
-				match (head.data) {
-					VarGet(str, _) => {
-						// check if this is a keyword
-						if (Strings.equal(str, "if")) {
-							def cond = readExpr();
-							def exprT = readExpr();
-							def exprF = readExpr();
+				// no keyword
+				if (kw.isNothing()) {
+					def head: AST = readExpr();
+					def tail: Vector<AST> = Vector.new();
+					while (opt1(')') < 0) {
+						def expr = readExpr();
+						tail.put(expr);
+
+						if (pos >= limit) {
+							failRel(startPos - pos, missingCloseParentheses);
+							return null;
+						}
+					}
+					return AST.new(ASTData.Apply(head, tail.extract()),
+						FileRange.new(fileName, startLine, startColumn, line, column));
+				}
+
+				def str = kw.fromJust();
+				match (str) {
+					IF => {
+						def cond = readExpr();
+						def exprT = readExpr();
+						var exprF: AST;
+						if (ParseOption.allowMissingElse && opt1(')') >= 0) {
+								exprF = AST.new(ASTData.Lit(PoopCrapObjects.instance), null);
+						} else {
+							exprF = readExpr();
 							req1(')');
+						}
 
-							return AST.new(ASTData.If(cond, exprT, exprF),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "raise")) {
-							def exn = readExpr();
-							req1(')');
-
-							return AST.new(ASTData.Raise(exn),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "try")) {
-							def try = readExpr();
-							def exn = readIdentifier();
-							def catch = readExpr();
-							req1(')');
-							
-							// make the exception variable a local
-							def b = bindLocal(exn);
-
-							return AST.new(ASTData.Catch(try, exn, b, catch),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-
-						/* functions and lambdas */
-						} else if (Strings.equal(str, "func")) {
-							/* The syntax of a function is
-							 *   (func (f x y z)
-							 *      <expr>
-							 *   )
-							 */
+						return AST.new(ASTData.If(cond, exprT, exprF),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					COND => {
+						def cases: Vector<(AST, AST)> = Vector.new();
+						while (opt1(')') < 0) {
 							req1('(');
-							// name of function
-							def name = readIdentifier();
-							// params to function
-							def params: Vector<string> = Vector<string>.new();
-							while (opt1(')') < 0) {
-								def param = readIdentifier();
-								params.put(param);
-
-								if (pos >= limit) {
-									failRel(startPos - pos, "unmatched opening parentheses");
-									return null;
-								}
-							}
-							
-							// body expresssion
-							def body = readCode(params.copy());
-							req1(')');
-
-							def b = bindLocal(name);
-							def range = FileRange.new(fileName, startLine, startColumn, line, column);
-							
-							// XXX creating CodeObject here
-							return AST.new(ASTData.VarSet(name, b,
-										                  AST.new(ASTData.Func(name, params.extract(), CodeObjects.fromAST(body)), range)), 
-										   range);
-						} else if (Strings.equal(str, "lambda")) {
-							/* lambdas */
-							req1('(');
-							// params to function
-							def params: Vector<string> = Vector<string>.new();
-							while (opt1(')') < 0) {
-								def param = readIdentifier();
-								params.put(param);
-
-								if (pos >= limit) {
-									failRel(startPos - pos, "unmatched opening parentheses");
-									return null;
-								}
-							}
-							
-							// body expresssion
-							def body = readCode(params.copy());
-							req1(')');
-
-							def range = FileRange.new(fileName, startLine, startColumn, line, column);
-							
-							// XXX creating CodeObject here
-							return AST.new(ASTData.Func("lambda", params.extract(), CodeObjects.fromAST(body)), range);
-						} else if (Strings.equal(str, "set")) {
-							def id = readIdentifier();
-							def expr = readExpr();
-							req1(')');
-
-							// VarSet: local or global?
-							def b = bindLocal(id);
-
-							return AST.new(ASTData.VarSet(id, b, expr),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "cond")) {
-							def cases: Vector<(AST, AST)> = Vector.new();
-							while (opt1(')') < 0) {
-								req1('(');
-								def fst = readExpr();
-								def snd = readExpr();
-								req1(')');
-								cases.put((fst, snd));
-								
-								if (pos >= limit) {
-									failRel(startPos - pos, "unmatched opening parentheses");
-									return null;
-								}
-							}
-
-							return AST.new(ASTData.Cond(cases.extract()),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "while")) {
-							def cond = readExpr();
-							def body = readExpr();
-							req1(')');
-							
-							return AST.new(ASTData.While(cond, body),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "begin")) { // also has a sugary version
-							def exprs: Vector<AST> = Vector.new();
-							// begin must not be non-empty
-							// TODO this does not print a nice error message if it fails
 							def fst = readExpr();
-							exprs.put(fst);
-
-							while (opt1(')') < 0) {
-								def expr = readExpr();
-								exprs.put(expr);
-
-								if (pos >= limit) {
-									failRel(startPos - pos, "unmatched opening parentheses");
-									return null;
-								}
-							}
+							def snd = readExpr();
+							req1(')');
+							cases.put((fst, snd));
 							
-							return AST.new(ASTData.Begin(exprs.extract()),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "get-field")) { // also has a sugary version
-							def field = readIdentifier();
-							def obj = readExpr();
-							req1(')');
+							if (pos >= limit) {
+								failRel(startPos - pos, missingCloseParentheses);
+								return null;
+							}
+						}
 
-							return AST.new(ASTData.GetField(field, obj),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "set-field")) {
-							def field = readIdentifier();
-							def obj = readExpr();
-							def val = readExpr();
-							req1(')');
+						return AST.new(ASTData.Cond(cases.extract()),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					WHILE => {
+						def cond = readExpr();
+						def body = readExpr();
+						req1(')');
+						
+						return AST.new(ASTData.While(cond, body),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					AND => {
+						def left = readExpr();
+						def right = readExpr();
+						req1(')');
 
-							return AST.new(ASTData.SetField(field, obj, val),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "get-global")) {
-							def id = readIdentifier();
-							req1(')');
+						return AST.new(ASTData.And(left, right),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					OR => {
+						def left = readExpr();
+						def right = readExpr();
+						req1(')');
 
-							return AST.new(ASTData.VarGet(id, global),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "set-global")) {
-							def id = readIdentifier();
-							def val = readExpr();
-							req1(')');
+						return AST.new(ASTData.Or(left, right),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					BEGIN => {
+						def exprs: Vector<AST> = Vector.new();
+						def fst = readExpr();
+						exprs.put(fst);
 
-							return AST.new(ASTData.VarSet(id, global, val),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "class")) {
-							def name = readIdentifier();
-							def fields: Vector<(string, CodeObject)> = Vector.new();
-							def methods: Vector<ASTData.Func> = Vector.new();
-							var init: Maybe<CodeObject> = Maybe.Nothing;
-							var superclass: Maybe<AST> = Maybe.Nothing;
+						while (opt1(')') < 0) {
+							def expr = readExpr();
+							exprs.put(expr);
 
-							while (opt1(')') < 0) {
-								req1('(');
-								def word = readIdentifier();
-								if (Strings.equal(word, "field")) {
+							if (pos >= limit) {
+								failRel(startPos - pos, missingCloseParentheses);
+								return null;
+							}
+						}
+						
+						return AST.new(ASTData.Begin(exprs.extract()),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					FUNC => {
+						req1('(');
+						// name of function
+						def name = readIdentifier();
+						// params to function
+						def params: Vector<string> = Vector<string>.new();
+						while (opt1(')') < 0) {
+							def param = readIdentifier();
+							// check param
+							if (contains(params, param)) fail(duplicatedParameter); // XXX fail but do not stop parsing
+
+							params.put(param);
+
+							if (pos >= limit) {
+								failRel(startPos - pos, missingCloseParentheses);
+								return null;
+							}
+						}
+						
+						// body expresssion
+						def body = readCode(params.copy());
+						req1(')');
+
+						def b = bindLocal(name);
+						def range = FileRange.new(fileName, startLine, startColumn, line, column);
+						
+						// XXX creating CodeObject here
+						return AST.new(ASTData.VarSet(name, b,
+															AST.new(ASTData.Func(name, params.extract(), CodeObjects.fromAST(body)), range)), 
+										range);
+					}
+					LAMBDA => {
+						req1('(');
+						// params to function
+						def params: Vector<string> = Vector<string>.new();
+						while (opt1(')') < 0) {
+							def param = readIdentifier();
+							// check param
+							if (contains(params, param)) fail(duplicatedParameter); // XXX fail but do not stop parsing
+							params.put(param);
+
+							if (pos >= limit) {
+								failRel(startPos - pos, missingCloseParentheses);
+								return null;
+							}
+						}
+						
+						// body expresssion
+						def body = readCode(params.copy());
+						req1(')');
+
+						def range = FileRange.new(fileName, startLine, startColumn, line, column);
+						
+						// XXX creating CodeObject here
+						return AST.new(ASTData.Func("lambda", params.extract(), CodeObjects.fromAST(body)), range);
+					}
+					SET => {
+						def id = readIdentifier();
+						def expr = readExpr();
+						req1(')');
+
+						// VarSet: local or global?
+						def b = bindLocal(id);
+
+						return AST.new(ASTData.VarSet(id, b, expr),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					SET_GLOBAL => {
+						def id = readIdentifier();
+						def val = readExpr();
+						req1(')');
+
+						return AST.new(ASTData.VarSet(id, global, val),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					GET_GLOBAL => {
+						def id = readIdentifier();
+						req1(')');
+
+						return AST.new(ASTData.VarGet(id, global),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					SET_FIELD => {
+						def field = readIdentifier();
+						def obj = readExpr();
+						def val = readExpr();
+						req1(')');
+
+						return AST.new(ASTData.SetField(field, obj, val),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					GET_FIELD => {
+						def field = readIdentifier();
+						def obj = readExpr();
+						req1(')');
+
+						return AST.new(ASTData.GetField(field, obj),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					CLASS => {
+						def name = readIdentifier();
+						def fields: Vector<(string, CodeObject)> = Vector.new();
+						def methods: Vector<ASTData.Func> = Vector.new();
+						var init: Maybe<CodeObject> = Maybe.Nothing;
+						var superclass: Maybe<AST> = Maybe.Nothing;
+
+						while (opt1(')') < 0) {
+							req1('(');
+							
+							def kw = readClassKeyword();
+							
+							if (kw.isNothing()) {
+								fail("unrecognized construct in class definition");
+								return null;
+							}
+
+							match (kw.fromJust()) {
+								EXTENDS => {
+									if (superclass.isJust()) {
+										fail(duplicatedExtends);
+										// XXX fail but keep parsing
+									}
+									superclass = Maybe.Just(readExpr());
+								}
+								INIT => {
+									if (init.isJust()) {
+										fail(duplicatedInit);
+										// XXX fail but keep parsing
+									}
+									init = Maybe.Just(CodeObjects.fromAST(readCode(["self"])));
+								}
+								FIELD => {
 									def fieldName = readIdentifier();
 									def fieldInit = readCode(["self"]);
 									
 									fields.put(fieldName, CodeObjects.fromAST(fieldInit));
-								} else if (Strings.equal(word, "method")) {
+								}
+								METHOD => {
 									req1('(');
 									def methodName = readIdentifier();
 									def methodParams = Vector<string>.new();
+									methodParams.put("self");
 									
 									while (opt1(')') < 0) {
 										def paramName = readIdentifier();
+										// check param
+										if (contains(methodParams, paramName)) fail(duplicatedParameter); // XXX fail but do not stop parsing
 										methodParams.put(paramName);
 
 										if (pos >= limit) {
-											failRel(startPos - pos, "unmatched opening parentheses");
+											failRel(startPos - pos, missingCloseParentheses);
 											return null;
 										}
 									}
-									def methodSelfParams = Array<string>.new(methodParams.length + 1);
-									for (i < methodSelfParams.length) {
-										if (i == 0) {
-											methodSelfParams[i] = "self";
-										} else {
-											methodSelfParams[i] = methodParams[i - 1];
-										}
-									}
-									def methodBody = readCode(methodSelfParams);
-									// FIXME null check exception when method has no body
+									def methodBody = readCode(methodParams.copy());
 
 									// XXX creating CodeObject here
-									methods.put(ASTData.Func(methodName, methodParams.extract(), CodeObjects.fromAST(methodBody)));
-								} else if (Strings.equal(word, "init")) {
-									if (init.isJust()) {
-										fail("redeclaration of init in class definition");
-										return null;
-									}
-									init = Maybe.Just(CodeObjects.fromAST(readCode(["self"])));
-								} else if (Strings.equal(word, "extends")) {
-									if (init.isJust()) {
-										fail("redeclaration of extends in class definition");
-										return null;
-									}
-									superclass = Maybe.Just(readExpr());
-								} else {
-									fail(Strings.format1("unrecognized attribute of class declaration: %s", word));
-									return null;
-								}
-								req1(')');
-
-								if (pos >= limit) {
-									failRel(startPos - pos, "unmatched opening parentheses");
-									return null;
+									methods.put(ASTData.Func(methodName, 
+												Ranges.dup(methodParams.copy()[1 ...]), 
+												CodeObjects.fromAST(methodBody)));
 								}
 							}
-
-							def b = bindLocal(name);
-							def range = FileRange.new(fileName, startLine, startColumn, line, column);
-							
-							// XXX creating CodeObject here
-							return AST.new(ASTData.VarSet(name, b,
-										                  AST.new(ASTData.Class(name, superclass, init, fields.extract(), methods.extract()), range)),
-										   range);
-						} else if (Strings.equal(str, "new")) {
-							def expr = readExpr();
 							req1(')');
 
-							return AST.new(ASTData.New(expr),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "and")) {
-							def left = readExpr();
-							def right = readExpr();
-							req1(')');
-
-							return AST.new(ASTData.And(left, right),
-								FileRange.new(fileName, startLine, startColumn, line, column));
-						} else if (Strings.equal(str, "or")) {
-							def left = readExpr();
-							def right = readExpr();
-							req1(')');
-
-							return AST.new(ASTData.Or(left, right),
-								FileRange.new(fileName, startLine, startColumn, line, column));
+							if (pos >= limit) {
+								failRel(startPos - pos, missingCloseParentheses);
+								return null;
+							}
 						}
-					}
-					_ => ;
-				}
-				def tail: Vector<AST> = Vector.new();
-				while (opt1(')') < 0) {
-					def expr = readExpr();
-					tail.put(expr);
 
-					if (pos >= limit) {
-						failRel(startPos - pos, "unmatched opening parentheses");
-						return null;
+						def b = bindLocal(name);
+						def range = FileRange.new(fileName, startLine, startColumn, line, column);
+						
+						// XXX creating CodeObject here
+						return AST.new(ASTData.VarSet(name, b,
+															AST.new(ASTData.Class(name, superclass, init, fields.extract(), methods.extract()), range)),
+										range);
+					}
+					NEW => {
+						def expr = readExpr();
+						req1(')');
+						return AST.new(ASTData.New(expr),
+								FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					RAISE => {
+						def exn = readExpr();
+						req1(')');
+
+						return AST.new(ASTData.Raise(exn),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					TRY => {
+						def try = readExpr();
+						def exn = readIdentifier();
+						def catch = readExpr();
+						req1(')');
+						
+						// make the exception variable a local
+						def b = bindLocal(exn);
+
+						return AST.new(ASTData.Catch(try, exn, b, catch),
+							FileRange.new(fileName, startLine, startColumn, line, column));
 					}
 				}
-				return AST.new(ASTData.Apply(head, tail.extract()),
-					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
 			')' => {
-				fail("unmatched closing parentheses");
+				fail("misplaced closing parentheses");
 				return null;
 			}
 			// { } is a shortcut for `begin`
@@ -459,6 +521,67 @@ class Parser extends TextReader {
 		def str = readToken(len).image;
 		return str;
 	}
+	
+	/* this reads a keyword, returning the keyword found and consuming it
+	 * returns null if no keyword is found (should not consume anything)
+	 */
+	private def readKeyword() -> Maybe<Keyword> {
+		def len = plus_rel(0, isIdentCharacter) - pos;
+		if (len < 0) {
+			return Maybe.Nothing;
+		}
+		// not a keyword if it is part of a qualified string
+		if (peekRel(len) == '.') return Maybe.Nothing;
+	
+		// check in list of keywords
+		for (kw in Keyword.set.all) {
+			def str = kw.id;
+
+			// check length first
+			if (str.length != len) continue;
+			
+			var matched: bool = true;
+			for (i < str.length) {
+				if (str[i] != peekRel(i)) matched = false;
+			}
+			// found: consume the keyword
+			if (matched) {
+				reqN(str);
+				return Maybe.Just(kw);
+			}
+		}
+
+		return Maybe.Nothing;
+	}
+
+	private def readClassKeyword() -> Maybe<ClassKeyword> {
+		def len = plus_rel(0, isIdentCharacter) - pos;
+		if (len < 0) {
+			return Maybe.Nothing;
+		}
+		// not a keyword if it is part of a qualified string
+		if (peekRel(len) == '.') return Maybe.Nothing;
+	
+		// check in list of keywords
+		for (kw in ClassKeyword.set.all) {
+			def str = kw.id;
+
+			// check length first
+			if (str.length != len) continue;
+			
+			var matched: bool = true;
+			for (i < str.length) {
+				if (str[i] != peekRel(i)) matched = false;
+			}
+			// found: consume the keyword
+			if (matched) {
+				reqN(str);
+				return Maybe.Just(kw);
+			}
+		}
+		return Maybe.Nothing;
+	}
+
 
 	private def bindLocal(name: string) -> Box<AccessMode> {
 		var b: Box<AccessMode>;
@@ -476,6 +599,17 @@ class Parser extends TextReader {
 		return b;
 	}
 
+	def addError(eline: int, ecol: int, msg: string) {
+		// use previous callback anyway
+		setFirstError(eline, ecol, msg);
+
+		//def sb = StringBuilder.new();
+ 		//sb.puts(fileName);
+ 		//sb.put3(":%d:%d: parse error: %s\n", eline, ecol, msg);
+		//renderCurrentLineWithCaret(sb, ecol);
+		//sb.ln();
+		//System.puts(sb.extract());
+	}
 
 	def getExprs() -> Array<CodeObject> {
 		return exprs.extract();
@@ -523,3 +657,9 @@ def skipWhitespaceAndComments(tr: TextReader) {
 	tr.at(pos, line, column);
 }
 
+def contains(vec: Vector<string>, str: string) -> bool {
+  for (i < vec.length) {
+	  if (Strings.equal(vec[i], str)) return true;
+  }
+  return false;
+}

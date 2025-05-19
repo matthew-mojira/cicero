@@ -20,6 +20,7 @@
 	  (set a (+ a (* j k)))
 	  ()
 	)
+	(println a)
 	(set k (k.pred))
       })
       (set j (j.pred))

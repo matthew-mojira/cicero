@@ -59,12 +59,20 @@ def main(args: Array<string>) -> int {
 				}
 			}
 		} else {
-			System.puts(reader.fileName);
-			System.puts(Strings.format3(":%d:%d: parse error: %s\n", reader.error_line, reader.error_column, reader.error_msg));
 			def sb = StringBuilder.new();
+// 
+// 			for (err in reader.errors.copy()) {
+// 				sb.puts(reader.fileName);
+// 				sb.put3(":%d:%d: parse error: %s\n", err.0, err.1, err.2);
+// 				sb.ln();
+// 			}
+
+			sb.puts(reader.fileName);
+			sb.put3(":%d:%d: parse error: %s\n", reader.error_line, reader.error_column, reader.error_msg);
 			reader.renderCurrentLineWithCaret(sb, reader.error_column);
-			System.puts(sb.extract());
-			System.ln();
+			sb.ln();
+
+ 			System.puts(sb.extract());
 			return 1;
 		}
 	}
