@@ -55,11 +55,12 @@ Better functions
 Nicer parsing experience
 - [ ] fix hang when parsing mismatched parentheses in method definition
 - [ ] when input is stdin, keep reading on incomplete input
-- [ ] clarify between keywords, literals, and builtins
-- [ ] do not allow duplicate parameter/field/methods names
-- [ ] do not allow self as a parameter in methods
-- [ ] do not require {} for blocks inside functions (and whiles too)
-- [ ] warn on redefinition? (runtime's responsibility?)
+- [~] clarify between keywords, literals, and builtins
+  - [ ] improve literal detection
+- [X] do not allow duplicate parameter/field/methods names
+- [X] do not allow self as a parameter in methods
+- [-] do not require {} for blocks inside functions (and whiles too) -- CANCELLED
+- [-] warn on redefinition? (runtime's responsibility?) -- CANCELLED
 
 More types
 - [ ] floating-point numbers
