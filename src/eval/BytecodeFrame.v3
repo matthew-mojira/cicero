@@ -60,68 +60,71 @@ class BytecodeFrame extends FrameObject {
 
 			// if frame is in an exceptional state, try to handle it!
 			// Should this go after the handlers?
-			if (isExn()) {
-				if (handlers.empty()) {
-					if (Tracing.traceBytecodeEvaluation) System.puts("returned with exception\n");
-					return null;
-				}
-				def p = handlers.pop();
-				pc = p.0;
-				while (stack.top != p.1)
-					stack.pop();
-				// push error value
-				stack.push(getExn());
-				resetExn();
-			}
+ 			if (isExn()) {
+ 				if (handlers.empty()) {
+ 					if (Tracing.traceBytecodeEvaluation) System.puts("returned with exception\n");
+ 					return null;
+ 				}
+ 				def p = handlers.pop();
+ 				pc = p.0;
+ 				while (stack.top != p.1)
+ 					stack.pop();
+ 				// push error value
+ 				stack.push(getExn());
+ 				resetExn();
+ 			}
 
 			// Fetch
 			def bytecode = Ref<Instruction>.at(code, pc);
-			def operand  = bytecode.operand;
 			loc = source.get(pc >> 2); // XXX Expensive!
 
 			/* Inline caches */
 			var cache: HashMap<ClassObject, int>;
 
-			// FIXME GRP believes this read is the opcode
- 			if (Tiers.enableIC)
- 				cache = b.cache[pc >> 2];
+  			if (Tiers.enableIC)
+  				cache = b.cache[pc >> 2];
+ 
+ 			def opcode   = bytecode.opcode;
 
-			def opcode   = bytecode.opcode;
+ 			if (Profiling.profileBytecode) {
+ 				Profiling.bytecodeMap[opcode.tag] += 1;
+ 			}
 
-			if (Tracing.traceBytecodeEvaluation) {
-				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, operand));
-				System.puts("    locals:\n");
-				for (i < locals.length) {
-					if (locals[i] == null) {
-						System.puts(Strings.format1("    %d: NULL\n", i));
-					} else {
-						System.puts(Strings.format2("    %d: %s\n", i, locals[i].display()));
-					}
-				}
-				System.puts("    stack:\n");
-				for (i < stack.top) {
-					System.puts("    ");
-					System.puts(stack.elems[i].display());
-					System.ln();
-				}
-				System.puts("    exn loc stack:\n");
-				for (i < handlers.top) {
-					System.puts("    ");
-					System.puts(Strings.format2("=> %d (%d)", handlers.elems[i].0, handlers.elems[i].1));
-					System.ln();
-				}
-				System.puts("--\n");
-			}
-
-			if (Profiling.profileBytecode) {
-				Profiling.bytecodeMap[opcode.tag] += 1;
-			}
+//  			if (Tracing.traceBytecodeEvaluation) {
+//  				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, operand));
+//  				System.puts("    locals:\n");
+//  				for (i < locals.length) {
+//  					if (locals[i] == null) {
+//  						System.puts(Strings.format1("    %d: NULL\n", i));
+//  					} else {
+//  						System.puts(Strings.format2("    %d: %s\n", i, locals[i].display()));
+//  					}
+//  				}
+//  				System.puts("    stack:\n");
+//  				for (i < stack.top) {
+//  					System.puts("    ");
+//  					System.puts(stack.elems[i].display());
+//  					System.ln();
+//  				}
+//  				System.puts("    exn loc stack:\n");
+//  				for (i < handlers.top) {
+//  					System.puts("    ");
+//  					System.puts(Strings.format2("=> %d (%d)", handlers.elems[i].0, handlers.elems[i].1));
+//  					System.ln();
+//  				}
+//  				System.puts("--\n");
+//  			}
+ 
 
 			pc += 4;
 			match (opcode) {
-				NOP => ;
-				LOAD_CONST => stack.push(constants[operand]);
+				NOP => def operand  = bytecode.operand;
+				LOAD_CONST => {
+					def operand  = bytecode.operand;
+					stack.push(constants[operand]);
+				}
 				LOAD_GLOBAL => {
+					def operand  = bytecode.operand;
 					def id = strings[operand];
 					if (globals.has(id)) {
 						stack.push(globals[id]);
@@ -130,6 +133,7 @@ class BytecodeFrame extends FrameObject {
 					}
 				}
 				LOAD_LOCAL => {
+					def operand  = bytecode.operand;
 					def local = locals[operand];
 					if (local == null)
 						throw(Exceptions.unboundLocal(b.locals[operand]));
@@ -137,20 +141,27 @@ class BytecodeFrame extends FrameObject {
 						stack.push(local);
 				}
 				STORE_GLOBAL => {
+					def operand  = bytecode.operand;
 					def id = strings[operand];
 					def top = stack.pop();
 					globals[id] = top;
 				}
 				STORE_LOCAL => {
+					def operand  = bytecode.operand;
 					def top = stack.pop();
 					locals[operand] = top;
 				}
-				JUMP => pc += i24.view(operand);
+				JUMP => {
+					def operand  = bytecode.operand;
+					pc += i24.view(operand);
+				}
 				JUMP_IF_FALSE => {
+					def operand  = bytecode.operand;
 					def top = stack.pop();
 					if (!top.isTrue()) pc += i24.view(operand);
 				}
 				JUMP_IF_TRUE_PEEK => {
+					def operand  = bytecode.operand;
 					def top = stack.peek();
 					if (!top.isTrue()) {
 						stack.pop();
@@ -159,6 +170,7 @@ class BytecodeFrame extends FrameObject {
 					}
 				}
 				JUMP_IF_FALSE_PEEK => {
+					def operand  = bytecode.operand;
 					def top = stack.peek();
 					if (top.isTrue()) {
 						stack.pop();
@@ -167,6 +179,7 @@ class BytecodeFrame extends FrameObject {
 					}
 				}
 				RAISE => {
+					def operand  = bytecode.operand;
 					def top = stack.pop();
 					assertType(ClassObjects.classStr, top);
 					if (isExn()) continue;
@@ -174,10 +187,12 @@ class BytecodeFrame extends FrameObject {
 					throw(StrObject.!(top).str);
 				}
 				ASSERT_FUNC => {
+					def operand  = bytecode.operand;
 					def top = stack.peek();
 					assertType(ClassObjects.classFunc, top);
 				}
 				CALL => {
+					def operand  = bytecode.operand;
 					var args: Vector<Object> = Vector.new();
 					for (i < operand) {
 						args.put(stack.pop());
@@ -223,18 +238,25 @@ class BytecodeFrame extends FrameObject {
 					stack.push(frame.getValue());
 				}
 				TRY => {
+					def operand  = bytecode.operand;
 					handlers.push((pc + operand, stack.top));
 				}
 				CATCH => {
+					def operand  = bytecode.operand;
 					handlers.pop();
 				}
 				// stack manipulation
-				POP => for (i < operand) stack.pop();
+				POP => {
+					def operand  = bytecode.operand;
+					for (i < operand) stack.pop();
+				}
 				DUPE => {
+					def operand  = bytecode.operand;
 					// special path, operand = 0
 					stack.push(stack.elems[stack.top - operand - 1]);
 				}
 				SWAP => {
+					def operand  = bytecode.operand;
 					def top = stack.peek();
 					def val = stack.elems[stack.top - operand - 1];
 					stack.elems[stack.top - 1] = val;
@@ -242,6 +264,7 @@ class BytecodeFrame extends FrameObject {
 				}
 				// objects
 				CREATE_CLASS => {
+					def operand  = bytecode.operand;
 					def superclass = stack.pop();
 					assertType(ClassObjects.classClass, superclass);
 					if (isExn()) continue;
@@ -250,6 +273,7 @@ class BytecodeFrame extends FrameObject {
 					stack.push(classhole(ClassObject.!(superclass)));
 				}
 				CREATE_OBJECT => {
+					def operand  = bytecode.operand;
 					def top = stack.pop();
 					assertType(ClassObjects.classClass, top);
 					if (isExn()) continue;
@@ -297,6 +321,7 @@ class BytecodeFrame extends FrameObject {
 					stack.push(obj);
 				}
 				LOAD_FIELD => {
+					def operand  = bytecode.operand;
 					def obj = stack.pop();
 					def field = strings[operand];
 
@@ -325,6 +350,7 @@ class BytecodeFrame extends FrameObject {
 					}
 				}
 				STORE_FIELD => {
+					def operand  = bytecode.operand;
 					def val = stack.pop();
 					def obj = stack.pop();
 					def field = strings[operand];
@@ -334,6 +360,7 @@ class BytecodeFrame extends FrameObject {
 					}
 				}
 				CREATE_LIST => {
+					def operand  = bytecode.operand;
 					def values: Vector<Object> = Vector.new();
 					for (i < operand) {
 						values.put(stack.pop());
@@ -348,6 +375,7 @@ class BytecodeFrame extends FrameObject {
 
 				//_ => System.error("eval error", "unsupported opcode");
 			}
+
 		}
 
 		if (stack.empty()) System.error("eval error", "stack is empty");

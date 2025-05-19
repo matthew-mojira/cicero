@@ -1,5 +1,5 @@
 component Tracing {
 	def traceFunctionCalls = false;
 	def traceBytecodeCompilation = false;
-	def traceBytecodeEvaluation = false;
+	def traceBytecodeEvaluation = false; /* FIXME reimplement this */
 }

@@ -71,7 +71,8 @@ enum Opcode {
  */
 
 component Opcodes {
-	def map: Array<Opcode> = Array.new(23); // XXX update this with the number of opcodes
+	def numOpcodes: int = 23;
+	def map: Array<Opcode> = Array.new(numOpcodes); // XXX update this with the number of opcodes
 }
 
 def nothing() -> int {

@@ -25,7 +25,7 @@ class Bytecode {
 	new(ast: AST, params: Array<string>) {
 		locals.puta(params);
 		// put a bunch of NOPs at start of function
-		for (i < 100) {
+		for (i < 0) {
 			source.put(null);
 			putb(Opcode.NOP.tag);
 			putO(0x123456);
