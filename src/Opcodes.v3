@@ -1,35 +1,37 @@
-enum Opcode {
-	NOP,
+enum OperandType {
+	NONE, SLEB, ULEB
+}
+
+enum Opcode(operandType: OperandType) {
+	NOP                  (OperandType.NONE),
 	// Loads
-	LOAD_CONST,    // [0] index into the constant pool
-	LOAD_GLOBAL,   // [0] index into the string pool
-	LOAD_LOCAL,    // [0] index into the runtime locals
-	LOAD_FIELD,    // [1] index into the string pool
+	LOAD_CONST           (OperandType.ULEB),   // [0] index into the constant pool
+	LOAD_GLOBAL          (OperandType.ULEB),   // [0] index into the string pool
+	LOAD_LOCAL           (OperandType.ULEB),   // [0] index into the runtime locals
+	LOAD_FIELD           (OperandType.ULEB),   // [1] index into the string pool
 	// Stores
-	STORE_GLOBAL,  // [1] index into the string pool
-	STORE_LOCAL,   // [0] index into the runtime locals
-	STORE_FIELD,   // [2] index into the string pool
+	STORE_GLOBAL         (OperandType.ULEB),   // [1] index into the string pool
+	STORE_LOCAL          (OperandType.ULEB),   // [0] index into the runtime locals
+	STORE_FIELD          (OperandType.ULEB),   // [2] index into the string pool
 	// Control flow
-	CALL,          // [n] number of arguments (not including function!)
-	JUMP,          // [0] offset of pc
-	JUMP_IF_FALSE, // [1] offset of pc
-	JUMP_IF_TRUE_PEEK,  // [1] offset of pc
-	JUMP_IF_FALSE_PEEK, // [1] offset of pc
+	CALL                 (OperandType.ULEB),   // [n] number of arguments (not including function!)
+	JUMP                 (OperandType.SLEB),   // [0] offset of pc
+	JUMP_IF_FALSE        (OperandType.SLEB),   // [1] offset of pc
+	JUMP_IF_TRUE_PEEK    (OperandType.SLEB),   // [1] offset of pc
+	JUMP_IF_FALSE_PEEK   (OperandType.SLEB),   // [1] offset of pc
 	// Exceptions
-	RAISE,         // [1]
-	TRY,           // [0] offset from this bytecode of the catch
-	CATCH,         // [0]
-	ASSERT_FUNC    // [1]
+	RAISE                (OperandType.NONE),   // [1]
+	TRY                  (OperandType.SLEB),   // [0] offset from this bytecode of the catch
+	CATCH                (OperandType.NONE),   // [0]
+	ASSERT_FUNC          (OperandType.NONE),   // [1]
 	// Object creation
-	CREATE_CLASS,  // [1] index into the classhole pool
-	CREATE_OBJECT, // [1]
-	CREATE_LIST,   // [1] how many elements to pull
+	CREATE_CLASS         (OperandType.ULEB),   // [1] index into the classhole pool
+	CREATE_OBJECT        (OperandType.NONE),   // [1]
+	CREATE_LIST          (OperandType.ULEB),   // [1] how many elements to pull
 	// Stack manipulation
-	POP,           // [1] how many values to pull
-	DUPE,          // index of element to dupe to top of stack (0 = top)
-	SWAP,          // index of element to swap top of stack with (0 = top)
-	// should typechecking be done as a bytecode? or can the bytecodes
-	// just sometimes raise exceptions
+	POP                  (OperandType.ULEB),   // [1] how many values to pull
+	DUPE                 (OperandType.ULEB),   // index of element to dupe to top of stack (0 = top)
+	SWAP                 (OperandType.ULEB)    // index of element to swap top of stack with (0 = top)
 }
 
 /* TODO Defining a better format for bytecode:
@@ -60,7 +62,7 @@ enum Opcode {
  *   ASSERT_FUNC
  *   CREATE_CLASS       uleb
  *   CREATE_OBJECT
- *   CREATE_LIST
+ *   CREATE_LIST        uleb
  *   POP                uleb
  *   DUPE               uleb
  *   SWAP               uleb

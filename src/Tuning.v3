@@ -1,5 +1,6 @@
 component Tiers {
 	var enableTier1:  bool;
+	var enableTier2:  bool;
 	var enableIC:     bool;
 	var maxCachedInt: long; /* FIXME remove this or refactor BigInts to use it */
 }

@@ -25,6 +25,7 @@ def main(args: Array<string>) -> int {
 			Tiers.enableTier1 = true;
 			Tiers.enableIC = Option<bool>.!(opt.map["cache"]).get();
 		}
+		2 => Tiers.enableTier2 = true;
 		_ => System.error("arg error", Strings.format1("unrecognized tier: %d", Option<int>.!(opt.map["tier"]).get()));
 	}
 
@@ -46,6 +47,7 @@ def main(args: Array<string>) -> int {
 			for (expr in exprs) {
 				// compile to tier1 bytecode
 				if (Tiers.enableTier1) expr.compile([]);
+				if (Tiers.enableTier2) expr.compile2([]);
 
 				// evaluate
 				frame.evalCode(expr);
@@ -89,6 +91,7 @@ def main(args: Array<string>) -> int {
 				for (expr in exprs) {
 					// compile to tier1 bytecode
 					if (Tiers.enableTier1) expr.compile([]);
+					if (Tiers.enableTier2) expr.compile2([]);
 
 					// evaluate
 					frame.evalCode(expr);
@@ -130,6 +133,7 @@ def loadCore(frame: FrameObject) {
  		if (Tiers.enableTier1) {
  			expr.compile([]);
 		}
+		if (Tiers.enableTier2) expr.compile2([]);
 		frame.evalCode(expr);
 	}
 }

@@ -100,6 +100,7 @@ component FrameObjects {
 			-1 => frame = VirgilFrame.new(prev, code, args);
 			 0 => frame = ASTFrame.new(prev, code, args);
 			 1 => frame = BytecodeFrame.new(prev, code, args);
+			 2 => frame = Bytecode2Frame.new(prev, code, args);
 		} else {
 			System.error("eval error", Strings.format1("unrecognized tier: %d", code.tier));
 		}
@@ -110,6 +111,8 @@ component FrameObjects {
 		var frame: FrameObject;
 		if (Tiers.enableTier1) {
 			frame = BytecodeFrame.new(null, null, null);
+		} else if (Tiers.enableTier2) {
+			frame = Bytecode2Frame.new(null, null, null);
 		} else {
 			frame = ASTFrame.new(null, null, null);
 		}

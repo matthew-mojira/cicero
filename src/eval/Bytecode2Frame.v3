@@ -1,0 +1,316 @@
+class Bytecode2Frame extends FrameObject {
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {
+		if (code != null) {
+			locals = Array.new(code.bytecode2.locals.length);
+			for (i < args.length) {
+				locals[i] = args[i].1;
+			}
+		} else {
+			locals = Array.new(0);
+		}
+	}
+
+	def var locals: Array<Object>;
+
+	def stack: ArrayStack<Object> = ArrayStack.new();
+	/* This is a handler stack which stores structure about exceptions:
+	 *   (a, b)
+	 *   where
+	 *     a = absolute pc of handler
+	 *     b = absolute size of stack (i.e. pop other things until you restore stack state)
+	 */
+	def handlers: ArrayStack<(int, int)> = ArrayStack.new();
+
+	def eval() {
+		def v = evalBytecode(code.bytecode2);
+		if (!isExn())
+			result = Result.OK(v);
+	}
+
+	def evalCode(code: CodeObject) -> Object {
+		stack.clear();
+		def v = evalBytecode(code.bytecode2);
+		if (!isExn())
+			result = Result.OK(v);
+		return v;
+	}
+
+	/* BYTECODE EVALUATOR */
+	def evalBytecode(b: Bytecode2) -> Object {
+		def strings    = b.stringPool;
+		def classholes = b.classPool;
+		def constants  = b.constPool;
+		def source     = b.sourceMap;
+		
+		def reader = DataReader.new(b.instrs);
+
+		while (reader.more() || isExn()) {
+			// if frame is in an exceptional state, try to handle it!
+			// Should this go after the handlers?
+ 			if (isExn()) {
+ 				if (handlers.empty()) {
+ 					if (Tracing.traceBytecodeEvaluation) System.puts("returned with exception\n");
+ 					return null;
+ 				}
+ 				def p = handlers.pop();
+ 				reader.at(p.0);
+ 				while (stack.top != p.1)
+ 					stack.pop();
+ 				// push error value
+ 				stack.push(getExn());
+ 				resetExn();
+ 			}
+
+			// Fetch
+			// FIXME loc is missing!!!
+			def opcode = Opcodes.map[reader.read1()];
+
+ 			if (Profiling.profileBytecode) {
+ 				Profiling.bytecodeMap[opcode.tag] += 1;
+ 			}
+
+			match (opcode) {
+				NOP => ;
+				LOAD_CONST => {
+					def operand = reader.read_uleb32();
+					stack.push(constants[operand]);
+				}
+				LOAD_GLOBAL => {
+					def operand = reader.read_uleb32();
+					def id = strings[operand];
+					if (globals.has(id)) {
+						stack.push(globals[id]);
+					} else {
+						throw(Exceptions.unboundGlobal(id));
+					}
+				}
+				LOAD_LOCAL => {
+					def operand = reader.read_uleb32();
+					def local = locals[operand];
+					if (local == null)
+						throw(Exceptions.unboundLocal(b.locals[operand]));
+					else
+						stack.push(local);
+				}
+				STORE_GLOBAL => {
+					def operand = reader.read_uleb32();
+					def id = strings[operand];
+					def top = stack.pop();
+					globals[id] = top;
+				}
+				STORE_LOCAL => {
+					def operand = reader.read_uleb32();
+					def top = stack.pop();
+					locals[operand] = top;
+				}
+				JUMP => {
+					def operand = reader.read_sleb32();
+					reader.at(reader.pos + operand);
+				}
+				JUMP_IF_FALSE => {
+					def operand = reader.read_sleb32();
+					def top = stack.pop();
+					if (!top.isTrue())
+						reader.at(reader.pos + operand);
+				}
+				JUMP_IF_TRUE_PEEK => {
+					def operand = reader.read_sleb32();
+					def top = stack.peek();
+					if (!top.isTrue()) {
+						stack.pop();
+					} else {
+						reader.at(reader.pos + operand);
+					}
+				}
+				JUMP_IF_FALSE_PEEK => {
+					def operand = reader.read_sleb32();
+					def top = stack.peek();
+					if (top.isTrue()) {
+						stack.pop();
+					} else {
+						reader.at(reader.pos + operand);
+					}
+				}
+				RAISE => {
+					def top = stack.pop();
+					assertType(ClassObjects.classStr, top);
+					if (isExn()) continue;
+
+					throw(StrObject.!(top).str);
+				}
+				ASSERT_FUNC => {
+					def top = stack.peek();
+					assertType(ClassObjects.classFunc, top);
+				}
+				CALL => {
+					def operand = reader.read_uleb32();
+					var args: Vector<Object> = Vector.new();
+					for (i < operand) {
+						args.put(stack.pop());
+					}
+					args.reverse(); // XXX reverse can be expensive, should do arithmetic on index instead
+
+					def top = stack.pop();
+					// function code
+					def fv = FuncObject.!(top); // this cast succeeds because of ASSERT_FUNC
+					def params = fv.params, code = fv.code;
+
+					// evaluate argument values
+					var argv: Array<(string, Object)>;
+
+					if (fv.instanceOf(ClassObjects.classMethod)) {
+						argv = Array.new(args.length + 1);
+						for (i < args.length) {
+							def arg = args[i];
+							if (i < params.length) // avoid out of bounds but don't raise exception
+								argv[i + 1] = (params[i], arg);
+						}
+						argv[0] = ("self", MethodObject.!(fv).obj);
+					} else {
+						argv = Array.new(args.length);
+						for (i < args.length) {
+							def arg = args[i];
+							if (i < params.length) // avoid out of bounds but don't raise exception
+								argv[i] = (params[i], arg);
+						}
+					}
+
+					// arity check
+					assertArity(params.length, args.extract()); // XXX extract
+					if (isExn()) continue;
+
+					// create new frame (and evaluate)
+					def frame = newFrame(fv.id, code, argv);
+					frame.eval();
+					if (frame.isExn()) {
+						rethrow(frame.getExn());
+						continue;
+					}
+					stack.push(frame.getValue());
+				}
+				TRY => {
+					def operand = reader.read_sleb32();
+					handlers.push((reader.pos + operand, stack.top));
+				}
+				CATCH => {
+					handlers.pop();
+				}
+				// stack manipulation
+				POP => {
+					def operand = int.!(reader.read_uleb32());
+					for (i < operand) stack.pop();
+				}
+				DUPE => {
+					def operand = int.!(reader.read_uleb32());
+					stack.push(stack.elems[stack.top - operand - 1]);
+				}
+				SWAP => {
+					def operand = int.!(reader.read_uleb32());
+					def top = stack.peek();
+					def val = stack.elems[stack.top - operand - 1];
+					stack.elems[stack.top - 1] = val;
+					stack.elems[stack.top - operand - 1] = top;
+				}
+				// objects
+				CREATE_CLASS => {
+					def operand = reader.read_uleb32();
+					def superclass = stack.pop();
+					assertType(ClassObjects.classClass, superclass);
+					if (isExn()) continue;
+
+					def classhole = classholes[operand];
+					stack.push(classhole(ClassObject.!(superclass)));
+				}
+				CREATE_OBJECT => {
+					def top = stack.pop();
+					assertType(ClassObjects.classClass, top);
+					if (isExn()) continue;
+
+					// duplicated code
+					def clsObj = ClassObject.!(top);
+					def obj = Objects.newObject(clsObj);
+
+					def classes: Vector<ClassObject> = Vector.new();
+					for (cls = clsObj; cls != null; cls = cls.superclass)
+						classes.put(cls);
+				
+					// initialization order is from base class downwards, which
+					// may involve reinitializing some fields
+					for (cls in classes.reverse().extract()) {
+						// initialize fields
+						for (field in cls.classFields) {
+							def name = field.0, expr = field.1;
+
+							// XXX hackfix
+							if (expr == null) continue;
+							// create new frames here!
+							def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, []);
+							frame.eval();
+							if (frame.isExn()) {
+								rethrow(frame.getExn());
+								continue;
+							}
+							obj.setField(name, frame.getValue());
+						}
+						// call initializer
+						if (cls.init != null) {
+							def args = [("self", obj)];
+							def code = cls.init;
+
+							// create new frames here!
+							def frame = newFrame(Strings.format1("%s.init", cls.name), code, args);
+							frame.eval();
+							if (frame.isExn()) {
+								rethrow(frame.getExn());
+								continue;
+							}
+						} 
+					}
+					stack.push(obj);
+				}
+				LOAD_FIELD => {
+					def operand = reader.read_uleb32();
+					def obj = stack.pop();
+					def field = strings[operand];
+
+					def v = obj.getField(field);
+					if (v == null) {
+						throw(Exceptions.missingField(obj, field));
+					} else {
+						stack.push(v);
+					}
+				}
+				STORE_FIELD => {
+					def operand = reader.read_uleb32();
+					def val = stack.pop();
+					def obj = stack.pop();
+					def field = strings[operand];
+
+					if (!obj.setField(field, val)) {
+						throw(Exceptions.missingField(obj, field));
+					}
+				}
+				CREATE_LIST => {
+					def operand = reader.read_uleb32();
+					def values: Vector<Object> = Vector.new();
+					for (i < operand) {
+						values.put(stack.pop());
+					}
+					values.reverse();
+
+					def obj = ListObject.new();
+					obj.list.puta(values.extract());
+
+					stack.push(obj);
+				}
+
+				//_ => System.error("eval error", "unsupported opcode");
+			}
+
+		}
+
+		if (stack.empty()) System.error("eval error", "stack is empty");
+		if (Tracing.traceBytecodeEvaluation) System.puts("RETURN\n");
+		return stack.peek();
+	}
+}

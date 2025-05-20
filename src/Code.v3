@@ -6,8 +6,9 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 	def var virgil: Range<Object> -> Result;
 	def var ast: AST; // root node
 	def var bytecode: Bytecode;
+	def var bytecode2: Bytecode2;
 
-	def var tier: i2;
+	def var tier: int;
 
 	def incrementCount() {
 //  		runCount++;
@@ -23,6 +24,13 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 		if (tier > 0) System.error("compile error", "compiling what has already been compiled to bytecode");
 		bytecode = Bytecode.new(ast, params);
 		tier = 1;
+	}
+	
+	def compile2(params: Array<string>) {
+		if (tier < 0) System.error("compile error", "attempting to compile Virgil code to bytecode");
+		if (tier > 0) System.error("compile error", "compiling what has already been compiled to bytecode");
+		bytecode2 = BytecodeCompiler.new(ast, params).compile();
+		tier = 2;
 	}
 
 	def display() -> string { return "<code>"; }
