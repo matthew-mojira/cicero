@@ -764,8 +764,7 @@ class BigInteger(mag: Array<int>, signum: int) {
  			return;
  		}
  
- 		def maxNumDigitGroups = (4 * mag.length + 6) / 7;
- 		def digitGroups = Array<long>.new(maxNumDigitGroups);
+ 		def digitGroups = Vector<long>.new();
  
  		var tmp = this;
  		var numGroups = 0;
@@ -780,7 +779,8 @@ class BigInteger(mag: Array<int>, signum: int) {
  			def q2 = q.toBigInteger(tmp.signum * d.signum);
  			def r2 = r.toBigInteger(tmp.signum * d.signum);
  
- 			digitGroups[numGroups++] = r2.longValue();
+ 			digitGroups.put(r2.longValue());
+			numGroups++;
  			tmp = q2;
  		}
 
