@@ -12,18 +12,16 @@ def main(args: Array<string>) -> int {
 		System.puts("  -help: print this help text\n");
 		System.puts("  -tier=0: evaluation tier (0=AST, 1=bytecode)\n");
 		System.puts("  -cache=false: use inline cache in tier1 interpreter\n");
-		System.puts("  -max-int=int.max: maximum absolute canonicalized int object\n");
 		System.puts("  -suppress-output=false: do not print out results of evaluation (useful for benchmarking)\n");
 		System.puts("  -repl=false: when files are provided, open repl after evaluation\n");
 
 		return 0;
 	}
-	Tiers.maxCachedInt = Option<int>.!(opt.map["max-int"]).get();
 	match (Option<int>.!(opt.map["tier"]).get()) {
-		0 => Tiers.enableTier1 = false;
+		0 => CiceroOptions.enableTier1 = false;
 		1 => {
-			Tiers.enableTier1 = true;
-			Tiers.enableIC = Option<bool>.!(opt.map["cache"]).get();
+			CiceroOptions.enableTier1 = true;
+			CiceroOptions.enableIC = Option<bool>.!(opt.map["cache"]).get();
 		}
 		_ => System.error("arg error", Strings.format1("unrecognized tier: %d", Option<int>.!(opt.map["tier"]).get()));
 	}
@@ -45,7 +43,7 @@ def main(args: Array<string>) -> int {
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
 				// compile to tier1 bytecode
-				if (Tiers.enableTier1) expr.compile([]);
+				if (CiceroOptions.enableTier1) expr.compile([]);
 
 				// evaluate
 				frame.evalCode(expr);
@@ -88,7 +86,7 @@ def main(args: Array<string>) -> int {
 
 				for (expr in exprs) {
 					// compile to tier1 bytecode
-					if (Tiers.enableTier1) expr.compile([]);
+					if (CiceroOptions.enableTier1) expr.compile([]);
 
 					// evaluate
 					frame.evalCode(expr);
@@ -111,7 +109,7 @@ def main(args: Array<string>) -> int {
 		}
 	}
 
-	if (Profiling.profileBytecode) {
+	if (CiceroOptions.profileBytecode) {
 		/* Output Cicero's profiling */
 		var i = 0;
 		for (op in Opcode.set.all) {
@@ -127,7 +125,7 @@ def loadCore(frame: FrameObject) {
 	def reader = Parser.new("core", CiceroTexts.core);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
- 		if (Tiers.enableTier1) {
+ 		if (CiceroOptions.enableTier1) {
  			expr.compile([]);
 		}
 		frame.evalCode(expr);
@@ -140,7 +138,6 @@ def getOptions() -> Options {
 
 	opt.newBoolOption("help", false);
 	opt.newIntOption("tier", 0);
-	opt.newIntOption("max-int", int.max);
 	opt.newBoolOption("cache", false);
 	opt.newBoolOption("repl", false);
 	opt.newBoolOption("suppress-output", false);

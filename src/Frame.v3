@@ -81,7 +81,7 @@ class FrameObject extends Object {
 
 component FrameObjects {
 	def newFrame(prev: FrameObject, name: string, code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
-		if (Tracing.traceFunctionCalls) {
+		if (CiceroOptions.traceFunctionCalls) {
 			System.puts(name);
 			System.puts("(");
 			for (i < args.length) {
@@ -108,7 +108,7 @@ component FrameObjects {
 	}
 	def newTopFrame() -> FrameObject {
 		var frame: FrameObject;
-		if (Tiers.enableTier1) {
+		if (CiceroOptions.enableTier1) {
 			frame = BytecodeFrame.new(null, null, null);
 		} else {
 			frame = ASTFrame.new(null, null, null);

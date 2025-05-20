@@ -1,365 +1,39 @@
-/* Refactor Bytecode class into BytecodeBuilder which creates Bytecode
- * class Bytecode(instrs:     Array<byte>, 
- *                stringPool: Array<string>,
- *                constPool:  Array<Object>,
- *                classPool:  Array<(ClassObject, ???) -> ClassObject>,
- *                funcPool:   Array<??? -> FuncObject>,
- *                sourceMap:  Array<FileRange>) // indexed by what? if we do non-uniform instruction length
- * ??? = captured variables (by name or by index in previous locals?--troublesome in mixed-tier code, if that ever exists)
- */ 
+layout Instruction {
+	+0  opcode:  Opcode;
+	+1  operand: u24; // you may treat this as unsigned or signed depending on opcode
+	=4;
+}
 
-class Bytecode {
-	def writer:     DataWriter     = DataWriter.new();
+class Bytecode(instrs:     Array<byte>, 
+		locals:     Array<string>,
+                stringPool: Array<string>,
+                constPool:  Array<Object>,
+                classPool:  Array<ClassObject -> ClassObject>,
+                sourceMap:  Array<FileRange>)
 
-	var bytecode:   Array<byte>;
-	def strings:    Vector<string> = Vector.new();
-	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
-	def constants:  Vector<Object> = Vector.new();
-	def locals:     Vector<string> = Vector.new();
+// ??? = captured variables (by name or by index in previous locals?--troublesome in mixed-tier code, if that ever exists)
+{
+	def var cache: Array<HashMap<ClassObject, int>>;
 
-	/* Source mappings */
-	def source: Vector<FileRange>  = Vector.new();
-	/* Inline cache */
-	var cache: Array<HashMap<ClassObject, int>>;
-
-	new(ast: AST, params: Array<string>) {
-		locals.puta(params);
-		// put a bunch of NOPs at start of function
-		for (i < 0) {
-			source.put(null);
-			putb(Opcode.NOP.tag);
-			putO(0x123456);
-		}
-		compileAST(ast);
-		bytecode = writer.copy();
-		if (Tiers.enableIC) {
-			cache = Array.new(source.length);
+	new() {
+		if (CiceroOptions.enableIC) {
+			cache = Array.new(sourceMap.length);
 			// Wow a lot of initialization
 			for (i < cache.length) {
 				cache[i] = HashMap.new(ClassObject.hash, ClassObject.==);
 			}
 		}
-		if (Tracing.traceBytecodeCompilation) {
-			System.puts("== Bytecode compilation ==\n");
-			inspect();
-		}
-	}
-
-	def compileAST(ast: AST) {
-		def loc = ast.loc;
-		match (ast.data) {
-			Lit(obj) => {
-				source.put(loc);
-				putb(Opcode.LOAD_CONST.tag);
-				putO(addConstant(obj));
-			}
-			VarGet(id, mode) => match (mode.data) {
-				Local  => {
-					source.put(loc);
-					putb(Opcode.LOAD_LOCAL.tag);
-					putO(addLocal(id));
-				}
-				Global => {
-					source.put(loc);
-					putb(Opcode.LOAD_GLOBAL.tag);
-					putO(addString(id));
-				}
-			}
-			VarSet(id, mode, code) => {
-				compileAST(code);
-				source.put(loc);
-				putb(Opcode.DUPE.tag);
-				putO(0);
-				match (mode.data) {
-					Local  => {
-						source.put(loc);
-						putb(Opcode.STORE_LOCAL.tag);
-						putO(addLocal(id));
-					}
-					Global => {
-						source.put(loc);
-						putb(Opcode.STORE_GLOBAL.tag);
-						putO(addString(id));
-					}
-				}
-			}
-			And(left, right) => {
-				compileAST(left);
-				source.put(loc);
-				putb(Opcode.JUMP_IF_FALSE_PEEK.tag);
-				def hole = pos();
-				skipO(); // hole to put jump offset
-				compileAST(right);
-				writeO(hole, pos() - (hole + 3));
-			}
-			Or(left, right) => {
-				compileAST(left);
-				source.put(loc);
-				putb(Opcode.JUMP_IF_TRUE_PEEK.tag);
-				def hole = pos();
-				skipO(); // hole to put jump offset
-				compileAST(right);
-				writeO(hole, pos() - (hole + 3));
-			}
-			Apply(tgt, args) => {
-				compileAST(tgt);
-				source.put(loc);
-				putb(Opcode.ASSERT_FUNC.tag);
-				zeroO();
-				for (arg in args) {
-					compileAST(arg);
-				}
-				source.put(loc);
-				putb(Opcode.CALL.tag);
-				putO(args.length);
-			}
-			If(cond, tru, fals) => {
-				compileAST(cond);
-				source.put(loc);
-				putb(Opcode.JUMP_IF_FALSE.tag);
-				def hole1 = pos();
-				skipO(); // hole to put jump offset
-				compileAST(tru);
-				source.put(loc);
-				putb(Opcode.JUMP.tag);
-				def hole2 = pos();
-				skipO(); // hole to put jump offset
-				writeO(hole1, pos() - (hole1 + 3));
-				compileAST(fals);
-				writeO(hole2, pos() - (hole2 + 3));
-			}
-			Cond(cases) => {
-				def ends: Vector<int> = Vector.new();
-				for (c in cases) {
-					def cond = c.0;
-					def body = c.1;
-
-					compileAST(cond);
-					source.put(loc);
-					putb(Opcode.JUMP_IF_FALSE.tag);
-					def hole = pos();
-					skipO(); // hole to put jump offset
-					compileAST(body);
-					source.put(loc);
-					putb(Opcode.JUMP.tag);
-					ends.put(pos());
-					skipO(); // hole to put jump offset
-					writeO(hole, pos() - (hole + 3));
-				}
-				def idx = constants.length;
-				// XXX object creation in AST compilation!
-				// could be problematic if we object lookup observable
-				source.put(loc);
-				putb(Opcode.LOAD_CONST.tag);
-				putO(addConstant(StrObjects.getStrObject(Exceptions.noTrueBranch)));
-				source.put(loc);
-				putb(Opcode.RAISE.tag);
-				putO(0); // no operand
-				// fill in all jump to end targets
-				for (hole in ends.extract()) {
-					writeO(hole, pos() - (hole + 3));
-				}
-			}
-			Func(id, params, code) => {
-				// XXX compiling code
-				code.compile(params);
-				
-				// XXX object creation in AST compilation!
-				def cst = addConstant(FuncObjects.newFO(id, params, code));
-			
-				source.put(loc);
-				putb(Opcode.LOAD_CONST.tag);
-				putO(cst);
-			}
-			Raise(exn) => {
-				compileAST(exn);
-				source.put(loc);
-				putb(Opcode.RAISE.tag);
-				putO(0); // no operand
-			}
-			Catch(try, id, b, catch) => {
-				source.put(loc);
-				putb(Opcode.TRY.tag);
-				def hole1 = pos();
-				skipO();
-
-				compileAST(try);
-
-				source.put(loc);
-				putb(Opcode.CATCH.tag);
-				putO(0); // no operand
-
-				source.put(loc);
-				putb(Opcode.JUMP.tag);
-				def hole2 = pos();
-				skipO();
-
-				writeO(hole1, pos() - (hole1 + 3));
-					
-				source.put(loc);
-				match (b.data) {
-					Local  => {
-						putb(Opcode.STORE_LOCAL.tag);
-						putO(addLocal(id));
-					}
-					Global => {
-						putb(Opcode.STORE_GLOBAL.tag);
-						putO(addString(id));
-					}
-				}
-
-				compileAST(catch);
-				writeO(hole2, pos() - (hole2 + 3));
-			}
-			Begin(exprs) => {
-				for (i < exprs.length - 1) {
-					compileAST(exprs[i]);
-					source.put(loc);
-					putb(Opcode.POP.tag);
-					putO(1); // ignore eval result
-				}
-				compileAST(exprs[exprs.length - 1]);
-			}
-			While(cond, body) => {
-				def head = pos();
-				compileAST(cond);
-				source.put(loc);
-				putb(Opcode.JUMP_IF_FALSE_PEEK.tag);
-				def hole = pos();
-				skipO(); // hole to put jump offset
-				compileAST(body);
-				source.put(loc);
-				putb(Opcode.POP.tag);
-				putO(1);
-				source.put(loc);
-				putb(Opcode.JUMP.tag);
-				skipO();
-				writeO(pos() - 3, head - pos());
-				writeO(hole, pos() - (hole + 3));
-			}
-			GetField(id, obj) => {
-				compileAST(obj);
-				source.put(loc);
-				putb(Opcode.LOAD_FIELD.tag);
-				putO(addString(id));
-			}
-			SetField(id, obj, val) => {
-				compileAST(obj);
-				compileAST(val);
-				source.put(loc);
-				putb(Opcode.SWAP.tag);
-				putO(1);
-				source.put(loc);
-				putb(Opcode.DUPE.tag);
-				putO(1);
-				source.put(loc);
-				putb(Opcode.STORE_FIELD.tag);
-				putO(addString(id));
-			}
-			Class(id, superclass, init, fields, methods) => {
-				// there are subcodes which are getting compiled here
-				// TODO should this compilation process just be part of code creation?
-				match (superclass) {
-					Nothing => {
-						def idx = constants.length;
-						source.put(loc);
-						putb(Opcode.LOAD_CONST.tag);
-						putO(addConstant(ClassObjects.classBase));
-					}
-					Just(expr) => compileAST(expr);
-				}
-				var init2: CodeObject;
-				match (init) {
-					Nothing => ;
-					Just(code) => {
-						code.compile(["self"]);
-						init2 = code;
-					}
-				}
-				// XXX compiling subcode
-				for (field in fields) field.1.compile([]);
-				//                                   XXX
-				def idx = addClasshole(ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc)));
-				source.put(loc);
-				putb(Opcode.CREATE_CLASS.tag);
-				putO(idx);
-			}
-			New(obj) => {
-				compileAST(obj);
-				source.put(loc);
-				putb(Opcode.CREATE_OBJECT.tag);
-				putO(0); // no operand
-			}
-			List(elems) => {
-				for (elem in elems)
-					compileAST(elem);
-				source.put(loc);
-				putb(Opcode.CREATE_LIST.tag);
-				putO(elems.length);
-			}
-
-//			_ => System.error("compile error", "unsupported AST node");
-		}
-		
-	}
-
-	// wrappers around datawriter
-	def putb(b: int)  { writer.putb(b); }
-	def putO(o: int)  { writer.putbbb(o, o >> 8, o >> 16); }
-	//def skipN(s: int) { writer.skipN(s); }
-	def skipO()       { writer.skipN(3); }
-	//def zeroN(s: int) { writer.zeroN(s); }
-	def zeroO()       { writer.zeroN(3); }
-	def pos() -> int  { return writer.pos; }
-	//def writeb(addr: int, data: int) { writer.data[addr] = byte.view(data); }
-	def writeO(addr: int, data: int) {
-		writer.data[addr]     = byte.view(data);
-		writer.data[addr + 1] = byte.view(data >> 8);
-		writer.data[addr + 2] = byte.view(data >> 16);
-	}
-
-	def addString(str: string) -> int {
-		// check for existing string
-		for (i = 0; i < strings.length; i++) {
-			if (Strings.equal(strings[i], str))
-				return i;
-		}
-		def idx = strings.length;
-		strings.put(str);
-		return idx;
-	}
-
-	def addClasshole(clazz: ClassObject -> ClassObject) -> int {
-		def idx = classholes.length;
-		classholes.put(clazz);
-		return idx;
-	}
-
-	def addConstant(const: Object) -> int {
-		def idx = constants.length;
-		constants.put(const);
-		return idx;
-	}
-
-	def addLocal(id: string) -> int {
-		for (i < locals.length) {
-			if (Strings.equal(locals[i], id))
-				return i;
-		}
-		def idx = locals.length;
-		locals.put(id);
-		return idx;
 	}
 
 	/* print this bytecode */
 	def inspect() {
-		def bc = bytecode;
+		def bc = instrs;
 		var pc = 0;
 		while (pc < bc.length) {
 			def bc      = Ref<Instruction>.at(bc, pc);
 			def opcode  = bc.opcode;
 			def operand = bc.operand;
-			def loc = source[pc >> 2];
+			def loc = sourceMap[pc >> 2];
 
 			System.puts(Strings.format3("+%d: %s %d", pc, opcode.name, operand));
 			if (loc != null)
@@ -372,37 +46,6 @@ class Bytecode {
 				_ => ;
 			}
 		}
-
 	}
 }
-
-layout Instruction {
-	+0  opcode:  Opcode;
-	+1  operand: u24; // you may treat this as unsigned or signed depending on opcode
-	=4;
-}
-
-component Bytecodes {
-	def inspect(code: Array<byte>) {
-		var pc = 0;
-		while (pc < code.length) {
-			def bytecode = Ref<Instruction>.at(code, pc);
-			def opcode   = bytecode.opcode;
-			def operand  = bytecode.operand;
-
-			System.puts(Strings.format3("+%d: %s %d", pc, opcode.name, operand));
-			
-			pc += 4;
-			// dispatch on bytecode
-			match (opcode) {
-				_ => ;
-			}
-		}
-	}
-}
-
-def funcToFunc(f: ASTData.Func) -> FuncObject {
-	// XXX compilation here
-	f.body.compile(Arrays.prepend("self", f.params));
-	return FuncObjects.newFO(f.id, f.params, f.body);
-}
+ 

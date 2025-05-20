@@ -81,7 +81,7 @@ class Object {
  	 		x: StrObject    => cls = ClassObjects.classStr;
 		}
 		// sanity check
-		if (CompileOptions.sanityChecks)
+		if (CiceroOptions.sanityChecks)
 			if (cls == null) System.error("init error", "class is still null after initialization");
 
 		/* Get the sequence of superclasses up to base */

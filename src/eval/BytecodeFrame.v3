@@ -40,13 +40,13 @@ class BytecodeFrame extends FrameObject {
 
 	/* BYTECODE EVALUATOR */
 	def evalBytecode(b: Bytecode) -> Object {
-		def code       = b.bytecode;
-		def strings    = b.strings;
-		def classholes = b.classholes;
-		def constants  = b.constants;
-		def source     = b.source;
+		def code       = b.instrs;
+		def strings    = b.stringPool;
+		def classholes = b.classPool;
+		def constants  = b.constPool;
+		def source     = b.sourceMap;
 		
-		if (Tracing.traceBytecodeEvaluation) {
+		if (CiceroOptions.traceBytecodeEvaluation) {
 			System.puts("Evaluating bytecode:\n");
 			System.puts(Strings.format1("Number of locals: %d\n", locals.length));
 			b.inspect();
@@ -55,14 +55,14 @@ class BytecodeFrame extends FrameObject {
 
 		var pc = 0;
 		while (pc < code.length || isExn()) {
-			// sanity check
-			// if ((pc & 0b11) != 0) System.error("eval error", Strings.format1("unaligned pc access: %d", pc));
+			if (CiceroOptions.sanityChecks)
+				if ((pc & 0b11) != 0) System.error("eval error", Strings.format1("unaligned pc access: %d", pc));
 
 			// if frame is in an exceptional state, try to handle it!
 			// Should this go after the handlers?
  			if (isExn()) {
  				if (handlers.empty()) {
- 					if (Tracing.traceBytecodeEvaluation) System.puts("returned with exception\n");
+ 					if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
  					return null;
  				}
  				def p = handlers.pop();
@@ -76,44 +76,42 @@ class BytecodeFrame extends FrameObject {
 
 			// Fetch
 			def bytecode = Ref<Instruction>.at(code, pc);
-			loc = source.get(pc >> 2); // XXX Expensive!
+			loc = source[pc >> 2];
 
 			/* Inline caches */
 			var cache: HashMap<ClassObject, int>;
-
-  			if (Tiers.enableIC)
-  				cache = b.cache[pc >> 2];
+  			if (CiceroOptions.enableIC) cache = b.cache[pc >> 2];
  
- 			def opcode   = bytecode.opcode;
+ 			def opcode = bytecode.opcode;
 
- 			if (Profiling.profileBytecode) {
+ 			if (CiceroOptions.profileBytecode) {
  				Profiling.bytecodeMap[opcode.tag] += 1;
  			}
 
-//  			if (Tracing.traceBytecodeEvaluation) {
-//  				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, operand));
-//  				System.puts("    locals:\n");
-//  				for (i < locals.length) {
-//  					if (locals[i] == null) {
-//  						System.puts(Strings.format1("    %d: NULL\n", i));
-//  					} else {
-//  						System.puts(Strings.format2("    %d: %s\n", i, locals[i].display()));
-//  					}
-//  				}
-//  				System.puts("    stack:\n");
-//  				for (i < stack.top) {
-//  					System.puts("    ");
-//  					System.puts(stack.elems[i].display());
-//  					System.ln();
-//  				}
-//  				System.puts("    exn loc stack:\n");
-//  				for (i < handlers.top) {
-//  					System.puts("    ");
-//  					System.puts(Strings.format2("=> %d (%d)", handlers.elems[i].0, handlers.elems[i].1));
-//  					System.ln();
-//  				}
-//  				System.puts("--\n");
-//  			}
+  			if (CiceroOptions.traceBytecodeEvaluation) {
+  				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, bytecode.operand));
+  				System.puts("    locals:\n");
+  				for (i < locals.length) {
+  					if (locals[i] == null) {
+  						System.puts(Strings.format1("    %d: NULL\n", i));
+  					} else {
+  						System.puts(Strings.format2("    %d: %s\n", i, locals[i].display()));
+  					}
+  				}
+  				System.puts("    stack:\n");
+  				for (i < stack.top) {
+  					System.puts("    ");
+  					System.puts(stack.elems[i].display());
+  					System.ln();
+  				}
+  				System.puts("    exn loc stack:\n");
+  				for (i < handlers.top) {
+  					System.puts("    ");
+  					System.puts(Strings.format2("=> %d (%d)", handlers.elems[i].0, handlers.elems[i].1));
+  					System.ln();
+  				}
+  				System.puts("--\n");
+  			}
  
 
 			pc += 4;
@@ -325,7 +323,7 @@ class BytecodeFrame extends FrameObject {
 					def obj = stack.pop();
 					def field = strings[operand];
 
-					if (Tiers.enableIC) {
+					if (CiceroOptions.enableIC) {
 						/* Inline cache */
 						if (cache.has(obj.getClass())) {
 							//System.puts("[CACHE] cache hit\n");
@@ -379,7 +377,7 @@ class BytecodeFrame extends FrameObject {
 		}
 
 		if (stack.empty()) System.error("eval error", "stack is empty");
-		if (Tracing.traceBytecodeEvaluation) System.puts("RETURN\n");
+		if (CiceroOptions.traceBytecodeEvaluation) System.puts("RETURN\n");
 		return stack.peek();
 	}
 }

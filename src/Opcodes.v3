@@ -28,47 +28,7 @@ enum Opcode {
 	POP,           // [1] how many values to pull
 	DUPE,          // index of element to dupe to top of stack (0 = top)
 	SWAP,          // index of element to swap top of stack with (0 = top)
-	// should typechecking be done as a bytecode? or can the bytecodes
-	// just sometimes raise exceptions
 }
-
-/* TODO Defining a better format for bytecode:
- * Right now, each bytecode is four bytes: one for the opcode and three for the
- * operand. While the alignment is nice, this is really wasteful; rarely does
- * an instruction need the third byte, and some don't take operands at all.
- *
- * Instead of using EXTENDED_ARG like CPython, we should use an LEB128 encoding
- * from Wasm (which Virgil has library functions to support).
- *
- * Each opcode:
- *   NOP
- *   LOAD_CONST         uleb
- *   LOAD_GLOBAL        uleb
- *   LOAD_LOCAL         uleb
- *   LOAD_FIELD         uleb
- *   STORE_GLOBAL       uleb
- *   STORE_LOCAL        uleb
- *   STORE_FIELD        uleb
- *   CALL               uleb
- *   JUMP               sleb
- *   JUMP_IF_FALSE      sleb
- *   JUMP_IF_TRUE_PEEK  sleb
- *   JUMP_IF_FALSE_PEEK sleb
- *   RAISE
- *   TRY                sleb
- *   CATCH
- *   ASSERT_FUNC
- *   CREATE_CLASS       uleb
- *   CREATE_OBJECT
- *   CREATE_LIST
- *   POP                uleb
- *   DUPE               uleb
- *   SWAP               uleb
- *
- * This means that the compilation process is a little more difficult, since
- * jumps (whose offsets need to be filled in later) don't know how big their
- * operand is.
- */
 
 component Opcodes {
 	def numOpcodes: int = 23;

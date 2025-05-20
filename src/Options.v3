@@ -1,7 +1,16 @@
-component CompileOptions {
-	// TODO refactor assertions to be guarded by sanity checks (so that
-	// disabling them with -O3 eliminates those checks from being compiled)
-	// This will also allow us to insert many more sanity checks around the
-	// program which we can disable to avoid overhead in stabler builds.
+component CiceroOptions {
+	/* compile-time extras */
 	def sanityChecks = true;
+	
+	/* tiering/evaluation options */
+	var enableTier1:  bool;
+	var enableIC:     bool;
+
+	/* tracing */
+	def traceFunctionCalls = false;
+	def traceBytecodeCompilation = false;
+	def traceBytecodeEvaluation = false;
+
+	/* profiling */
+	def profileBytecode = false;
 }
