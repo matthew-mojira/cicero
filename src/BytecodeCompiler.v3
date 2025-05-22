@@ -38,6 +38,7 @@ class BytecodeCompiler {
 			VarGet(id, mode) => match (mode.data) {
 				Local  => writeInstrWithOperand(loc, Opcode.LOAD_LOCAL, addLocal(id));
 				Global => writeInstrWithOperand(loc, Opcode.LOAD_GLOBAL, addString(id));
+				_ => System.error("compile error", "unimplemented case: Nonlocal");
 			}
 			VarSet(id, mode, code) => {
 				compileAST(code);
@@ -45,6 +46,7 @@ class BytecodeCompiler {
 				match (mode.data) {
 					Local  => writeInstrWithOperand(loc, Opcode.STORE_LOCAL, addLocal(id));
 					Global => writeInstrWithOperand(loc, Opcode.STORE_GLOBAL, addString(id));
+					_ => System.error("compile error", "unimplemented case: Nonlocal");
 				}
 			}
 			And(left, right) => {
@@ -99,7 +101,8 @@ class BytecodeCompiler {
 					fillHole(hole, writer.pos - hole - 4);
 				}
 			}
-			Func(id, params, code) => {
+			// TODO implement 4th param
+			Func(id, params, code, xxx) => {
 				// XXX compiling code
 				code.compile(params);
 				
@@ -128,6 +131,7 @@ class BytecodeCompiler {
 				match (b.data) {
 					Local  => writeInstrWithOperand(loc, Opcode.STORE_LOCAL, addLocal(id));
 					Global => writeInstrWithOperand(loc, Opcode.STORE_GLOBAL, addString(id));
+					_ => System.error("compile error", "unimplemented case: Nonlocal");
 				}
 
 				compileAST(catch);

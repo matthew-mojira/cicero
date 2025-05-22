@@ -326,10 +326,10 @@ class BytecodeFrame extends FrameObject {
 					if (CiceroOptions.enableIC) {
 						/* Inline cache */
 						if (cache.has(obj.getClass())) {
-							//System.puts("[CACHE] cache hit\n");
+							System.puts("[CACHE] cache hit\n");
 							stack.push(obj.getFieldByIndex(cache[obj.getClass()]));
 						} else {
-							//System.puts("[CACHE] cache miss\n");
+							System.puts("[CACHE] cache miss\n");
 							def v = obj.getField(field);
 							if (v == null) {
 								throw(Exceptions.missingField(obj, field));

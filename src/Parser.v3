@@ -36,6 +36,11 @@ def duplicatedFieldMethod: string   = "field/method redefined";
 def duplicatedExtends: string       = "extends clause defined";
 def duplicatedInit: string          = "init clause defined";
 
+class Vars {
+	def referencedVars: HashMap<string, Box<AccessMode>> = Strings.newMap();
+	def possibleNonlocals: Vector<(string, Box<AccessMode>)> = Vector.new();
+}
+
 class Parser extends TextReader {
 	private def exprs: Vector<CodeObject>          = Vector.new();
 	def errors: Vector<(int, int, string)> = Vector.new();
@@ -55,25 +60,41 @@ class Parser extends TextReader {
 		}
 	}
 
-	// Box is a pointer to an access mode, so we can retroactively change
-	// access modes when a set is encountered, but also so we need only a
-	// single pass to parse the program.
-	def varStack: ArrayStack<HashMap<string, Box<AccessMode>>> = ArrayStack.new();
+	def varStack: ArrayStack<Vars> = ArrayStack.new();
 	// all global-set/gets use this to reduce allocations. Don't mutate this
 	def global:   Box<AccessMode> = Box.new(AccessMode.Global);
 
-	private def readCode(locals: Array<string>) -> AST {
-		def map: HashMap<string, Box<AccessMode>> = Strings.newMap();
-		varStack.push(map);
-
+	                                             /* AST,  globals (which may be nonlocals) */
+	private def readCode(locals: Array<string>) -> (AST, Array<(string, Box<AccessMode>)>) {
+		def top = Vars.new();
 		for (local in locals) {
-			map[local] = Box.new(AccessMode.Local);
+			top.referencedVars[local] = Box.new(AccessMode.Local);
 		}
+		varStack.push(top);
 
 		def expr = readExpr();
 
+		// HERE: set the nonlocal modes from the enclosed functions
+		for (i < top.possibleNonlocals.length) {
+			def p = top.possibleNonlocals[i];
+			def id = p.0, acc = p.1;
+
+			if (top.referencedVars.has(id) && top.referencedVars[id].data == AccessMode.Local) {
+				acc.data = AccessMode.Nonlocal;
+			}
+		}
+
 		varStack.pop();
-		return expr;
+
+		// of the remaining variables, keep the ones that are global, so could be nonlocal in the enclosing scope
+		def globals: Vector<(string, Box<AccessMode>)> = Vector.new();
+		for (list = Maps.keyList(top.referencedVars); list != null; list = list.tail) {
+			def key = list.head;
+			if (top.referencedVars[key].data == AccessMode.Global) {
+				globals.put((key, top.referencedVars[key]));
+			}
+		}
+		return (expr, globals.extract());
 	}
 
 
@@ -206,15 +227,22 @@ class Parser extends TextReader {
 						}
 						
 						// body expresssion
-						def body = readCode(params.copy());
+						def ret = readCode(params.copy());
+						def body = ret.0, prev = ret.1;
 						req1(')');
 
 						def b = bindLocal(name);
 						def range = FileRange.new(fileName, startLine, startColumn, line, column);
-						
+
+						// get func to the set of possible nonlocals
 						// XXX creating CodeObject here
-						return AST.new(ASTData.VarSet(name, b,
-															AST.new(ASTData.Func(name, params.extract(), CodeObjects.fromAST(body)), range)), 
+						def func = ASTData.Func(name, params.extract(), CodeObjects.fromAST(body), Vector.new());
+						def vars = varStack.peek();
+						if (vars != null) {
+							vars.possibleNonlocals.puta(prev);
+						}
+						
+						return AST.new(ASTData.VarSet(name, b, AST.new(func, range)), 
 										range);
 					}
 					LAMBDA => {
@@ -234,13 +262,21 @@ class Parser extends TextReader {
 						}
 						
 						// body expresssion
-						def body = readCode(params.copy());
+						def ret = readCode(params.copy());
+						def body = ret.0, prev = ret.1;
 						req1(')');
 
 						def range = FileRange.new(fileName, startLine, startColumn, line, column);
 						
+						// get func to the set of possible nonlocals
 						// XXX creating CodeObject here
-						return AST.new(ASTData.Func("lambda", params.extract(), CodeObjects.fromAST(body)), range);
+						def func = ASTData.Func("lambda", params.extract(), CodeObjects.fromAST(body), Vector.new());
+						def vars = varStack.peek();
+						if (vars != null) {
+							vars.possibleNonlocals.puta(prev);
+						}
+						
+						return AST.new(func, range);
 					}
 					SET => {
 						def id = readIdentifier();
@@ -315,11 +351,11 @@ class Parser extends TextReader {
 										fail(duplicatedInit);
 										// XXX fail but keep parsing
 									}
-									init = Maybe.Just(CodeObjects.fromAST(readCode(["self"])));
+									init = Maybe.Just(CodeObjects.fromAST(readCode(["self"]).0)); // XXX ignoring .1
 								}
 								FIELD => {
 									def fieldName = readIdentifier();
-									def fieldInit = readCode(["self"]);
+									def fieldInit = readCode(["self"]).0; // XXX ignoring .1
 									
 									fields.put(fieldName, CodeObjects.fromAST(fieldInit));
 								}
@@ -340,12 +376,12 @@ class Parser extends TextReader {
 											return null;
 										}
 									}
-									def methodBody = readCode(methodParams.copy());
+									def methodBody = readCode(methodParams.copy()).0; // XXX ignoring .1
 
 									// XXX creating CodeObject here
 									methods.put(ASTData.Func(methodName, 
 												Ranges.dup(methodParams.copy()[1 ...]), 
-												CodeObjects.fromAST(methodBody)));
+												CodeObjects.fromAST(methodBody), Vector.new()));
 								}
 							}
 							req1(')');
@@ -472,11 +508,11 @@ class Parser extends TextReader {
 					def map = varStack.peek();
 					if (map == null) {
 						b = global;
-					} else if (map.has(str)) {
-						b = map[str];
+					} else if (map.referencedVars.has(str)) {
+						b = map.referencedVars[str];
 					} else {
 						b = Box.new(AccessMode.Global);
-						map[str] = b;
+						map.referencedVars[str] = b;
 					}
 					expr = AST.new(ASTData.VarGet(str, b), range);
 				}
@@ -589,12 +625,12 @@ class Parser extends TextReader {
 		def map = varStack.peek();
 		if (map == null) {
 			b = global;
-		} else if (map.has(name)) {
-			b = map[name];
+		} else if (map.referencedVars.has(name)) {
+			b = map.referencedVars[name];
 			b.data = AccessMode.Local; // set forces local accesses everywhere
 		} else {
 			b = Box.new(AccessMode.Local);
-			map[name] = b;
+			map.referencedVars[name] = b;
 		}
 		return b;
 	}

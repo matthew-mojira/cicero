@@ -67,7 +67,9 @@ More types
 - [ ] set
 
 Wasm
-- [ ] Analyze compiled Wasm with GRP (update GRP)
+- [ ] GRP
+  - [ ] GRP: use abstract interpreter to detect dispatch in switch
+  - [ ] investigate why opcode counts are wrong for Cicero tier1 in GRP
 - [ ] Tier II layering: compile bytecode to Wasm, link wizard, and execute
 
 Potpourri of potentially bigger things

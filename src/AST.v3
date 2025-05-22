@@ -1,6 +1,7 @@
 type AccessMode {
 	case Local;
 	case Global;
+	case Nonlocal;
 }
 
 // When a field is of type Code, that indicates that its evaluation occurs in
@@ -25,7 +26,7 @@ type ASTData {
 		 { def whichOne() -> string { return "raise"; } }
 	case Catch(try: AST, exn: string, mode: Box<AccessMode>, catch: AST) // XXX mode required
 		 { def whichOne() -> string { return "catch"; } }
-	case Func(id: string, params: Array<string>, body: CodeObject)
+	case Func(id: string, params: Array<string>, body: CodeObject, nonlocals: Vector<string>)
 		 { def whichOne() -> string { return "func"; } }
 	case While(cond: AST, body: AST)
 		 { def whichOne() -> string { return "while"; } }
