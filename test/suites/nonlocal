@@ -24,3 +24,24 @@
 => <func 'g'>
 => 1
 --
+(func (f x) (lambda (y) (+ x y)))
+((f 1) 2)
+--
+=> <func 'f'>
+=> 3
+--
+(func (f x) (lambda (x) (+ x 1)))
+((f 10) 1)
+--
+=> <func 'f'>
+=> 2
+--
+(func (sub x y)
+  (lambda () (- x y)))
+(sub 1 2)
+((sub 1 2))
+--
+=> <func 'sub'>
+=> <func 'lambda'>
+=> -1
+--

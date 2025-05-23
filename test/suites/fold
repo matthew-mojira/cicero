@@ -1,0 +1,28 @@
+(class pair
+  (field head ())
+  (field tail ())
+  (method (display)
+    (+ "(" (+ ((get-field display self.head)) (+ " " (+ ((get-field display self.tail)) ")"))))
+  )
+)
+(func (cons x y) {
+  (set p (new pair))
+  (set-field head p x)
+  (set-field tail p y)
+  p
+})
+; incomplete test suite
+--
+=> <class 'pair'>
+=> <func 'cons'>
+==
+(println (cons 1 2))
+--
+(1 2)
+=> <poopcrap>
+--
+(println (cons 1 ()))
+--
+(1 <poopcrap>)
+=> <poopcrap>
+--

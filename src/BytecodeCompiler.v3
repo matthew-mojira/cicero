@@ -278,7 +278,7 @@ class BytecodeCompiler {
 		return idx;
 	}
 	def addNonlocal(id: string) -> int {
-		for (i < locals.length) {
+		for (i < nonlocals.length) {
 			if (Strings.equal(nonlocals[i], id))
 				return i;
 		}
