@@ -38,7 +38,12 @@ def duplicatedInit: string          = "init clause defined";
 
 class Vars {
 	def referencedVars: HashMap<string, Box<AccessMode>> = Strings.newMap();
-	def possibleNonlocals: Vector<(string, Box<AccessMode>)> = Vector.new();
+	def possibleNonlocals: Vector<(ASTData.Func, Array<(string, Box<AccessMode>)>)> = Vector.new();
+	// TODO: you need to make sure that the functions get their vector of
+	// nonlocals updated based on what you find here
+	/* datatype should be
+     *     Vector<(ASTData.Func, Array<(string, Box<AccessMode>)>)>
+	 */
 }
 
 class Parser extends TextReader {
@@ -77,10 +82,15 @@ class Parser extends TextReader {
 		// HERE: set the nonlocal modes from the enclosed functions
 		for (i < top.possibleNonlocals.length) {
 			def p = top.possibleNonlocals[i];
-			def id = p.0, acc = p.1;
+			def fn = p.0, poss = p.1;
 
-			if (top.referencedVars.has(id) && top.referencedVars[id].data == AccessMode.Local) {
-				acc.data = AccessMode.Nonlocal;
+			for (i < poss.length) {
+				def p = poss[i];
+				def id = p.0, acc = p.1;
+					if (top.referencedVars.has(id) && top.referencedVars[id].data == AccessMode.Local) {
+						acc.data = AccessMode.Nonlocal;
+						fn.nonlocals.put(id); // XXX is this unique?
+					}
 			}
 		}
 
@@ -239,7 +249,7 @@ class Parser extends TextReader {
 						def func = ASTData.Func(name, params.extract(), CodeObjects.fromAST(body), Vector.new());
 						def vars = varStack.peek();
 						if (vars != null) {
-							vars.possibleNonlocals.puta(prev);
+							vars.possibleNonlocals.put((func, prev));
 						}
 						
 						return AST.new(ASTData.VarSet(name, b, AST.new(func, range)), 
@@ -273,7 +283,7 @@ class Parser extends TextReader {
 						def func = ASTData.Func("lambda", params.extract(), CodeObjects.fromAST(body), Vector.new());
 						def vars = varStack.peek();
 						if (vars != null) {
-							vars.possibleNonlocals.puta(prev);
+							vars.possibleNonlocals.put((func, prev));
 						}
 						
 						return AST.new(func, range);

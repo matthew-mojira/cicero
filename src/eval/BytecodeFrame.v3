@@ -1,19 +1,33 @@
 class BytecodeFrame extends FrameObject {
-	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
 		if (code != null) {
 			locals = Array.new(code.bytecode.locals.length);
-			//System.puts(Strings.format1("length: %d\n", code.bytecode.locals.length));
-			// args == null?
 			for (i < args.length) {
-				//System.puts(Strings.format1("arg: %s\n", args[i].0));
 				locals[i] = args[i].1;
+			}
+			// XXX some slow unification here, which might lead to some nonlocals not being used from the args?
+			nonlocals = Array.new(code.bytecode.nonlocals.length);
+			for (i < nonlocals.length) {
+				def id = code.bytecode.nonlocals[i];
+				// search for id in nonlocal args
+				for (j < nonlocalArgs.length) {
+					def p = nonlocalArgs[j];
+					if (Strings.equal(id, p.0)) {
+						nonlocals[i] = p.1;
+						break;
+					}
+					// might this ever happen?
+					System.error("eval error", "unable to unify nonlocal arguments");
+				}
 			}
 		} else {
 			locals = Array.new(0);
+			nonlocals = Array.new(0);
 		}
 	}
 
 	def var locals: Array<Object>;
+	def var nonlocals: Array<Object>;
 
 	def stack: ArrayStack<Object> = ArrayStack.new();
 	/* This is a handler stack which stores structure about exceptions:
@@ -43,6 +57,7 @@ class BytecodeFrame extends FrameObject {
 		def code       = b.instrs;
 		def strings    = b.stringPool;
 		def classholes = b.classPool;
+		def funcholes  = b.funcPool;
 		def constants  = b.constPool;
 		def source     = b.sourceMap;
 		
@@ -138,6 +153,16 @@ class BytecodeFrame extends FrameObject {
 					else
 						stack.push(local);
 				}
+				LOAD_NONLOCAL => {
+					def operand  = bytecode.operand;
+					def nonlocal = nonlocals[operand];
+					if (CiceroOptions.sanityChecks) {
+						if (nonlocal == null) {
+							System.error("eval error", "nonlocal null");
+						}
+					}
+					stack.push(nonlocal);
+				}
 				STORE_GLOBAL => {
 					def operand  = bytecode.operand;
 					def id = strings[operand];
@@ -227,7 +252,7 @@ class BytecodeFrame extends FrameObject {
 					if (isExn()) continue;
 
 					// create new frame (and evaluate)
-					def frame = newFrame(fv.id, code, argv);
+					def frame = newFrame(fv.id, code, argv, fv.nonlocals);
 					frame.eval();
 					if (frame.isExn()) {
 						rethrow(frame.getExn());
@@ -294,7 +319,7 @@ class BytecodeFrame extends FrameObject {
 							// XXX hackfix
 							if (expr == null) continue;
 							// create new frames here!
-							def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, []);
+							def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, [], []);
 							frame.eval();
 							if (frame.isExn()) {
 								rethrow(frame.getExn());
@@ -308,7 +333,7 @@ class BytecodeFrame extends FrameObject {
 							def code = cls.init;
 
 							// create new frames here!
-							def frame = newFrame(Strings.format1("%s.init", cls.name), code, args);
+							def frame = newFrame(Strings.format1("%s.init", cls.name), code, args, []);
 							frame.eval();
 							if (frame.isExn()) {
 								rethrow(frame.getExn());
@@ -370,7 +395,17 @@ class BytecodeFrame extends FrameObject {
 
 					stack.push(obj);
 				}
+				CREATE_FUNC => {
+					def operand  = bytecode.operand;
+					def nonlocals: Vector<(string, Object)> = Vector.new();
 
+					def funchole = funcholes[operand];
+					for (i = funchole.nonlocals.length - 1; i >= 0; i--) {
+						nonlocals.put(funchole.nonlocals[i], stack.pop());
+					}
+
+					stack.push(FuncObjects.newFO(funchole.id, funchole.params, nonlocals.extract(), funchole.body));
+				}
 				//_ => System.error("eval error", "unsupported opcode");
 			}
 

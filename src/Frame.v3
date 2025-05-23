@@ -41,8 +41,8 @@ class FrameObject extends Object {
 	// XXX this is for top-level code. note that this may have a discrepancy in tiers!
 	def evalCode(code: CodeObject) -> Object;
 
-	def newFrame(name: string, code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
-		return FrameObjects.newFrame(this, name, code, args);
+	def newFrame(name: string, code: CodeObject, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> FrameObject {
+		return FrameObjects.newFrame(this, name, code, args, nonlocals);
 	}
 
 	// throw sets the exception value in the frame right away
@@ -80,7 +80,7 @@ class FrameObject extends Object {
 }
 
 component FrameObjects {
-	def newFrame(prev: FrameObject, name: string, code: CodeObject, args: Array<(string, Object)>) -> FrameObject {
+	def newFrame(prev: FrameObject, name: string, code: CodeObject, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> FrameObject {
 		if (CiceroOptions.traceFunctionCalls) {
 			System.puts(name);
 			System.puts("(");
@@ -97,9 +97,10 @@ component FrameObjects {
 
 		var frame: FrameObject;
 		match (code.tier) {
+			// XXX virgil functions do not capture free variables
 			-1 => frame = VirgilFrame.new(prev, code, args);
-			 0 => frame = ASTFrame.new(prev, code, args);
-			 1 => frame = BytecodeFrame.new(prev, code, args);
+			 0 => frame = ASTFrame.new(prev, code, args, nonlocals);
+			 1 => frame = BytecodeFrame.new(prev, code, args, nonlocals);
 		} else {
 			System.error("eval error", Strings.format1("unrecognized tier: %d", code.tier));
 		}
@@ -109,9 +110,9 @@ component FrameObjects {
 	def newTopFrame() -> FrameObject {
 		var frame: FrameObject;
 		if (CiceroOptions.enableTier1) {
-			frame = BytecodeFrame.new(null, null, null);
+			frame = BytecodeFrame.new(null, null, null, null);
 		} else {
-			frame = ASTFrame.new(null, null, null);
+			frame = ASTFrame.new(null, null, null, null);
 		}
 		for (builtin in Builtin.set.all) {
 			frame.globals[builtin.id] = builtin.val;

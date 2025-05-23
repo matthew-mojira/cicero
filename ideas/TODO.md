@@ -44,8 +44,8 @@ Better bytecode
 - [ ] canonicalize constants and name strings in the bytecode compiler
 
 Better functions
-- [ ] closures (allowing recursion for a function not at the top level)
-  - [ ] two-pass nonlocal detection
+- [X] closures (allowing recursion for a function not at the top level)
+  - [X] ONE-pass nonlocal detection
 - [ ] allow (mutation of) nonlocal variables
 - [ ] optional arguments
 - [ ] variadic functions
@@ -111,6 +111,8 @@ items are eligible for capture:
 
 Unlike Python, we will not allow the enclosing scope to modify a nonlocal
 variable, that is, no `set-nonlocal` or anything like that.
+
+**Right now, only func/lambda will allow nonlocal variables**
 
 What has to be updated?
 

@@ -1,13 +1,19 @@
 class ASTFrame extends FrameObject {
-	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>) super(prev, code, args) {
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
 		if (args != null) {
 			for (arg in args) {
 				locals[arg.0] = arg.1;
 			}
 		}
+		if (nonlocalArgs != null) {
+			for (nonlocal in nonlocalArgs) {
+				nonlocals[nonlocal.0] = nonlocal.1;
+			}
+		}
 	}
 	
 	def var locals: HashMap<string, Object> = Strings.newMap();
+	def var nonlocals: HashMap<string, Object> = Strings.newMap();
 	
 	def eval() {
 		def v = evalAST(code.ast);
@@ -45,7 +51,13 @@ class ASTFrame extends FrameObject {
 						return value;
 					}
 				}
-				_ => System.error("interp error", "unimplemented case: Nonlocal");
+				Nonlocal => {
+					if (CiceroOptions.sanityChecks) {
+						if (nonlocals[id] == null)
+							System.error("interp error", Strings.format1("nonlocal read of %s was null", id));
+					}
+					value = nonlocals[id];
+				}
 			}
 			VarSet(id, mode, expr) => {
 				def v = evalAST(expr);
@@ -53,7 +65,7 @@ class ASTFrame extends FrameObject {
 				match (mode.data) {
 					Local  => locals[id] = v;
 					Global => globals[id] = v;
-					_ => System.error("interp error", "unimplemented case: Nonlocal");
+					Nonlocal => System.error("interp error", "attempting to set nonlocal variable");
 				}
 				value = v;
 			}
@@ -118,7 +130,7 @@ class ASTFrame extends FrameObject {
 				if (isExn()) return value;
 
 				// create new frame (and evaluate)
-				def frame = newFrame(fv.id, code, argv);
+				def frame = newFrame(fv.id, code, argv, fv.nonlocals);
 				frame.eval();
 				if (frame.isExn()) {
 					rethrow(frame.getExn());
@@ -161,17 +173,27 @@ class ASTFrame extends FrameObject {
 					match (b.data) { // bind exception to variable
 						Local =>  locals[exnvar]  = val;
 						Global => globals[exnvar] = val;
-						_ => System.error("interp error", "unimplemented case: Nonlocal");
+						Nonlocal => System.error("interp error", "trying to bind to a nonlocal variable");
 					}
 					def e = evalAST(catch);
 					if (isExn()) return value;
 					value = e;
 				}
 			}
-			// TODO implement xxx
-			Func(id, params, code, xxx) => {
-				// future work: capturing free variables
-				value = FuncObjects.newFO(id, params, code);
+			Func(id, params, code, fnonlocals) => {
+				def vals: Vector<(string, Object)> = Vector.new();
+				// now work: capturing free variables
+				for (i < fnonlocals.length) {
+					def id = fnonlocals[i];
+					// get local
+					if (locals.has(id))
+						vals.put(id, locals[id]);
+					else {
+						throw(Exceptions.unboundLocal(id));
+						return value;
+					}
+				}
+				value = FuncObjects.newFO(id, params, vals.extract(), code);
 			}
 			Class(id, superclass, init, fields, methods) => {
 				var i: CodeObject = if(init.isJust(), init.fromJust(), null);
@@ -289,7 +311,7 @@ class ASTFrame extends FrameObject {
 						// XXX hackfix
 						if (expr == null) continue;
 						// create new frames here!
-						def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, []);
+						def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, [], []);
 						frame.eval();
 						if (frame.isExn()) {
 							rethrow(frame.getExn());
@@ -303,7 +325,7 @@ class ASTFrame extends FrameObject {
 						def code = cls.init;
 
 						// create new frames here!
-						def frame = newFrame(Strings.format1("%s.init", cls.name), code, args);
+						def frame = newFrame(Strings.format1("%s.init", cls.name), code, args, []);
 						frame.eval();
 						if (frame.isExn()) {
 							rethrow(frame.getExn());
@@ -334,5 +356,6 @@ class ASTFrame extends FrameObject {
 }
 
 def funcToFunc(f: ASTData.Func) -> FuncObject {
-	return FuncObjects.newFO(f.id, f.params, f.body);
+	// XXX list for method
+	return FuncObjects.newFO(f.id, f.params, [], f.body);
 }

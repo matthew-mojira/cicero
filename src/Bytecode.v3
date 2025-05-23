@@ -6,12 +6,12 @@ layout Instruction {
 
 class Bytecode(instrs:     Array<byte>, 
 		locals:     Array<string>,
+		nonlocals:  Array<string>,
                 stringPool: Array<string>,
                 constPool:  Array<Object>,
                 classPool:  Array<ClassObject -> ClassObject>,
+                funcPool:   Array<ASTData.Func>,
                 sourceMap:  Array<FileRange>)
-
-// ??? = captured variables (by name or by index in previous locals?--troublesome in mixed-tier code, if that ever exists)
 {
 	def var cache: Array<HashMap<ClassObject, int>>;
 

@@ -1,4 +1,4 @@
-class FuncObject(id: string, params: Array<string>, code: CodeObject) extends Object {
+class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject) extends Object {
 	def display() -> string { return Strings.format1("<func '%s'>", id); }
 	def isTrue()  -> bool   { return true; }
 
@@ -18,11 +18,11 @@ class FuncObject(id: string, params: Array<string>, code: CodeObject) extends Ob
 
 component FuncObjects {
 	// XXX hackfix to allow method subclass
-	def newFO(id: string, params: Array<string>, code: CodeObject) -> FuncObject {
-		return FuncObject.new(id, params, code);
+	def newFO(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject) -> FuncObject {
+		return FuncObject.new(id, params, nonlocals, code);
 	}
 	def fromVirgil(id: string, params: Array<string>, fn: Range<Object> -> Result) -> FuncObject {
-		return newFO(id, params, CodeObjects.fromVirgil(fn));
+		return newFO(id, params, [], CodeObjects.fromVirgil(fn));
 	}
 
 	def fromVirgilMethod0<T>(name: string, method: T -> Result) -> FuncObject {
@@ -45,11 +45,14 @@ component FuncObjects {
 			def fn = ASTData.Func.!(code.ast.data);
 
 			if (CiceroOptions.enableTier1) fn.body.compile(Arrays.prepend("self", fn.params));
-			return newFO(id, Arrays.deleteAt(fn.params, 0), fn.body);
+			return newFO(id, Arrays.deleteAt(fn.params, 0), [], fn.body);
 		} else {
 			System.error("init error", "failed to parse built-in cicero method");
 			return null;
 		}
+	}
+	def funchole(id: string, params: Array<string>, code: CodeObject) -> (Array<(string, Object)> -> FuncObject) {
+		return newFO(id, params, _, code);
 	}
 }
 

@@ -1,0 +1,4 @@
+(func (f x)
+  (lambda (y) (+ x y)))
+
+((f 1) 2)

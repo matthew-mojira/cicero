@@ -1,5 +1,6 @@
 class MethodObject(obj: Object, id_: string, params_: Array<string>, code_: CodeObject) extends FuncObject {
-	new() super(id_, params_, code_) {}
+	// [] = no capture
+	new() super(id_, params_, [], code_) {}
 	def display() -> string { return Strings.format1("<method '%s'>", id); }
 	def isTrue()  -> bool   { return true; }
 

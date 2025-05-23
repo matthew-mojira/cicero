@@ -5,6 +5,7 @@ enum Opcode {
 	LOAD_GLOBAL,   // [0] index into the string pool
 	LOAD_LOCAL,    // [0] index into the runtime locals
 	LOAD_FIELD,    // [1] index into the string pool
+	LOAD_NONLOCAL, // [1] index into the nonlocal variables
 	// Stores
 	STORE_GLOBAL,  // [1] index into the string pool
 	STORE_LOCAL,   // [0] index into the runtime locals
@@ -21,9 +22,10 @@ enum Opcode {
 	CATCH,         // [0]
 	ASSERT_FUNC    // [1]
 	// Object creation
-	CREATE_CLASS,  // [1] index into the classhole pool
 	CREATE_OBJECT, // [1]
+	CREATE_CLASS,  // [1] index into the classhole pool
 	CREATE_LIST,   // [1] how many elements to pull
+	CREATE_FUNC,   // [n] index into the funchole pool
 	// Stack manipulation
 	POP,           // [1] how many values to pull
 	DUPE,          // index of element to dupe to top of stack (0 = top)
@@ -31,7 +33,7 @@ enum Opcode {
 }
 
 component Opcodes {
-	def numOpcodes: int = 23;
+	def numOpcodes: int = 25;
 	def map: Array<Opcode> = Array.new(numOpcodes); // XXX update this with the number of opcodes
 }
 

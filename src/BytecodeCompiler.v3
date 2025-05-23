@@ -3,8 +3,10 @@ class BytecodeCompiler {
 
 	def strings:    Vector<string> = Vector.new();
 	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
+	def funcholes:  Vector<ASTData.Func> = Vector.new();
 	def constants:  Vector<Object> = Vector.new();
 	def locals:     Vector<string> = Vector.new();
+	def nonlocals:  Vector<string> = Vector.new();
 
 	/* Source mappings */
 	def source: Vector<FileRange>  = Vector.new();
@@ -24,9 +26,11 @@ class BytecodeCompiler {
 	def extract() -> Bytecode {
 		def b = Bytecode.new(writer.extract(), 
 				locals.extract(), 
+				nonlocals.extract(),
 				strings.extract(), 
 				constants.extract(), 
 				classholes.extract(), 
+				funcholes.extract(), 
 				source.extract());
 		return b;
 	}
@@ -38,7 +42,7 @@ class BytecodeCompiler {
 			VarGet(id, mode) => match (mode.data) {
 				Local  => writeInstrWithOperand(loc, Opcode.LOAD_LOCAL, addLocal(id));
 				Global => writeInstrWithOperand(loc, Opcode.LOAD_GLOBAL, addString(id));
-				_ => System.error("compile error", "unimplemented case: Nonlocal");
+				Nonlocal => writeInstrWithOperand(loc, Opcode.LOAD_NONLOCAL, addNonlocal(id));
 			}
 			VarSet(id, mode, code) => {
 				compileAST(code);
@@ -46,7 +50,7 @@ class BytecodeCompiler {
 				match (mode.data) {
 					Local  => writeInstrWithOperand(loc, Opcode.STORE_LOCAL, addLocal(id));
 					Global => writeInstrWithOperand(loc, Opcode.STORE_GLOBAL, addString(id));
-					_ => System.error("compile error", "unimplemented case: Nonlocal");
+					_ => System.error("compile error", "illegal case on varset: Nonlocal");
 				}
 			}
 			And(left, right) => {
@@ -102,14 +106,16 @@ class BytecodeCompiler {
 				}
 			}
 			// TODO implement 4th param
-			Func(id, params, code, xxx) => {
+			Func(id, params, code, nonlocals) => {
 				// XXX compiling code
 				code.compile(params);
-				
-				// XXX object creation in AST compilation!
-				def cst = addConstant(FuncObjects.newFO(id, params, code));
 			
-				writeInstrWithOperand(loc, Opcode.LOAD_CONST, cst);
+				for (i < nonlocals.length) {
+					def nonlocal = nonlocals[i];
+					// this variable will be captured!
+					writeInstrWithOperand(loc, Opcode.LOAD_LOCAL, addLocal(nonlocal));
+				}
+				writeInstrWithOperand(loc, Opcode.CREATE_FUNC, addFunchole(ASTData.Func.!(ast.data)));
 			}
 			Raise(exn) => {
 				compileAST(exn);
@@ -250,6 +256,12 @@ class BytecodeCompiler {
 		return idx;
 	}
 
+	def addFunchole(func: ASTData.Func) -> int {
+		def idx = funcholes.length;
+		funcholes.put(func);
+		return idx;
+	}
+
 	def addConstant(const: Object) -> int {
 		def idx = constants.length;
 		constants.put(const);
@@ -265,11 +277,21 @@ class BytecodeCompiler {
 		locals.put(id);
 		return idx;
 	}
+	def addNonlocal(id: string) -> int {
+		for (i < locals.length) {
+			if (Strings.equal(nonlocals[i], id))
+				return i;
+		}
+		def idx = nonlocals.length;
+		nonlocals.put(id);
+		return idx;
+	}
 
 }
 
 def funcToFunc(f: ASTData.Func) -> FuncObject {
 	// XXX compilation here
 	f.body.compile(Arrays.prepend("self", f.params));
-	return FuncObjects.newFO(f.id, f.params, f.body);
+	// XXX empty map = no variable capture for a method
+	return FuncObjects.newFO(f.id, f.params, [], f.body);
 }
