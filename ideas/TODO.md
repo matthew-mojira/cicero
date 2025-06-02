@@ -37,12 +37,6 @@ Maps
 - [ ] add methods to the map class
 - [ ] map literals and/or some way to create maps
 
-Better bytecode
-- [ ] reduce operands by one of the following: (1) operand length depends on
-      bytecode, (2) use LEBs, (3) add `EXTENDED_ARG` bytecode
-- [ ] create better DataWriter wrappers (e.g. combine `source.put`/`putb`/`putO`)
-- [ ] canonicalize constants and name strings in the bytecode compiler
-
 Better functions
 - [X] closures (allowing recursion for a function not at the top level)
   - [X] ONE-pass nonlocal detection

@@ -10,12 +10,15 @@ class BytecodeFrame extends FrameObject {
 			for (i < nonlocals.length) {
 				def id = code.bytecode.nonlocals[i];
 				// search for id in nonlocal args
-				for (j < nonlocalArgs.length) {
-					def p = nonlocalArgs[j];
+				var found: bool;
+				for (p in nonlocalArgs) {
 					if (Strings.equal(id, p.0)) {
 						nonlocals[i] = p.1;
+						found = true;
 						break;
 					}
+				}
+				if (!found) {
 					// might this ever happen?
 					System.error("eval error", "unable to unify nonlocal arguments");
 				}
