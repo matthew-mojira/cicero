@@ -1,0 +1,6 @@
+(func (main) {
+   (func (foo x) (= x 0))
+   (foo 1)
+})
+
+(main)

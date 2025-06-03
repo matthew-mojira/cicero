@@ -32,6 +32,34 @@ enum Opcode {
 	SWAP,          // index of element to swap top of stack with (0 = top)
 }
 
+/*
+ * 00 NOP
+ * 01 LOAD_CONST  
+ * 02 LOAD_GLOBAL 
+ * 03 LOAD_LOCAL  
+ * 04 LOAD_FIELD  
+ * 05 LOAD_NONLOCAL
+ * 06 STORE_GLOBAL
+ * 07 STORE_LOCAL 
+ * 08 STORE_FIELD 
+ * 09 CALL        
+ * 0A JUMP        
+ * 0B JUMP_IF_FALSE
+ * 0C JUMP_IF_TRUE_PEEK
+ * 0D JUMP_IF_FALSE_PEEK
+ * 0E RAISE      
+ * 0F TRY        
+ * 10 CATCH      
+ * 11 ASSERT_FUNC 
+ * 12 CREATE_OBJECT
+ * 13 CREATE_CLASS 
+ * 14 CREATE_LIST  
+ * 15 CREATE_FUNC  
+ * 16 POP
+ * 17 DUPE
+ * 18 SWAP
+ */
+
 component Opcodes {
 	def numOpcodes: int = 25;
 	def map: Array<Opcode> = Array.new(numOpcodes); // XXX update this with the number of opcodes

@@ -105,7 +105,6 @@ class BytecodeCompiler {
 					fillHole(hole, writer.pos - hole - 4);
 				}
 			}
-			// TODO implement 4th param
 			Func(id, params, code, nonlocals) => {
 				// XXX compiling code
 				code.compile(params);

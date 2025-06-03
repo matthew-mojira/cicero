@@ -181,19 +181,30 @@ class ASTFrame extends FrameObject {
 				}
 			}
 			Func(id, params, code, fnonlocals) => {
-				def vals: Vector<(string, Object)> = Vector.new();
+				def vals: Array<(string, Object)> = Array.new(fnonlocals.length);
+				// create the function now, and insert its values as we iterate through fnonlocals
+				def fn = FuncObjects.newFO(id, params, vals, code);
 				// now work: capturing free variables
 				for (i < fnonlocals.length) {
-					def id = fnonlocals[i];
-					// get local
-					if (locals.has(id))
-						vals.put(id, locals[id]);
-					else {
-						throw(Exceptions.unboundLocal(id));
+					def lid = fnonlocals[i];
+					// XXX
+					// The evaluation of the Func creates a named function, but does not bind that function
+					// in the local or global environment (the parser wraps this AST node in the VarSet node)
+					// This means we cannot just look up the function as a local. But the semantics are such
+					// that a reference to that variable in the enclosed scope (as a nonlocal) should be the
+					// function (for things like recursive calls). So we search for that explicitly and give it
+					// this function, going around the search through the local.
+					if (Strings.equal(lid, id)) {
+						vals[i] = (lid, fn);
+					} else if (locals.has(lid)) {
+						// get local
+						vals[i] = (lid, locals[lid]);
+					} else {
+						throw(Exceptions.unboundLocal(lid));
 						return value;
 					}
 				}
-				value = FuncObjects.newFO(id, params, vals.extract(), code);
+				value = fn;
 			}
 			Class(id, superclass, init, fields, methods) => {
 				var i: CodeObject = if(init.isJust(), init.fromJust(), null);

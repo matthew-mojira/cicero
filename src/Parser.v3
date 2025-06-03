@@ -39,11 +39,6 @@ def duplicatedInit: string          = "init clause defined";
 class Vars {
 	def referencedVars: HashMap<string, Box<AccessMode>> = Strings.newMap();
 	def possibleNonlocals: Vector<(ASTData.Func, Array<(string, Box<AccessMode>)>)> = Vector.new();
-	// TODO: you need to make sure that the functions get their vector of
-	// nonlocals updated based on what you find here
-	/* datatype should be
-     *     Vector<(ASTData.Func, Array<(string, Box<AccessMode>)>)>
-	 */
 }
 
 class Parser extends TextReader {
@@ -84,13 +79,19 @@ class Parser extends TextReader {
 			def p = top.possibleNonlocals[i];
 			def fn = p.0, poss = p.1;
 
+			//System.puts(Strings.format1("Determining nonlocals for enclosed '%s':\n", fn.id));
+
 			for (i < poss.length) {
 				def p = poss[i];
 				def id = p.0, acc = p.1;
-					if (top.referencedVars.has(id) && top.referencedVars[id].data == AccessMode.Local) {
-						acc.data = AccessMode.Nonlocal;
-						fn.nonlocals.put(id); // XXX is this unique?
-					}
+				//System.puts(Strings.format1("  testing '%s': ", id));
+				if (top.referencedVars.has(id) && top.referencedVars[id].data == AccessMode.Local) {
+					//System.puts("NONLOCAL\n");
+					acc.data = AccessMode.Nonlocal;
+					fn.nonlocals.put(id); // XXX is this unique?
+				} else {
+					//System.puts("NO\n");
+				}
 			}
 		}
 

@@ -1,0 +1,13 @@
+(set x 1)
+(while true {
+       (set x (+ x 1))
+       (set x (+ x 1))
+       (set x (+ x 1))
+       (set x (+ x 1))
+       (set x (+ x 1))
+       (set x (+ x 1))
+       (set x (+ x 1))
+       (set x (+ x 1))
+       (set x (+ x 1))
+       (set x (+ x 1))
+ })

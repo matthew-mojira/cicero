@@ -12,5 +12,5 @@ component CiceroOptions {
 	def traceBytecodeEvaluation = false;
 
 	/* profiling */
-	def profileBytecode = false;
+	def profileBytecode = true;
 }

@@ -1,0 +1,11 @@
+  (func (fib n)
+    (cond
+      ((< n 0) (raise "negative number passed to fib"))
+      ((= n 0) 0)
+      ((= n 1) 1)
+      ; true => default case
+      (true (+ (fib (- n 1)) (fib (- n 2))))))
+  
+  (puts ((get-field disassemble (fib.code))))
+
+  (fib 15)
