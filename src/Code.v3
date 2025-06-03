@@ -31,6 +31,13 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 	def co_display() -> Result {
 		return Result.OK(StrObjects.fromString(display()));
 	}
+	def co_disassemble() -> Result {
+		if (tier == 1) {
+			return Result.OK(StrObjects.fromString(bytecode.display()));
+		} else {
+			return Result.Exn(ExnObjects.fromVirgil("co.disassemble", "code object has not been compiled to bytecode"));
+		}
+	}
 }
 
 component CodeObjects {

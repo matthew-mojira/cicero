@@ -1,0 +1,16 @@
+(func (f x) (+ 1 x))
+--
+=> <func 'f'>
+==
+f.code
+(f.code)
+--
+=> <method 'code'>
+=> <code>
+--
+(set co (f.code))
+co.disassemble
+--
+=> <code>
+=> <method 'disassemble'>
+--

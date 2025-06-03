@@ -26,7 +26,9 @@ class Bytecode(instrs:     Array<byte>,
 	}
 
 	/* print this bytecode */
-	def inspect() {
+	def display() -> string {
+		def str = StringBuilder.new();
+
 		def bc = instrs;
 		var pc = 0;
 		while (pc < bc.length) {
@@ -35,10 +37,10 @@ class Bytecode(instrs:     Array<byte>,
 			def operand = bc.operand;
 			def loc = sourceMap[pc >> 2];
 
-			System.puts(Strings.format3("+%d: %s %d", pc, opcode.name, operand));
+			str.put3("+%d: %s %d", pc, opcode.name, operand);
 			if (loc != null)
-				System.puts(Strings.format2(" (%d:%d)", loc.beginLine, loc.beginColumn));
-			System.ln();
+				str.put2(" (%d:%d)", loc.beginLine, loc.beginColumn);
+			str.ln();
 			
 			pc += 4;
 			// dispatch on bytecode
@@ -46,6 +48,12 @@ class Bytecode(instrs:     Array<byte>,
 				_ => ;
 			}
 		}
+
+		return str.extract();
+	}
+
+	def inspect() {
+		System.puts(display());
 	}
 }
  

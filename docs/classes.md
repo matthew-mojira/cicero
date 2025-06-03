@@ -42,6 +42,8 @@ Wrapper for code.
 
 Methods:
 * `(co.display)`: returns a string representation of the object
+* `(co.disassemble)`: returns a string representation of a disassembly of the
+  bytecode. Raises an exception if code hasn't been compiled to bytecode.
 
 ## exn
 
