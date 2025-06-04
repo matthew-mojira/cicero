@@ -184,3 +184,7 @@ c.increment
 c.value
 "doNotInstantiateThisClass", => 1
 ```
+
+## Maps
+
+Create a map with a call to built-in function `new-map`.

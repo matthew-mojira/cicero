@@ -55,6 +55,12 @@ component ListObjects {
 		obj.list.putr(range);
 		return obj;
 	}
+	def fromList(list: List<Object>) -> ListObject {
+		def obj = ListObject.new();
+		for (elt = list; elt != null; elt = elt.tail)
+			obj.list.put(elt.head);
+		return obj;
+	}
 }
 
 def outOfBounds(len: long, idx: long) => Strings.format2("access at index %d is out of bounds for list of length %d", idx, len);

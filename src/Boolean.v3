@@ -1,4 +1,4 @@
-class BoolObject(val: bool) extends Object #unboxed {
+class BoolObject(val: bool) extends Object {
 	def display() -> string { return if(val, "true", "false"); }
 	def isTrue()  -> bool   { return val; }
 

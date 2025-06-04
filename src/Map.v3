@@ -1,13 +1,47 @@
 class MapObject extends Object {
-	def map: Map<string, Object> = Strings.newMap();
+	def map: HashMap<string, Object> = Strings.newMap();
 
 	def display() -> string { return "<map>"; }
 	def isTrue()  -> bool   { return true; }
-	
+
+	def p_set(key: StrObject, val: Object) -> Result {
+		map[key.str] = val;
+		return Result.OK(this);
+	}
+
+	def p_get(key: StrObject) -> Result {
+		def val = map[key.str];
+		if (val == null) {
+			return Result.Exn(ExnObjects.fromVirgil("map.get", unknownKey(key.str)));
+		} else {
+			return Result.OK(val);
+		}
+	}
+
+	def p_delete(key: StrObject) -> Result {
+		def res = map.remove(key.str);
+		if (res) {
+			return Result.OK(this);
+		} else {
+			return Result.Exn(ExnObjects.fromVirgil("map.get", unknownKey(key.str)));
+		}
+	}
+
+	def p_keys() -> Result {
+		def list: List<Object> = Lists.map(Maps.keyList(map), StrObjects.fromString);
+		return Result.OK(ListObjects.fromList(list));
+	}
+
+	def p_values() -> Result {
+		return Result.OK(ListObjects.fromList(Maps.valueList(map)));
+	}
+
 	def p_display() -> Result {
 		return Result.OK(StrObjects.fromString(display()));
 	}
 }
+
+def unknownKey(key: string) => Strings.format1("no value with key %s", key);
 
 component MapObjects {
 }

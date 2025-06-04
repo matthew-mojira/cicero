@@ -112,11 +112,17 @@ Methods:
 
 ## map
 
-Represents a map between strings and objects. Except there's no way to create
-these.
+Represents a map between strings and objects.
 
 Methods:
 * `(p.display)`: returns a string representation of the object
+* `(p.set s o)`: assigns key `s` to value `o`
+* `(p.get s)`: retrieves the value assigned to key `s`, or raises exception if
+  not bound
+* `(p.delete s)`: delete the value associated with key `s`, or raises exception
+  if not bound
+* `(p.keys)`: gets list of keys in the map
+* `(p.values)`: gets list of values in the map
 
 ## method
 
