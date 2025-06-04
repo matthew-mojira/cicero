@@ -400,14 +400,25 @@ class BytecodeFrame extends FrameObject {
 				}
 				CREATE_FUNC => {
 					def operand  = bytecode.operand;
-					def nonlocals: Vector<(string, Object)> = Vector.new();
-
 					def funchole = funcholes[operand];
+
+					def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
+
+					def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body);
 					for (i = funchole.nonlocals.length - 1; i >= 0; i--) {
-						nonlocals.put(funchole.nonlocals[i], stack.pop());
+						// if the nonlocal is the function itself (for recursion) then do not
+						// get it from the stack. you already have it!
+						if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
+							nonlocals[i] = (funchole.id, fn);
+						} else {
+							nonlocals[i] = (funchole.nonlocals[i], stack.pop());
+						}
+						// this if prevents certain NullPointerException
+  						if (nonlocals[i] == (null, null))
+  							System.error("null check", "null");
 					}
 
-					stack.push(FuncObjects.newFO(funchole.id, funchole.params, nonlocals.extract(), funchole.body));
+					stack.push(fn);
 				}
 				//_ => System.error("eval error", "unsupported opcode");
 			}

@@ -5,6 +5,9 @@ Benchmarking/unit tests
   - [ ] redefining things in the base class, especially determining what is
         canoncalized
   - [ ] set-field
+  - [ ] nonlocal captures, especially recursion
+  - [ ] repetition, hot code
+- [ ] large, representative programs (of syntax/bytecode distribution)
 
 Optimizations in the tier1 bytecode
 - [ ] determine what optimizations are available
@@ -63,7 +66,11 @@ More types
 Wasm
 - [ ] GRP
   - [ ] GRP: use abstract interpreter to detect dispatch in switch
-  - [ ] investigate why opcode counts are wrong for Cicero tier1 in GRP
+  - [X] investigate why opcode counts are wrong for Cicero tier1 in GRP
+  - [ ] figure out what "commonSetup" means
+  - [ ] understand traces/ascribe traces to Virgil source
+- [ ] Wizard
+  - [ ] stack overflow running on tier0 (-O3) and tier1 (-O0)
 - [ ] Tier II layering: compile bytecode to Wasm, link wizard, and execute
 
 Potpourri of potentially bigger things
@@ -79,6 +86,7 @@ Potpourri of potentially bigger things
 - [ ] return, break, continue
 - [ ] namespaces?
 - [ ] rename PoopCrap to something more school-appropriate (and maybe Classhole too)
+- [ ] lambdas should be their own class (and func should extend lambda)
 
 ## nonlocal variables
 

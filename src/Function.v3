@@ -1,5 +1,5 @@
 class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject) extends Object {
-	def display() -> string { return Strings.format1("<func '%s'>", id); }
+	def display() => if(id.length == 0, "<lambda>", Strings.format1("<func '%s'>", id));
 	def isTrue()  -> bool   { return true; }
 
 	def f_name() -> Result {

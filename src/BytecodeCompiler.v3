@@ -111,6 +111,9 @@ class BytecodeCompiler {
 			
 				for (i < nonlocals.length) {
 					def nonlocal = nonlocals[i];
+					if (Strings.equal(nonlocal, id))
+						// the function itself is captured, but not loaded to a local
+						continue;
 					// this variable will be captured!
 					writeInstrWithOperand(loc, Opcode.LOAD_LOCAL, addLocal(nonlocal));
 				}

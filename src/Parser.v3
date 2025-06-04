@@ -281,7 +281,8 @@ class Parser extends TextReader {
 						
 						// get func to the set of possible nonlocals
 						// XXX creating CodeObject here
-						def func = ASTData.Func("lambda", params.extract(), CodeObjects.fromAST(body), Vector.new());
+						// lambda has no name
+						def func = ASTData.Func("", params.extract(), CodeObjects.fromAST(body), Vector.new());
 						def vars = varStack.peek();
 						if (vars != null) {
 							vars.possibleNonlocals.put((func, prev));

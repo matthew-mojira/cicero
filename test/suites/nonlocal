@@ -42,11 +42,32 @@
 ((sub 1 2))
 --
 => <func 'sub'>
-=> <func 'lambda'>
+=> <lambda>
 => -1
 --
 (func (main) {
    (func (foo x) (if (= x 0) x (foo 0)))
+   (foo 1)
+})
+(main)
+--
+=> <func 'main'>
+=> 0
+--
+(func (main) {
+   (set foo 1)
+   (func (foo x) (if (= x 0) x (foo 0)))
+   (foo 1)
+})
+(main)
+--
+=> <func 'main'>
+=> 0
+--
+(func (main) {
+   (set foo 1)
+   (set y 0)
+   (func (foo x) (if (= x y) x (foo 0)))
    (foo 1)
 })
 (main)
