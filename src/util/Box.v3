@@ -1,4 +1,4 @@
-class Box<T> {
+class Box<T> #unboxed {
 	var data: T;
 	new (data: T) {
 		this.data = data;

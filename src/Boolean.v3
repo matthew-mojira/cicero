@@ -1,15 +1,15 @@
-class BoolObject(val: bool) extends Object {
+class BoolObject(val: bool) extends Object #unboxed {
 	def display() -> string { return if(val, "true", "false"); }
 	def isTrue()  -> bool   { return val; }
 
 	def b_not() -> Result { 
-		return Result.OK(BoolObjects.getBoolObject(!val));
+		return Result.OK(BoolObjects.fromBool(!val));
 	}
 	def b_and(that: BoolObject) -> Result {
-		return Result.OK(BoolObjects.getBoolObject(this.val && that.val));
+		return Result.OK(BoolObjects.fromBool(this.val && that.val));
 	}
 	def b_or(that: BoolObject) -> Result {
-		return Result.OK(BoolObjects.getBoolObject(this.val || that.val));
+		return Result.OK(BoolObjects.fromBool(this.val || that.val));
 	}
 	def b_display() -> Result {
 		return Result.OK(StrObjects.fromString(display()));
@@ -22,10 +22,6 @@ component BoolObjects {
 	def trueObject  = BoolObject.new(true);
 	def falseObject = BoolObject.new(false);
 
-	// TODO deprecate this
-	def getBoolObject(b: bool) -> BoolObject {
-		return fromBool(b);
-	}
 	def fromBool(b: bool) -> BoolObject {
 		return if(b, trueObject, falseObject);
 	}

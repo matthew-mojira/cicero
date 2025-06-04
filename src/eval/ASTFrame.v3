@@ -16,13 +16,13 @@ class ASTFrame extends FrameObject {
 	def var nonlocals: HashMap<string, Object> = Strings.newMap();
 	
 	def eval() {
-		def v = evalAST(code.ast);
+		def v = evalAST(Code.AST.!(code.code).ast);
 		if (!isExn())
 			result = Result.OK(v);			
 	}
 
 	def evalCode(code: CodeObject) -> Object {
-		def v = evalAST(code.ast);
+		def v = evalAST(Code.AST.!(code.code).ast);
 		if (!isExn())
 			result = Result.OK(v);			
 		return v;

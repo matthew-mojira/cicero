@@ -203,10 +203,10 @@ class Object {
 		return Result.OK(field);
 	}
 	def o_eq(other: Object) -> Result {
-		return Result.OK(BoolObjects.getBoolObject(this == other));
+		return Result.OK(BoolObjects.fromBool(this == other));
 	}
 	def o_neq(other: Object) -> Result {
-		return Result.OK(BoolObjects.getBoolObject(this != other));
+		return Result.OK(BoolObjects.fromBool(this != other));
 	}
 }
 

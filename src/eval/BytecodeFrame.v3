@@ -1,14 +1,15 @@
 class BytecodeFrame extends FrameObject {
 	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
 		if (code != null) {
-			locals = Array.new(code.bytecode.locals.length);
+			def bytecode = Code.Bytecode.!(code.code).bytecode;
+			locals = Array.new(bytecode.locals.length);
 			for (i < args.length) {
 				locals[i] = args[i].1;
 			}
 			// XXX some slow unification here, which might lead to some nonlocals not being used from the args?
-			nonlocals = Array.new(code.bytecode.nonlocals.length);
+			nonlocals = Array.new(bytecode.nonlocals.length);
 			for (i < nonlocals.length) {
-				def id = code.bytecode.nonlocals[i];
+				def id = bytecode.nonlocals[i];
 				// search for id in nonlocal args
 				var found: bool;
 				for (p in nonlocalArgs) {
@@ -42,14 +43,14 @@ class BytecodeFrame extends FrameObject {
 	def handlers: ArrayStack<(int, int)> = ArrayStack.new();
 
 	def eval() {
-		def v = evalBytecode(code.bytecode);
+		def v = evalBytecode(Code.Bytecode.!(code.code).bytecode);
 		if (!isExn())
 			result = Result.OK(v);
 	}
 
 	def evalCode(code: CodeObject) -> Object {
 		stack.clear();
-		def v = evalBytecode(code.bytecode);
+		def v = evalBytecode(Code.Bytecode.!(code.code).bytecode);
 		if (!isExn())
 			result = Result.OK(v);
 		return v;

@@ -42,7 +42,7 @@ component FuncObjects {
 		var reader = Parser.new(null, cicero);
 		if (reader.ok) {
 			def code = reader.getExprs()[0]; // XXX only use first read item
-			def fn = ASTData.Func.!(code.ast.data);
+			def fn = ASTData.Func.!(Code.AST.!(code.code).ast.data);
 
 			if (CiceroOptions.enableTier1) fn.body.compile(Arrays.prepend("self", fn.params));
 			return newFO(id, Arrays.deleteAt(fn.params, 0), [], fn.body);

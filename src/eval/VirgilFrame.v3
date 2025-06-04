@@ -3,7 +3,7 @@ class VirgilFrame extends FrameObject {
 
 	def eval() {
 		def argv: Range<Object> = Arrays.map(args, snd<string, Object>);
-		result = code.virgil(argv);
+		result = Code.Virgil.!(code.code).fn(argv);
 	}
 }
 

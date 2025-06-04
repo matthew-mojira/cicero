@@ -175,7 +175,6 @@ class BytecodeCompiler {
 			}
 			Class(id, superclass, init, fields, methods) => {
 				// there are subcodes which are getting compiled here
-				// TODO should this compilation process just be part of code creation?
 				match (superclass) {
 					Nothing => {
 						def idx = constants.length;

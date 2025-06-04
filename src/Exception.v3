@@ -5,7 +5,7 @@ class ExnObject extends Object {
 	def stacktrace: Vector<(string, FileRange)> = Vector.new();
 	// TODO handle Virgil locations better?
 	
-	new(msg: string, fn: string, loc: FileRange) {
+	private new(msg: string, fn: string, loc: FileRange) {
 		message = StrObjects.getStrObject(msg);
 		stacktrace.put((fn, loc));
 	}
@@ -38,7 +38,6 @@ component ExnObjects {
 	def fromVirgil(fn: string, msg: string) -> ExnObject {
 		return ExnObject.new(msg, fn, null);
 	}
-	// TODO use this
 	def fromStrObject(str: StrObject, fn: string, loc: FileRange) -> ExnObject {
 		def obj = ExnObject.new(null, fn, loc);
 		obj.message = str;

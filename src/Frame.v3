@@ -47,7 +47,7 @@ class FrameObject extends Object {
 
 	// throw sets the exception value in the frame right away
 	def throw(msg: string) {
-		result = Result.Exn(ExnObject.new(msg, name, loc));
+		result = Result.Exn(ExnObjects.fromStrObject(StrObjects.fromString(msg), name, loc));
 	}
 	def rethrow(exn: ExnObject) {
 		exn.stacktrace.put((name, loc));
@@ -96,13 +96,10 @@ component FrameObjects {
 		}
 
 		var frame: FrameObject;
-		match (code.tier) {
-			// XXX virgil functions do not capture free variables
-			-1 => frame = VirgilFrame.new(prev, code, args);
-			 0 => frame = ASTFrame.new(prev, code, args, nonlocals);
-			 1 => frame = BytecodeFrame.new(prev, code, args, nonlocals);
-		} else {
-			System.error("eval error", Strings.format1("unrecognized tier: %d", code.tier));
+		match (code.code) {
+			Virgil   => frame = VirgilFrame.new(prev, code, args);
+			AST      => frame = ASTFrame.new(prev, code, args, nonlocals);
+			Bytecode => frame = BytecodeFrame.new(prev, code, args, nonlocals);
 		}
 		frame.name = name;
 		return frame;

@@ -18,13 +18,13 @@ class IntObject(val: BigInteger) extends Object {
 	def i_eq(that: Object) -> Result {
 		if (!that.instanceOf(ClassObjects.classInt))
 			return Result.OK(BoolObjects.falseObject);
-		return Result.OK(BoolObjects.getBoolObject(this.val.equals(IntObject.!(that).val)));
+		return Result.OK(BoolObjects.fromBool(this.val.equals(IntObject.!(that).val)));
 	}
 
-	def i_lt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val.compareTo(that.val) <  0));
-	def i_leq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val.compareTo(that.val) <= 0));
-	def i_gt(that: IntObject)  => Result.OK(BoolObjects.getBoolObject(this.val.compareTo(that.val) >  0));
-	def i_geq(that: IntObject) => Result.OK(BoolObjects.getBoolObject(this.val.compareTo(that.val) >= 0));
+	def i_lt(that: IntObject)  => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) <  0));
+	def i_leq(that: IntObject) => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) <= 0));
+	def i_gt(that: IntObject)  => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) >  0));
+	def i_geq(that: IntObject) => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) >= 0));
 
 	/* logical */
 	def i_and(that: IntObject) => Result.OK(IntObject.new(this.val.and(that.val)));

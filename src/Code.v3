@@ -1,28 +1,19 @@
-def TIER_UP = 10;
+type Code #unboxed {
+	case Virgil(fn: Range<Object> -> Result);
+	case AST(ast: AST);
+	case Bytecode(bytecode: Bytecode);
+}
 
 class CodeObject(range: FileRange) extends Object { // XXX range is null if code is virgil
-	def var runCount = 0;
-	
-	def var virgil: Range<Object> -> Result;
-	def var ast: AST; // root node
-	def var bytecode: Bytecode;
-
-	def var tier: i2;
-
-	def incrementCount() {
-//  		runCount++;
-//  		if (runCount > 10 && tier == 0) {
-//  			System.puts("tiering up!\n");
-//  			compile();
-//  		}
-	}
+	def var code: Code;
 
 	/* Compile code */
 	def compile(params: Array<string>) {
-		if (tier < 0) System.error("compile error", "attempting to compile Virgil code to bytecode");
-		if (tier > 0) System.error("compile error", "compiling what has already been compiled to bytecode");
-		bytecode = BytecodeCompiler.new(ast, params).extract();
-		tier = 1;
+		match (code) {
+			Virgil   => System.error("compile error", "attempting to compile Virgil code to bytecode");
+			Bytecode => System.error("compile error", "compiling what has already been compiled to bytecode");
+			AST(ast) => BytecodeCompiler.new(ast, params).extract();
+		}
 	}
 
 	def display() -> string { return "<code>"; }
@@ -32,10 +23,9 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 		return Result.OK(StrObjects.fromString(display()));
 	}
 	def co_disassemble() -> Result {
-		if (tier == 1) {
-			return Result.OK(StrObjects.fromString(bytecode.display()));
-		} else {
-			return Result.Exn(ExnObjects.fromVirgil("co.disassemble", "code object has not been compiled to bytecode"));
+		match (code) {
+			Bytecode => return Result.OK(StrObjects.fromString(Code.Bytecode.!(code).bytecode.display()));
+			_        => return Result.Exn(ExnObjects.fromVirgil("co.disassemble", "code object has not been compiled to bytecode"));
 		}
 	}
 }
@@ -44,8 +34,7 @@ component CodeObjects {
 
 	def fromVirgil(func: Range<Object> -> Result) -> CodeObject {
 		def code = CodeObject.new(null); // XXX null
-		code.virgil = func;
-		code.tier = -1;
+		code.code = Code.Virgil(func);
 		return code;
 	}
 
@@ -54,8 +43,7 @@ component CodeObjects {
 		if (ast == null) return null;
 
 		def code = CodeObject.new(ast.loc);
-		code.ast = ast;
-		code.tier = 0;
+		code.code = Code.AST(ast);
 
 		return code;
 	}
