@@ -362,7 +362,7 @@
 ; main
 (func (richards/main) {
   (set iterations 0)
-  (while (< iterations 2) {
+  (while (< iterations 10) {
     (if (richards/run)
       () ; continue
       (raise "richards error: incorrect results")
