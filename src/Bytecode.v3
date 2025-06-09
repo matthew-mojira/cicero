@@ -13,15 +13,13 @@ class Bytecode(instrs:     Array<byte>,
                 funcPool:   Array<ASTData.Func>,
                 sourceMap:  Array<FileRange>)
 {
-	def var cache: Array<HashMap<ClassObject, int>>;
+	def var cache: Array<Pair<ClassObject, int>>;
 
 	new() {
 		if (CiceroOptions.enableIC) {
 			cache = Array.new(sourceMap.length);
-			// Wow a lot of initialization
-			for (i < cache.length) {
-				cache[i] = HashMap.new(ClassObject.hash, ClassObject.==);
-			}
+			for (i < cache.length)
+				cache[i] = Pair.new(null, -1);
 		}
 	}
 

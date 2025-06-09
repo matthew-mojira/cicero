@@ -1,4 +1,4 @@
-type Code #unboxed {
+type Code {
 	case Virgil(fn: Range<Object> -> Result);
 	case AST(ast: AST);
 	case Bytecode(bytecode: Bytecode);

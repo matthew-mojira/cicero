@@ -1,0 +1,6 @@
+class Pair<A, B> #unboxed {
+	var fst: A;
+	var snd: B;
+
+	new(fst, snd) {}
+}

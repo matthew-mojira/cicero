@@ -98,7 +98,7 @@ class BytecodeFrame extends FrameObject {
 			loc = source[pc >> 2];
 
 			/* Inline caches */
-			var cache: HashMap<ClassObject, int>;
+			var cache: Pair<ClassObject, int>;
   			if (CiceroOptions.enableIC) cache = b.cache[pc >> 2];
  
  			def opcode = bytecode.opcode;
@@ -353,17 +353,17 @@ class BytecodeFrame extends FrameObject {
 					def field = strings[operand];
 
 					if (CiceroOptions.enableIC) {
+						def cls = obj.getClass();
 						/* Inline cache */
-						if (cache.has(obj.getClass())) {
-							System.puts("[CACHE] cache hit\n");
-							stack.push(obj.getFieldByIndex(cache[obj.getClass()]));
+						if (cache.fst == cls) {
+							stack.push(obj.getFieldByIndex(cache.snd));
 						} else {
-							System.puts("[CACHE] cache miss\n");
 							def v = obj.getField(field);
 							if (v == null) {
 								throw(Exceptions.missingField(obj, field));
 							} else {
-								cache[obj.getClass()] = obj.getIndex(field);
+								cache.fst = cls;
+								cache.snd = obj.getIndex(field);
 								stack.push(v);
 							}
 						}
@@ -415,8 +415,8 @@ class BytecodeFrame extends FrameObject {
 							nonlocals[i] = (funchole.nonlocals[i], stack.pop());
 						}
 						// this if prevents certain NullPointerException
-  						if (nonlocals[i] == (null, null))
-  							System.error("null check", "null");
+  						//if (nonlocals[i] == (null, null))
+  						//	System.error("null check", "null");
 					}
 
 					stack.push(fn);
