@@ -363,3 +363,78 @@ evaluate `x => v`:
 Expose `is-true` as a method which is called on implicitly by the runtime (this
 might be complicated) to allow user-defined classes to define their own methods
 of determining truth.
+
+## Lambdas and executable code
+
+Code should be directly executable, but the layout of a code object is not
+ideal:
+
+A code object consists of a Code and a FileRange.
+* Code is an ADT which may be
+  * Virgil: a virgil function `Range<Object> -> Result`. Note that the resulting
+    Code is already parameterized (the names for the parameters are stored
+    separately, which brings arity redundancy issues). The idea here is that 
+    Virgil functions should take differing number of arguments, but its wrapping
+    in a FuncObject (and thus all functions in cicero) explicitly prohibits this.
+  * AST: the root node of an AST tree. Note the AST type itself is a combination
+    of both ASTData (the real syntatical construct) and a FileRange for the source
+    of just that AST node.
+  * Bytecode: which contains the bytecodes but also constant pools, source 
+    mappings, and inline caches.
+* As far as I am aware the FileRange is not in use anywhere. Note that the Virgil
+  type does not use this FileRange because its source is defined in Virgil code.
+  Perhaps it would be useful to have that mapping but it would be mostly unhelpful.
+
+The CodeObject is internally mutable, because of the potential for AST to be
+tiered up to Bytecode (without creating a new CodeObject). Note that Virgil code
+cannot be compiled.
+
+The layout is sorta inconsistent to how frames work (with an abstract class
+extended by three classes, one for each case in the Code AST). Frames are 
+usually a one-off execution thing (except for the top-level which is multiple
+expressions evaluated in a single frame--different than the block). In the
+future, implementing coroutines means a frame needs to be able to suspend
+execution.
+
+### Where do lambdas come in all this?
+
+A code object should be an executable type. This already happens internally
+for top-level expressions. However, in a cicero program you cannot call a
+code object. (But maybe "call" implies some kind of arguments being supplied,
+which would then mean lambda/function.)
+
+We could build up types via inheritance:
+* CodeObject contains Code (implicit data)
+* LambdaObject extends CodeObject
+  * parameters, which control arity checking and provides locals when called
+* FuncObject extends LambdaObject
+  * name for the function (in the parser, this also implicitly sets local)
+* MethodObject extends FuncObject
+  * bound object available as a local called "self"
+
+### Revisiting the removal of XXXObject
+
+But how would this work on the Virgil side of things? We could remove XXXObject
+altogether and force everything to use Object.
+
+Taken from the above section:
+
+> Another possibility is to integrate the components of a function as fields of
+> the object. When creating a new function, something like this occurs:
+> 
+> ```
+> def func = Object.new(Class.func);
+> func.fields["name"] = StrObject.of(id);
+> func.fields["params"] = ListObject.of(params);
+> func.fields["code"] = CodeObject.of(code);
+> ```
+> 
+> When a function is evaluated, the frame accesses the Cicero fields, which are 
+> now exposed to the user and mutable. This means the user can mess with them, in
+> a way which is more often than not confusing and unintuitive. But it's more
+> dynamic!
+> 
+> The question is speed. Obviously this is slower in a trivial implementation,
+> but how much can dynamic optimizations cut down on this overhead?
+
+This means we need to be really good about dynamic optimization!!
