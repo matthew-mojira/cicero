@@ -80,6 +80,7 @@ class Object {
  	 		x: PoopCrapObject => cls = ClassObjects.classPoopCrap;
  	 		x: StrObject    => cls = ClassObjects.classStr;
 		}
+
 		// sanity check
 		if (CiceroOptions.sanityChecks)
 			if (cls == null) System.error("init error", "class is still null after initialization");
@@ -111,6 +112,16 @@ class Object {
 		 * could change if we expose *primitive* fields which are also
 		 * Cicero objects.
 		 */
+		
+		// Methods are initialized when class is initialized
+		if (!CiceroOptions.useLazyMethods) {
+			for (clazz in classes.copy()) {
+				for (func in clazz.classMethods) {
+					def m = MethodObject.new(this, func.id, func.params, func.code);
+					fields[fieldMap[func.id]] = m;
+				}
+			}
+		}
 	}
 
 	// returns success
@@ -128,6 +139,18 @@ class Object {
  	}
  
  	def getFieldByIndex(idx: int) -> Object {
+		if (CiceroOptions.sanityChecks) {
+			if (cls == null)
+				System.error("field error", "class not initialized");
+			if (idx < 0 || idx >= fields.length) {
+				System.error("field error", Strings.format3("field index %d is out of bounds for class %s (length %d)",
+							idx, cls.name, fields.length));
+			}
+			if (fields[idx] == null) {
+				System.error("field error", Strings.format2("access of field index %d for class %s is null",
+							idx, cls.name));
+			}
+		}
  		return fields[idx];
  	}
 
@@ -149,18 +172,23 @@ class Object {
 		def obj = fields[fieldMap[name]];
 		if (obj != null) return obj; // allocated
 	
-		// null if and only if lazy (uninitialized) method
- 		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
- 			for (func in clazz.classMethods) {
- 				if (Strings.equal(func.id, name)) {
- 					def m = MethodObject.new(this, func.id, func.params, func.code);
- 					fields[fieldMap[name]] = m;
- 					return m;
- 				}
- 			}
- 		}
+		if (CiceroOptions.useLazyMethods) {
+			// null if and only if lazy (uninitialized) method
+			for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
+				for (func in clazz.classMethods) {
+					if (Strings.equal(func.id, name)) {
+						def m = MethodObject.new(this, func.id, func.params, func.code);
+						fields[fieldMap[name]] = m;
+						return m;
+					}
+				}
+			}
 
-		System.error("object error", Strings.format1("uninitialized field not a lazy method: %s", name));
+			System.error("object error", Strings.format1("uninitialized field not a lazy method: %s", name));
+			return null;
+		}
+
+		System.error("object error", Strings.format1("could not find field %s", name));
 		return null;
 	}
 

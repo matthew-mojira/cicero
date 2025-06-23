@@ -1,10 +1,12 @@
 component CiceroOptions {
 	/* compile-time extras */
-	def sanityChecks = true;
+	def sanityChecks = false;
 	
 	/* tiering/evaluation options */
 	var enableTier1:  bool;
 	var enableIC:     bool;
+
+	def useLazyMethods: bool = false;
 
 	/* tracing */
 	def traceFunctionCalls = false;
