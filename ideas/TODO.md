@@ -293,6 +293,19 @@ class Object {
 }
 ```
 
+### Lazy methods and inline caches
+
+Inline caches don't work so well when lazy methods are being used. In some
+limited testing, lazy methods improve the performance of the richards benchmark
+by 20-25%. But lazy methods conflict with inline caches. 
+
+Inline caches are supposed to be a fast path to getting the value of a field.
+But what if that field is of a method that has not yet been initialized? The
+method access is purely by field index where the field name can be ignored.
+However, when the field is not initialized, it needs to be, and essentially the
+lookup must be treated as a cache miss so that *by name* the field is
+initialized. This cuts into potential savings of the inline cache.
+
 ## Default values
 
 We can reduce potential boilerplate code and possible exceptions by introducing

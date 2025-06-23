@@ -6,7 +6,8 @@ component CiceroOptions {
 	var enableTier1:  bool;
 	var enableIC:     bool;
 
-	def useLazyMethods: bool = false;
+	/* compile-baked optimizations */
+	def useLazyMethods: bool = true;
 
 	/* tracing */
 	def traceFunctionCalls = false;

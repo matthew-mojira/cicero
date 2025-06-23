@@ -336,7 +336,13 @@ class BytecodeFrame extends FrameObject {
 						def cls = obj.getClass();
 						/* Inline cache */
 						if (cache.fst == cls) {
-							stack.push(obj.getFieldByIndex(cache.snd));
+							def res = obj.getFieldByIndex(cache.snd);
+							if (CiceroOptions.useLazyMethods && res == null) {
+								// if not yet initialized, must treat as cache miss
+								stack.push(obj.getField(field));
+							} else {
+								stack.push(res);
+							}
 						} else {
 							def v = obj.getField(field);
 							if (v == null) {
