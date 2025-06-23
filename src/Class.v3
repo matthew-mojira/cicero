@@ -1,4 +1,6 @@
 class ClassObject(
+		// name, superclass, and init could be represented internally as
+		// Cicero objects, but fields and methods cannot, so all/none/some?
 		name: string, 
 		superclass: ClassObject,  // XXX: base class has superclass == null
 		init: CodeObject,

@@ -2,18 +2,11 @@ class BoolObject(val: bool) extends Object {
 	def display() -> string { return if(val, "true", "false"); }
 	def isTrue()  -> bool   { return val; }
 
-	def b_not() -> Result { 
-		return Result.OK(BoolObjects.fromBool(!val));
-	}
-	def b_and(that: BoolObject) -> Result {
-		return Result.OK(BoolObjects.fromBool(this.val && that.val));
-	}
-	def b_or(that: BoolObject) -> Result {
-		return Result.OK(BoolObjects.fromBool(this.val || that.val));
-	}
-	def b_display() -> Result {
-		return Result.OK(StrObjects.fromString(display()));
-	}
+	def b_not()                 => Result.OK(BoolObjects.fromBool(!val));
+	def b_and(that: BoolObject) => Result.OK(BoolObjects.fromBool(this.val && that.val));
+	def b_or(that: BoolObject)  => Result.OK(BoolObjects.fromBool(this.val || that.val));
+
+	def b_display()             => Result.OK(StrObjects.fromString(display()));
 }
 
 

@@ -134,7 +134,7 @@ def loadCore(frame: FrameObject) {
 
 // TODO steal OptionsGroup from virgil or wizard
 def getOptions() -> Options {
-	def opt = BasicOptions.new(null);
+	def opt = BasicOptions.new();
 
 	opt.newBoolOption("help", false);
 	opt.newIntOption("tier", 0);
