@@ -29,31 +29,31 @@ Each instruction is 4 bytes: one byte for the opcode and three for the operand.
 Unlike cpython's bytecode, there is no extension if longer operands are needed
 (so hopefully 24 bits is enough).
 
-| opcode | instruction        | operand                      | stack effect                               | exception                                               |
-|--------|--------------------|------------------------------|--------------------------------------------|---------------------------------------------------------|
-| 00     | NOP                | no operand                   | no effect                                  | none                                                    |
-| 01     | LOAD_CONST         | index into constant pool     | +1 (constant value)                        | none                                                    |
-| 02     | LOAD_GLOBAL        | index into string pool       | +1 (global value)                          | global unbound                                          |
-| 03     | LOAD_LOCAL         | index into locals (rt)       | +1 (local value)                           | local uninitialized                                     |
-| 04     | LOAD_FIELD         | index into string pool       | -1 (object) / +1 (field value)             | missing field                                           |
-| 05     | LOAD_NONLOCAL      | index into nonlocals (rt)    | +1 (nonlocal value)                        | none                                                    |
-| 06     | STORE_GLOBAL       | index into string pool       | -1 (global value)                          | none                                                    |
-| 07     | STORE_LOCAL        | index into locals (rt)       | -1 (local value)                           | none                                                    |
-| 08     | STORE_FIELD        | index into string pool       | -2 (field value, object)                   | missing field                                           |
-| 09     | CALL               | number of arguments          | -n (arguments) / +1 (return value)         | arity mismatch, callee throws exception                 |
-| 0A     | JUMP               | pc offset to target          | no effect                                  | none                                                    |
-| 0B     | JUMP_IF_FALSE      | pc offset to target          | -1 (condition)                             | none                                                    |
-| 0C     | JUMP_IF_TRUE_PEEK  | pc offset to target          | peek, -1 if top of stack is false          | none                                                    |
-| 0D     | JUMP_IF_FALSE_PEEK | pc offset to target          | peek, -1 if top of stack is true           | none                                                    |
-| 0E     | RAISE              | no operand                   | -1 (exception value)                       | yes, top of stack is not string                         |
-| 0F     | TRY                | pc offset to catch           | no effect                                  | none                                                    |
-| 10     | CATCH              | no operand                   | no effect                                  | none                                                    |
-| 11     | ASSERT_FUNC        | no operand                   | peek, no effect                            | top of stack is not func                                |
-| 12     | CREATE_OBJECT      | no operand                   | -1 (class) / +1 (object)                   | top of stack is not class, initializers throw exception |
-| 13     | CREATE_CLASS       | index into class pool        | -1 (superclass object) / +1 (class object) | top of stack is not class                               |
-| 14     | CREATE_LIST        | number of elements           | -n (elements)                              | none                                                    |
-| 15     | CREATE_FUNC        | index into func pool         | -n (nonlocals)                             | none                                                    |
-| 16     | POP                | number of values to pull     | -n (pulled values)                         | none                                                    |
-| 17     | DUPE               | stack index of duped value   | peek n, +1 (duped value)                   | none                                                    |
-| 18     | SWAP               | stack index of swapped value | peek n, swaps (no net)                     | none                                                    |
+| opcode | instruction        | operand                      | stack effect                               | exception                                               | control flow                 |
+|--------|--------------------|------------------------------|--------------------------------------------|---------------------------------------------------------|------------------------------|
+| 00     | NOP                | no operand                   | no effect                                  | none                                                    | fallthrough                  |
+| 01     | LOAD_CONST         | index into constant pool     | +1 (constant value)                        | none                                                    | fallthrough                  |
+| 02     | LOAD_GLOBAL        | index into string pool       | +1 (global value)                          | global unbound                                          | fallthrough, exception       |
+| 03     | LOAD_LOCAL         | index into locals (rt)       | +1 (local value)                           | local uninitialized                                     | fallthrough, exception       |
+| 04     | LOAD_FIELD         | index into string pool       | -1 (object) / +1 (field value)             | missing field                                           | fallthrough, exception       |
+| 05     | LOAD_NONLOCAL      | index into nonlocals (rt)    | +1 (nonlocal value)                        | none                                                    | fallthrough                  |
+| 06     | STORE_GLOBAL       | index into string pool       | -1 (global value)                          | none                                                    | fallthrough                  |
+| 07     | STORE_LOCAL        | index into locals (rt)       | -1 (local value)                           | none                                                    | fallthrough                  |
+| 08     | STORE_FIELD        | index into string pool       | -2 (field value, object)                   | missing field                                           | fallthrough, exception       |
+| 09     | CALL               | number of arguments          | -n (arguments) / +1 (return value)         | arity mismatch, callee throws exception                 | fallthrough, exception, call |
+| 0A     | JUMP               | pc offset to target          | no effect                                  | none                                                    | jump                         |
+| 0B     | JUMP_IF_FALSE      | pc offset to target          | -1 (condition)                             | none                                                    | fallthrough, jump            |
+| 0C     | JUMP_IF_TRUE_PEEK  | pc offset to target          | peek, -1 if top of stack is false          | none                                                    | fallthrough, jump            |
+| 0D     | JUMP_IF_FALSE_PEEK | pc offset to target          | peek, -1 if top of stack is true           | none                                                    | fallthrough, jump            |
+| 0E     | RAISE              | no operand                   | -1 (exception value)                       | yes, top of stack is not string                         | exception                    |
+| 0F     | TRY                | pc offset to catch           | no effect                                  | none                                                    | fallthrough                  |
+| 10     | CATCH              | no operand                   | no effect                                  | none                                                    | fallthrough                  |
+| 11     | ASSERT_FUNC        | no operand                   | peek, no effect                            | top of stack is not func                                | fallthrough, exception       |
+| 12     | CREATE_OBJECT      | no operand                   | -1 (class) / +1 (object)                   | top of stack is not class, initializers throw exception | fallthrouhg, exception, call |
+| 13     | CREATE_CLASS       | index into class pool        | -1 (superclass object) / +1 (class object) | top of stack is not class                               | fallthrough, exception       |
+| 14     | CREATE_LIST        | number of elements           | -n (elements)                              | none                                                    | fallthrough                  |
+| 15     | CREATE_FUNC        | index into func pool         | -n (nonlocals)                             | none                                                    | fallthrough                  |
+| 16     | POP                | number of values to pull     | -n (pulled values)                         | none                                                    | fallthrough                  |
+| 17     | DUPE               | stack index of duped value   | peek n, +1 (duped value)                   | none                                                    | fallthrough                  |
+| 18     | SWAP               | stack index of swapped value | peek n, swaps (no net)                     | none                                                    | fallthrough                  |
 
