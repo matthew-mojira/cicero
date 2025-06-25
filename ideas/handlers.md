@@ -66,3 +66,335 @@ an indicator of if that object is the proper value or an exceptional value).
 
 Or, we could use wasm-gc which has `exnref`, and would also make try-catch
 a simple translation as well.
+
+## Fast calls for bytecode handlers
+
+In the Wizard fast interpreter, replace the call opcode with a special fast
+call to specially compiled bytecode handler functions. We compile the bytecode
+handlers (from wasm, using spc) so that they respect the fast interpreter's
+register usage so that we don't need to create a frame. The call to the handler
+function is really a jump and the end of the bytecode handler is a (wasm)
+dispatch to the next instruction.
+
+Again, we're trying to deconstruct the operand stack and locals from cicero
+to wasm. That means some instructions (like `LOAD_LOCAL`) can't really be made
+into handlers since it would effectively be in a different wasm frame (though
+implementation-wise it's murkier).
+
+### Easy exceptions from handlers
+
+Handlers return a pair. The first element is either the return value or the
+exception value, indicated by the second element of the pair.
+
+What about try-catch blocks? How about wasm-gc exceptions?
+
+### Handlers
+
+#### `NOP`
+
+`NOP` does not need to be translated, since it does nothing. But maybe as a
+test for our fast calls we could give it a dummy function
+
+```
+def handle_NOP() -> void {
+
+}
+```
+
+#### `LOAD_CONST`
+
+#### `LOAD_GLOBAL`
+
+#### `LOAD_LOCAL`
+
+This needs to be translated as a both a handler function and inline
+instructions. The inline instructions handle the actual load of the value from
+the wasm locals, but then we need a special handler to check uninitialized
+locals.
+
+```
+local.get #operand
+i32.const #operand
+call $handle_LOAD_LOCAL
+;; check for exception
+if
+    ;; do exn stuff
+end
+;; if no exn, should be here with result local value on stack
+```
+
+Note that the handler function needs the local number (for creating the
+exception) and the value at top of stack (which is a peek assuming it is not
+null):
+
+```
+def handle_LOAD_LOCAL(local: Object, operand: int) -> (Object, int) {
+    if (local == null) {
+        /* create exception object and return */
+    }
+    return (local, 0);
+}
+```
+
+#### `LOAD_FIELD`
+
+#### `STORE_GLOBAL`
+
+#### `STORE_LOCAL`
+
+Unlike `LOAD_LOCAL`, this cannot throw exception, so we're okay here with a
+simple (non-handler) translation.
+
+```
+local.set #operand
+```
+
+#### `STORE_FIELD`
+
+#### `CALL`
+
+#### `JUMP`
+
+Eliminated by translating from control flow first.
+
+#### `JUMP_IF_FALSE`
+
+Eliminated by translating from control flow first.
+
+#### `JUMP_IF_TRUE_PEEK`
+
+Eliminated by translating from control flow first.
+
+#### `JUMP_IF_FALSE_PEEK`
+
+Eliminated by translating from control flow first.
+
+#### `RAISE`
+
+#### `TRY`
+
+#### `CATCH`
+
+#### `ASSERT_FUNC`
+
+```cicero
+def handle_ASSERT_FUNC(obj: Object) -> (Object, int) {
+    if (!obj.instanceOf(ClassObjects.classFunc)) {
+        /* create exception object and return */
+    }
+    return (obj, 0);
+}
+```
+
+```wasm
+call $handle_ASSERT_FUNC
+if
+    ;; exception
+end
+```
+
+#### `CREATE_OBJECT`
+
+#### `CREATE_CLASS`
+
+#### `CREATE_LIST`
+
+This instruction takes a variable number of values from the stack depending on
+the operand. For the handler, we could separate these into different versions
+for every size that we see during compilation:
+
+```cicero
+def handle_CREATE_LIST_0() -> Object { /* return type indicates no exception */
+    return ListObjects.fromArray([]);
+}
+def handle_CREATE_LIST_1(obj1: Object) -> Object {
+    return ListObjects.fromArray([obj1]);
+}
+def handle_CREATE_LIST_N(obj1: Object, obj2: Object, ..., objN: Object) -> Object {
+    return ListObjects.fromArray([obj1, obj2, ..., objN]);
+}
+```
+
+#### `CREATE_FUNC`
+
+The handler here is complex since it needs to grab the locals which will be
+captured as nonlocals. However, the bytecode compiler already compiles a 
+sequence of `LOAD_LOCALS` corresponding to the nonlocals that will be captured
+(with a common order that the handler can use to pull values correctly).
+
+So again we can create a set of handlers depending on how many values need to
+be pulled. However, the confusing part here is that when a function captures
+itself (for recursion). That is considered a nonlocal, but the value is not
+pushed to the stack (since it's not effectively bound yet). When going over
+the funchole we have to skip the name that matches the name of the function and
+insert our lazily-defined function for that.
+
+How to get the funchole?
+
+#### `POP`
+
+Compile `POP n` as `n` `drop` instructions in wasm. Since cicero uses the
+virgil GC and not refcount, there is no extra operations needed to complete
+this.
+
+For example, compile
+
+```
+POP 3
+```
+
+as
+
+```
+drop
+drop
+drop
+```
+
+#### `DUPE`
+
+Right now, the bytecode compiler only generates `DUPE 0` and `DUPE 1`
+instructions. Again we generate multiple handlers based on the operand, which
+peek and return multiple values based on how many were read.
+
+```
+/* Duplicate the top element on the stack */
+def handle_DUPE_0(obj: Object) -> (Object, Object) {
+    return (obj, obj);
+}
+/* Duplicate element below the top element on the stack */
+def handle_DUPE_1(obj0: Object, obj1: Object) -> (Object, Object, Object) {
+    return (obj0, obj1, obj0);
+}
+```
+
+#### `SWAP`
+
+The only `SWAP` instruction the compiler generates is `SWAP 1` which swaps the
+top two elements of the stack.
+
+```
+/* Swap top two elements of the stack */
+def handle_SWAP_1(obj0: Object, obj1: Object) -> (Object, Object) {
+    return (obj1, obj0);
+}
+```
+
+### Avoiding beyond relooper
+
+To avoid the need for beyond relooper, we will translate from the AST but use
+the bytecodes as intermediaries. So we'll translate strictly the control flow
+parts into wasm's control flow then translate the subparts using the regular
+bytecode compiler that won't generate any control flow instructions.
+
+So how do we translate the control flow?
+
+#### `And`
+
+`And` is a short-circuiting control flow, so the circuiting is control flow.
+We'll also need a truthiness handler which peeks the stack:
+
+```
+func is_true_peek(obj: Object) -> (Object, bool) {
+    return (obj, obj.isTrue());
+}
+```
+
+So the wasm will look like this
+
+```
+; compile left
+call $is_true_peek
+if (param i32) (result i32)
+    ; true, so the value is the other
+    drop
+    ; compile right
+else
+    ; false, the value is that false value
+end
+```
+
+#### `Or`
+
+Similar to `And`, except swap the cases:
+
+```
+; compile left
+call $is_true_peek
+if (param i32) (result i32)
+    ; true, so this is the value
+else
+    ; false, the value is the right value
+    drop
+    ; compile right
+end
+```
+
+#### `If`
+
+Here, we're consuming the value to determine truthienss so no need to peek.
+
+```cicero
+func is_true(obj: Object) -> bool {
+    return obj.isTrue();
+}
+```
+
+```wasm
+; compile cond
+call $is_true
+if (result i32)
+    ; compile true
+else
+    ; compile false
+end
+```
+
+#### `Cond`
+
+`Cond` is the generalized form of `If` and so we'll translate it as a sequence
+of `if-else` in wasm. However, if there is no matching case, it is an
+exception.
+
+```wasm
+; compile cond1
+call $is_true
+if (result i32)
+    ; compile body1
+else
+    ; compile cond2
+    call $is_true
+    if (result i32)
+        ; compile body2
+    else
+        ; ...
+        ; compile condN
+        call $is_true
+        if (result i32)
+            ; compile bodyN
+        else
+            ; THROW EXCEPTION (use the generated code from bytecode compiler
+            ; to fill this in)
+        end
+    end
+end
+```
+
+#### `Catch`
+
+This will depend if we do our own exception-handling or just use wasm-gc.
+
+#### `While`
+
+```wasm
+loop (result i32)
+    block (result i32)
+        ; compile cond
+        call $is_false_peek
+        br_if 1
+
+        ; compile body
+    end
+    br 0
+end
+```
