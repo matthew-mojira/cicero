@@ -88,6 +88,16 @@ exception value, indicated by the second element of the pair.
 
 What about try-catch blocks? How about wasm-gc exceptions?
 
+### The functions
+
+The wasm implementation for cicero will be "one big fat module". The cicero
+runtime will dynamically create new wasm functions in the cicero module
+instance. 
+
+Technically the code object is the thing that gets compiled, which is wrapped
+either as part of a class definition or a function (or a method). So we don't
+really know the arity?
+
 ### Handlers
 
 #### `NOP`
@@ -113,7 +123,22 @@ i32.const #ptr
 
 #### `LOAD_GLOBAL`
 
-See note below. Punt.
+See below.
+
+```virgil
+def handle_LOAD_GLOBAL(name: string) -> (Object, int) {
+    if (globals.has(name)) {
+        return (globals[name], 0);
+    } else {
+        /* throw and return exception */
+    }
+}
+```
+
+```wasm
+i32.const #str
+call $handle_LOAD_GLOBAL
+```
 
 #### `LOAD_LOCAL`
 
@@ -177,7 +202,17 @@ end
 
 #### `STORE_GLOBAL`
 
-See note below. Punt.
+```virgil
+def handle_STORE_GLOBAL(val: Object, name: string) -> void {
+    globals[val] = name;
+}
+```
+
+```wasm
+;; value on stack
+i32.load #str
+call $handle_STORE_GLOBAL
+```
 
 #### `STORE_LOCAL`
 
@@ -215,6 +250,26 @@ end
 ```
 
 #### `CALL`
+
+Calls need to set up a new stack frame. However, I don't think we are going to
+have stack frames anymore (at least, we are going to have a wasm stack frame
+in cicero which will be different than the bytecode frame).
+
+Calls are multi-arity, where the operand indicates how many values will be
+pulled off the stack for arguments. An additional value, the function, is
+pulled off the stack (thanks to `ASSERT_FUNC` which always appears before,
+this is a callable function).
+
+Note that the function might be a method, in which an additional object needs 
+to be bound as the first local called `self`.
+
+How do we set up functions?
+
+An arity check has to occur. An mismatched arity (between the number of values
+pulled from the stack and the function's desired arity) is an exception.
+
+If the function returns in an exceptional state, then we have to rethrow that
+exception.
 
 #### `JUMP`
 
@@ -264,7 +319,16 @@ end
 
 #### `CREATE_OBJECT`
 
+Object creation requires a handler that consumes a class object at the top
+of the stack, and returns a new object. It will need to set up new stack
+frames to for the class initializer and field initializers.
+
 #### `CREATE_CLASS`
+
+Class creation consumes a object which must be a class for the superclass.
+What about the classhole? How does the runtime know about those? Again we
+could just give it a special pointer to the `ClassObject -> ClassObject`
+classhole function.
 
 #### `CREATE_LIST`
 
@@ -470,4 +534,37 @@ end
 
 ### Globals
 
-punt.
+So we decided to use "one big fat module" for cicero. The cicero runtime,
+including the bytecode handlers, are packaged into one module. The runtime
+generates new wasm code when it compiles a user's function from cicero
+bytecode (just data with respect to the wasm engine) to wasm bytecode. This
+means that wasm globals are globals to both the runtime and to the user
+functions (that were compiled to wasm).
+
+So that we can use wasm globals as cicero globals, we need a way of
+dynamically adding globals to the wasm module instance. This functionality is
+not currently present in wizard, but we (me) could add it.
+
+But wait! Globals are stored by name, so can we index it?
+
+#### So maybe not wasm globals
+
+This is okay though, because then the handlers become lookups on the string.
+Since we are using one big fat module, the bytecode handler looks up in the
+same space for global variables no matter what frame or function calls it.
+
+```virgil
+def handle_LOAD_GLOBAL(name: string) -> (Object, int) {
+    if (globals.has(name)) {
+        return (globals[name], 0);
+    } else {
+        /* throw and return exception */
+    }
+}
+```
+
+```virgil
+def handle_STORE_GLOBAL(val: Object, name: string) -> void {
+    globals[val] = name;
+}
+```
