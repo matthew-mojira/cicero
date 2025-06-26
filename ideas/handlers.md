@@ -103,7 +103,17 @@ def handle_NOP() -> void {
 
 #### `LOAD_CONST`
 
+Constants are presently available in the bytecode and are indexed by the
+operand. However, in constructing the wasm we can simply get the pointer for
+the constant and use `i32.const` (or `i64.const` if we use 64-bit pointers):
+
+```
+i32.const #ptr
+```
+
 #### `LOAD_GLOBAL`
+
+See note below. Punt.
 
 #### `LOAD_LOCAL`
 
@@ -138,7 +148,36 @@ def handle_LOAD_LOCAL(local: Object, operand: int) -> (Object, int) {
 
 #### `LOAD_FIELD`
 
+Lookups on field are by name (and we don't yet have efficient inline caches to
+lookup by index). The operand to the instruction is the index in the string
+pool to get the name. The handler needs to receive this string somehow? 
+
+If the call is out to an imported handler function, then one idea is to pass in
+a pointer to a virgil string for the name. If it's in the same module then we
+could also give it an index intoto wasm memory where the string is stored.
+
+```virgil
+def handle_LOAD_FIELD(obj: Object, name: string) -> (Object, int) {
+    def ret = obj.getField(name);
+    if (ret == null) {
+        /* throw exception for missing field */
+    }
+    return (ret, 0);
+}
+```
+
+```wasm
+;; stack already has object
+i32.const #str ;; pregenerated pointer
+call $handle_LOAD_FIELD
+if
+    ;; check for exception
+end
+```
+
 #### `STORE_GLOBAL`
+
+See note below. Punt.
 
 #### `STORE_LOCAL`
 
@@ -150,6 +189,30 @@ local.set #operand
 ```
 
 #### `STORE_FIELD`
+
+Store field works like load field. However, the handler only needs to return a
+bool because the values are consumed (the real semantics corresponding to the
+`StoreField` AST note require that the assigned value be the value of the
+operation, but the bytecode compiler accomplishes this as extra instructions
+beyond `STORE_FIELD`).
+
+```virgil
+def handle_STORE_FIELD(obj: Object, val: Object, name: string) -> bool {
+    return (obj.setField(name, val));
+}
+```
+
+```wasm
+;; stack already has:
+;; value
+;; object
+;; alue
+i32.const #str ;; pregenerated pointer
+call $handle_STORE_FIELD
+if
+    ;; check for exception
+end
+```
 
 #### `CALL`
 
@@ -171,9 +234,15 @@ Eliminated by translating from control flow first.
 
 #### `RAISE`
 
+I think we will want to use wasm exception handling for this.
+
 #### `TRY`
 
+I think we will want to use wasm exception handling for this.
+
 #### `CATCH`
+
+I think we will want to use wasm exception handling for this.
 
 #### `ASSERT_FUNC`
 
@@ -382,7 +451,7 @@ end
 
 #### `Catch`
 
-This will depend if we do our own exception-handling or just use wasm-gc.
+This will depend if we use the wasm exception handling proposal.
 
 #### `While`
 
@@ -398,3 +467,7 @@ loop (result i32)
     br 0
 end
 ```
+
+### Globals
+
+punt.
