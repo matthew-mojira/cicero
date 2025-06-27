@@ -568,3 +568,24 @@ def handle_STORE_GLOBAL(val: Object, name: string) -> void {
     globals[val] = name;
 }
 ```
+
+## One big fat module
+
+Our idea is that the entire cicero runtime (including bytecode handlers) will
+be compiled as one wasm module. The runtime accepts text input and creates
+user (cicero) code, which is data with respect to wasm. For efficiency
+(hopefully), we compile user code to wasm as a new function which is
+dynamically added to the module instance.
+
+Wizard supports dynamically adding new functions to a module instance, but I
+am not so sure this is a standard feature or that other engines support that.
+
+## Garbage collection
+
+The virgil runtime uses a semispace copying collector. This means that the
+pointers for an object will move after a garbage collection. How does this work
+with virgil code compiled to wasm? I am worried that for compiling
+`LOAD_CONST` where the immediate is the pointer, the pointer value may not be
+valid if a garbage collection occurs.
+
+Big problem!
