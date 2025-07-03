@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SCRIPT_LOC=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
-BIN=$SCRIPT_LOC/../bin
+BIN=$(cd $SCRIPT_LOC/../bin && pwd)
 
 CYAN='[0;36m'
 RED='[0;31m'
@@ -35,7 +35,7 @@ function print_testing() {
 
 if [ "$TEST_TARGETS" = "" ]; then
     if [ "$TEST_TARGET" = "" ]; then
-        TEST_TARGETS="v3i x86-linux x86-64-linux jvm wasm-wave"
+        TEST_TARGETS="x86-linux x86-64-linux jvm wasm-wave"
     else
         TEST_TARGETS="$TEST_TARGET"
     fi
@@ -67,7 +67,7 @@ for suite in $TEST_SUITES; do
     mkdir -p $T/expect
 
     # turn suites into .co and .expect files
-    ruby $SCRIPT_LOC/creator.rb suites/$SUITE
+    ruby $SCRIPT_LOC/creator.rb $SCRIPT_LOC/suites/$SUITE
 
     # move to tmp
     mv $SCRIPT_LOC/suites/*.co $T
@@ -81,7 +81,7 @@ function run_tests() {
 
         # run test
 	if [ "$TEST_TARGET" = "wasm-wave" ]; then
-		wizeng $BINARY -tier=$TEST_TIER $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
+		wizeng $WIZENG_OPTIONS $BINARY -tier=$TEST_TIER $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
 	else
         	$BINARY -tier=$TEST_TIER $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
 	fi
@@ -91,6 +91,7 @@ function run_tests() {
             echo "##-ok"
         else
 	    echo "##-fail"
+
 	    # FIXME discriminate between different error types
 	    #if [ -s "$U/$TEST_PROG.err" ]; then
             #    echo "##-fail: failed to parse or virgil exception"
