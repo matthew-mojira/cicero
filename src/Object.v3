@@ -1,4 +1,7 @@
-/* cls represents a linked list of classes up to the base class
+/* Base class for all objects in Cicero. Built-in classes have their own
+ * Virgil subclass, while all objects of user-defined types are Object.
+ *
+ * cls represents a linked list of classes up to the base class
  * 
  * fields is an array of Objects which hold each field, starting from the
  * base class down to the lowest class (cls).
@@ -209,6 +212,8 @@ class Object {
 
 	def display() => "<object>";
 	def isTrue()  => true;
+
+	/* METHODS */
 
 	def o_getclass() -> Result {
 		return Result.OK(cls);

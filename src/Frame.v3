@@ -1,4 +1,4 @@
-/* FrameObject refers to the `frame` type in Cicero, but in Virgil this is
+/* FrameObject refers to the `frame` class in Cicero, but in Virgil this is
  * an abstract class extended by Virgil/AST/Bytecode frames internally.
  */
 class FrameObject extends Object {
@@ -10,6 +10,7 @@ class FrameObject extends Object {
 	var globals: HashMap<string, Object>;
 	def var name: string;
 
+	/* private = don't create this class explicitly */
 	private new(prev: FrameObject, code, args) {
 		if (prev == null) {
 			globals = Strings.newMap();
@@ -36,9 +37,14 @@ class FrameObject extends Object {
 	 */
 	var loc: FileRange;
 
-	/* How to evaluate this frame. It must set {result} based on what happens. */
+	/* A function to evaluate this frame. It must set {result} based on 
+	 * what happens. */
 	def eval();
-	// XXX this is for top-level code. note that this may have a discrepancy in tiers!
+	/* This is the function used to evaluate top-level code. A frame cannot
+	 * normally evaluate (in `eval`) multiple expressions (unless the block
+	 * construct is used). But in the top level (especially the repl),
+	 * independent expressions are fed in one-by-one.
+	 */	
 	def evalCode(code: CodeObject) -> Object;
 
 	def newFrame(name: string, code: CodeObject, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> FrameObject {
@@ -72,7 +78,7 @@ class FrameObject extends Object {
 			throw(Exceptions.arityMismatch(argc, vals.length));
 	}
 
-	/* methods */
+	/* METHODS */
 
 	def fr_display() -> Result {
 		return Result.OK(StrObjects.fromString(display()));
@@ -80,6 +86,10 @@ class FrameObject extends Object {
 }
 
 component FrameObjects {
+	/* This is the only place to create new frames. It determines what kind
+	 * of frame to create to evaluate the code based on the type of the
+	 * Code (AST, bytecode, etc.)
+	 */
 	def newFrame(prev: FrameObject, name: string, code: CodeObject, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> FrameObject {
 		if (CiceroOptions.traceFunctionCalls) {
 			System.puts(name);
@@ -104,6 +114,7 @@ component FrameObjects {
 		frame.name = name;
 		return frame;
 	}
+	/* Frame used to evaluate top-level code. */
 	def newTopFrame() -> FrameObject {
 		var frame: FrameObject;
 		if (CiceroOptions.enableTier1) {

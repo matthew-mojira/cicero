@@ -1,6 +1,11 @@
+/* The single Object of the unit type.
+ */
 class PoopCrapObject extends Object {
 	def display() -> string { return "<poopcrap>"; }
 	def isTrue()  -> bool   { return false; }
+
+	/* METHODS */
+
 	def u_display() => Result.OK(StrObjects.fromString(display()));
 }
 

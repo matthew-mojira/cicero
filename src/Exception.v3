@@ -1,9 +1,10 @@
+/* Represents a Cicero language exception. */
 class ExnObject extends Object {
 	def isTrue()  -> bool   { return true; }
 
 	def message: string;
+	// XXX: Exception locations in Virgil code have a null FileRange.
 	def stacktrace: Vector<(string, FileRange)> = Vector.new();
-	// TODO handle Virgil locations better?
 	
 	private new(message, fn: string, loc: FileRange) {
 		stacktrace.put((fn, loc));
@@ -25,24 +26,35 @@ class ExnObject extends Object {
 		System.puts(str.extract());
 	}
 	
+	/* METHODS */
+	
 	def e_display() -> Result {
 		return Result.OK(StrObjects.fromString(display()));
 	}
+
+	/* Stacktrace prepares a list of strings where each string is one
+	 * frame in the stacktrace, which is not really useful.
+	 */
 	def e_stacktrace() -> Result {
 		return Result.OK(ListObjects.fromArray(stacktrace.send(Ranges.map(_, compose(formatLine, StrObjects.fromString, Object.!<StrObject>)))));
 	}
 }
 
 component ExnObjects {
+	/* Create an exception object for something that happened in Virgil
+	 * (i.e. null location)
+	 */
 	def fromVirgil(fn: string, msg: string) -> ExnObject {
 		return ExnObject.new(msg, fn, null);
 	}
+	/* Create an exception from a string and location */
 	def fromStrObject(str: StrObject, fn: string, loc: FileRange) -> ExnObject {
 		def obj = ExnObject.new(str.str, fn, loc);
 		return obj;
 	}
 }
 
+/* Format a line of the exception in the stacktrace printout. */
 def formatLine(fn: string, range: FileRange) -> string {
 	def str = StringBuilder.new();
 	str.put1("  at %s (", fn);

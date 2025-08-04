@@ -1,16 +1,40 @@
+/* A Cicero bytecode instruction is four bytes, one byte for the opcode and
+ * three for the operand.
+ * 
+ * Contrast this approach with CPython bytecode, which is one byte for the
+ * opcode and one for the operand. If a bytecode requires a longer operand,
+ * there is the EXTENDED_ARG opcode which uses its operand as part of the
+ * operand for the real instruction that follows it. No such counterpart exists
+ * in Cicero.
+ */
 layout Instruction {
 	+0  opcode:  Opcode;
 	+1  operand: u24; // you may treat this as unsigned or signed depending on opcode
 	=4;
 }
 
+/* The bytecode object, which contains the instructions (as bytes) and all the
+ * locals and pools that the instructions will reference
+ */
 class Bytecode(instrs:     Array<byte>, 
 		locals:     Array<string>,
 		nonlocals:  Array<string>,
+		/* String pool is used for lookups by name (e.g. globals) */
                 stringPool: Array<string>,
                 constPool:  Array<Object>,
+		/* This is a function which takes the superclass object and
+		 * creates a new class object with respect to that
+		 */
                 classPool:  Array<ClassObject -> ClassObject>,
+		/* This is the AST-level information for the function, and not
+		 * function objects. At runtime, the VM will need to use some
+		 * information to capture free variables before creating the
+		 * actual function object.
+		 */
                 funcPool:   Array<ASTData.Func>,
+		/* Instructions are 4-byte aligned, so take pc >> 2 to find the
+		 * source location of an instruction.
+		 */
                 sourceMap:  Array<FileRange>)
 {
 	def var cache: Array<Pair<ClassObject, int>>;

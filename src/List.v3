@@ -1,3 +1,4 @@
+/* A list of objects that the user can modify. */
 class ListObject extends Object {
 	def list: Vector<Object> = Vector.new();
 
@@ -15,6 +16,8 @@ class ListObject extends Object {
 		return buf.extract();
 	}
 	def isTrue()  -> bool   { return true; }
+
+	/* METHODS */
 
 	def l_get(idx: IntObject) -> Result {
 		if (idx.val.longValue() < 0 || idx.val.longValue() >= list.length)

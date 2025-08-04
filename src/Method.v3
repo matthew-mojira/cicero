@@ -4,6 +4,9 @@ class MethodObject(obj: Object, id_: string, params_: Array<string>, code_: Code
 	def display() -> string { return Strings.format1("<method '%s'>", id); }
 	def isTrue()  -> bool   { return true; }
 
+	/* METHODS */
+
+	/* The object bound to the method. */
 	def m_object() -> Result {
 		return Result.OK(obj);
 	}

@@ -9,7 +9,8 @@ class StrObject(str: string) extends Object {
 	def display() -> string { return Strings.format1("\"%s\"", str); }
 	def isTrue()  -> bool   { return true; }
 
-	/* methods */
+	/* METHODS */
+
 	def s_concat(str: StrObject) => Result.OK(StrObjects.fromString(Arrays.concat(this.str, str.str)));
 
 	def s_display() => Result.OK(StrObjects.fromString(display()));

@@ -1,3 +1,6 @@
+/* Builtins are identifiers which are available at the global level at VM 
+ * startup.
+ */
 enum Builtin(id: string, val: Object) {
 	TRUE    ("true",     BoolObjects.trueObject),
 	FALSE   ("false",    BoolObjects.falseObject),
@@ -17,6 +20,8 @@ enum Builtin(id: string, val: Object) {
  	NEW_MAP ("new-map",  FuncObjects.fromVirgil("new-map", [], newMap)),
 	PUTS    ("puts",     FuncObjects.fromVirgil("puts", ["o"], puts))
 }
+
+/* Virgil function definitions for Cicero function objects */
 
 def newMap(args: Range<Object>) -> Result {
 	return Result.OK(MapObject.new());

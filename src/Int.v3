@@ -1,6 +1,13 @@
+/* An integer object, backed by a BigInteger.
+ *
+ * Note: integers aren't canonicalized, so there can be multiple distinct
+ * Virgil objects floating around that represent the same underlying number.
+ */
 class IntObject(val: BigInteger) extends Object {
 	def display() => val.displayDec();
 	def isTrue()  => true;
+
+	/* METHODS */
 
 	/* arithmetic */
 	def i_neg()  => Result.OK(IntObject.new(val.negate()));

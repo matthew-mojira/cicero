@@ -1,3 +1,7 @@
+/* If a keyword appears as the first element of an s-expression, i.e.
+ *   (if ...)
+ * it gets parsed differently. Otherwise, it's treated as an identifier.
+ */
 enum Keyword(id: string) {
 	IF("if"),
 	COND("cond"),
@@ -18,6 +22,14 @@ enum Keyword(id: string) {
 	TRY("try")
 }
 
+/* Same as Keyword except inside a class definition
+ * (class
+ *   (extends ...)
+ *   ...
+ * )
+ * But note that inside the class definition one of these class keywords must
+ * appear in an s-expression. This is a special syntax.
+ */
 enum ClassKeyword(id: string) {
 	EXTENDS("extends"),
 	INIT("init"),

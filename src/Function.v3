@@ -1,6 +1,20 @@
+/* A function object.
+ *
+ * If this is a lambda (which doesn't have a name) the `id` field should be
+ * an empty string.
+ *
+ * A note on Virgil-defined code: the internal type of the function is
+ *   Range<Object> -> Result
+ * The FuncObject contains the `params` field, which is used by the runtime
+ * to perform function arity. So the Virgil-defined code can assume that the
+ * arity is correct. Type-checking is the responsilibity of the implementation
+ * of that function, still.
+ */
 class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject) extends Object {
 	def display() => if(id.length == 0, "<lambda>", Strings.format1("<func '%s'>", id));
 	def isTrue()  -> bool   { return true; }
+
+	/* METHODS */
 
 	def f_name() -> Result {
 		return Result.OK(StrObjects.getStrObject(id));
@@ -17,26 +31,42 @@ class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Ob
 }
 
 component FuncObjects {
-	// XXX hackfix to allow method subclass
+	// XXX hackfix: use this function so that we can have MethodObject as a
+	// subclass of FuncObject in Virgil
 	def newFO(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject) -> FuncObject {
 		return FuncObject.new(id, params, nonlocals, code);
 	}
+	/* Create a function defined with Virgil code */
 	def fromVirgil(id: string, params: Array<string>, fn: Range<Object> -> Result) -> FuncObject {
 		return newFO(id, params, [], CodeObjects.fromVirgil(fn));
 	}
 
+	/* Create a FuncObject from a Virgil method with 0 parameters */
 	def fromVirgilMethod0<T>(name: string, method: T -> Result) -> FuncObject {
 		return fromVirgil(name, [], callMethod0(_, method));
 	}
+	/* Create a FuncObject from a Virgil method with 1 parameter.
+	 *
+	 * There is an additional parameter `cst` (for constraints) for the
+	 * types of the arguments the function should accept. Note: the arity
+	 * checking is performed by the runtime (before making the call) while
+	 * type-checking is considered part of the function definition. Here,
+	 * the type specification is extracted out of convenience, so that the
+	 * real method definitions can assume the type is correct so we don't
+	 * have to write code to check the types everywhere every time.
+	 */
 	def fromVirgilMethod1<T, A1>(name: string, cst: Array<ClassObject>, method: (T, A1) -> Result) -> FuncObject {
 		return fromVirgil(name, ["arg1"], callMethod1(name, _, cst, method));
 	}
+	/* Create a FuncObject from a Virgil method with 2 parameters. */
 	def fromVirgilMethod2<T, A1, A2>(name: string, cst: Array<ClassObject>, method: (T, A1, A2) -> Result) -> FuncObject {
 		return fromVirgil(name, ["arg1", "arg2"], callMethod2(name, _, cst, method));
 	}
+	/* Create a FuncObject from a Virgil method with 3 parameters. */
 	def fromVirgilMethod3<T, A1, A2, A3>(name: string, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> Result) -> FuncObject {
 		return fromVirgil(name, ["arg1", "arg2", "arg3"], callMethod3(name, _, cst, method));
 	}
+	/* Create a FuncObject from a Cicero-defined method. */
 	def fromCiceroMethod(id: string, cicero: string) -> FuncObject {
 		// parse
 		var reader = Parser.new(null, cicero);
@@ -51,6 +81,10 @@ component FuncObjects {
 			return null;
 		}
 	}
+
+	/* Returns a function which takes in captured variables and constructs
+	 * a FuncObject.
+	 */
 	def funchole(id: string, params: Array<string>, code: CodeObject) -> (Array<(string, Object)> -> FuncObject) {
 		return newFO(id, params, _, code);
 	}
