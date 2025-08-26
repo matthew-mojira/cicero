@@ -1,0 +1,14 @@
+// sorted by arity
+type WasmFunction {
+	case Func0(fn: void -> Object);
+	case Func1(fn: Object -> Object);
+	case Func2(fn: (Object, Object) -> Object);
+	case Func3(fn: (Object, Object, Object) -> Object);
+	case Func4(fn: (Object, Object, Object, Object) -> Object);
+	case Func5(fn: (Object, Object, Object, Object, Object) -> Object);
+	case Func6(fn: (Object, Object, Object, Object, Object, Object) -> Object);
+	case Func7(fn: (Object, Object, Object, Object, Object, Object, Object) -> Object);
+	case Func8(fn: (Object, Object, Object, Object, Object, Object, Object, Object) -> Object);
+	case Func9(fn: (Object, Object, Object, Object, Object, Object, Object, Object, Object) -> Object);
+	case Func10(fn: (Object, Object, Object, Object, Object, Object, Object, Object, Object, Object) -> Object);
+}

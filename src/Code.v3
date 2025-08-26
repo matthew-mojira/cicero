@@ -2,6 +2,7 @@ type Code {
 	case Virgil(fn: Range<Object> -> Result);
 	case AST(ast: AST);
 	case Bytecode(bytecode: Bytecode);
+	case Wasm(wasm: WasmFunction);
 }
 
 class CodeObject(range: FileRange) extends Object { // XXX range is null if code is virgil
