@@ -101,13 +101,16 @@ except it is defined as Cicero code).
 It is not intended for the end user to modify this file.
 
 The core utilities are:
-* binary operator wrappers: `+`, `-`, `*`, `/`, `=`, `!=`, `<`, `<=`, `>`, `>=`
-  which wrap around a more ugly method call. 
+* binary operator wrappers: `+`, `-`, `*`, `/`, `=`, `!=`, `<`, `<=`, `>`,
+  `>=`, `&`, `|`, `^`, which wrap around a more ugly method call. 
   ```
   ((get-field + 1) 2)
   ; can be written more familiarly as
   (+ 1 2)
   ```
+* logical `not` (for any value)
+* `print`: prints any object
+* `println`: prints any object with new line
 
 ### Variable scope
 
@@ -121,14 +124,12 @@ possible to modify a global variable in an expression not at the top level.
 Values of type
 
 * bool
-* int
 * poopcrap
 * string
-* type
 
 have one unique instance for each underlying value. The underlying value is
-immutable (i.e. you can't take the integer 1 and make it 2), but the fields
-are mutable. This may make things strange if you mess with the fields.
+immutable, but the fields are mutable. This may make things strange if you mess 
+with the fields.
 
 ## User-defined classes
 
