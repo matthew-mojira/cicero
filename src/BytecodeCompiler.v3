@@ -42,6 +42,17 @@ class BytecodeCompiler {
 				classholes.extract(), 
 				funcholes.extract(), 
 				source.extract());
+		if (CiceroOptions.traceBytecodeCompilation) {
+			System.puts("** compiled bytecode **\n");
+			System.puts(b.display());
+ 			System.puts("** as basic blocks **\n");
+ 			def cfg = CFGraph.new(b);
+			System.puts("** computing dominators **\n");
+			cfg.computeDominators();
+			cfg.computeImmediateDominator();
+			cfg.display();
+		}
+
 		return b;
 	}
 

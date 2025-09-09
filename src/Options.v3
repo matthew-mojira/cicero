@@ -11,7 +11,7 @@ component CiceroOptions {
 
 	/* tracing */
 	def traceFunctionCalls = false;
-	def traceBytecodeCompilation = false;
+	def traceBytecodeCompilation = true;
 	def traceBytecodeEvaluation = false;
 
 	/* profiling */

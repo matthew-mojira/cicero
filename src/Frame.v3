@@ -110,6 +110,7 @@ component FrameObjects {
 			Virgil   => frame = VirgilFrame.new(prev, code, args);
 			AST      => frame = ASTFrame.new(prev, code, args, nonlocals);
 			Bytecode => frame = BytecodeFrame.new(prev, code, args, nonlocals);
+			_ => System.error("unimplemented", "WasmFrame");
 		}
 		frame.name = name;
 		return frame;

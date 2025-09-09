@@ -1,0 +1,208 @@
+/* The first part of the beyond relooper implementation is to construct a
+ * control-flow graph for Cicero bytecode.
+ */
+
+/* One complicating factor is Cicero's exception handling. Exception handling
+ * has a very particular bytecode structure:
+ *   TRY <offset to handler>
+ *   <try code>
+ *   CATCH
+ *   JUMP <offset to end of handler>
+ *   <handler>
+ * Since jumping due to exceptions turn the CFG upside-down (and we are going
+ * to compile it as Wasm exceptions or at least a special block construct), it
+ * is best to get this out of the way first.
+ *
+ * For now, we'll ignore the existence of any try/catch block.
+ */
+
+// I don't believe it's possible to construct syntactically unreachable code,
+// but removing it would be an optimization this implicitly performs.
+
+class CFGraph(bytecode: Bytecode) {
+	def var head:    BasicBlock;
+	def basicBlocks: Vector<BasicBlock> = Vector.new();
+
+	new() {
+		def bc = bytecode.instrs;
+		def boundaries: Array<bool> = Array.new(bc.length + 4);
+		def map: Array<int> = Array.new(bc.length + 4);
+		if (bc.length > 0)
+			boundaries[0] = true; // entry point
+
+		var pc = 0;
+		while (pc < bc.length) {
+			def ins = Ref<Instruction>.at(bc, pc);
+			def opcode = ins.opcode;
+			def operand = ins.operand;
+
+			pc += 4;
+			if (opcode.jump) {
+				System.puts(Strings.format1("pc+operand: %d\n", pc + i24.view(operand)));
+				boundaries[pc + i24.view(operand)] = true;
+				if (opcode.fallthrough)
+					boundaries[pc] = true;
+			}
+		}
+
+		// Boundaries has the endpoints for basic blocks. Now to create
+		// the basic block.
+		var prev = 0;
+		var num = 1;
+		for (i = 4; i < bc.length; i += 4) {
+			map[i] = num;
+			if (boundaries[i]) {
+				basicBlocks.put(BasicBlock.new(bc[prev ... i], prev));
+				prev = i;
+				num += 1;
+			}
+		}
+		map[bc.length] = num;
+		basicBlocks.put(BasicBlock.new(bc[prev ... bc.length], prev));
+		basicBlocks.put(BasicBlock.new(null, bc.length));
+
+		for (i < basicBlocks.length - 1) {
+			def block = basicBlocks[i];
+			def lastOp = Opcodes.map[block.bytes[block.bytes.length - 4]];
+			def lastPc = block.startPc + block.bytes.length;
+			
+			if (lastOp.fallthrough)	{
+				block.successors.add(basicBlocks[map[lastPc]]);
+				basicBlocks[map[lastPc]].predecessors.add(block);
+			}
+			if (lastOp.jump) {
+				def operand = (u24.!(block.bytes[block.bytes.length - 1]) << 16)
+				            | (u24.!(block.bytes[block.bytes.length - 2]) << 8)
+				            |  u24.!(block.bytes[block.bytes.length - 3]);
+				def target = lastPc + i24.view(operand);
+				block.successors.add(basicBlocks[map[target]]);
+				basicBlocks[map[target]].predecessors.add(block);
+			}
+		}
+		head = basicBlocks[0];
+	}
+
+	def computeDominators() {
+		// dominator of the start node is the start itself
+		head.dominators.add(head);
+		// for all other nodes, set all nodes as the dominators
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			if (block == head) continue;
+
+			block.dominators.addv(basicBlocks);
+		}
+
+		var domChanged = true;
+		while (domChanged) {
+			domChanged = false;
+
+			for (i < basicBlocks.length) {
+				def block = basicBlocks[i];
+				if (block == head) continue;
+
+				def predecessors = block.predecessors.toArray();
+				if (predecessors.length == 0) continue;
+
+				def newDoms: HashSet<BasicBlock> = predecessors[0].dominators.dup();
+				for (i = 1; i < predecessors.length; i++) {
+					def pred = predecessors[i];
+					newDoms.retainAll(pred.dominators);
+				}
+
+				newDoms.add(block);				
+
+				if (!newDoms.equalS(block.dominators)) {
+					block.dominators = newDoms;
+					domChanged = true;
+				}
+			}
+
+		}
+	}
+
+	def computeImmediateDominator() {
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			if (block == head){
+				block.immDom = null;
+				continue;
+			}
+
+			def strictDoms: HashSet<BasicBlock> = block.dominators.dup();
+			strictDoms.delete(block);
+
+			var immDomCand: BasicBlock;
+			def arr = strictDoms.toArray();
+			for (dom in arr) {
+				var dominatedByOthers: bool;
+				for (other in arr) {
+					if (other != dom && other.dominators.contains(dom)) {
+						dominatedByOthers = true;
+						break;
+					}
+				}
+				if (!dominatedByOthers) {
+					immDomCand = dom;
+					break;
+				}
+			}
+			block.immDom = immDomCand;			
+		}
+	}
+
+	def display() {
+		for (block in basicBlocks.copy()) {
+			block.display();
+		}		
+	}
+}
+
+// TODO paths between basic blocks
+
+class BasicBlock(bytes: Range<byte>, startPc: int) {
+	def successors:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+	def predecessors: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+	var dominators:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+
+	var immDom: BasicBlock;
+
+	def hash() -> int {
+		return startPc;
+	}
+
+	def display() {
+		System.puts(Strings.format1("block at pc=%d\n", startPc));
+		
+		def predecessors = predecessors.toArray();
+		System.puts("   [");
+		for (i = 0; i < predecessors.length - 1; i++) {
+			System.puts(Strings.format1("%d, ", predecessors[i].startPc));
+		}
+		if (predecessors.length > 0)
+			System.puts(Strings.format1("%d", predecessors[predecessors.length - 1].startPc));
+		System.puts(Strings.format1("] => %d ", startPc));
+		def successors = successors.toArray();
+		match (successors.length) {
+			0 => System.puts("=> []\n");
+			1 => System.puts(Strings.format1("=> [%d]\n", successors[0].startPc));
+			2 => System.puts(Strings.format2("=> [%d, %d]\n", successors[0].startPc, successors[1].startPc));
+			_ => System.error("branch error", "at least three targets in basic block");
+		}
+		if (immDom != null) {
+			System.puts(Strings.format1("=> imm dom is: %d\n", immDom.startPc));
+		} else {
+			System.puts("=> imm dom is: null\n");
+		}
+		def bc = Ranges.dup(bytes);
+		var pc = 0;
+		while (pc < bc.length) {
+			def ins = Ref<Instruction>.at(bc, pc);
+			def opcode = ins.opcode;
+			def operand = ins.operand;
+
+			System.puts(Strings.format3("  +%d: %s %d\n", startPc + pc, opcode.name, operand));
+			pc += 4;
+		}
+	}
+}

@@ -1,0 +1,44 @@
+class HashSet<T> extends HashMap<T, void> {
+	new(hash: T -> int, equals: (T, T) -> bool) super(hash, equals) {}
+
+	def add(e: T) -> this {
+		this[e] = void;
+	}
+	def addv(vec: Vector<T>) -> this {
+		for (i < vec.length) {
+			add(vec[i]);
+		}
+	}
+	def adds(set: HashSet<T>) -> this {
+		for (e in set.toArray())
+			add(e);
+	}
+	def contains(e: T) -> bool {
+		return this.has(e);
+	}
+	def delete(e: T) -> this {
+		remove(e);
+	}
+	def retainAll(s: HashSet<T>) -> this {
+		for (e in toArray()) {
+			if (!s.contains(e)) delete(e);
+		}
+	}
+	def equalS(s: HashSet<T>) -> bool {
+		for (e in toArray()) 
+			if (!s.contains(e)) return false;
+		for (e in s.toArray()) 
+			if (!contains(e)) return false;
+		return true;
+	}
+	def toArray() -> Array<T> {
+		return Lists.toArray(Maps.keyList(this));
+	}
+	def dup() -> HashSet<T> {
+		def s = HashSet.new(hash, equals);
+		return s.adds(this);
+	}
+	def size() -> int {
+		return toArray().length;
+	}
+}
