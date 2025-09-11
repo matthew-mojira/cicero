@@ -1,0 +1,190 @@
+Wizard Engine 25β.2685
+Usage: wizeng [options] <wasm files>
+
+WIZENG OPTIONS
+
+    -help
+        Print command-line help.
+    --help
+        Print command-line help.
+    --version
+        Print build version.
+    -pregen=<path>
+        Pre-generate assembly interpreter and stubs into the given file.
+    --expose=<string>
+        Expose the given host module's functionality to programs.
+    --print-result[=(true|false)]
+        Print the result of the main function upon exit.
+
+
+MONITOR OPTIONS
+
+Wizard offers instrumentation and dynamic analyses of Wasm programs via monitors.
+Multiple monitors can enabled simultaneously using the command-line flag.
+
+   --monitors=<monitor>{<opts>}[,<monitor>{<opts>}]
+
+Each monitor comes with its own set of optional arguments and their modifiers.
+This build of the Wizard engine supports the following monitors:
+
+    blocks        Tallies basic block counts per function.
+    branches      Tallies direct and indirect branches.
+                      {code|c} emit report with code
+                      {zero|z} show zero counts
+    breakpoints   Triggers an external debugger (e.g. gdb) at specified points.
+                      {br=<function pattern>:min_pc..max_pc} points in functions at which to break
+    cache-sim     Simulates a cache for a simple memory model.
+                      {debug|d} emit debug output
+    calls         Tallies direct and indirect calls.
+    const         Tracks constants in various places in the program.
+                      {filter|f=<function patterns>} apply constant tracking to selected functions
+    control       Tallies execution counts and shows a control-flow graph.
+    coverage      Tallies instruction and basic block coverage.
+                      {code|c} emit report with code
+                      {instr|i} emit report with per-instruction code
+    debug         An interactive synchronous debugger with breakpoints and stepping.
+    fprofile      Reports execution time spent in individual functions.
+                      {filter|f=<function patterns>} apply profiling to selected functions
+    globals       Tallies reads and writes to Wasm globals.
+    hotness       Tallies "hot" execution path counts proportionally.
+                      {code|c} emit report with code
+    iclass        Traces instruction classes during execution.
+    icount        Tallies instruction counts per function.
+    loops         Tallies counts of loops.
+                      {code|c} emit report with code
+                      {zero|z} show zero counts
+    memstats      Tallies stats on memory accesses.
+    opcodes       Tallies static and dynamic counts of each Wasm opcode.
+    profile       Reports execution time for entire calling context trees.
+                      {depth=<int>} limit the maximum call tree depth
+                      {calls=<function patterns>} apply profiling to selected functions
+    profile_bytecode Recovers source level information from bytecode execution
+                      {output_folder=<string>} output folder for profiling results
+                      {switch_size=<int>} minimum number opcode switch targets to be considered a dispatch function
+                      {operand_len=<int>} maximum number of bytes for immediates between consecutive opcodes
+    r3            Generates a reduced set of event traces for wasm r3 replay module creation.
+                      {exclude=<function patterns>} Treat the matched functions as host functions.
+    r3-replay     Replays a module from an R3 trace file.
+                      {trace_file=<path>} The path to the R3 trace file to replay.
+    timeout       Enforces a limit on the number of instructions executed.
+                      {instrs=<int>} set the instruction count limit
+    tracepoints   Traces value stack at given points.
+                      {tr=<function pattern>:min_pc..max_pc} points in functions to trace
+
+Additional global monitor options include:
+
+    -csv[=(true|false)]
+        Enable comma-separated value output for monitors.
+
+Example usage:
+
+   --monitors=loops,coverage{code=instr}
+
+
+A Whamm monitor can also be used, which is provided as a path to a Wasm module.
+If the module must be dynamically linked with support libraries, append paths to
+those libraries delimited with '+'.
+The Whamm monitor module should come FIRST in this list.
+
+Example usage:
+
+   --monitors=path/to/whamm-monitor.wasm+path/to/lib.wasm
+
+
+WASI OPTIONS
+
+WASI can be configured with the following options:
+
+    --env=ENV_VAR_NAME=value
+        To define an environment variable accessible in the WASI context.
+        Example: --env=RUST_LOG=debug
+    --dir=/path/to/preopen
+        Instructs Wizard to preopen a directory, and make it available to
+        the program as a capability which can be used to open, read, and
+        write to ALL files inside that directory.
+    --random-seed=<int>
+        When non-zero, use a deterministic pseudo-random number generator
+        with the given seed.
+
+
+TRACING OPTIONS
+
+A number of tracing options enable debugging output from various components of the engine.
+These options help debug both the engine and wasm modules, including ones that are
+malformed or have type errors.
+Note that the '-t' short form supports multiple combined options, such as '-tiov'.
+
+    -ti --trace-int             trace interpreter
+    -tb --trace-binparse        trace binary parser
+    -tv --trace-validation      trace code validation
+    -tt --trace-test            trace test framework
+    -ts --trace-spectest        trace specification tests
+    -to --trace-operands        trace interpreter stack contents
+    -tm --trace-memory          trace memory accesses
+    -tc --trace-canon           trace type canonicalization
+    -tu --trace-uid             trace internal unique IDs
+    -tk --trace-compiler        trace compiler(s)
+    -ta --trace-asm             trace generated assembly (must be used with -tk)
+    -ty --trace-stack           trace stacks
+    -tx --trace-exception       trace exceptions
+    -tl --trace-linking         trace linking
+    -tw --trace-whamm           trace whamm monitoring
+
+    --trace-module[=<module pattern*>]
+        Trace calls into the given module(s).
+    --trace-calls[=<function pattern*>]
+        Trace calls into and out of the given functions(s). The pattern can use function
+        names from the module or function indexes.
+
+    --metrics[=<pattern*>]
+        Reports the given metrics.
+    -no-names[=(true|false)]
+        Disables parsing and reporting from the name section.
+    -colors[=(true|false)]
+        Enable or disable terminal colors.
+    -fatal
+        Aborts upon parsing, validation, or test failure.
+
+
+ENGINE OPTIONS
+
+Wizard supports a number of engine-wide options which enable extensions and configure
+the execution mode. Each extension can be enabled independently with its own flag.
+Some extensions imply other extensions as indicated below.
+
+    -ext:tail-call              Tail calls
+    -ext:multi-memory           Multiple memories
+    -ext:function-references    Typed function references
+        implies: tail-call
+    -ext:threads                Atomic operations
+    -ext:gc                     Garbage collection
+        implies: tail-call, function-references
+    -ext:exception-handling     Exception handling
+        implies: tail-call
+    -ext:memory64               64-bit memories
+        implies: tail-call, multi-memory, function-references, gc, exception-handling, extended-const
+    -ext:repeat-sections        Repeated sections and relaxed order
+    -ext:stack-switching        Stack switching
+        implies: tail-call, function-references, gc, exception-handling
+    -ext:custom-page-sizes      Custom page sizes
+        implies: tail-call, multi-memory, exception-handling, memory64, extended-const
+    -ext:extended-const         Extended constant expressions
+    -ext:relaxed-simd           Relaxed SIMD
+    -ext:wizeng                 Wizard-specific engine capabilities
+
+This build of the Wizard Engine supports the following execution modes:
+
+    -mode=int                   (default) use fast interpreter only
+    -mode=dyn                   use fast interpreter first, compile hot functions with SPC
+    -mode=lazy                  lazy-compile functions with SPC on first execution
+    -mode=jit                   pre-compile modules with SPC, fallback to interpreter
+    -mode=spc                   pre-compile modules with SPC, no fallback
+
+Other engine configuration options include:
+
+    -stack-size=<int[K|M|G]>
+        Initial stack size in bytes for Wasm execution stacks.
+    -jit-filter=<function patterns>
+        Filters functions compiled by the JIT.
+
+

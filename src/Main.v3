@@ -23,6 +23,11 @@ def main(args: Array<string>) -> int {
 			CiceroOptions.enableTier1 = true;
 			CiceroOptions.enableIC = Option<bool>.!(opt.map["cache"]).get();
 		}
+		2 => {
+			CiceroOptions.enableTier1 = true;
+			CiceroOptions.enableWasm = true;
+			CiceroOptions.enableIC = false;
+		}
 		_ => System.error("arg error", Strings.format1("unrecognized tier: %d", Option<int>.!(opt.map["tier"]).get()));
 	}
 

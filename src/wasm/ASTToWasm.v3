@@ -1,0 +1,152 @@
+def IS_TRUE: u32;
+def I32_TO_I32: i32;
+
+def isTrue(o: Object) => o.isTrue();
+
+class WasmCompiler {
+	// TODO need extra information about parameters and locals
+	// TODO get better wasm code generator (use Aeneas?)
+	def wasm: DataWriter = DataWriter.new();
+
+	new(ast: AST, params: Array<string>) {
+		System.puts("starting wasm compile\n");
+		// FIXME add type for now, no locals
+		wasm.putb(0); // no locals
+		compileAST(ast);
+		wasm.putb(WasmOp.END.opcode);
+		System.puts("finished wasm compile\n");
+	}
+
+	// from BytecodeCompiler
+	def locals:     Vector<string> = Vector.new();
+
+	def compile() -> WasmFunction {
+		/* TODO We will have to figure out all the locals that will be in the function. 
+		 * Some of them are locals because they are parameters. Like the BytecodeCompiler
+		 * there should be an argument for these locals, which end up getting handled in
+		 * the same way as Wasm arguments (they become the first locals). 
+		 *
+		 * From running the compile process `locals` will have the full set of locals
+		 * and the map from indices to names. However, this also includes the parameters,
+		 * so we will have to take a slice after the parameters, so we only have bona-fide
+		 * locals to work with.
+		 *
+		 * Those bona-fide locals will be emitted as part of the code's locals declaration.
+		 */
+		def wasm = wasm.extract();
+		def sig  = CiWasmTarget.functionTypeId<Object, Object>();   // frame -> result
+		def fid  = wave.new_func(sig, Pointer.atContents(wasm), wasm.length);
+		def func = CiRuntime.forgeClosure<void, Object, Object>(Pointer.NULL + fid, void);
+
+		return WasmFunction.Func1(func);
+	}
+	
+	def compileAST(expr: AST) {
+		match (expr.data) {
+			Lit(lit) => {
+				wasm.putb(WasmOp.I32_LOAD.opcode);
+				wasm.put_uleb32(ptrAt(lit));
+			}
+			_ => {
+				System.puts("wasm compiler error: compiling unsupported case\n");
+				System.error("wasm compiler", "compiling unsupported case");
+			}
+//  			VarGet(id, mode) => match (mode.data) {
+//  				Local    => {
+// 					wasm.putb(WasmOp.GET_LOCAL.opcode);
+// 					wasm.put_uleb32(addLocal(id));
+// 					// TODO raise exception if local is not initialized (0)
+// 				}
+//  				Global   => ;
+// 				/* TODO This should be a call out to a function
+// 				 *   WasmFrame.getGlobal(name: string) -> Object
+// 				 * which would actually become 
+// 				 *   (WasmFrame, name) -> Object
+// 				 *           [i32 i32] -> i32
+// 				 * which means that the frame that a function is executing for
+// 				 * needs to be passed in as a local (voluntary local) 
+// 				 *
+// 				 * Note that this function may fail to lookup a global, so we need
+// 				 * to create an exception or otherwise indicate failure.
+// 				 */
+//  				Nonlocal => ;
+// 				/* TODO This should be a call out to a function
+// 				 *   WasmFrame.getNonlocal(name: string) -> Object
+// 				 * This is the same as the above global, and since everything is
+// 				 * in a Virgil-level WasmFrame, we can use the frame as effectively
+// 				 * Virgil-level state to add to the Wasm bytecode. But does this
+// 				 * significantly compromise speed? (In theory, yes. In practice, no,
+// 				 * because global and nonlocal accesses are infrequent compared to
+// 				 * local variable accesses.)
+// 				 */
+//  			}
+// 			VarSet(id, mode, val) => match (mode.data) {
+// 				Local => {
+// 					wasm.putb(WasmOp.SET_LOCAL.opcode);
+// 					wasm.put_uleb32(addLocal(id));
+// 				}
+// 				Global => ;
+// 				/* TODO call to
+// 				 *   WasmFrame.setGlobal(name: string, value: Object)
+// 				 *   [i32 i32 i32] -> []
+// 				 */
+// 				Nonlocal => System.error("compile error", "illegal case on varset: Nonlocal");
+// 			}
+// 			And(left, right) => {
+// 				compileAST(left);
+// 				/* TODO call to
+// 			         *   isTrue(val: Object) -> (Object, bool)
+// 				 *                 [i32] -> [i32 i32]
+// 				 * This is a static function that determines truthiness of a Cicero value.
+// 				 * Recall that the only falsy things are `false` and `()`. These are
+// 				 * canonicalized so there are only two instances of false values.
+// 				 * The function gives you the object back, and the truthiness of it.
+// 				 */
+// 				/* if (param i64) (result i64)
+// 				 *   drop ;; this is the value of left
+// 				 *   compileAST(right);
+// 				 * end
+// 				 */
+// 			}
+// 			Or(left, right) => {
+// 				compileAST(left);
+// 				wasm.putb(WasmOp.CALL.opcode);
+// 				wasm.put_uleb32(IS_TRUE);
+// 				wasm.putb(WasmOp.IF.opcode);
+// 				wasm.put_sleb32(I32_TO_I32);
+// 					wasm.putb(WasmOp.DROP.opcode);
+// 					compileAST(right);
+// 				wasm.putb(WasmOp.END.opcode);
+// 			}
+// 			Apply(tgt, args) => ;
+// 			If(cond, left, right) => ;
+// 			Cond(cases) => ;
+// 			Raise(exn) => ;
+// 			Catch(try, id, mode, catch) => ;
+// 			Func(id, params, body, nonlocals) => ;
+// 			While(cond, body) => ;
+// 			Begin(exprs) => ;
+// 			GetField(field, obj) => ;
+// 			SetField(field, obj, val) => ;
+// 			Class(id, superclass, init, fields, methods) => ;
+// 			New(expr) => ;
+// 			List(elems) => ;
+		}
+
+	}
+
+	// from BytecodeCompiler
+	def addLocal(id: string) -> u32 {
+		for (i < locals.length) {
+			if (Strings.equal(locals[i], id))
+				return u32.view(i);
+		}
+		def idx = locals.length;
+		locals.put(id);
+		return u32.view(idx);
+	}
+}
+
+def ptrAt(o: Object) -> u32 {
+	return u32.view(Pointer.atObject(o) - Pointer.NULL);
+}

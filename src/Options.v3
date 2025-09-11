@@ -5,6 +5,7 @@ component CiceroOptions {
 	/* tiering/evaluation options */
 	var enableTier1:  bool;
 	var enableIC:     bool;
+	var enableWasm:   bool;
 
 	/* compile-baked optimizations */
 	def useLazyMethods: bool = true;

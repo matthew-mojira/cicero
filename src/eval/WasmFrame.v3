@@ -1,0 +1,20 @@
+class WasmFrame extends FrameObject {
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
+	}
+
+	def var locals: Array<Object>;
+	def var nonlocals: Array<Object>;
+
+	def eval() {
+		def f = Code.Wasm.!(code.code).wasm;
+		match (f) {
+			Func1(f) => result = Result.OK(f(this));	
+			_ => System.error("unimplemented", "WasmFrame.eval: FuncN (N != 1)");
+		}
+	}
+
+	def evalCode(code: CodeObject) -> Object {
+		System.error("unimplemented", "WasmFrame.evalCode");
+		return null;
+	}
+}
