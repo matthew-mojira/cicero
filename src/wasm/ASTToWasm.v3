@@ -9,12 +9,11 @@ class WasmCompiler {
 	def wasm: DataWriter = DataWriter.new();
 
 	new(ast: AST, params: Array<string>) {
-		System.puts("starting wasm compile\n");
 		// FIXME add type for now, no locals
 		wasm.putb(0); // no locals
 		compileAST(ast);
+		wasm.putb(WasmOp.RETURN.opcode);
 		wasm.putb(WasmOp.END.opcode);
-		System.puts("finished wasm compile\n");
 	}
 
 	// from BytecodeCompiler
@@ -34,8 +33,19 @@ class WasmCompiler {
 		 * Those bona-fide locals will be emitted as part of the code's locals declaration.
 		 */
 		def wasm = wasm.extract();
-		def sig  = CiWasmTarget.functionTypeId<Object, Object>();   // frame -> result
+		// dump bytes
+		// System.putc('\n');
+		// for (b in wasm) {
+		// 	System.puts(Strings.format1("%x", b));
+		// }
+		// System.putc('\n');
+
+		def sig  = CiWasmTarget.functionTypeId<(int, Object), Object>();   // frame -> result
 		def fid  = wave.new_func(sig, Pointer.atContents(wasm), wasm.length);
+		if (fid < 0) {
+			System.puts("failed validation, terminating\n");
+			System.error("failed validation", "generated function failed validation");
+		}
 		def func = CiRuntime.forgeClosure<void, Object, Object>(Pointer.NULL + fid, void);
 
 		return WasmFunction.Func1(func);
@@ -44,7 +54,7 @@ class WasmCompiler {
 	def compileAST(expr: AST) {
 		match (expr.data) {
 			Lit(lit) => {
-				wasm.putb(WasmOp.I32_LOAD.opcode);
+				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_uleb32(ptrAt(lit));
 			}
 			_ => {

@@ -33,7 +33,7 @@ def main(args: Array<string>) -> int {
 
 	def frame = FrameObjects.newTopFrame();
 
-	loadCore(frame);
+	//loadCore(frame);
 	
 	def output = !Option<bool>.!(opt.map["suppress-output"]).get();
 
@@ -48,7 +48,9 @@ def main(args: Array<string>) -> int {
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
 				// compile to tier1 bytecode
+				System.puts("compiling to bytecode\n");
 				if (CiceroOptions.enableTier1) expr.compile([]);
+				System.puts("done compiling to bytecode\n");
 
 				// evaluate
 				frame.evalCode(expr);

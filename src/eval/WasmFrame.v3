@@ -14,7 +14,15 @@ class WasmFrame extends FrameObject {
 	}
 
 	def evalCode(code: CodeObject) -> Object {
-		System.error("unimplemented", "WasmFrame.evalCode");
+		def f = Code.Wasm.!(code.code).wasm;
+		match (f) {
+			Func1(f) => {
+				def value = f(this);
+				result = Result.OK(value);
+				return value;
+			}
+			_ => System.error("unimplemented", "WasmFrame.eval: FuncN (N != 1)");
+		}
 		return null;
 	}
 }

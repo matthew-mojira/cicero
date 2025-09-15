@@ -108,7 +108,11 @@ component FrameObjects {
 	def newTopFrame() -> FrameObject {
 		var frame: FrameObject;
 		if (CiceroOptions.enableTier1) {
-			frame = BytecodeFrame.new(null, null, null, null);
+			if (CiceroOptions.enableWasm) {
+				frame = WasmFrame.new(null, null, null, null);
+			} else {
+				frame = BytecodeFrame.new(null, null, null, null);
+			}
 		} else {
 			frame = ASTFrame.new(null, null, null, null);
 		}
