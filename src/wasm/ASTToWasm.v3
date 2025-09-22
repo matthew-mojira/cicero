@@ -3,6 +3,10 @@ def I32_TO_I32: i32;
 
 def isTrue(o: Object) => o.isTrue();
 
+def PLACEHOLDER: u32 = 198186718;
+def PLACEHOLDER_GET_GLOBAL: u32 = PLACEHOLDER;
+
+
 class WasmCompiler {
 	// TODO need extra information about parameters and locals
 	// TODO get better wasm code generator (use Aeneas?)
@@ -11,7 +15,9 @@ class WasmCompiler {
 	new(ast: AST, params: Array<string>) {
 		// FIXME add type for now, no locals
 		wasm.putb(0); // no locals
+		// TODO put hole for number here, then i32 type
 		compileAST(ast);
+		// TODO fill hole with locals.length
 		wasm.putb(WasmOp.RETURN.opcode);
 		wasm.putb(WasmOp.END.opcode);
 	}
@@ -61,13 +67,18 @@ class WasmCompiler {
 				System.puts("wasm compiler error: compiling unsupported case\n");
 				System.error("wasm compiler", "compiling unsupported case");
 			}
-//  			VarGet(id, mode) => match (mode.data) {
-//  				Local    => {
-// 					wasm.putb(WasmOp.GET_LOCAL.opcode);
-// 					wasm.put_uleb32(addLocal(id));
-// 					// TODO raise exception if local is not initialized (0)
-// 				}
-//  				Global   => ;
+  			VarGet(id, mode) => match (mode.data) {
+  				Local    => {
+ 					wasm.putb(WasmOp.GET_LOCAL.opcode);
+ 					wasm.put_uleb32(addLocal(id));
+ 					// TODO raise exception if local is not initialized (0)
+ 				}
+  				Global => {
+// 					def fid = CiWasmTarget.functionId(WasmFrame.getGlobal);
+// 					System.puts(Strings.format1("num: %d\n", fid));
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(PLACEHOLDER_GET_GLOBAL);
+				}
 // 				/* TODO This should be a call out to a function
 // 				 *   WasmFrame.getGlobal(name: string) -> Object
 // 				 * which would actually become 
@@ -89,19 +100,27 @@ class WasmCompiler {
 // 				 * because global and nonlocal accesses are infrequent compared to
 // 				 * local variable accesses.)
 // 				 */
-//  			}
-// 			VarSet(id, mode, val) => match (mode.data) {
-// 				Local => {
-// 					wasm.putb(WasmOp.SET_LOCAL.opcode);
-// 					wasm.put_uleb32(addLocal(id));
-// 				}
+				_ => {
+					System.puts("wasm compiler error: compiling unsupported case\n");
+					System.error("wasm compiler", "compiling unsupported case");
+				}
+			}
+ 			VarSet(id, mode, val) => match (mode.data) {
+ 				Local => {
+ 					wasm.putb(WasmOp.SET_LOCAL.opcode);
+ 					wasm.put_uleb32(addLocal(id));
+ 				}
 // 				Global => ;
 // 				/* TODO call to
 // 				 *   WasmFrame.setGlobal(name: string, value: Object)
 // 				 *   [i32 i32 i32] -> []
 // 				 */
 // 				Nonlocal => System.error("compile error", "illegal case on varset: Nonlocal");
-// 			}
+				_ => {
+					System.puts("wasm compiler error: compiling unsupported case\n");
+					System.error("wasm compiler", "compiling unsupported case");
+				}
+ 			}
 // 			And(left, right) => {
 // 				compileAST(left);
 // 				/* TODO call to

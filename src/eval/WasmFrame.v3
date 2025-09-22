@@ -25,4 +25,17 @@ class WasmFrame extends FrameObject {
 		}
 		return null;
 	}
+
+	// TODO handle error condition
+	def getGlobal(id: string) -> Object {
+		if (globals.has(id))
+			return globals[id];
+		System.puts(Strings.format1("cicero exception: global %s not found\n", id));
+		System.error("cicero exception", Strings.format1("global %s not found", id));
+		return null;
+	}
+
+	def setGlobal(id: string, obj: Object) {
+		globals[id] = obj;
+	}
 }

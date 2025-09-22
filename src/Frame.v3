@@ -107,15 +107,7 @@ component FrameObjects {
 	}
 	def newTopFrame() -> FrameObject {
 		var frame: FrameObject;
-		if (CiceroOptions.enableTier1) {
-			if (CiceroOptions.enableWasm) {
-				frame = WasmFrame.new(null, null, null, null);
-			} else {
-				frame = BytecodeFrame.new(null, null, null, null);
-			}
-		} else {
-			frame = ASTFrame.new(null, null, null, null);
-		}
+		frame = ASTFrame.new(null, null, null, null);
 		for (builtin in Builtin.set.all) {
 			frame.globals[builtin.id] = builtin.val;
 		}
