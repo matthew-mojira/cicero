@@ -91,10 +91,15 @@ def main(args: Array<string>) -> int {
 					frame.evalCode(expr);
 					match (frame.result) {
 						Exn(exn) => {
+							System.puts("Exception\n");
 							exn.print();
 							frame.resetExn();
 						}
-						OK(val) => System.puts(Strings.format1("=> %s\n", val.display()));
+						OK(val) => {
+							if (val == null)
+								System.puts("result value was null\n");
+							System.puts(Strings.format1("=> %s\n", val.display()));
+						}
 						_       => System.error("eval error", "frame did not give result");
 					}
 				}

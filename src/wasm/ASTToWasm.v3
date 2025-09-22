@@ -11,10 +11,16 @@ class WasmCompiler {
 	// TODO need extra information about parameters and locals
 	// TODO get better wasm code generator (use Aeneas?)
 	def wasm: DataWriter = DataWriter.new();
+	def params: Array<string>;
 
-	new(ast: AST, params: Array<string>) {
+	new(ast: AST, params) {
+		addLocal("<receiver>"); // XXX part of virgil, ignored
+		addLocal("<frame>");    // frame is made available for whenever it's needed
+		Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
 		// FIXME add type for now, no locals
-		wasm.putb(0); // no locals
+		wasm.put_uleb32(1); // 1 set of
+		wasm.put_uleb32(1); // 1 of
+		wasm.putb(0x7F);    // i32
 		// TODO put hole for number here, then i32 type
 		compileAST(ast);
 		// TODO fill hole with locals.length
@@ -46,15 +52,26 @@ class WasmCompiler {
 		// }
 		// System.putc('\n');
 
-		def sig  = CiWasmTarget.functionTypeId<(int, Object), Object>();   // frame -> result
+		var sig: int;
+		match (params.length) {
+			0 => sig = CiWasmTarget.functionTypeId<(int, Object), Object>();
+			1 => sig = CiWasmTarget.functionTypeId<(int, Object, Object), Object>();
+			2 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object), Object>();
+		}
 		def fid  = wave.new_func(sig, Pointer.atContents(wasm), wasm.length);
 		if (fid < 0) {
 			System.puts("failed validation, terminating\n");
 			System.error("failed validation", "generated function failed validation");
 		}
-		def func = CiRuntime.forgeClosure<void, Object, Object>(Pointer.NULL + fid, void);
+		var func: WasmFunction;
+		match (params.length) {
+			0 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, Object, Object>(Pointer.NULL + fid, void));
+			1 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object), Object>(Pointer.NULL + fid, void));
+			2 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (Object, Object, Object), Object>(Pointer.NULL + fid, void));
+		}
 
-		return WasmFunction.Func1(func);
+		System.puts("compile successful!\n");
+		return func;
 	}
 	
 	def compileAST(expr: AST) {
@@ -107,7 +124,8 @@ class WasmCompiler {
 			}
  			VarSet(id, mode, val) => match (mode.data) {
  				Local => {
- 					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					compileAST(val);
+ 					wasm.putb(WasmOp.TEE_LOCAL.opcode);
  					wasm.put_uleb32(addLocal(id));
  				}
 // 				Global => ;
@@ -154,7 +172,14 @@ class WasmCompiler {
 // 			Catch(try, id, mode, catch) => ;
 // 			Func(id, params, body, nonlocals) => ;
 // 			While(cond, body) => ;
-// 			Begin(exprs) => ;
+ 			Begin(exprs) => {
+				for (i < exprs.length - 1) {
+					compileAST(exprs[i]);
+ 					wasm.putb(WasmOp.DROP.opcode);
+				}
+				compileAST(exprs[exprs.length - 1]);
+				
+			}
 // 			GetField(field, obj) => ;
 // 			SetField(field, obj, val) => ;
 // 			Class(id, superclass, init, fields, methods) => ;

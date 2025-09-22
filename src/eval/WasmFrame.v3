@@ -8,8 +8,20 @@ class WasmFrame extends FrameObject {
 	def eval() {
 		def f = Code.Wasm.!(code.code).wasm;
 		match (f) {
-			Func1(f) => result = Result.OK(f(this));	
-			_ => System.error("unimplemented", "WasmFrame.eval: FuncN (N != 1)");
+			Func1(f) => {
+				System.puts("making call into wasm code\n");
+				result = Result.OK(f(this));
+				System.puts("result is ok\n");
+			}
+			Func2(f) => {
+				System.puts("making call into wasm code 2\n");
+				result = Result.OK(f(this, args[0].1));
+				System.puts("result is ok\n");
+			}
+			_ => {
+				System.puts("unimplemented number of arguments\n");
+				System.error("unimplemented", "WasmFrame.eval: FuncN (N != 1)");
+			}
 		}
 	}
 
