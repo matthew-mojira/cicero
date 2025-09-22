@@ -1,0 +1,30 @@
+; Sieve of Eratosthenes
+; Implementation based on pseudocode from wikipedia(https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes)
+(func (sieve n){
+
+  (set primes [])
+  ; A = array of `n` boolean values, initially all set to true
+  (set A [])
+  (set i 0)
+  (while (< i n){
+    (A.put true)
+    (set i (i.succ))
+   })
+
+  (set p 2)
+  (while (< p (n.succ)){
+    (if (= (A.get (p.pred)) true) {
+      ; `p` is a prime number
+      (primes.put p)
+      (set k (+ p p))
+      ; All the multiples of the prime `p` are not prime. So, set them to false
+      (while (<= k n){
+        (A.set (k.pred) false)
+        (set k (+ k p))
+       })
+     } ())
+    (set p (p.succ))
+   })
+  ; return primes
+  primes
+})
