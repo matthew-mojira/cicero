@@ -1,0 +1,74 @@
+; Towers of Hanoi
+; Implementation based on `Are-we-fast-yet` benchmarks
+
+(class _TowersDisk
+  (field size 0)
+  (field next ())
+  (method (init_size n)
+    (set-field size self n)
+  )
+)
+
+(class Towers
+  ; init
+  (field _piles ())
+  (field _moves_done 0)
+
+  (method (_push_disk disk pile) {
+    (set top (self._piles.get pile))
+    (if (and (!= top ()) (>= disk.size top.size)) (raise "Cannot put a big disk on a smaller one")
+    ; else 
+    {
+      (set-field next disk top)
+      (self._piles.set pile disk)
+     })
+   })
+
+  (method (_pop_disk_from pile){
+    (set top (self._piles.get pile))
+    (if top {
+      (self._piles.set pile (get-field next top))
+      (set-field next top ())
+      top
+     }(raise "Attempting to remove a disk from an empty pile"))
+   })
+
+  (method (_move_top_disk from_pile to_pile){
+    (self._push_disk (self._pop_disk_from from_pile) to_pile)
+    (set-field _moves_done self (self._moves_done.succ))
+   })
+
+  (method (_build_tower_at pile disks){
+    (set i disks)
+    (while (>= i 0) {
+      (set tower_disk (new _TowersDisk))
+      (tower_disk.init_size i)
+      (self._push_disk tower_disk pile)
+
+      (set i (i.pred))
+     })
+   })
+
+  (method (_move_disks disks from_pile to_pile){
+    (if (= disks 1) (self._move_top_disk from_pile to_pile) {
+      ; else
+      (set other_pile (- (- 3 from_pile) to_pile))
+      (self._move_disks (disks.pred) from_pile other_pile)
+      (self._move_top_disk from_pile to_pile)
+      (self._move_disks (disks.pred) other_pile to_pile)
+     })
+   })
+
+  (method (benchmark){
+    (set-field _piles self [() () ()])
+    (self._build_tower_at 0 13)
+    (set-field _moves_done self 0)
+    (self._move_disks 13 0 1)
+    self._moves_done
+   })
+
+  (method (verify_result result) (= result 8191))
+)
+(set x (new Towers))
+(set moves (x.benchmark))
+(x.verify_result moves)
