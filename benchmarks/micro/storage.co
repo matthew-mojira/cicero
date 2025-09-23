@@ -1,0 +1,55 @@
+; Tree of arrays to stress GC
+; Micro Benchmark
+
+(class Random
+  (field _seed 74755)
+
+  (method (next){
+    (set-field _seed self (& (+ (* self._seed 1309) 13849) 65535))
+    self._seed
+   })
+)
+
+(class Storage
+  (field _count 0)
+
+  (method (benchmark){
+    (set random (new Random))
+    (set-field _count self 0)
+    (self._build_tree_depth 7 random)
+    self._count
+   })
+
+  (method (_build_tree_depth depth random){
+    (set-field _count self (self._count.succ))
+
+    (if (= depth 1){
+      (set size (+ (% (random.next) 10) 1))
+      
+      ; Build empty array of size `size` with `poopcrap` value as elements
+      (set arr [])
+      (set i 0)
+      (while (< i size){
+        (arr.put ())
+        (set i (i.succ))
+       })
+      arr
+     }
+     ; else
+     {
+      (set arr [() () () ()])
+      (set i 0)
+      (while (< i 4){
+        (arr.set i (self._build_tree_depth (- depth 1) random))
+        (set i (i.succ))
+      })
+      arr
+     })
+   })
+  
+  (method (verify_result result) (= result 5461))
+)
+
+(set x (new Storage))
+(set answer (x.benchmark))
+(x.verify_result answer)
