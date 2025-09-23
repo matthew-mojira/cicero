@@ -1,0 +1,64 @@
+;; List creation and traversal micro benchmark
+
+(class Element
+  (field _val 0)
+  (field next ())
+  (method (init_val v) (set-field _val self v))
+  (method (length)
+    (if (= self.next ()) 1 (+ 1 (self.next.length)))
+  )
+)
+
+(class List
+
+  (method (benchmark){
+    (set result
+      (self.tail (self.make_list 15) (self.make_list 10) (self.make_list 6))
+    )
+    (result.length)
+   })
+
+  (method (make_list length){
+    (if (= length 0) () {
+      ; else
+      (set e (new Element))
+      (e.init_val length)
+      (set-field next e (self.make_list (length.pred)))
+      e
+     })
+   })
+
+  (method (is_shorter_than x y){
+    (set x_tail x)
+    (set y_tail y)
+    (set return_value false)
+
+    (while (!= y_tail ()) {
+      (if (= x_tail ()) {
+        (set return_value true)
+        (set y_tail ())
+       }
+       ; else
+       {
+        (set x_tail x_tail.next)
+        (set y_tail y_tail.next)
+       })
+     })
+    return_value
+   })
+
+  (method (tail x y z){
+    (if (self.is_shorter_than y x)
+      (self.tail
+        (self.tail x.next y z)
+        (self.tail y.next z x)
+        (self.tail z.next x y)
+      )
+     ;else
+     z )
+   })
+
+  (method (verify_result result) (= result 10))
+)
+(set x (new List))
+(x.verify_result (x.benchmark))
