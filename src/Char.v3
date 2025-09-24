@@ -1,0 +1,24 @@
+class CharObject(char: byte) extends Object {
+	private new() {}
+
+	def display() -> string { return Strings.format1("'%c'", char); }
+	def isTrue()  -> bool   { return true; }
+
+	/* METHODS */
+	def ch_display() => Result.OK(StrObjects.fromString(display()));
+}
+
+def charObjects: Array<CharObject> = Array.new(256);
+
+component CharObjects {
+	def fromByte(char: byte) -> CharObject {
+		if (charObjects[char] == null) {
+			def cObj = CharObject.new(char);
+			charObjects[char] = cObj;
+			return cObj;
+		}
+		return charObjects[char];
+	}
+}
+
+

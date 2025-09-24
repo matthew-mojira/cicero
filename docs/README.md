@@ -13,6 +13,7 @@ a singleton object of class `poopcrap`.
 
 * `base`: the parent class of all objects
   * `bool`
+  * `char`
   * `class`
   * `code`
   * `exn`
@@ -85,9 +86,9 @@ Here is how the easy things evaluate:
 Some values are provided as variables in the global environment. They are
 
 * `true` and `false`
-* `base`, `bool`, `class`, `code`, `exn`, `frame`, `func`, `int`, `list`, `map`,
-  `method`, `poopcrap`, `str` referring to those classes (note that `func` is 
-  overloaded for the syntactic function declaration)
+* `base`, `bool`, `char`, `class`, `code`, `exn`, `frame`, `func`, `int`, 
+  `list`, `map`, `method`, `poopcrap`, `str` referring to those classes (note
+  that `func` is overloaded for the syntactic function declaration)
 
 These are not literals but are instead variables defined in the global 
 environment.

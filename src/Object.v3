@@ -72,6 +72,7 @@ class Object {
 		match (this) {
  	 		x: MethodObject => cls = ClassObjects.classMethod;
  	 		x: BoolObject   => cls = ClassObjects.classBool;
+ 	 		x: CharObject   => cls = ClassObjects.classChar;
  	 		x: ClassObject  => cls = ClassObjects.classClass;
 	 		x: CodeObject   => cls = ClassObjects.classCode;
 	 		x: ExnObject    => cls = ClassObjects.classExn;

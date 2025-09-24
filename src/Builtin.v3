@@ -6,6 +6,7 @@ enum Builtin(id: string, val: Object) {
 	FALSE   ("false",    BoolObjects.falseObject),
  	BASE    ("base",     ClassObjects.classBase),
  	BOOL    ("bool",     ClassObjects.classBool),
+ 	CHAR    ("char",     ClassObjects.classChar),
  	CLASS   ("class",    ClassObjects.classClass),
 	CODE    ("code",     ClassObjects.classCode),
 	EXN     ("exn",      ClassObjects.classExn),
