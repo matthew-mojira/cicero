@@ -120,6 +120,14 @@
     (if (self.is_empty) () (self._storage.get self._first_idx))
   )
 
+  (method (remove_first){
+    (if (self.is_empty) (){
+      ;else
+      (set-field _first_idx self (self._first_idx.succ))
+      (self._storage.get (- self._first_idx 1))
+     })
+   })
+
   (method (remove obj){
     (if (or (= self._storage ()) (self.is_empty)) false {
       ;else

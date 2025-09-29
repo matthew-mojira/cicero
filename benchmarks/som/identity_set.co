@@ -1,0 +1,12 @@
+; Requirements: `set.co`
+
+(class IdentitySet
+  (extends Set)
+
+  (method (contains obj){
+    (func (lambda it){
+      (= it obj)
+     })
+    (self.has_some lambda)
+   })
+)

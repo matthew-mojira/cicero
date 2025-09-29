@@ -1,0 +1,8 @@
+(class Random
+  (field _seed 74755)
+
+  (method (next){
+    (set-field _seed self (& (+ (* self._seed 1309) 13849) 65535))
+    self._seed
+   })
+)
