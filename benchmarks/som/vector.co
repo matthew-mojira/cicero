@@ -1,0 +1,201 @@
+; Requires `constants.co` to be loaded beforehand
+; Example: "> cicero constants.co vector.co"
+
+(func (vector_with elem){
+  (set v (new Vector))
+  (v.init_values 1)
+  (v.append elem)
+  v
+ })
+
+(func (empty_vec size){
+    (set arr [])
+    (set i 0)
+    (while (< i size){
+      (arr.put ())
+      (set i (i.succ))
+     })
+    arr
+ })
+
+(func (max a b){
+  (if (> a b) a b)
+})
+
+(class Vector
+
+  (field _first_idx 0)
+  (field _last_idx 0)
+  (field _storage ())
+
+  (method (init_values size){
+    (set-field _storage self (if (= size 0) ()
+      (empty_vec size)
+    ))
+  })
+
+  (method (at idx)
+    (if (or (= self._storage ()) (>= idx (self._storage.length))) () (self._storage.get idx))
+  )
+
+  (method (at_put idx val){
+    (if (= self._storage ())
+      (set-field _storage self (empty_vec (max (idx.succ) INITIAL_SIZE))) {
+      ;else
+      (if (>= idx (self._storage.length)) {
+        (set new_length (self._storage.length))
+        (while (<= new_length idx){
+          (set new_length (* new_length 2))
+         })
+
+        (set new_storage (empty_vec new_length))
+        (set i 0)
+        (while (< i (self._storage.length)){
+          (new_storage.set i (self._storage.get i))
+          (set i (i.succ))
+         })
+
+        (set-field _storage self new_storage)
+       }())
+
+     })
+
+    (self._storage.set idx val)
+    (if (< self._last_idx (idx.succ)) (set-field _last_idx self (idx.succ)) ())
+   })
+
+  (method (append elem){
+    (if (= self._storage ())
+      (set-field _storage self (empty_vec INITIAL_SIZE)) {
+      ;else
+      (if (>= self._last_idx (self._storage.length)) {
+        (set new_storage (empty_vec (* 2 (self._storage.length))))
+        (set i 0)
+        (while (< i (self._storage.length)){
+          (new_storage.set i (self._storage.get i))
+          (set i (i.succ))
+         })
+        (set-field _storage self new_storage)
+        }())
+    })
+
+    (self._storage.set self._last_idx elem)
+    (set-field _last_idx self (self._last_idx.succ))
+   })
+
+  (method (is_empty) (= self._last_idx self._first_idx))
+
+  (method (for_each fn){
+    (set i self._first_idx)
+    (while (< i self._last_idx) {
+      (fn (self._storage.get i))
+      (set i (i.succ))
+     })
+   })
+
+  (method (has_some fn){
+    (set i self._first_idx)
+    (set return_val false)
+    (while (and (< i self._last_idx) (= return_val false)){
+      (if (fn (self._storage.get i)) (set return_val true) ())
+      (set i (i.succ))
+     })
+    return_val
+   })
+
+  (method (get_one fn){
+    (set i self._first_idx)
+    (set return_val ())
+    (set done false)
+    (while (and (< i self._last_idx) (= done false)){
+      (set e (self._storage.get i))
+      (if (fn e) {(set return_val e) (set done true)} ())
+
+      (set i (i.succ))
+     })
+    return_val
+   })
+
+  (method (first)
+    (if (self.is_empty) () (self._storage.get self._first_idx))
+  )
+
+  (method (remove obj){
+    (if (or (= self._storage ()) (self.is_empty)) false {
+      ;else
+      (class State (field new_last 0) (field found false) (field new_array []))
+      (set X (new State))
+      (set-field new_array X (empty_vec (self.capacity)))
+      (func (each it){
+        (if (= it obj) (set-field found X true) {
+          (X.new_array.set X.new_last it)
+          (set-field new_last X (X.new_last.succ))
+         })
+       })
+
+      (self.for_each each)
+
+      (set-field _storage self X.new_array)
+      (set-field _last_idx self X.new_last)
+      (set-field _first_idx self 0)
+      X.found
+     })
+   })
+
+  (method (remove_all){
+    (set-field _first_idx self 0)
+    (set-field _last_idx self 0)
+
+    (if (= self._storage ()) ()
+      (set-field _storage self (empty_vec (self._storage.length)))
+    )
+   })
+
+  (method (size) (- self._last_idx self._first_idx))
+
+  (method (capacity) (if (= self._storage ()) 0 (self._storage.length)))
+
+  (method (sort){
+    (self.__quick-sort self._first_idx (self._last_idx.pred))
+  })
+
+  (method (__partition lo hi) {
+    (set pivot (self._storage.get hi))
+    (set i lo)
+    (set j lo)
+    (while (< j hi) {
+      (if (< (self._storage.get j) pivot) {
+        ; swap _storage[i] with _storage[j]
+        (set tmp (self._storage.get i))
+        (self._storage.set i (self._storage.get j))
+        (self._storage.set j tmp)
+        (set i (i.succ))
+      } ())
+      (set j (j.succ))
+    })
+    (set tmp (self._storage.get i))
+    (self._storage.set i (self._storage.get hi))
+    (self._storage.set hi tmp)
+    i
+  })
+
+  (method (__quick-sort lo hi)
+    (cond
+      ((>= lo hi) ())
+      ((< lo 0) ())
+      (true {
+        (set p (self.__partition lo hi))
+        (self.__quick-sort lo (p.pred))
+        (self.__quick-sort (p.succ) hi)
+      })
+    )
+  )
+
+  (method (_swap storage i j)
+    (raise "Not implemented error")
+  )
+
+  (method (_default_sort i j)
+    (raise "Not implemented error")
+  )
+)
