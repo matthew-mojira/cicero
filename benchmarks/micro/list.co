@@ -3,7 +3,7 @@
 (class Element
   (field _val 0)
   (field next ())
-  (method (init_val v) (set-field _val self v))
+  (method (init-values v) (set-field _val self v))
   (method (length)
     (if (= self.next ()) 1 (+ 1 (self.next.length)))
   )
@@ -22,7 +22,7 @@
     (if (= length 0) () {
       ; else
       (set e (new Element))
-      (e.init_val length)
+      (e.init-values length)
       (set-field next e (self.make_list (length.pred)))
       e
      })

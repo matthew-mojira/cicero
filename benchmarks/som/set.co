@@ -3,8 +3,8 @@
 (class Set
   (field _items (new Vector))
 
-  (method (init_values size){
-    (self._items.init_values size)
+  (method (init-values size){
+    (self._items.init-values size)
   })
 
   (method (size) (self._items.size))

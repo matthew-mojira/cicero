@@ -4,7 +4,7 @@
 (class _TowersDisk
   (field size 0)
   (field next ())
-  (method (init_size n)
+  (method (init-values n)
     (set-field size self n)
   )
 )
@@ -42,7 +42,7 @@
     (set i disks)
     (while (>= i 0) {
       (set tower_disk (new _TowersDisk))
-      (tower_disk.init_size i)
+      (tower_disk.init-values i)
       (self._push_disk tower_disk pile)
 
       (set i (i.pred))

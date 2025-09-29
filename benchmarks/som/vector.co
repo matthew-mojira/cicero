@@ -3,7 +3,7 @@
 
 (func (vector_with elem){
   (set v (new Vector))
-  (v.init_values 1)
+  (v.init-values 1)
   (v.append elem)
   v
  })
@@ -28,7 +28,7 @@
   (field _last_idx 0)
   (field _storage ())
 
-  (method (init_values size){
+  (method (init-values size){
     (set-field _storage self (if (= size 0) ()
       (empty_vec size)
     ))

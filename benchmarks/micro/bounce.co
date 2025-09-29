@@ -7,7 +7,7 @@
   (field _x_vel 0)
   (field _y_vel 0)
 
-  (method (init_values random){
+  (method (init-values random){
     (set-field _x self (% (random.next) 500))
     (set-field _y self (% (random.next) 500))
     (set-field _x_vel self (- (% (random.next) 300) 150))
@@ -70,7 +70,7 @@
     (set i 0)
     (while (< i ball_count){
       (set ball (new Ball))
-      (ball.init_values random)
+      (ball.init-values random)
       (balls.set i ball)
 
       (set i (i.succ))
