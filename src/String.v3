@@ -12,9 +12,17 @@ class StrObject(str: string) extends Object {
 	/* METHODS */
 
 	def s_concat(str: StrObject) => Result.OK(StrObjects.fromString(Arrays.concat(this.str, str.str)));
+	def s_charAt(idx: IntObject) -> Result {
+		def realIndex = idx.val.longValue();
+		if (realIndex < 0 || realIndex >= str.length)
+			return Result.Exn(ExnObjects.fromVirgil("str.char-at", outOfBounds(realIndex, str.length)));
+		return Result.OK(CharObjects.fromByte(str[realIndex]));
+	}
 
 	def s_display() => Result.OK(StrObjects.fromString(display()));
 }
+
+def outOfBounds(len: long, idx: long) => Strings.format2("access at index %d is out of bounds for string of length %d", idx, len);
 
 component StrObjects {
 	/* canonical instances of strings */

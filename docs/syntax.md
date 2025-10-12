@@ -139,7 +139,7 @@ Otherwise, the value from evaluating `e1` is the value of the entire expression.
   ...
   (method (fm ym1 ym2 ... ymnm) gm))
 ```
-`x` and the `xi`s and `fi`s are identifiers. `c`, `i`, and the `ei`s, yi`s, and
+`x` and the `xi`s, `fi`s, and `yi`s are identifiers. `c`, `i`, and the `ei`s and
 `gi`s are all expressions. The clauses inside the `class` except for the class
 identifier `x` may be written in any order. Any clause may be omitted, so an
 "empty" class `(class X)` is valid.
