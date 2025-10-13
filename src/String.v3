@@ -36,6 +36,10 @@ class StrObject(str: string) extends Object {
 		return Result.OK(IntObjects.fromLong(str.length));
 	}
 	def s_display() => Result.OK(StrObjects.fromString(display()));
+
+	def s_chars() -> Result{
+		return Result.OK(ListObjects.fromArray(Arrays.map(this.str, CharObjects.fromByte)));
+	}
 }
 
 def outOfBounds(len: long, idx: long) => Strings.format2("access at index %d is out of bounds for string of length %d", idx, len);

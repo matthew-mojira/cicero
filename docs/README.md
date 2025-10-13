@@ -127,6 +127,7 @@ Values of type
 * bool
 * poopcrap
 * string
+* char
 
 have one unique instance for each underlying value. The underlying value is
 immutable, but the fields are mutable. This may make things strange if you mess 

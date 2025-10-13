@@ -178,6 +178,7 @@ Methods:
   index i of the string
 * `(s.display)`: returns a string representation for this object.
 * `(s.length)`: returns the length of the string which is the number of bytes
+* `(s.chars)`: returns a list of char objects.
 * `(s.+ o)`: concatenates this string with another string/char
 
 

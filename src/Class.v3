@@ -184,7 +184,8 @@ component ClassObjects {
 			[FuncObjects.fromVirgilMethod0("display", PoopCrapObject.u_display)]);
 	def classStr = ClassObject.new("str", classBase, CodeObjects.virgilFail, [],
 			[FuncObjects.fromVirgilMethod0("display",    StrObject.s_display),
-			 FuncObjects.fromVirgilMethod0("length",    StrObject.s_length),
+			 FuncObjects.fromVirgilMethod0("length",     StrObject.s_length),
+			 FuncObjects.fromVirgilMethod0("chars",      StrObject.s_chars),
 			 FuncObjects.fromVirgilMethod1("+", o,       StrObject.s_concat),
 			 FuncObjects.fromVirgilMethod1("char-at", i, StrObject.s_charAt)]);
 
