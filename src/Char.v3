@@ -6,6 +6,22 @@ class CharObject(char: byte) extends Object {
 
 	/* METHODS */
 	def ch_display() => Result.OK(StrObjects.fromString(display()));
+	
+	def ch_concat(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classStr)){
+			def str_value = (StrObject.!(obj).str);
+			return Result.OK(StrObjects.fromString(Arrays.concat([this.char], str_value)));
+
+		} else if (obj.instanceOf(ClassObjects.classChar)){
+			def char_value = (CharObject.!(obj).char);
+			return Result.OK(StrObjects.fromString(Arrays.concat([this.char], [char_value])));
+
+		} else{
+			return Result.Exn(ExnObjects.fromVirgil("+", "Invalid type for char/string concatenation"));
+		}
+	}
+
+	def ch_ascii_value() => Result.OK(IntObjects.fromLong(this.char));
 }
 
 def charObjects: Array<CharObject> = Array.new(256);

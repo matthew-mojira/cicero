@@ -11,7 +11,20 @@ class StrObject(str: string) extends Object {
 
 	/* METHODS */
 
-	def s_concat(str: StrObject) => Result.OK(StrObjects.fromString(Arrays.concat(this.str, str.str)));
+	def s_concat(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classStr)){
+			def str_value = (StrObject.!(obj).str);
+			return Result.OK(StrObjects.fromString(Arrays.concat(this.str, str_value)));
+
+		} else if (obj.instanceOf(ClassObjects.classChar)){
+			def char_value = (CharObject.!(obj).char);
+			return Result.OK(StrObjects.fromString(Arrays.concat(this.str, [char_value])));
+
+		} else{
+			return Result.Exn(ExnObjects.fromVirgil("+", "Invalid type for string concatenation"));
+		}
+	}
+
 	def s_charAt(idx: IntObject) -> Result {
 		def realIndex = idx.val.longValue();
 		if (realIndex < 0 || realIndex >= str.length)

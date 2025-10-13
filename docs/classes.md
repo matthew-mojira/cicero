@@ -32,6 +32,8 @@ Represents a character
 
 Methods:
 * `(ch.display)`: returns a string representation of the object
+* `(ch.+ o)`: returns a string that concatenates this char with another string/char
+* `(ch.ascii)`: returns the ASCII numerical representation of a character
 
 ## class
 
@@ -176,6 +178,6 @@ Methods:
   index i of the string
 * `(s.display)`: returns a string representation for this object.
 * `(s.length)`: returns the length of the string which is the number of bytes
-* `(s.+ s)`: concatenates this string with another string
+* `(s.+ o)`: concatenates this string with another string/char
 
 
