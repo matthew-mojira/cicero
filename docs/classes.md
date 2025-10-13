@@ -26,6 +26,15 @@ Methods:
 
 Note that the binary operators *do not* short circuit.
 
+## char
+
+Represents a character
+
+Methods:
+* `(ch.display)`: returns a string representation of the object
+* `(ch.+ o)`: returns a string that concatenates this char with another string/char
+* `(ch.ascii)`: returns the ASCII numerical representation of a character
+
 ## class
 
 Represents a class.
@@ -165,7 +174,11 @@ Methods:
 Represents a string.
 
 Methods:
+* `(s.char-at i)`: returns a character object representing the character at
+  index i of the string
 * `(s.display)`: returns a string representation for this object.
-* `(s.+ s)`: concatenates this string with another string
+* `(s.length)`: returns the length of the string which is the number of bytes
+* `(s.chars)`: returns a list of char objects.
+* `(s.+ o)`: concatenates this string with another string/char
 
 

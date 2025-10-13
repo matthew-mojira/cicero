@@ -505,6 +505,11 @@ class Parser extends TextReader {
 				return AST.new(ASTData.Lit(StrObjects.getStrObject(str)),
 					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
+			'\'' =>{
+				def char = readChar();
+				return AST.new(ASTData.Lit(CharObjects.fromByte(char)),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
 			_ => {
 				// this is an identifier
 				def strs = readQualifiedName();
@@ -560,6 +565,17 @@ class Parser extends TextReader {
 		}
 		advance(chars);
 		return str;
+	}
+
+	private def readChar() -> byte {
+		def a = Chars.parseLiteral(data, pos);
+		def chars = a.0, char = a.1;
+		if (chars < 0) {
+			fail("malformed char literal");
+			return 0;
+		}
+		advance(chars);
+		return char;
 	}
 
 	private def readQualifiedName() -> Array<string> {

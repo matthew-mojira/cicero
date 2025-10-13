@@ -23,7 +23,7 @@
   (if (= key ()) 0 {
     ;else
     (set hash_ (key.custom_hash))
-    (^ hash_ (>> hash_ 16))
+    (^ hash_ (hash_.>> 16))
    })
  })
 
@@ -32,7 +32,7 @@
   (field _size 0)
 
   (method (init-values size){
-    (set-field _buckets self (empty_vec size))
+    (set-field _buckets self (empty_vec size ()))
    })
 
   (method (size) self._size)
@@ -125,7 +125,7 @@
   (method (_resize){
     (set old_storage self._buckets)
 
-    (set new_storage (empty_vec (* (old_storage.length) 2) ))
+    (set new_storage (empty_vec (* (old_storage.length) 2) ()))
     (set-field _buckets self new_storage)
     (self._transfer_entries old_storage)
    })
@@ -190,7 +190,7 @@
    })
 
   (method (remove_all){
-    (set-field _buckets self (empty_vec (self._buckets.length)))
+    (set-field _buckets self (empty_vec (self._buckets.length) ()))
     (set-field _size self 0)
    })
 

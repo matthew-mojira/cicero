@@ -8,11 +8,11 @@
   v
  })
 
-(func (empty_vec size){
+(func (empty_vec size value){
     (set arr [])
     (set i 0)
     (while (< i size){
-      (arr.put ())
+      (arr.put value)
       (set i (i.succ))
      })
     arr
@@ -30,7 +30,7 @@
 
   (method (init-values size){
     (set-field _storage self (if (= size 0) ()
-      (empty_vec size)
+      (empty_vec size ())
     ))
   })
 
@@ -40,7 +40,7 @@
 
   (method (at_put idx val){
     (if (= self._storage ())
-      (set-field _storage self (empty_vec (max (idx.succ) INITIAL_SIZE))) {
+      (set-field _storage self (empty_vec (max (idx.succ) INITIAL_SIZE) ())) {
       ;else
       (if (>= idx (self._storage.length)) {
         (set new_length (self._storage.length))
@@ -48,7 +48,7 @@
           (set new_length (* new_length 2))
          })
 
-        (set new_storage (empty_vec new_length))
+        (set new_storage (empty_vec new_length ()))
         (set i 0)
         (while (< i (self._storage.length)){
           (new_storage.set i (self._storage.get i))
@@ -66,10 +66,10 @@
 
   (method (append elem){
     (if (= self._storage ())
-      (set-field _storage self (empty_vec INITIAL_SIZE)) {
+      (set-field _storage self (empty_vec INITIAL_SIZE ())) {
       ;else
       (if (>= self._last_idx (self._storage.length)) {
-        (set new_storage (empty_vec (* 2 (self._storage.length))))
+        (set new_storage (empty_vec (* 2 (self._storage.length)) ()))
         (set i 0)
         (while (< i (self._storage.length)){
           (new_storage.set i (self._storage.get i))
@@ -133,7 +133,7 @@
       ;else
       (class State (field new_last 0) (field found false) (field new_array []))
       (set X (new State))
-      (set-field new_array X (empty_vec (self.capacity)))
+      (set-field new_array X (empty_vec (self.capacity) ()))
       (func (each it){
         (if (= it obj) (set-field found X true) {
           (X.new_array.set X.new_last it)
@@ -155,7 +155,7 @@
     (set-field _last_idx self 0)
 
     (if (= self._storage ()) ()
-      (set-field _storage self (empty_vec (self._storage.length)))
+      (set-field _storage self (empty_vec (self._storage.length) ()))
     )
    })
 
