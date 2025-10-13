@@ -19,6 +19,9 @@ class StrObject(str: string) extends Object {
 		return Result.OK(CharObjects.fromByte(str[realIndex]));
 	}
 
+ 	def s_length() -> Result {
+		return Result.OK(IntObjects.fromLong(str.length));
+	}
 	def s_display() => Result.OK(StrObjects.fromString(display()));
 }
 

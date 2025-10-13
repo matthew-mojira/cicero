@@ -175,6 +175,7 @@ Methods:
 * `(s.char-at i)`: returns a character object representing the character at
   index i of the string
 * `(s.display)`: returns a string representation for this object.
+* `(s.length)`: returns the length of the string which is the number of bytes
 * `(s.+ s)`: concatenates this string with another string
 
 
