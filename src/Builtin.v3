@@ -9,6 +9,7 @@ enum Builtin(id: string, val: Object) {
  	CHAR    ("char",     ClassObjects.classChar),
  	CLASS   ("class",    ClassObjects.classClass),
 	CODE    ("code",     ClassObjects.classCode),
+	DOUBLE  ("double",   ClassObjects.classDouble),
 	EXN     ("exn",      ClassObjects.classExn),
  	FRAME   ("frame",    ClassObjects.classFrame),
  	FUNC    ("func",     ClassObjects.classFunc),

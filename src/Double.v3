@@ -1,0 +1,10 @@
+class DoubleObject(val: double) extends Object {
+	def display() => Strings.format1("%d", val);
+	def isTrue()  => true;
+
+    def do_display() => Result.OK(StrObjects.fromString(display()));
+}
+
+component DoubleObjects {
+	def fromDouble(val: double) => DoubleObject.new(val);
+}
