@@ -1,6 +1,13 @@
+def FLOAT_MAX_LENGTH: int = 14;
 class DoubleObject(val: double) extends Object {
-	// @todo: need to work on display
-	def display() => Strings.format1("%d", int.truncd(val));
+	// @todo: need to work on display for doubles;
+	// but this would be smthg to work on the virgil side
+	def display() -> string{
+		var a: Array<byte> = Array<byte>.new(FLOAT_MAX_LENGTH);
+		var l = Floats.renderFloat(float.roundd(val), a, 0);
+		return Strings.format1("%s", Arrays.range(a, 0, l));
+	}
+
 	def isTrue()  => true;
 
     def do_display() => Result.OK(StrObjects.fromString(display()));

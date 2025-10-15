@@ -521,25 +521,33 @@ class Parser extends TextReader {
 				// Number (integer or double)
 				if ((strs.length == 1 || strs.length == 2)
 					&& (str.length > 0)
-					&& ((str[0] >= '0' && str[0] <= '9') || (str[0] == '-'))){
+					&& ((str[0] >= '0' && str[0] <= '9') || ((str[0] == '-') && (str.length > 1)))){
 
 					def string_value = if(strs.length ==1, strs[0], Arrays.concat(Arrays.concat(strs[0], ['.']), strs[1]));
 
 					def np = NumberParser.new(string_value);
-					if (np.parse() && string_value.length == np.pos){
+					if (np.parse()){
 						// TODO: Handle big integers and floats
-						// Implement parsing big ints
 						if (np.is_float) {
 							// double
 							var fval = NumberParserValue.Float.!(np.val);
 							var dval = DoubleParserHelper.f64(fval.sign, fval.exp, fval.mantissa);
-							expr = AST.new(ASTData.Lit(DoubleObjects.fromDouble(dval)), range);
-							strIndex = 2;
-						} else{
-
+							if (string_value.length == np.pos){
+								expr = AST.new(ASTData.Lit(DoubleObjects.fromDouble(dval)), range);
+								strIndex = 2;
+							} else {
+								// dealing with field-access like (3.+ 34)
+								def rounded_long = long.!(dval); // explicit because value must be the same
+								expr = AST.new(ASTData.Lit(IntObjects.fromLong(rounded_long)), range);
+							}
+						} else if (string_value.length == np.pos){
 							// integer
 							var ival = NumberParserValue.Int.!(np.val).v;
 							expr = AST.new(ASTData.Lit(IntObjects.fromLong(long.view(ival))), range);
+
+						} else{
+							fail("error parsing number literal");
+							return null;
 						}
 					} else{
 						fail("error parsing number literal");
