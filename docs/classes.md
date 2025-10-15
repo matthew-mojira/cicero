@@ -60,10 +60,15 @@ Represents an signed double. 64 bit value.
 Methods:
 
 * `(d.display)`: returns a string representation of the double by performing round-to-nearest demotion to a float(32-bit)
-* `(d1.+ o)`
-* `(d1.- o)`
-* `(d1.* o)`
-* `(d1./ o)`
+* `(d.+ o)`
+* `(d.- o)`
+* `(d.* o)`
+* `(d./ o)`
+* `(d.= o)`
+* `(d.!= o)`
+* `(d.< o)`
+* `(d.<= o)`
+* `(d.> o)`
 All the above arithmetic operations return a `double`. `o` can be either `double` or `int`. Raises exception if `int`(bigInteger) cannot be represented as a `double`.
 
 ## exn
@@ -103,13 +108,13 @@ Methods:
 * `(i1.+ o)`
 * `(i1.- o)`
 * `(i1.* o)`
-* `(i1./ o)`
+* `(i1./ i2)`
 * `(i1.% i2)`
-* `(i1.= i2)`
-* `(i1.!= i2)`
-* `(i1.< i2)`
-* `(i1.<= i2)`
-* `(i1.> i2)`
+* `(i1.= o)`
+* `(i1.!= o)`
+* `(i1.< o)`
+* `(i1.<= o)`
+* `(i1.> o)`
 * `(i1.& i2)`: bitwise AND
 * `(i1.| i2)`: bitwise OR
 * `(i1.^ i2)`: bitwise XOR

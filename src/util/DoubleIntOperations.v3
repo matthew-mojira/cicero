@@ -34,6 +34,52 @@ component DoubleIntOperations{
     def divIntDouble(i: IntObject, d: DoubleObject) -> Result{
 		return div__(d, i, false);
 	}
+	def eqIntDouble(i: IntObject, d: DoubleObject) -> Result{
+		return cmpIntDouble(i, d, CmpCode.EQ, true);
+	}
+	def ltIntDouble(i: IntObject, d: DoubleObject) -> Result{
+		return cmpIntDouble(i, d, CmpCode.LT, true);
+	}
+	def ltDoubleInt(d: DoubleObject, i: IntObject) -> Result{
+		return cmpIntDouble(i, d, CmpCode.LT, false);
+	}
+	def leqIntDouble(i: IntObject, d: DoubleObject) -> Result{
+		return cmpIntDouble(i, d, CmpCode.LEQ, true);
+	}
+	def leqDoubleInt(d: DoubleObject, i: IntObject) -> Result{
+		return cmpIntDouble(i, d, CmpCode.LEQ, false);
+	}
+	def gtIntDouble(i: IntObject, d: DoubleObject) -> Result{
+		return cmpIntDouble(i, d, CmpCode.GT, true);
+	}
+	def gtDoubleInt(d: DoubleObject, i: IntObject) -> Result{
+		return cmpIntDouble(i, d, CmpCode.GT, false);
+	}
+	def geqIntDouble(i: IntObject, d: DoubleObject) -> Result{
+		return cmpIntDouble(i, d, CmpCode.GEQ, true);
+	}
+	def geqDoubleInt(d: DoubleObject, i: IntObject) -> Result{
+		return cmpIntDouble(i, d, CmpCode.GEQ, false);
+	}
+}
+
+enum CmpCode {EQ, LT, GT, GEQ, LEQ}
+
+def cmpIntDouble(i: IntObject, d: DoubleObject, code: CmpCode, intOperandLeft: bool) -> Result{
+	def ival = i.val.longValue();
+	if ((i.val.compareTo(MAX_LONG_VALUE_IN_DOUBLE) <= 0)
+		&& (i.val.compareTo(MIN_LONG_VALUE_IN_DOUBLE)) >= 0){
+			def ival_d = double.!(ival);
+			match (code) {
+				EQ => return Result.OK(BoolObjects.fromBool(ival_d == d.val));
+				LT => return Result.OK(BoolObjects.fromBool(if (intOperandLeft, ival_d < d.val, d.val < ival_d)));
+				LEQ => return Result.OK(BoolObjects.fromBool(if (intOperandLeft, ival_d <= d.val, d.val <= ival_d)));
+				GT => return Result.OK(BoolObjects.fromBool(if (intOperandLeft, ival_d > d.val, d.val > ival_d)));
+				GEQ => return Result.OK(BoolObjects.fromBool(if (intOperandLeft, ival_d >= d.val, d.val >= ival_d)));
+			}
+	} else{
+		return Result.OK(BoolObjects.fromBool(false));
+	}
 }
 
 def sub__(d: DoubleObject, i: IntObject, doubleLeftOperand: bool) -> Result{
@@ -52,12 +98,10 @@ def div__(d: DoubleObject, i: IntObject, doubleLeftOperand: bool) -> Result{
 	if ((i.val.compareTo(MAX_LONG_VALUE_IN_DOUBLE) <= 0)
 		&& (i.val.compareTo(MIN_LONG_VALUE_IN_DOUBLE)) >= 0){
 			def val = double.!(ival);
-			if ((doubleLeftOperand && val == 0) || (!doubleLeftOperand && d.val == 0)) return Result.Exn(ExnObjects.fromVirgil("div", divideByZero));
+			if ((doubleLeftOperand && val == 0) || (!doubleLeftOperand && d.val == 0)) return Result.Exn(ExnObjects.fromVirgil("div", "division by zero"));
 			def answer = if(doubleLeftOperand, d.val / val, val / d.val);
 			return Result.OK(DoubleObjects.fromDouble(answer));
 	} else{
 		return Result.Exn(ExnObjects.fromVirgil("/", "Cannot perform '/' as the `int` cannot be represented as a `double`"));
 	}
 }
-
-def divideByZero = "division by zero";

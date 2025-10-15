@@ -1,6 +1,6 @@
 def FLOAT_MAX_LENGTH: int = 14;
 class DoubleObject(val: double) extends Object {
-	// @todo: need to work on display for doubles;
+	// @todo: need to work on display for doubles without need to roundd to floats;
 	// but this would be smthg to work on the virgil side
 	def display() -> string{
 		var a: Array<byte> = Array<byte>.new(FLOAT_MAX_LENGTH);
@@ -63,7 +63,67 @@ class DoubleObject(val: double) extends Object {
 		return Result.Exn(ExnObjects.fromVirgil("/", "Can only perform '/' on a `double` with another `double` or `int`"));
 	}
 
+	/* Comparisons */
 
+	def do_eq(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			return Result.OK(BoolObjects.fromBool(val == dval));
+		}
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return DoubleIntOperations.eqIntDouble(iobj, this);
+		}
+		return Result.OK(BoolObjects.fromBool(false));
+	}
+
+	def do_lt(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			return Result.OK(BoolObjects.fromBool(val < dval));
+		}
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return DoubleIntOperations.ltDoubleInt(this, iobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil("<", "Can only perform '<' on a `double` with another `double` or `int`"));
+	}
+
+	def do_gt(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			return Result.OK(BoolObjects.fromBool(val > dval));
+		}
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return DoubleIntOperations.gtDoubleInt(this, iobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil(">", "Can only perform '>' on a `double` with another `double` or `int`"));
+	}
+
+	def do_geq(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			return Result.OK(BoolObjects.fromBool(val >= dval));
+		}
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return DoubleIntOperations.geqDoubleInt(this, iobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil(">=", "Can only perform '>=' on a `double` with another `double` or `int`"));
+	}
+
+	def do_leq(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			return Result.OK(BoolObjects.fromBool(val <= dval));
+		}
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return DoubleIntOperations.leqDoubleInt(this, iobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil("<=", "Can only perform '<=' on a `double` with another `double` or `int`"));
+	}
 }
 
 component DoubleObjects {

@@ -67,16 +67,65 @@ class IntObject(val: BigInteger) extends Object {
 			Result.OK(IntObject.new(this.val.remainder(that.val))));
 
 	/* comparisons */
-	def i_eq(that: Object) -> Result {
-		if (!that.instanceOf(ClassObjects.classInt))
-			return Result.OK(BoolObjects.falseObject);
-		return Result.OK(BoolObjects.fromBool(this.val.equals(IntObject.!(that).val)));
+	def i_eq(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def ival = IntObject.!(obj).val;
+			return Result.OK(BoolObjects.fromBool(this.val.equals(ival)));
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dobj = DoubleObject.!(obj);
+			return DoubleIntOperations.eqIntDouble(this, dobj);
+		}
+		return Result.OK(BoolObjects.fromBool(false));
 	}
 
-	def i_lt(that: IntObject)  => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) <  0));
-	def i_leq(that: IntObject) => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) <= 0));
-	def i_gt(that: IntObject)  => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) >  0));
-	def i_geq(that: IntObject) => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) >= 0));
+	def i_lt(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def ival = IntObject.!(obj).val;
+			return Result.OK(BoolObjects.fromBool(this.val.compareTo(ival) <  0));
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dobj = DoubleObject.!(obj);
+			return DoubleIntOperations.ltIntDouble(this, dobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil("<", "Can only perform '<' on an `int` with another `int` or `double`"));
+	}
+
+	def i_leq(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def ival = IntObject.!(obj).val;
+			return Result.OK(BoolObjects.fromBool(this.val.compareTo(ival) <=  0));
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dobj = DoubleObject.!(obj);
+			return DoubleIntOperations.leqIntDouble(this, dobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil("<=", "Can only perform '<=' on an `int` with another `int` or `double`"));
+	}
+
+	def i_gt(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def ival = IntObject.!(obj).val;
+			return Result.OK(BoolObjects.fromBool(this.val.compareTo(ival) > 0));
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dobj = DoubleObject.!(obj);
+			return DoubleIntOperations.gtIntDouble(this, dobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil(">", "Can only perform '>' on an `int` with another `int` or `double`"));
+	}
+
+	def i_geq(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def ival = IntObject.!(obj).val;
+			return Result.OK(BoolObjects.fromBool(this.val.compareTo(ival) >= 0));
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dobj = DoubleObject.!(obj);
+			return DoubleIntOperations.geqIntDouble(this, dobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil(">=", "Can only perform '>=' on an `int` with another `int` or `double`"));
+	}
 
 	/* logical */
 	def i_and(that: IntObject) => Result.OK(IntObject.new(this.val.and(that.val)));
