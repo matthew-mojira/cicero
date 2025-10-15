@@ -11,12 +11,57 @@ class IntObject(val: BigInteger) extends Object {
 
 	/* arithmetic */
 	def i_neg()  => Result.OK(IntObject.new(val.negate()));
-	def i_add(that: IntObject) => Result.OK(IntObject.new(this.val.add(that.val)));
-	def i_sub(that: IntObject) => Result.OK(IntObject.new(this.val.subtract(that.val)));
-	def i_mul(that: IntObject) => Result.OK(IntObject.new(this.val.multiply(that.val)));
-	def i_div(that: IntObject) => if (that.val.signum == 0,
-			Result.Exn(ExnObjects.fromVirgil("int.div", divideByZero)),
-			Result.OK(IntObject.new(this.val.divide(that.val))));
+
+	def i_add(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return Result.OK(IntObject.new(this.val.add(iobj.val)));
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dobj = DoubleObject.!(obj);
+			return DoubleIntOperations.addIntDouble(this, dobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil("+", "Can only perform '+' on an `int` with another `int` or `double`"));
+	}
+
+	def i_sub(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return Result.OK(IntObject.new(this.val.subtract(iobj.val)));
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dobj = DoubleObject.!(obj);
+			return DoubleIntOperations.subIntDouble(this, dobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil("-", "Can only perform '-' on an `int` with another `int` or `double`"));
+	}
+
+	def i_mul(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return Result.OK(IntObject.new(this.val.multiply(iobj.val)));
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dobj = DoubleObject.!(obj);
+			return DoubleIntOperations.mulIntDouble(this, dobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil("*", "Can only perform '*' on an `int` with another `int` or `double`"));
+	}
+
+	def i_div(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return if (iobj.val.signum == 0, 
+				Result.Exn(ExnObjects.fromVirgil("int.div", divideByZero)),
+				Result.OK(IntObject.new(this.val.divide(iobj.val))));
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dobj = DoubleObject.!(obj);
+			return DoubleIntOperations.divIntDouble(this, dobj);
+		}
+		return Result.Exn(ExnObjects.fromVirgil("/", "Can only perform '/' on an `int` with another `int` or `double`"));
+	}
+
 	def i_mod(that: IntObject) => if (that.val.signum == 0,
 			Result.Exn(ExnObjects.fromVirgil("int.mod", divideByZero)),
 			Result.OK(IntObject.new(this.val.remainder(that.val))));
