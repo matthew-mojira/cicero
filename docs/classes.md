@@ -54,6 +54,18 @@ Methods:
 * `(co.disassemble)`: returns a string representation of a disassembly of the
   bytecode. Raises an exception if code hasn't been compiled to bytecode.
 
+## double
+Represents an signed double. 64 bit value.
+
+Methods:
+
+* `(d.display)`: returns a string representation of the double by performing round-to-nearest demotion to a float(32-bit)
+* `(d1.+ o)`
+* `(d1.- o)`
+* `(d1.* o)`
+* `(d1./ o)`
+All the above arithmetic operations return a `double`. `o` can be either `double` or `int`. Raises exception if `int`(bigInteger) cannot be represented as a `double`.
+
 ## exn
 
 Represents an exception, which holds a message and a stacktrace.

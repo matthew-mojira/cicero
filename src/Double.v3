@@ -11,6 +11,59 @@ class DoubleObject(val: double) extends Object {
 	def isTrue()  => true;
 
     def do_display() => Result.OK(StrObjects.fromString(display()));
+
+	/* arithmetic */
+	def do_neg() => Result.OK(DoubleObject.new(- val));
+	def do_add(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return DoubleIntOperations.addIntDouble(iobj, this);
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			return Result.OK(DoubleObjects.fromDouble(val + dval));
+		}
+		return Result.Exn(ExnObjects.fromVirgil("+", "Can only perform '+' on a `double` with another `double` or `int`"));
+	}
+
+	def do_sub(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return DoubleIntOperations.subDoubleInt(this, iobj);
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			return Result.OK(DoubleObjects.fromDouble(val - dval));
+		}
+		return Result.Exn(ExnObjects.fromVirgil("-", "Can only perform '-' on a `double` with another `double` or `int`"));
+	}
+
+	def do_mul(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return DoubleIntOperations.mulIntDouble(iobj, this);
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			return Result.OK(DoubleObjects.fromDouble(val * dval));
+		}
+		return Result.Exn(ExnObjects.fromVirgil("*", "Can only perform '*' on a `double` with another `double` or `int`"));
+	}
+
+	def do_div(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classInt)){
+			def iobj = IntObject.!(obj);
+			return DoubleIntOperations.divDoubleInt(this, iobj);
+		}
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			if (dval == 0) return Result.Exn(ExnObjects.fromVirgil("double.div", divideByZero));
+			return Result.OK(DoubleObjects.fromDouble(val / dval));
+		}
+		return Result.Exn(ExnObjects.fromVirgil("/", "Can only perform '/' on a `double` with another `double` or `int`"));
+	}
+
+
 }
 
 component DoubleObjects {
@@ -47,3 +100,4 @@ def roundOff(val: u64, bits: int) -> u1 {
 	if ((val << u6.view(63 - bits)) >= max) return 1;
 	return 0;
 }
+def divideByZero = "division by zero";

@@ -1,0 +1,59 @@
+// All operations that involve an `int` and a `double` will return a `double`!
+// The `int` will need to be converted to a `double` first
+component DoubleIntOperations{
+    def addIntDouble(i: IntObject, d: DoubleObject) -> Result{
+		def ival = i.val.longValue();
+		def dval = double.?(ival);
+		if (dval){
+			return Result.OK(DoubleObjects.fromDouble(d.val + double.!(ival)));
+		} else{
+			return Result.Exn(ExnObjects.fromVirgil("+", "Cannot perform '+' as the `int` cannot be represented as a `double`"));
+		}
+    }
+    def mulIntDouble(i: IntObject, d: DoubleObject) -> Result{
+		def ival = i.val.longValue();
+		def dval = double.?(ival);
+		if (dval){
+			return Result.OK(DoubleObjects.fromDouble(d.val * double.!(ival)));
+		} else{
+			return Result.Exn(ExnObjects.fromVirgil("*", "Cannot perform '*' as the `int` cannot be represented as a `double`"));
+		}
+    }
+    def subDoubleInt(d: DoubleObject, i: IntObject) -> Result{
+		return sub__(d, i, true);
+    }
+    def subIntDouble(i: IntObject, d: DoubleObject) -> Result{
+		return sub__(d, i, false);
+	}
+    def divDoubleInt(d: DoubleObject, i: IntObject) -> Result{
+		return div__(d, i, true);
+    }
+    def divIntDouble(i: IntObject, d: DoubleObject) -> Result{
+		return div__(d, i, false);
+	}
+}
+
+def sub__(d: DoubleObject, i: IntObject, doubleLeftOperand: bool) -> Result{
+	def ival = i.val.longValue();
+	def dval = double.?(ival);
+	if (dval){
+		def answer = if(!doubleLeftOperand, double.!(ival) -d.val, d.val- double.!(ival));
+		return Result.OK(DoubleObjects.fromDouble(answer));
+	} else{
+		return Result.Exn(ExnObjects.fromVirgil("-", "Cannot perform '-' as the `int` cannot be represented as a `double`"));
+	}
+}
+
+def div__(d: DoubleObject, i: IntObject, doubleLeftOperand: bool) -> Result{
+	def ival = i.val.longValue();
+	def dval = double.?(ival);
+	if (dval){
+		def val = double.!(ival);
+		if ((doubleLeftOperand && val == 0) || (!doubleLeftOperand && d.val == 0)) return Result.Exn(ExnObjects.fromVirgil("div", divideByZero));
+		def answer = if(doubleLeftOperand, d.val / val, val / d.val);
+		return Result.OK(DoubleObjects.fromDouble(answer));
+	} else{
+		return Result.Exn(ExnObjects.fromVirgil("/", "Cannot perform '/' as the `int` cannot be represented as a `double`"));
+	}
+}
+def divideByZero = "division by zero";
