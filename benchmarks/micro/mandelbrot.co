@@ -1,0 +1,98 @@
+(class Mandelbrot
+      
+    (method (inner_benchmark_loop inner_iterations){
+        (self._verify_result (self._mandelbrot inner_iterations) inner_iterations)
+
+    })
+
+    (method (benchmark)
+        (raise "Should never be reached")
+    )
+
+    (method (verify_result result)
+        (raise "Should never be reached")
+    )
+
+    (method (_verify_result result inner_iterations){
+        (if (= inner_iterations 500){
+            (= result 191)
+        }{
+        ;else
+            (if (= inner_iterations 750) {
+                (= result 50)
+            }{
+            ;else
+                (if (= inner_iterations 1) {
+                    (= result 128)
+                }{
+                    (set err "No verification result for ") 
+                    (set err (+ err (inner_iterations.as str)))
+                    (println (+ err " found"))
+                    (println (+ "Result is: " (result.as str)))
+                    false
+                })
+            })
+        })
+    })
+
+    (method (_mandelbrot size){
+        (set _sum 0)
+        (set byte_acc 0)
+        (set bit_num 0)
+
+        (set y 0)
+        (while (< y size){
+            (set ci (- (/ (* 2.0 y) size) 1.0))
+            (set x 0)
+
+            (while (< x size){
+                (set zrzr 0.0)
+                (set zi 0.0)
+                (set zizi 0.0)
+                (set cr (- (/ (* 2.0 x) size) 1.5))
+
+                (set z 0)
+                (set not_done true)
+                (set escape 0)
+                (while (and not_done (< z 50)){
+                    (set zr (+ (- zrzr zizi) cr))
+                    (set zi (+ (* (* 2.0 zr) zi) ci))
+
+                    (set zrzr (* zr zr))
+                    (set zizi (* zi zi))
+
+                    (if (> (+ zizi zrzr) 4.0){
+                        (set not_done false)
+                        (set escape 1)
+                    }())
+
+                    (set z (z.succ))
+                })
+
+                (set byte_acc (+ (byte_acc.<< 1) escape))
+                (set bit_num (bit_num.succ))
+
+                (if (= bit_num 8){
+                    (set _sum (_sum.^ byte_acc))
+                    (set byte_acc 0)
+                    (set bit_num 0)
+                }{
+                    (if (= x (size.pred)){
+                        (set byte_acc (byte_acc.<< (- 8 bit_num)))
+                        (set _sum (_sum.^ byte_acc))
+                        (set byte_acc 0)
+                        (set bit_num 0)
+                    }())
+                })
+
+                (set x (x.succ))
+            })
+            (set y (y.succ))
+        })
+        _sum
+    })
+)
+(set x (new Mandelbrot))
+(x.inner_benchmark_loop 500)
+(x.inner_benchmark_loop 750)
+(x.inner_benchmark_loop 1)

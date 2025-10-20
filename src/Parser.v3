@@ -550,7 +550,7 @@ class Parser extends TextReader {
 							return null;
 						}
 					} else{
-						fail("error parsing number literal");
+						failRel(-(np.pos + 1), "error parsing number literal");
 						return null;
 					}
 				} else{

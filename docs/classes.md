@@ -69,7 +69,7 @@ Methods:
 * `(d.< o)`
 * `(d.<= o)`
 * `(d.> o)`
-All the above arithmetic operations return a `double`. `o` can be either `double` or `int`. Raises exception if `int`(bigInteger) cannot be represented as a `double`.
+All the above arithmetic operations(`+`, `-`, `*`, `/`) return a `double`. `o` can be either `double` or `int`. Raises exception if `int`(bigInteger) cannot be represented as a `double`.
 
 ## exn
 
@@ -120,6 +120,8 @@ Methods:
 * `(i1.^ i2)`: bitwise XOR
 * `(i1.<< i2)`: shift left
 * `(i1.>> i2)`: shift right
+For the comparison operations: we can compare `int` with `int` or `double`
+For the arithmetic operations: `int op int` -> `int` and `int op double` -> `double`
 
 ## list
 
