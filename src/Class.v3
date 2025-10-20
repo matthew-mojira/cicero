@@ -123,6 +123,7 @@ component ClassObjects {
 	def classDouble  = ClassObject.new("double",  classBase, CodeObjects.virgilFail, [],
 			[FuncObjects.fromVirgilMethod0("display",     DoubleObject.do_display),
 			 FuncObjects.fromVirgilMethod0("neg",      DoubleObject.do_neg),
+			 FuncObjects.fromVirgilMethod0("sqrt",     DoubleObject.do_sqrt),
 			 FuncObjects.fromVirgilMethod1("+", o,     DoubleObject.do_add),
 			 FuncObjects.fromVirgilMethod1("-", o,     DoubleObject.do_sub),
 			 FuncObjects.fromVirgilMethod1("*", o,     DoubleObject.do_mul),

@@ -13,6 +13,11 @@ class DoubleObject(val: double) extends Object {
     def do_display() => Result.OK(StrObjects.fromString(display()));
 
 	/* arithmetic */
+
+	def do_sqrt() -> Result {
+		return Result.OK(DoubleObjects.fromDouble(double.sqrt(this.val)));
+	}
+
 	def do_neg() => Result.OK(DoubleObject.new(- val));
 	def do_add(obj: Object) -> Result{
 		if (obj.instanceOf(ClassObjects.classInt)){

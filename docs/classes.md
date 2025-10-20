@@ -60,6 +60,7 @@ Represents an signed double. 64 bit value.
 Methods:
 
 * `(d.display)`: returns a string representation of the double by performing round-to-nearest demotion to a float(32-bit)
+* `(d.sqrt)`: returns the sqrt of the double value
 * `(d.+ o)`
 * `(d.- o)`
 * `(d.* o)`
