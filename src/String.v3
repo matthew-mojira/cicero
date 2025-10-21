@@ -28,7 +28,7 @@ class StrObject(str: string) extends Object {
 	def s_charAt(idx: IntObject) -> Result {
 		def realIndex = idx.val.longValue();
 		if (realIndex < 0 || realIndex >= str.length)
-			return Result.Exn(ExnObjects.fromVirgil("str.char-at", outOfBounds(realIndex, str.length)));
+			return Result.Exn(ExnObjects.fromVirgil("str.char-at", outOfBounds(str.length, realIndex)));
 		return Result.OK(CharObjects.fromByte(str[realIndex]));
 	}
 
@@ -39,6 +39,23 @@ class StrObject(str: string) extends Object {
 
 	def s_chars() -> Result{
 		return Result.OK(ListObjects.fromArray(Arrays.map(this.str, CharObjects.fromByte)));
+	}
+
+	def s_substring(start: IntObject, end: IntObject) -> Result{
+		def start_index = start.val.longValue();
+		def end_index = end.val.longValue();
+		if (start_index < 0 || start_index > str.length)
+			return Result.Exn(ExnObjects.fromVirgil("str.substring", outOfBounds(str.length, start_index)));
+		if (end_index > str.length || end_index > str.length)
+			return Result.Exn(ExnObjects.fromVirgil("str.substring", outOfBounds(str.length, end_index)));
+
+		def sb = StringBuilder.new();
+		var i = start_index;
+		while (i < end_index){
+			sb.putc(str[i]);
+			i += 1;
+		}
+		return Result.OK(StrObjects.fromString(sb.toString()));
 	}
 }
 
