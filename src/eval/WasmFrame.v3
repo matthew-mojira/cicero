@@ -47,6 +47,10 @@ class WasmFrame extends FrameObject {
 		return null;
 	}
 
+	def getNonlocal(id: string) -> Object {
+		return nonlocals[id];
+	}
+
 	def setGlobal(id: string, obj: Object) {
 		globals[id] = obj;
 	}

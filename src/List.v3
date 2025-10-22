@@ -61,6 +61,90 @@ component ListObjects {
 			obj.list.put(elt.head);
 		return obj;
 	}
+	def from0() -> ListObject {
+		return ListObject.new();
+	}
+	def from1(o0: Object) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.put(o0);
+		return obj;
+	}
+	def from2(o0: Object, o1: Object) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.put(o0);
+		obj.list.put(o1);
+		return obj;
+	}
+	def from3(o0: Object, o1: Object, o2: Object) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.put(o0);
+		obj.list.put(o1);
+		obj.list.put(o2);
+		return obj;
+	}
+	def from4(o0: Object, o1: Object, o2: Object, o3: Object) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.put(o0);
+		obj.list.put(o1);
+		obj.list.put(o2);
+		obj.list.put(o3);
+		return obj;
+	}
+	def from5(o0: Object, o1: Object, o2: Object, o3: Object, o4: Object) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.put(o0);
+		obj.list.put(o1);
+		obj.list.put(o2);
+		obj.list.put(o3);
+		obj.list.put(o4);
+		return obj;
+	}
+	def from6(o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.put(o0);
+		obj.list.put(o1);
+		obj.list.put(o2);
+		obj.list.put(o3);
+		obj.list.put(o4);
+		obj.list.put(o5);
+		return obj;
+	}
+	def from7(o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.put(o0);
+		obj.list.put(o1);
+		obj.list.put(o2);
+		obj.list.put(o3);
+		obj.list.put(o4);
+		obj.list.put(o5);
+		obj.list.put(o6);
+		return obj;
+	}
+	def from8(o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.put(o0);
+		obj.list.put(o1);
+		obj.list.put(o2);
+		obj.list.put(o3);
+		obj.list.put(o4);
+		obj.list.put(o5);
+		obj.list.put(o6);
+		obj.list.put(o7);
+		return obj;
+	}
+	def from9(o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object, o8: Object) -> ListObject {
+		def obj = ListObject.new();
+		obj.list.put(o0);
+		obj.list.put(o1);
+		obj.list.put(o2);
+		obj.list.put(o3);
+		obj.list.put(o4);
+		obj.list.put(o5);
+		obj.list.put(o6);
+		obj.list.put(o7);
+		obj.list.put(o8);
+		return obj;
+	}
 }
 
 def outOfBounds(len: long, idx: long) => Strings.format2("access at index %d is out of bounds for list of length %d", idx, len);

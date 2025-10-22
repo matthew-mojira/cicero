@@ -3,9 +3,119 @@ def I32_TO_I32: i32;
 
 def isTrue(o: Object) => o.isTrue();
 
-def PLACEHOLDER: u32 = 198186718;
-def PLACEHOLDER_GET_GLOBAL: u32 = PLACEHOLDER;
+def GET_GLOBAL = CiWasmTarget.functionId(WasmFrame.getGlobal);
+def GET_NONLOCAL = CiWasmTarget.functionId(WasmFrame.getNonlocal);
+def SET_GLOBAL = CiWasmTarget.functionId(WasmFrame.setGlobal);
+def IS_TRUE = CiWasmTarget.functionId(isTrue);
+def IS_FALSE = CiWasmTarget.functionId(isFalse);
+def ASSERT_FUNC = CiWasmTarget.functionId(assertFunc);
+def GET_FIELD = CiWasmTarget.functionId(Object.getField); // null = failure
+def SET_FIELD = CiWasmTarget.functionId(Object.setField); // false = failure
 
+def LIST_FROM0 = CiWasmTarget.functionId(ListObjects.from0);
+def LIST_FROM1 = CiWasmTarget.functionId(ListObjects.from1);
+def LIST_FROM2 = CiWasmTarget.functionId(ListObjects.from2);
+def LIST_FROM3 = CiWasmTarget.functionId(ListObjects.from3);
+def LIST_FROM4 = CiWasmTarget.functionId(ListObjects.from4);
+def LIST_FROM5 = CiWasmTarget.functionId(ListObjects.from5);
+def LIST_FROM6 = CiWasmTarget.functionId(ListObjects.from6);
+def LIST_FROM7 = CiWasmTarget.functionId(ListObjects.from7);
+def LIST_FROM8 = CiWasmTarget.functionId(ListObjects.from8);
+def LIST_FROM9 = CiWasmTarget.functionId(ListObjects.from9);
+
+def CALL_FUNC0 = CiWasmTarget.functionId(callFunc0);
+def CALL_FUNC1 = CiWasmTarget.functionId(callFunc1);
+def CALL_FUNC2 = CiWasmTarget.functionId(callFunc2);
+def CALL_FUNC3 = CiWasmTarget.functionId(callFunc3);
+def CALL_FUNC4 = CiWasmTarget.functionId(callFunc4);
+def CALL_FUNC5 = CiWasmTarget.functionId(callFunc5);
+def CALL_FUNC6 = CiWasmTarget.functionId(callFunc6);
+def CALL_FUNC7 = CiWasmTarget.functionId(callFunc7);
+def CALL_FUNC8 = CiWasmTarget.functionId(callFunc8);
+def CALL_FUNC9 = CiWasmTarget.functionId(callFunc9);
+
+def CREATE_FUNC = CiWasmTarget.functionId(createFunc);
+
+def assertFunc(val: Object) -> Object {
+	if (!val.instanceOf(ClassObjects.classFunc))
+		return null;
+	return val;
+}
+
+def isTrue(o: Object) -> (bool, Object) => (o.isTrue(), o);
+def isFalse(o: Object) -> (bool, Object) => (!o.isTrue(), o);
+def BLOCK_SIG = CiWasmTarget.functionTypeId<Object, Object>();
+
+/* the callFuncN receives the function (already asserted) and arguments, and
+ * needs to set up the call and get the return value
+ * If the function is a method, it also sets up `self`
+ */
+def callFunc0(func: FuncObject) => callFuncN(func, []);
+def callFunc1(func: FuncObject, o0: Object) => callFuncN(func, [o0]);
+def callFunc2(func: FuncObject, o0: Object, o1: Object) => callFuncN(func, [o0, o1]);
+def callFunc3(func: FuncObject, o0: Object, o1: Object, o2: Object) => callFuncN(func, [o0, o1, o2]);
+def callFunc4(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object) => callFuncN(func, [o0, o1, o2, o3]);
+def callFunc5(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object) => callFuncN(func, [o0, o1, o2, o3, o4]);
+def callFunc6(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object) => callFuncN(func, [o0, o1, o2, o3, o4, o5]);
+def callFunc7(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6]);
+def callFunc8(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7]);
+def callFunc9(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object, o8: Object) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+
+def callFuncN(fv: FuncObject, args: Array<Object>) -> Object {
+	def params = fv.params, code = fv.code;
+
+	// evaluate argument values
+	var argv: Array<(string, Object)>;
+
+	if (fv.instanceOf(ClassObjects.classMethod)) {
+		argv = Array.new(args.length + 1);
+		for (i < args.length) {
+			def arg = args[i];
+			if (i < params.length) // avoid out of bounds but don't raise exception
+				argv[i + 1] = (params[i], arg);
+		}
+		argv[0] = ("self", MethodObject.!(fv).obj);
+	} else {
+		argv = Array.new(args.length);
+		for (i < args.length) {
+			def arg = args[i];
+			if (i < params.length) // avoid out of bounds but don't raise exception
+				argv[i] = (params[i], arg);
+		}
+	}
+
+	// FIXME arity check should throw exception instead of trap
+	if (args.length != params.length) {
+		System.puts(Strings.format2("arity mismatch: expected %d, got %d\n", params.length, args.length));
+		System.error("callFuncN", "arity mismatch");
+	}
+
+	// create new frame (and evaluate)
+	def frame = newFrame(fv.id, code, argv, fv.nonlocals);
+	frame.eval();
+	if (frame.isExn()) {
+		System.puts("evaluation of frame in callFuncN raised exception");
+		System.error("callFuncN", "exception raised in called function");
+	}
+	return frame.getValue();
+}
+
+def createFunc(funchole: ASTData.Func) -> FuncObject {
+	def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
+
+	def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body);
+	for (i = funchole.nonlocals.length - 1; i >= 0; i--) {
+		// if the nonlocal is the function itself (for recursion) then do not
+		// get it from the stack. you already have it!
+		if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
+			nonlocals[i] = (funchole.id, fn);
+		} else {
+			nonlocals[i] = (funchole.nonlocals[i], stack.pop());
+		}
+	}
+
+	return fn;
+}
 
 class WasmCompiler {
 	// TODO need extra information about parameters and locals
@@ -80,6 +190,8 @@ class WasmCompiler {
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_uleb32(ptrAt(lit));
 			}
+			// XXX unintuitively, this wildcard case is the default case, and the cases below
+			// supercede this (would go away if nested pattern matching is a thing)
 			_ => {
 				System.puts("wasm compiler error: compiling unsupported case\n");
 				System.error("wasm compiler", "compiling unsupported case");
@@ -91,10 +203,11 @@ class WasmCompiler {
  					// TODO raise exception if local is not initialized (0)
  				}
   				Global => {
-// 					def fid = CiWasmTarget.functionId(WasmFrame.getGlobal);
-// 					System.puts(Strings.format1("num: %d\n", fid));
-					wasm.putb(WasmOp.CALL.opcode);
-					wasm.put_uleb32(PLACEHOLDER_GET_GLOBAL);
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_uleb32(ptrAt(id)); // string
+ 					wasm.putb(WasmOp.CALL.opcode);
+ 					wasm.put_uleb32(GET_GLOBAL);
+					// TODO raise exception if global not found (currently, function traps)
 				}
 // 				/* TODO This should be a call out to a function
 // 				 *   WasmFrame.getGlobal(name: string) -> Object
@@ -107,7 +220,12 @@ class WasmCompiler {
 // 				 * Note that this function may fail to lookup a global, so we need
 // 				 * to create an exception or otherwise indicate failure.
 // 				 */
-//  				Nonlocal => ;
+  				Nonlocal => {
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_uleb32(ptrAt(id)); // string
+ 					wasm.putb(WasmOp.CALL.opcode);
+ 					wasm.put_uleb32(GET_NONLOCAL);
+				}
 // 				/* TODO This should be a call out to a function
 // 				 *   WasmFrame.getNonlocal(name: string) -> Object
 // 				 * This is the same as the above global, and since everything is
@@ -117,10 +235,6 @@ class WasmCompiler {
 // 				 * because global and nonlocal accesses are infrequent compared to
 // 				 * local variable accesses.)
 // 				 */
-				_ => {
-					System.puts("wasm compiler error: compiling unsupported case\n");
-					System.error("wasm compiler", "compiling unsupported case");
-				}
 			}
  			VarSet(id, mode, val) => match (mode.data) {
  				Local => {
@@ -128,50 +242,139 @@ class WasmCompiler {
  					wasm.putb(WasmOp.TEE_LOCAL.opcode);
  					wasm.put_uleb32(addLocal(id));
  				}
-// 				Global => ;
-// 				/* TODO call to
-// 				 *   WasmFrame.setGlobal(name: string, value: Object)
-// 				 *   [i32 i32 i32] -> []
-// 				 */
-// 				Nonlocal => System.error("compile error", "illegal case on varset: Nonlocal");
-				_ => {
-					System.puts("wasm compiler error: compiling unsupported case\n");
-					System.error("wasm compiler", "compiling unsupported case");
+ 				Global => {
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_uleb32(ptrAt(id)); // string
+					compileAST(val);
+ 					wasm.putb(WasmOp.CALL.opcode);
+ 					wasm.put_uleb32(SET_GLOBAL);
 				}
+ 				Nonlocal => System.error("compile error", "illegal case on varset: Nonlocal");
  			}
-// 			And(left, right) => {
-// 				compileAST(left);
-// 				/* TODO call to
-// 			         *   isTrue(val: Object) -> (Object, bool)
-// 				 *                 [i32] -> [i32 i32]
-// 				 * This is a static function that determines truthiness of a Cicero value.
-// 				 * Recall that the only falsy things are `false` and `()`. These are
-// 				 * canonicalized so there are only two instances of false values.
-// 				 * The function gives you the object back, and the truthiness of it.
-// 				 */
-// 				/* if (param i64) (result i64)
-// 				 *   drop ;; this is the value of left
-// 				 *   compileAST(right);
-// 				 * end
-// 				 */
-// 			}
-// 			Or(left, right) => {
-// 				compileAST(left);
-// 				wasm.putb(WasmOp.CALL.opcode);
-// 				wasm.put_uleb32(IS_TRUE);
-// 				wasm.putb(WasmOp.IF.opcode);
-// 				wasm.put_sleb32(I32_TO_I32);
-// 					wasm.putb(WasmOp.DROP.opcode);
-// 					compileAST(right);
-// 				wasm.putb(WasmOp.END.opcode);
-// 			}
-// 			Apply(tgt, args) => ;
-// 			If(cond, left, right) => ;
-// 			Cond(cases) => ;
+ 			And(left, right) => {
+ 				compileAST(left);
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(IS_TRUE);
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG); // XXX check if this is correct
+				wasm.putb(WasmOp.DROP.opcode);
+				compileAST(right);
+				wasm.putb(WasmOp.END.opcode);
+ 				/* TODO call to
+ 			         *   isTrue(val: Object) -> (Object, bool)
+ 				 *                 [i32] -> [i32 i32]
+ 				 * This is a static function that determines truthiness of a Cicero value.
+ 				 * Recall that the only falsy things are `false` and `()`. These are
+ 				 * canonicalized so there are only two instances of false values.
+				 * That could be used in the future to eliminate call to isTrue
+				 *
+ 				 * The function gives you the object back, and the truthiness of it.
+ 				 */
+ 			}
+ 			Or(left, right) => {
+ 				compileAST(left);
+ 				wasm.putb(WasmOp.CALL.opcode);
+ 				wasm.put_uleb32(IS_TRUE);
+ 				wasm.putb(WasmOp.IF.opcode);
+ 				wasm.put_sleb32(BLOCK_SIG);
+				wasm.putb(WasmOp.DROP.opcode);
+ 				compileAST(right);
+ 				wasm.putb(WasmOp.END.opcode);
+ 			}
+ 			Apply(tgt, args) => {
+				compileAST(tgt);
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(ASSERT_FUNC); // XXX traps for now
+				for (arg in args)
+					compileAST(arg);
+				// dispatch on number of args to variadic function
+				wasm.putb(WasmOp.CALL.opcode);
+				match (args.length) {
+					0 => wasm.put_uleb32(CALL_FUNC0);
+					1 => wasm.put_uleb32(CALL_FUNC1);
+					2 => wasm.put_uleb32(CALL_FUNC2);
+					3 => wasm.put_uleb32(CALL_FUNC3);
+					4 => wasm.put_uleb32(CALL_FUNC4);
+					5 => wasm.put_uleb32(CALL_FUNC5);
+					6 => wasm.put_uleb32(CALL_FUNC6);
+					7 => wasm.put_uleb32(CALL_FUNC7);
+					8 => wasm.put_uleb32(CALL_FUNC8);
+					9 => wasm.put_uleb32(CALL_FUNC9);
+					_ => {
+						System.puts(Strings.format1("Translating too many arguments: %d\n", elems.length));
+						System.error("compile error", "translating too many arguments");
+					}
+				}
+
+			}
+ 			If(cond, left, right) => {
+				compileAST(cond);
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_sleb32(IS_TRUE);
+ 				wasm.putb(WasmOp.IF.opcode);
+ 				wasm.put_sleb32(BLOCK_SIG);
+ 				compileAST(left);
+				wasm.putb(WasmOp.ELSE.opcode);
+ 				compileAST(right);
+ 				wasm.putb(WasmOp.END.opcode);
+			}
+			Cond(cases) => {
+				wasm.putb(WasmOp.BLOCK.opcode);
+				wasm.put_sleb32(0x7F);
+				for (c in cases) {
+					def cond = c.0;
+					def body = c.1;
+					wasm.putb(WasmOp.BLOCK.opcode);
+					wasm.put_sleb32(0x7F);
+					compileAST(cond);
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(IS_FALSE);
+					wasm.putb(WasmOp.BR_IF.opcode);
+					wasm.put_uleb32(0); // next case
+					compileAST(body);
+					wasm.putb(WasmOp.BR_IF.opcode);
+					wasm.put_uleb32(1); // done
+					wasm.putb(WasmOp.END.opcode);
+				}
+				// FIXME throw exception here for no macthing cond
+				wasm.putb(WasmOp.UNREACHABLE.opcode);
+				wasm.putb(WasmOp.END.opcode);
+			}
 // 			Raise(exn) => ;
 // 			Catch(try, id, mode, catch) => ;
-// 			Func(id, params, body, nonlocals) => ;
-// 			While(cond, body) => ;
+ 			Func(id, params, body, nonlocals) => {
+				// XXX compiling code of function body as part of enclosing compilation
+				code.compile(params);
+			
+				for (i < nonlocals.length) {
+					def nonlocal = nonlocals[i];
+					if (Strings.equal(nonlocal, id))
+						// the function itself is captured, but not loaded to a local
+						continue;
+					// this variable will be captured!
+					wasm.putb(WasmOp.GET_LOCAL);
+					wasm.put_uleb32(addLocal(nonlocal));
+				}
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(CREATE_FUNC);
+			}
+ 			While(cond, body) =>
+				wasm.putb(WasmOp.BLOCK.opcode);
+				wasm.put_sleb32(0x7F);
+					wasm.putb(WasmOp.LOOP.opcode);
+					wasm.put_sleb32(0x7F); // is this needed?
+					compileAST(cond);
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(IS_FALSE);
+					wasm.putb(WasmOp.BR_IF.opcode);
+					wasm.put_uleb32(1); // exit loop
+
+					compileAST(body);
+					wasm.putb(WasmOp.BR.opcode);
+					wasm.put_uleb32(0); // back to top of loop
+
+					wasm.putb(WasmOp.END.opcode);
+				wasm.putb(WasmOp.END.opcode);
  			Begin(exprs) => {
 				for (i < exprs.length - 1) {
 					compileAST(exprs[i]);
@@ -180,13 +383,58 @@ class WasmCompiler {
 				compileAST(exprs[exprs.length - 1]);
 				
 			}
-// 			GetField(field, obj) => ;
-// 			SetField(field, obj, val) => ;
+ 			GetField(field, obj) => {
+				compileAST(obj);
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_uleb32(ptrAt(field));
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(GET_FIELD); // XXX null on failure
+				// check failure condition
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG); // XXX check if this is correct
+				// okay: do nothing
+				wasm.putb(WasmOp.ELSE.opcode);
+				wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
+				wasm.putb(WasmOp.END.opcode);
+			}
+ 			SetField(field, obj, val) => {
+				compileAST(obj);
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_uleb32(ptrAt(field));
+				compileAST(val);
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(GET_FIELD); // XXX false on failure
+				// check failure condition
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.putb(WasmOp.ELSE.opcode);
+				wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
+				wasm.putb(WasmOp.END.opcode);
+			}
 // 			Class(id, superclass, init, fields, methods) => ;
 // 			New(expr) => ;
-// 			List(elems) => ;
+ 			List(elems) => {
+				for (elem in elems)
+					compileAST(elem);
+				// dispatch on size of list to variadic function
+				wasm.putb(WasmOp.CALL.opcode);
+				match (elems.length) {
+					0 => wasm.put_uleb32(LIST_FROM0);
+					1 => wasm.put_uleb32(LIST_FROM1);
+					2 => wasm.put_uleb32(LIST_FROM2);
+					3 => wasm.put_uleb32(LIST_FROM3);
+					4 => wasm.put_uleb32(LIST_FROM4);
+					5 => wasm.put_uleb32(LIST_FROM5);
+					6 => wasm.put_uleb32(LIST_FROM6);
+					7 => wasm.put_uleb32(LIST_FROM7);
+					8 => wasm.put_uleb32(LIST_FROM8);
+					9 => wasm.put_uleb32(LIST_FROM9);
+					_ => {
+						System.puts(Strings.format1("Translating too long of a list literal: %d\n", elems.length));
+						System.error("compile error", "translating too long of a list literal");
+					}
+				}
+			}
 		}
-
 	}
 
 	// from BytecodeCompiler
