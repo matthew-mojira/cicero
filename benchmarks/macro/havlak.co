@@ -1,0 +1,559 @@
+; Havlak benchmark
+; Requirements: `vector.co`, `identity_dictionary.co`, `set.co`, `identity_set.co`
+(class Havlak
+  (method (inner_benchmark_loop inner_iterations){
+    (set looptester (new _LoopTesterApp))
+    (self._verify_result (looptester.main inner_iterations 50 10 10 5) inner_iterations)
+  }) 
+
+  (method (_verify_result result inner_iterations){
+    (if (= inner_iterations 15_000)
+      (and (= (result.get 0) 46_602) (= (result.get 1) 5213)){
+      ;else
+      (if (= inner_iterations 1_500)
+        (and (= (result.get 0) 6_102) (= (result.get 1) 5213)){
+          ;else
+          (if (= inner_iterations 150)
+            (and (= (result.get 0) 2_052) (= (result.get 1) 5213)){
+              ;else
+              (if (= inner_iterations 15)
+                (and (= (result.get 0) 1_647) (= (result.get 1) 5213)){
+                  ;else
+                  (if (= inner_iterations 1)
+                    (and (= (result.get 0) 1_605) (= (result.get 1) 5213)){
+                      ;else
+                      ; no verification result
+                      false
+                    })
+                })
+            })
+        })
+      })
+   })
+
+  (method (benchmark) (raise "should not be reached"))
+  (method (verify_result result) (raise "should not be reached"))
+)
+
+(class _BasicBlock
+  (field _name ())
+  (field in_edges (new Vector))
+  (field out_edges (new Vector))
+
+  (method (init-values name){
+    (set-field _name self name)
+    (self.in_edges.init-values 2)
+    (self.out_edges.init-values 2)
+  })
+
+  (method (get_num_pred) (self.in_edges.size))
+
+  (method (add_out_edge to) (self.out_edges.append to))
+
+  (method (add_in_edge from_) (self.in_edges.append from_))
+
+  (method (custom_hash) self._name)
+)
+
+(class _BasicBlockEdge
+  (field _from ())
+  (field _to ())
+
+  (method (init-values cfg from_name to_name){
+    (set-field _from self (cfg.create_node from_name))
+    (set-field _to self (cfg.create_node to_name))
+
+    (self._from.add_out_edge self._to)
+    (self._to.add_in_edge self._from)
+
+    (cfg.add_edge self)
+  })
+)
+
+(class _ControlFlowGraph
+  (field start_basic_block ())
+  (field basic_blocks (new Vector))
+  (field _edge_list (new Vector))
+
+  (method (create_node name){
+    (if (self.basic_blocks.at name) (set node (self.basic_blocks.at name)) {
+      ;else
+      (set node (new _BasicBlock))
+      (node.init-values name)
+      (self.basic_blocks.at_put name node)
+    })
+
+    (if (= (self.num_nodes) 1)(set-field start_basic_block self node)())
+    node
+  })
+
+  (method (add_edge edge) (self._edge_list.append edge))
+
+  (method (num_nodes) (self.basic_blocks.size))
+)
+
+(class _LoopStructureGraph
+  (field _loop_counter 0)
+  (field _loops (new Vector))
+  (field _root ())
+
+  (init {
+    (set-field _root self (new _SimpleLoop))
+    (self._root.init-values () true)
+    (self._root.set_nesting_level 0)
+    (set-field counter self._root self._loop_counter)
+    (set-field _loop_counter self (self._loop_counter.succ))
+    (self._loops.append self._root)
+  })
+
+  (method (create_new_loop bb is_reducible){
+    (set loop (new _SimpleLoop))
+    (loop.init-values bb is_reducible)
+    (set-field counter loop self._loop_counter)
+    (set-field _loop_counter self (self._loop_counter.succ))
+    (self._loops.append loop)
+    loop
+  })
+  
+  (method (calculate_nesting_level){
+    (func (each liter){
+      (if liter.is_root (){
+        ;else
+        (if (= liter.parent ()) (liter.set_parent self._root) ())
+      })
+    })
+
+    (self._loops.for_each each)
+    (self._calculate_nesting_level_rec self._root 0)
+  })
+
+  (method (_calculate_nesting_level_rec loop depth){
+    (set-field depth_level loop depth)
+
+    (func (each liter){
+        (self._calculate_nesting_level_rec liter (depth.succ))
+        (loop.set_nesting_level (max loop.nesting_level (liter.nesting_level.succ)))
+    })
+    
+    (loop.children.for_each each)
+  })
+
+  (method (num_loops) (self._loops.size))
+)
+
+(class _SimpleLoop
+  (field _is_reducible false)
+  (field parent ())
+  (field is_root false)
+  (field nesting_level 0)
+  (field depth_level 0)
+  (field counter 0)
+  (field _basic_blocks (new IdentitySet))
+  (field children (new IdentitySet))
+  (field _header ())
+
+  (method (init-values bb is_reducible){
+    (set-field _is_reducible self is_reducible)
+
+    (if (= bb ()) () (self._basic_blocks.add bb))
+
+    (set-field _header self bb)
+  })
+
+  (method (add_node bb) (self._basic_blocks.add bb))
+
+  (method (add_child_loop loop) (self.children.add loop))
+
+  (method (set_parent parent){
+    (set-field parent self parent)
+    (self.parent.add_child_loop self)
+  })
+
+  (method (set_nesting_level level){
+    (set-field nesting_level self level)
+    (if (= level 0) (set-field is_root self true) ())
+  })
+)
+
+(class _UnionFindNode
+  (field parent ())
+  (field bb ())
+  (field dfs_number 0)
+  (field loop ())
+
+  (method (init_node bb dfs_number){
+    (set-field parent self self)
+    (set-field bb self bb)
+    (set-field dfs_number self dfs_number)
+    (set-field loop self ())
+  })
+
+  (method (find_set){
+    (set node_list (new Vector))
+
+    (set node self)
+    (while (!= node node.parent){
+      (if (!= node.parent node.parent.parent) (node_list.append node) ())
+      (set node node.parent)
+    })
+
+    (func (lambda i) (i.union self.parent))
+    (node_list.for_each lambda)
+    node
+  })
+
+  (method (union basic_block) (set-field parent self basic_block))
+)
+
+(class _LoopTesterApp
+  (field _cfg (new _ControlFlowGraph))
+  (field _lsg (new _LoopStructureGraph))
+
+  (init (self._cfg.create_node 0))
+
+  (method (_build_diamond start){
+    (set bb0 start)
+    (set a (new _BasicBlockEdge))
+    (a.init-values self._cfg bb0 (+ bb0 1))
+    (set b (new _BasicBlockEdge))
+    (b.init-values self._cfg bb0 (+ bb0 2))
+    (set c (new _BasicBlockEdge))
+    (c.init-values self._cfg (bb0.succ) (+ bb0 3))
+    (set d (new _BasicBlockEdge))
+    (d.init-values self._cfg (+ bb0 2) (+ bb0 3))
+    (+ bb0 3)
+  })
+  
+  (method (_build_connect start end_){
+    (set x (new _BasicBlockEdge))
+    (x.init-values self._cfg start end_)
+  })
+
+  (method (_build_straight start n){
+    (set i 0)
+    (while (< i n){
+      (self._build_connect (+ start i) (+ (+ start i) 1))
+      (set i (i.succ))
+    })
+    (+ start n)
+  })
+
+  (method (_build_base_loop from_){
+    (set header (self._build_straight from_ 1))
+    (set diamond1 (self._build_diamond header))
+    (set d11 (self._build_straight diamond1 1))
+    (set diamond2 (self._build_diamond d11))
+    (set footer (self._build_straight diamond2 1))
+    (self._build_connect diamond2 d11)
+    (self._build_connect diamond1 header)
+
+    (self._build_connect footer from_)
+    (set footer (self._build_straight footer 1))
+    footer
+  })
+
+  (method (main num_dummy_loops find_loop_iterations par_loops ppar_loops pppar_loops){
+    (self._construct_simple_cfg)
+    (self._add_dummy_loops num_dummy_loops)
+    (self._construct_cfg par_loops ppar_loops pppar_loops)
+
+    (self._find_loops self._lsg)
+    (set i 0)
+    (while (< i find_loop_iterations){
+      (self._find_loops (new _LoopStructureGraph))
+      (set i (i.succ))
+    })
+
+    (self._lsg.calculate_nesting_level)
+    [(self._lsg.num_loops) (self._cfg.num_nodes)]
+  })
+
+  (method (_construct_cfg par_loops ppar_loops pppar_loops){
+    (set n 2)
+
+    (set i 0)
+    (while (< i par_loops){
+      (self._cfg.create_node (n.succ))
+      (self._build_connect 2 (n.succ))
+      (set n (n.succ))
+
+      (set j 0)
+      (while (< j ppar_loops){
+        (set top n)
+        (set n (self._build_straight n 1))
+
+        (set k 0)
+        (while (< k pppar_loops){
+          (set n (self._build_base_loop n))
+          (set k (k.succ))
+        })
+
+        (set bottom (self._build_straight n 1))
+        (self._build_connect n top)
+        (set n bottom)
+
+        (set j (j.succ))
+      })
+
+      (self._build_connect n 1)
+
+      (set i (i.succ))
+    })
+  })
+
+  (method (_add_dummy_loops num_dummy_loops){
+    (set i 0)
+    (while (< i num_dummy_loops){
+      (self._find_loops self._lsg)
+      (set i (i.succ))
+    })
+  })
+
+  (method (_find_loops loop_structure){
+    (set finder (new _HavlakLoopFinder))
+    (finder.init-values self._cfg loop_structure)
+    (finder.find_loops)
+  })
+
+  (method (_construct_simple_cfg){
+    (self._cfg.create_node 0)
+    (self._build_base_loop 0)
+    (self._cfg.create_node 1)
+    (set x (new _BasicBlockEdge))
+    (x.init-values self._cfg 0 2)
+  })
+
+)
+
+(set _UNVISITED 2_147_483_647)
+(set _MAXNONBACKPREDS (* 32 1024))
+
+; No support for enum classes in cicero
+; So just variables used for `_BasicBlockClass`
+(set BB_TOP 0)  ; uninitialized
+(set BB_NONHEADER 1)  ; a regular BB
+(set BB_REDUCIBLE 2)  ; reducible loop
+(set BB_SELF 3)  ; single BB loop
+(set BB_IRREDUCIBLE 4)  ; irreducible loop
+(set BB_DEAD 5)  ; a dead BB
+(set BB_LAST 6)  ; Sentinel
+
+(class _HavlakLoopFinder
+  (field _cfg ())
+  (field _lsg ())
+  (field _non_back_preds (new Vector))
+  (field _back_preds (new Vector))
+  (field _number (new IdentityDictionary))
+  (field _max_size 0)
+  (field _header ())
+  (field _type ())
+  (field _last ())
+  (field _nodes ())
+
+  (method (init-values cfg lsg){
+    (set-field _cfg self cfg)
+    (set-field _lsg self lsg)
+  })
+
+  (method (_is_ancestor w v)
+    (and (<= w v) (<= v (self._last.get w)))
+  )
+
+  (method (_do_dfs current_node current){
+    (set node (self._nodes.get current))
+    (node.init_node current_node current)
+    (self._number.at_put current_node current)
+
+    (set state (new StateClass))
+    (set-field last_id state current)
+    (set outer_blocks current_node.out_edges)
+
+    (func (each target){
+      (if (= _UNVISITED (self._number.at target)){
+        (set-field last_id state (self._do_dfs target (+ 1 state.last_id)))
+      }())
+    })
+
+    (outer_blocks.for_each each)
+    (self._last.set current state.last_id)
+    state.last_id
+  })
+
+  (method (_init_all_nodes){
+    (func (lambda bb){
+      (self._number.at_put bb _UNVISITED)
+    })
+    (self._cfg.basic_blocks.for_each lambda)
+
+    (self._do_dfs self._cfg.start_basic_block 0)
+  })
+    
+  (method (_identify_edges size){
+    (set w 0)
+    (while (< w size){
+      (self._header.set w 0)
+      (self._type.set w BB_NONHEADER)
+
+      (set node (self._nodes.get w))
+      (set node_w node.bb)
+      (if (= node_w ()){
+        (self._type.set w BB_DEAD)
+      }{
+        ;else
+        (self._process_edges node_w w)
+      })
+
+      (set w (w.succ))
+    })
+  })
+
+  (method (_process_edges node_w w){
+    (if (> (node_w.get_num_pred) 0){
+
+      (func (each node_v){
+        (set v (self._number.at node_v))
+        (if (!= v _UNVISITED){
+          (if (self._is_ancestor w v){
+            (set vec (self._back_preds.at w))
+            (vec.append v)
+          }{
+            (set vec (self._non_back_preds.at w))
+            (vec.add v)
+          })
+        }())
+      })
+
+      (node_w.in_edges.for_each each)
+    }())
+  })
+
+  (method (find_loops){
+    (set returnNow false)
+    (if (= self._cfg.start_basic_block ()) (){
+      ;else
+      (set size (self._cfg.num_nodes))
+      (self._non_back_preds.remove_all)
+      (self._back_preds.remove_all)
+      (self._number.remove_all)
+
+      (if (> size self._max_size){
+        (set-field _header self (empty_vec size 0))
+        (set-field _type self (empty_vec size ()))
+        (set-field _last self (empty_vec size 0))
+        (set-field _nodes self (empty_vec size ()))
+        (set-field _max_size self size)
+      }())
+
+      (set i 0)
+      (while (< i size){
+        (self._non_back_preds.append (new Set))
+        (self._back_preds.append (new Vector))
+        (self._nodes.set i (new _UnionFindNode))
+
+        (set i (i.succ))
+      })
+
+      (self._init_all_nodes)
+      (self._identify_edges size)
+      (self._header.set 0 0)
+
+      (set w (size.pred))
+      (while (and (>= w 0) (returnNow.not)){
+        (set node_pool (new Vector))
+        (set node (self._nodes.get w))
+        (set node_w node.bb)
+        (if (!= node_w ()){
+          (self._step_d w node_pool)
+
+          (set work_list (new Vector))
+          (node_pool.for_each work_list.append)
+
+          (if (!= (node_pool.size) 0)(self._type.set w BB_IRREDUCIBLE)())
+
+          (while (not (work_list.is_empty)){
+            (set x (work_list.remove_first))
+
+            (set non_back (self._non_back_preds.at x.dfs_number))
+            (set non_back_size (non_back.size))
+            (if (> non_back_size _MAXNONBACKPREDS) (set returnNow true) {
+              ;else
+              (self._step_e_process_non_back_preds w node_pool work_list x)
+            })
+          })
+        }())
+
+        (if returnNow (){
+          (if (or (> (node_pool.size) 0) (= (self._type.get w) BB_SELF)){
+            (set loop
+              (self._lsg.create_new_loop node_w (!= (self._type.get w) BB_IRREDUCIBLE)))
+            (self._set_loop_attributes w node_pool loop)
+          }())
+        })
+
+        (set w (w.pred))
+      })
+    })
+  })
+
+  (method (_step_e_process_non_back_preds w node_pool work_list x){
+    (func (each i){
+      (set y (self._nodes.get i))
+      (set ydash (y.find_set))
+
+      (if (self._is_ancestor w ydash.dfs_number){
+        (if (!= ydash.dfs_number w){
+          (func (lambda e) (= e ydash))
+          (if (node_pool.has_some lambda) (){
+            (work_list.append ydash)
+            (node_pool.append ydash)
+          })
+        }())
+      ;else
+      }{
+        (self._type.set w BB_IRREDUCIBLE)
+        (set a (self._non_back_preds.at w))
+        (a.add ydash.dfs_number)
+      })
+    })
+
+    (set b (self._non_back_preds.at x.dfs_number))
+    (b.for_each each)
+  })
+
+  (method (_set_loop_attributes w node_pool loop){
+    (set n (self._nodes.get w))
+    (set-field loop n loop)
+
+    (func (each node){
+      (self._header.set node.dfs_number w)
+      (node.union (self._nodes.get w))
+
+      (if (!= node.loop ())
+        (node.loop.set_parent loop)
+        ;else
+        (loop.add_node node.bb)
+      )
+    })
+
+    (node_pool.for_each each)
+  })
+
+  (method (_step_d w node_pool){
+    (func (each v){
+      (if (!= v w) {
+        (set node (self._nodes.get v))
+        (node_pool.append (node.find_set))
+      }
+        ;else
+        (self._type.set w BB_SELF)
+      )
+    })
+
+    (set back_preds (self._back_preds.at w))
+    (back_preds.for_each each)
+  })
+)
+(class StateClass (field last_id 0))
+
+(set x (new Havlak))
+(x.inner_benchmark_loop 15)

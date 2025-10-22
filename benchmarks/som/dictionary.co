@@ -28,7 +28,7 @@
  })
 
 (class Dictionary
-  (field _buckets [])
+  (field _buckets (empty_vec _INITIAL_CAPACITY ()))
   (field _size 0)
 
   (method (init-values size){
@@ -57,9 +57,12 @@
       (if (e.match hash_ key){
         (set ret e.value)
         (set done true)
-       }())
-      (set e e.next)
+       }
+      ;else
+        (set e e.next)
+      )
      })
+
     ret
    })
 
@@ -71,8 +74,10 @@
     (while (and (!= e ()) (= ret false)){
       (if (e.match hash_ key){
         (set ret true)
-       }())
-      (set e e.next)
+       }
+      ;else
+        (set e e.next)
+      )
      })
     ret
    })
@@ -115,10 +120,11 @@
            (set-field _size self (self._size.succ))
            (set-field next current (self._new_entry key value hash_))
            (set loop false)
-          }())
+          }{
+            ;else
+            (set current current.next)
+          })
        })
-
-      (set current current.next)
      })
    })
 

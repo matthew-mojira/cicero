@@ -9,7 +9,7 @@
   (extends Dictionary)
   (method (_new_entry key value hash_){
     (set entry (new _IdEntry))
-    (entry.init-values key value hash_ ())
+    (entry.init-values hash_ key value ())
     entry
    })
 )
