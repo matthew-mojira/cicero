@@ -556,4 +556,8 @@
 (class StateClass (field last_id 0))
 
 (set x (new Havlak))
+(x.inner_benchmark_loop 1)
 (x.inner_benchmark_loop 15)
+(x.inner_benchmark_loop 150)
+(x.inner_benchmark_loop 1_500)
+(x.inner_benchmark_loop 15_000)

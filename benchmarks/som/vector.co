@@ -1,6 +1,6 @@
 ; Requires `constants.co` to be loaded beforehand
 ; Example: "> cicero constants.co vector.co"
-
+{
 (func (vector_with elem){
   (set v (new Vector))
   (v.init-values 1)
@@ -163,41 +163,69 @@
 
   (method (capacity) (if (= self._storage ()) 0 (self._storage.length)))
 
-  (method (sort){
-    (self.__quick-sort self._first_idx (self._last_idx.pred))
+  (method (sort comparator){
+    (if (> (self.size) 0) (self._sort self._first_idx (self._last_idx.pred) comparator)
+    ())
   })
 
-  (method (__partition lo hi) {
-    (set pivot (self._storage.get hi))
-    (set i lo)
-    (set j lo)
-    (while (< j hi) {
-      (if (< (self._storage.get j) pivot) {
-        ; swap _storage[i] with _storage[j]
-        (set tmp (self._storage.get i))
-        (self._storage.set i (self._storage.get j))
-        (self._storage.set j tmp)
-        (set i (i.succ))
-      } ())
-      (set j (j.succ))
-    })
-    (set tmp (self._storage.get i))
-    (self._storage.set i (self._storage.get hi))
-    (self._storage.set hi tmp)
-    i
-  })
+  (method (_sort i j c){
+    (if (= c ()) (self._default_sort i j){
+    ;else
+      (set n (- (+ j 1) i))
+      (if (<= n 1) (){
+      ;else
+        (set di (self._storage.get i))
+        (set dj (self._storage.get j))
 
-  (method (__quick-sort lo hi)
-    (cond
-      ((>= lo hi) ())
-      ((< lo 0) ())
-      (true {
-        (set p (self.__partition lo hi))
-        (self.__quick-sort lo (p.pred))
-        (self.__quick-sort (p.succ) hi)
+        (if (> (c.compare di dj) 0) {
+          (self._swap self._storage i j)
+          (set tmp di)
+          (set di dj)
+          (set dj tmp)
+        }())
+
+        (if (> n 2){
+          (set ij (/ (+ i j) 2))
+          (set dij (self._storage.get ij))
+
+          (if (<= (c.compare di dij) 0){
+            (if (> (c.compare dij dj) 0){
+              (self._swap self._storage j ij)
+              (set dij dj)
+            }())
+          }{
+          ;else
+            (self._swap self._storage i ij)
+            (set dij di)
+          })
+
+          (if (> n 3){
+            (set k i)
+            (set l (j.pred))
+
+            (set done false)
+            (while (not done){
+              (while
+                (and (<= k l) (<= (c.compare dij (self._storage.get l)) 0))
+                  (set l (l.pred))
+              )
+
+              (set k (k.succ))
+              (while
+                (and (<= k l) (<= (c.compare (self._storage.get k) dij) 0))
+                  (set k (k.succ))
+              )
+
+              (if (> k l) (set done true) (self._swap self._storage k l))
+            })
+
+            (self._sort i l c)
+            (self._sort k j c)
+          }())
+        }())
       })
-    )
-  )
+    })
+  })
 
   (method (_swap storage i j)
     (raise "Not implemented error")
@@ -207,3 +235,4 @@
     (raise "Not implemented error")
   )
 )
+}
