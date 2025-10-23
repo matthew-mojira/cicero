@@ -1,40 +1,37 @@
-def IS_TRUE: u32;
-def I32_TO_I32: i32;
+// def isTrue(o: Object) => o.isTrue();
 
-def isTrue(o: Object) => o.isTrue();
+def GET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.getGlobal));
+def GET_NONLOCAL: u32 = u32.view(CiWasmTarget.functionId(WasmFrame.getNonlocal));
+def SET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.setGlobal));
+def IS_TRUE: u32      = u32.view(CiWasmTarget.functionId(isTrue));
+def IS_FALSE: u32     = u32.view(CiWasmTarget.functionId(isFalse));
+def ASSERT_FUNC: u32  = u32.view(CiWasmTarget.functionId(assertFunc));
+def GET_FIELD: u32    = u32.view(CiWasmTarget.functionId(Object.getField)); // null = failure
+def SET_FIELD: u32    = u32.view(CiWasmTarget.functionId(Object.setField)); // false = failure
 
-def GET_GLOBAL = CiWasmTarget.functionId(WasmFrame.getGlobal);
-def GET_NONLOCAL = CiWasmTarget.functionId(WasmFrame.getNonlocal);
-def SET_GLOBAL = CiWasmTarget.functionId(WasmFrame.setGlobal);
-def IS_TRUE = CiWasmTarget.functionId(isTrue);
-def IS_FALSE = CiWasmTarget.functionId(isFalse);
-def ASSERT_FUNC = CiWasmTarget.functionId(assertFunc);
-def GET_FIELD = CiWasmTarget.functionId(Object.getField); // null = failure
-def SET_FIELD = CiWasmTarget.functionId(Object.setField); // false = failure
+def LIST_FROM0: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from0));
+def LIST_FROM1: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from1));
+def LIST_FROM2: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from2));
+def LIST_FROM3: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from3));
+def LIST_FROM4: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from4));
+def LIST_FROM5: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from5));
+def LIST_FROM6: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from6));
+def LIST_FROM7: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from7));
+def LIST_FROM8: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from8));
+def LIST_FROM9: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from9));
 
-def LIST_FROM0 = CiWasmTarget.functionId(ListObjects.from0);
-def LIST_FROM1 = CiWasmTarget.functionId(ListObjects.from1);
-def LIST_FROM2 = CiWasmTarget.functionId(ListObjects.from2);
-def LIST_FROM3 = CiWasmTarget.functionId(ListObjects.from3);
-def LIST_FROM4 = CiWasmTarget.functionId(ListObjects.from4);
-def LIST_FROM5 = CiWasmTarget.functionId(ListObjects.from5);
-def LIST_FROM6 = CiWasmTarget.functionId(ListObjects.from6);
-def LIST_FROM7 = CiWasmTarget.functionId(ListObjects.from7);
-def LIST_FROM8 = CiWasmTarget.functionId(ListObjects.from8);
-def LIST_FROM9 = CiWasmTarget.functionId(ListObjects.from9);
+def CALL_FUNC0: u32 = u32.view(CiWasmTarget.functionId(callFunc0));
+def CALL_FUNC1: u32 = u32.view(CiWasmTarget.functionId(callFunc1));
+def CALL_FUNC2: u32 = u32.view(CiWasmTarget.functionId(callFunc2));
+def CALL_FUNC3: u32 = u32.view(CiWasmTarget.functionId(callFunc3));
+def CALL_FUNC4: u32 = u32.view(CiWasmTarget.functionId(callFunc4));
+def CALL_FUNC5: u32 = u32.view(CiWasmTarget.functionId(callFunc5));
+def CALL_FUNC6: u32 = u32.view(CiWasmTarget.functionId(callFunc6));
+def CALL_FUNC7: u32 = u32.view(CiWasmTarget.functionId(callFunc7));
+def CALL_FUNC8: u32 = u32.view(CiWasmTarget.functionId(callFunc8));
+def CALL_FUNC9: u32 = u32.view(CiWasmTarget.functionId(callFunc9));
 
-def CALL_FUNC0 = CiWasmTarget.functionId(callFunc0);
-def CALL_FUNC1 = CiWasmTarget.functionId(callFunc1);
-def CALL_FUNC2 = CiWasmTarget.functionId(callFunc2);
-def CALL_FUNC3 = CiWasmTarget.functionId(callFunc3);
-def CALL_FUNC4 = CiWasmTarget.functionId(callFunc4);
-def CALL_FUNC5 = CiWasmTarget.functionId(callFunc5);
-def CALL_FUNC6 = CiWasmTarget.functionId(callFunc6);
-def CALL_FUNC7 = CiWasmTarget.functionId(callFunc7);
-def CALL_FUNC8 = CiWasmTarget.functionId(callFunc8);
-def CALL_FUNC9 = CiWasmTarget.functionId(callFunc9);
-
-def CREATE_FUNC = CiWasmTarget.functionId(createFunc);
+// def CREATE_FUNC = CiWasmTarget.functionId(createFunc);
 
 def assertFunc(val: Object) -> Object {
 	if (!val.instanceOf(ClassObjects.classFunc))
@@ -44,24 +41,24 @@ def assertFunc(val: Object) -> Object {
 
 def isTrue(o: Object) -> (bool, Object) => (o.isTrue(), o);
 def isFalse(o: Object) -> (bool, Object) => (!o.isTrue(), o);
-def BLOCK_SIG = CiWasmTarget.functionTypeId<Object, Object>();
+var BLOCK_SIG: i32 = -1;
 
 /* the callFuncN receives the function (already asserted) and arguments, and
  * needs to set up the call and get the return value
  * If the function is a method, it also sets up `self`
  */
-def callFunc0(func: FuncObject) => callFuncN(func, []);
-def callFunc1(func: FuncObject, o0: Object) => callFuncN(func, [o0]);
-def callFunc2(func: FuncObject, o0: Object, o1: Object) => callFuncN(func, [o0, o1]);
-def callFunc3(func: FuncObject, o0: Object, o1: Object, o2: Object) => callFuncN(func, [o0, o1, o2]);
-def callFunc4(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object) => callFuncN(func, [o0, o1, o2, o3]);
-def callFunc5(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object) => callFuncN(func, [o0, o1, o2, o3, o4]);
-def callFunc6(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object) => callFuncN(func, [o0, o1, o2, o3, o4, o5]);
-def callFunc7(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6]);
-def callFunc8(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7]);
-def callFunc9(func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object, o8: Object) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+def callFunc0(frame: FrameObject, func: FuncObject) => callFuncN(frame, func, []);
+def callFunc1(frame: FrameObject, func: FuncObject, o0: Object) => callFuncN(frame, func, [o0]);
+def callFunc2(frame: FrameObject, func: FuncObject, o0: Object, o1: Object) => callFuncN(frame, func, [o0, o1]);
+def callFunc3(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: Object) => callFuncN(frame, func, [o0, o1, o2]);
+def callFunc4(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object) => callFuncN(frame, func, [o0, o1, o2, o3]);
+def callFunc5(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object) => callFuncN(frame, func, [o0, o1, o2, o3, o4]);
+def callFunc6(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object) => callFuncN(frame, func, [o0, o1, o2, o3, o4, o5]);
+def callFunc7(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object) => callFuncN(frame, func, [o0, o1, o2, o3, o4, o5, o6]);
+def callFunc8(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object) => callFuncN(frame, func, [o0, o1, o2, o3, o4, o5, o6, o7]);
+def callFunc9(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object, o8: Object) => callFuncN(frame, func, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
 
-def callFuncN(fv: FuncObject, args: Array<Object>) -> Object {
+def callFuncN(prev: FrameObject, fv: FuncObject, args: Array<Object>) -> Object {
 	def params = fv.params, code = fv.code;
 
 	// evaluate argument values
@@ -91,7 +88,7 @@ def callFuncN(fv: FuncObject, args: Array<Object>) -> Object {
 	}
 
 	// create new frame (and evaluate)
-	def frame = newFrame(fv.id, code, argv, fv.nonlocals);
+	def frame = prev.newFrame(fv.id, code, argv, fv.nonlocals);
 	frame.eval();
 	if (frame.isExn()) {
 		System.puts("evaluation of frame in callFuncN raised exception");
@@ -100,22 +97,22 @@ def callFuncN(fv: FuncObject, args: Array<Object>) -> Object {
 	return frame.getValue();
 }
 
-def createFunc(funchole: ASTData.Func) -> FuncObject {
-	def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
-
-	def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body);
-	for (i = funchole.nonlocals.length - 1; i >= 0; i--) {
-		// if the nonlocal is the function itself (for recursion) then do not
-		// get it from the stack. you already have it!
-		if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
-			nonlocals[i] = (funchole.id, fn);
-		} else {
-			nonlocals[i] = (funchole.nonlocals[i], stack.pop());
-		}
-	}
-
-	return fn;
-}
+// def createFunc(funchole: ASTData.Func) -> FuncObject {
+// 	def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
+// 
+// 	def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body);
+// 	for (i = funchole.nonlocals.length - 1; i >= 0; i--) {
+// 		// if the nonlocal is the function itself (for recursion) then do not
+// 		// get it from the stack. you already have it!
+// 		if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
+// 			nonlocals[i] = (funchole.id, fn);
+// 		} else {
+// 			nonlocals[i] = (funchole.nonlocals[i], stack.pop());
+// 		}
+// 	}
+// 
+// 	return fn;
+// }
 
 class WasmCompiler {
 	// TODO need extra information about parameters and locals
@@ -124,6 +121,9 @@ class WasmCompiler {
 	def params: Array<string>;
 
 	new(ast: AST, params) {
+		System.puts("I'm actually compiling an AST to Wasm!\n");
+		if (BLOCK_SIG < 0)
+			BLOCK_SIG = CiWasmTarget.functionTypeId<Object, Object>();
 		addLocal("<receiver>"); // XXX part of virgil, ignored
 		addLocal("<frame>");    // frame is made available for whenever it's needed
 		Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
@@ -134,7 +134,7 @@ class WasmCompiler {
 		// TODO put hole for number here, then i32 type
 		compileAST(ast);
 		// TODO fill hole with locals.length
-		wasm.putb(WasmOp.RETURN.opcode);
+		// wasm.putb(WasmOp.RETURN.opcode);
 		wasm.putb(WasmOp.END.opcode);
 	}
 
@@ -154,6 +154,7 @@ class WasmCompiler {
 		 *
 		 * Those bona-fide locals will be emitted as part of the code's locals declaration.
 		 */
+		System.puts("Extracting the bytecode that was created!\n");
 		def wasm = wasm.extract();
 		// dump bytes
 		// System.putc('\n');
@@ -175,9 +176,9 @@ class WasmCompiler {
 		}
 		var func: WasmFunction;
 		match (params.length) {
-			0 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, Object, Object>(Pointer.NULL + fid, void));
-			1 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object), Object>(Pointer.NULL + fid, void));
-			2 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (Object, Object, Object), Object>(Pointer.NULL + fid, void));
+			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, Object, Object>(Pointer.NULL + fid, void));
+			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, (Object, Object), Object>(Pointer.NULL + fid, void));
+			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object, Object), Object>(Pointer.NULL + fid, void));
 		}
 
 		System.puts("compile successful!\n");
@@ -204,7 +205,7 @@ class WasmCompiler {
  				}
   				Global => {
 					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_uleb32(ptrAt(id)); // string
+					wasm.put_uleb32(ptrAtStr(id)); // string
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(GET_GLOBAL);
 					// TODO raise exception if global not found (currently, function traps)
@@ -222,7 +223,7 @@ class WasmCompiler {
 // 				 */
   				Nonlocal => {
 					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_uleb32(ptrAt(id)); // string
+					wasm.put_uleb32(ptrAtStr(id)); // string
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(GET_NONLOCAL);
 				}
@@ -244,7 +245,7 @@ class WasmCompiler {
  				}
  				Global => {
 					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_uleb32(ptrAt(id)); // string
+					wasm.put_uleb32(ptrAtStr(id)); // string
 					compileAST(val);
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(SET_GLOBAL);
@@ -301,7 +302,7 @@ class WasmCompiler {
 					8 => wasm.put_uleb32(CALL_FUNC8);
 					9 => wasm.put_uleb32(CALL_FUNC9);
 					_ => {
-						System.puts(Strings.format1("Translating too many arguments: %d\n", elems.length));
+						System.puts(Strings.format1("Translating too many arguments: %d\n", args.length));
 						System.error("compile error", "translating too many arguments");
 					}
 				}
@@ -310,9 +311,9 @@ class WasmCompiler {
  			If(cond, left, right) => {
 				compileAST(cond);
 				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_sleb32(IS_TRUE);
+				wasm.put_uleb32(IS_TRUE);
  				wasm.putb(WasmOp.IF.opcode);
- 				wasm.put_sleb32(BLOCK_SIG);
+ 				wasm.putb(0x7F); // result i32
  				compileAST(left);
 				wasm.putb(WasmOp.ELSE.opcode);
  				compileAST(right);
@@ -342,23 +343,23 @@ class WasmCompiler {
 			}
 // 			Raise(exn) => ;
 // 			Catch(try, id, mode, catch) => ;
- 			Func(id, params, body, nonlocals) => {
-				// XXX compiling code of function body as part of enclosing compilation
-				code.compile(params);
-			
-				for (i < nonlocals.length) {
-					def nonlocal = nonlocals[i];
-					if (Strings.equal(nonlocal, id))
-						// the function itself is captured, but not loaded to a local
-						continue;
-					// this variable will be captured!
-					wasm.putb(WasmOp.GET_LOCAL);
-					wasm.put_uleb32(addLocal(nonlocal));
-				}
-				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(CREATE_FUNC);
-			}
- 			While(cond, body) =>
+//  			Func(id, params, body, nonlocals) => {
+// 				// XXX compiling code of function body as part of enclosing compilation
+// 				code.compile(params);
+// 			
+// 				for (i < nonlocals.length) {
+// 					def nonlocal = nonlocals[i];
+// 					if (Strings.equal(nonlocal, id))
+// 						// the function itself is captured, but not loaded to a local
+// 						continue;
+// 					// this variable will be captured!
+// 					wasm.putb(WasmOp.GET_LOCAL);
+// 					wasm.put_uleb32(addLocal(nonlocal));
+// 				}
+// 				wasm.putb(WasmOp.CALL.opcode);
+// 				wasm.put_uleb32(CREATE_FUNC);
+// 			}
+ 			While(cond, body) => {
 				wasm.putb(WasmOp.BLOCK.opcode);
 				wasm.put_sleb32(0x7F);
 					wasm.putb(WasmOp.LOOP.opcode);
@@ -375,6 +376,7 @@ class WasmCompiler {
 
 					wasm.putb(WasmOp.END.opcode);
 				wasm.putb(WasmOp.END.opcode);
+			}
  			Begin(exprs) => {
 				for (i < exprs.length - 1) {
 					compileAST(exprs[i]);
@@ -386,7 +388,7 @@ class WasmCompiler {
  			GetField(field, obj) => {
 				compileAST(obj);
 				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_uleb32(ptrAt(field));
+				wasm.put_uleb32(ptrAtStr(field));
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(GET_FIELD); // XXX null on failure
 				// check failure condition
@@ -400,7 +402,7 @@ class WasmCompiler {
  			SetField(field, obj, val) => {
 				compileAST(obj);
 				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_uleb32(ptrAt(field));
+				wasm.put_uleb32(ptrAtStr(field));
 				compileAST(val);
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(GET_FIELD); // XXX false on failure
@@ -450,5 +452,8 @@ class WasmCompiler {
 }
 
 def ptrAt(o: Object) -> u32 {
+	return u32.view(Pointer.atObject(o) - Pointer.NULL);
+}
+def ptrAtStr(o: string) -> u32 {
 	return u32.view(Pointer.atObject(o) - Pointer.NULL);
 }

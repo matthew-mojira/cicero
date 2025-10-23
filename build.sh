@@ -17,7 +17,7 @@ fi
 
 if [ "$VIRGIL_LIB" = "" ]; then
     if [ "$VIRGIL_LOC" = "" ]; then
-	V3C_LOC=$(dirname $(which v3c))
+        V3C_LOC=$(dirname $V3C)
 	VIRGIL_LOC=$(cd $V3C_LOC/../ && pwd)
     fi
     VIRGIL_LIB=${VIRGIL_LOC}/lib/
@@ -90,7 +90,7 @@ echo "}" >> "$CICERO_TEXT"
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="-symbols -heap-size=1000M -stack-size=16M -O2"
+V3C_OPTS="-heap-size=1000M -stack-size=16M -O2"
 
 # build
 exe=${PROGRAM}.${TARGET}
@@ -108,7 +108,7 @@ elif [ "$TARGET" = "jvm" ]; then
     v3c-jar $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [[ "$TARGET" == wasm-* ]]; then
     # Compile to a wasm target
-    V3C_PATH=$(which v3c)
+    V3C_PATH=$V3C
     V3C_WASM_TARGET=${V3C_PATH/bin\/v3c/bin\/dev\/v3c-$TARGET}
     if [ ! -x $V3C_WASM_TARGET ]; then
 	echo Unknown Wasm target \"$TARGET\". Found these:
