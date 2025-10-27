@@ -33,7 +33,7 @@ def main(args: Array<string>) -> int {
 
 	def frame = FrameObjects.newTopFrame();
 
-	//loadCore(frame);
+	loadCore(frame);
 	
 	def output = !Option<bool>.!(opt.map["suppress-output"]).get();
 
@@ -129,8 +129,9 @@ def loadCore(frame: FrameObject) {
 	def reader = Parser.new("core", CiceroTexts.core);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
+		// FIXME compile the core too
  		if (CiceroOptions.enableTier1) {
- 			expr.compile([]);
+ 			// expr.compile([]);
 		}
 		frame.evalCode(expr);
 	}

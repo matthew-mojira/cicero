@@ -3,9 +3,8 @@
 def GET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.getGlobal));
 def GET_NONLOCAL: u32 = u32.view(CiWasmTarget.functionId(WasmFrame.getNonlocal));
 def SET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.setGlobal));
-def IS_TRUE: u32      = u32.view(CiWasmTarget.functionId(isTrue));
-def IS_FALSE: u32     = u32.view(CiWasmTarget.functionId(isFalse));
 def ASSERT_FUNC: u32  = u32.view(CiWasmTarget.functionId(assertFunc));
+def ASSERT_CLASS: u32 = u32.view(CiWasmTarget.functionId(assertClass));
 def GET_FIELD: u32    = u32.view(CiWasmTarget.functionId(Object.getField)); // null = failure
 def SET_FIELD: u32    = u32.view(CiWasmTarget.functionId(Object.setField)); // false = failure
 
@@ -32,15 +31,30 @@ def CALL_FUNC8: u32 = u32.view(CiWasmTarget.functionId(callFunc8));
 def CALL_FUNC9: u32 = u32.view(CiWasmTarget.functionId(callFunc9));
 
 // def CREATE_FUNC = CiWasmTarget.functionId(createFunc);
+def CREATE_OBJECT: u32 = u32.view(CiWasmTarget.functionId(createObject));
 
 def assertFunc(val: Object) -> Object {
 	if (!val.instanceOf(ClassObjects.classFunc))
 		return null;
 	return val;
 }
+def assertClass(val: Object) -> Object {
+	if (!val.instanceOf(ClassObjects.classClass))
+		return null;
+	return val;
+}
 
-def isTrue(o: Object) -> (bool, Object) => (o.isTrue(), o);
-def isFalse(o: Object) -> (bool, Object) => (!o.isTrue(), o);
+def isTrue(o: Object)  -> bool => o.isTrue();
+def isFalse(o: Object) -> bool => !o.isTrue();
+
+def IS_TRUE: u32  = u32.view(CiWasmTarget.functionId(isTrue));
+def IS_FALSE: u32 = u32.view(CiWasmTarget.functionId(isFalse));
+// XXX the copy versions are table indices which need to be called with call_indirect
+var IS_TRUE_COPY: int = -1; 
+var IS_FALSE_COPY: int = -1;
+var COPY: int = -1; 
+
+var COPY_SIG: i32 = -1;
 var BLOCK_SIG: i32 = -1;
 
 /* the callFuncN receives the function (already asserted) and arguments, and
@@ -114,6 +128,48 @@ def callFuncN(prev: FrameObject, fv: FuncObject, args: Array<Object>) -> Object 
 // 	return fn;
 // }
 
+def createObject(parentFr: FrameObject, clsObj: ClassObject) -> Object {
+	def obj = Objects.newObject(clsObj);
+
+	def classes: Vector<ClassObject> = Vector.new();
+	for (cls = clsObj; cls != null; cls = cls.superclass)
+		classes.put(cls);
+
+	// initialization order is from base class downwards, which
+	// may involve reinitializing some fields
+	for (cls in classes.reverse().extract()) {
+		// initialize fields
+		for (field in cls.classFields) {
+			def name = field.0, expr = field.1;
+
+			// XXX hackfix
+			if (expr == null) continue;
+			// create new frames here!
+			def frame = parentFr.newFrame(Strings.format2("%s.%s", cls.name, name), expr, [], []);
+			frame.eval();
+			if (frame.isExn()) {
+				// XXX rethrow exception
+				return null;
+			}
+			obj.setField(name, frame.getValue());
+		}
+		// call initializer
+		if (cls.init != null) {
+			def args = [("self", obj)];
+			def code = cls.init;
+
+			// create new frames here!
+			def frame = parentFr.newFrame(Strings.format1("%s.init", cls.name), code, args, []);
+			frame.eval();
+			if (frame.isExn()) {
+				// XXX rethrow exception
+				return null;
+			}
+		} 
+	}
+	return obj;
+}
+
 class WasmCompiler {
 	// TODO need extra information about parameters and locals
 	// TODO get better wasm code generator (use Aeneas?)
@@ -121,17 +177,34 @@ class WasmCompiler {
 	def params: Array<string>;
 
 	new(ast: AST, params) {
-		System.puts("I'm actually compiling an AST to Wasm!\n");
-		if (BLOCK_SIG < 0)
+		// Initialize some deferred elements
+		if (BLOCK_SIG < 0) {
 			BLOCK_SIG = CiWasmTarget.functionTypeId<Object, Object>();
-		addLocal("<receiver>"); // XXX part of virgil, ignored
+			COPY_SIG  = CiWasmTarget.functionTypeId<Object, (Object, Object)>();
+
+			def isTrueCopy: DataWriter = DataWriter.new();
+			isTrueCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
+			isTrueCopy.put_uleb32(IS_TRUE);
+			isTrueCopy.puta([0x0B]);
+			def isFalseCopy: DataWriter = DataWriter.new();
+			isFalseCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
+			isFalseCopy.put_uleb32(IS_FALSE);
+			isFalseCopy.puta([0x0B]);
+			def isTrueCode: Array<byte> = isTrueCopy.extract();
+			def isFalseCode: Array<byte> = isFalseCopy.extract();
+			def copy: Array<byte> = [0x00, 0x20, 0x00, 0x20, 0x00, 0x0B];
+
+			IS_TRUE_COPY = wave.new_func(COPY_SIG, Pointer.atContents(isTrueCode), isTrueCode.length);
+			IS_FALSE_COPY = wave.new_func(COPY_SIG, Pointer.atContents(isFalseCode), isFalseCode.length);
+			COPY = wave.new_func(COPY_SIG, Pointer.atContents(copy), copy.length);
+		}
+
+		addLocal("<receiver>"); // part of virgil, ignored
 		addLocal("<frame>");    // frame is made available for whenever it's needed
 		Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
-		// FIXME add type for now, no locals
 		wasm.put_uleb32(1); // 1 set of
-		wasm.put_uleb32(1); // 1 of
+		wasm.put_uleb32(10);// 10 of
 		wasm.putb(0x7F);    // i32
-		// TODO put hole for number here, then i32 type
 		compileAST(ast);
 		// TODO fill hole with locals.length
 		// wasm.putb(WasmOp.RETURN.opcode);
@@ -154,7 +227,7 @@ class WasmCompiler {
 		 *
 		 * Those bona-fide locals will be emitted as part of the code's locals declaration.
 		 */
-		System.puts("Extracting the bytecode that was created!\n");
+		// System.puts("Extracting the bytecode that was created!\n");
 		def wasm = wasm.extract();
 		// dump bytes
 		// System.putc('\n');
@@ -168,6 +241,12 @@ class WasmCompiler {
 			0 => sig = CiWasmTarget.functionTypeId<(int, Object), Object>();
 			1 => sig = CiWasmTarget.functionTypeId<(int, Object, Object), Object>();
 			2 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object), Object>();
+			3 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object), Object>();
+			4 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object), Object>();
+			_ => {
+				System.puts("params unknown\n");
+				System.error("compile error", "params unknown");
+			}
 		}
 		def fid  = wave.new_func(sig, Pointer.atContents(wasm), wasm.length);
 		if (fid < 0) {
@@ -179,15 +258,18 @@ class WasmCompiler {
 			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, Object, Object>(Pointer.NULL + fid, void));
 			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, (Object, Object), Object>(Pointer.NULL + fid, void));
 			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object, Object), Object>(Pointer.NULL + fid, void));
+			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (Object, Object, Object, Object), Object>(Pointer.NULL + fid, void));
+			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object), Object>(Pointer.NULL + fid, void));
 		}
 
-		System.puts("compile successful!\n");
+		// System.puts("compile successful!\n");
 		return func;
 	}
 	
 	def compileAST(expr: AST) {
 		match (expr.data) {
 			Lit(lit) => {
+				// TODO disable GC and implement non-moving collector
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_uleb32(ptrAt(lit));
 			}
@@ -204,6 +286,8 @@ class WasmCompiler {
  					// TODO raise exception if local is not initialized (0)
  				}
   				Global => {
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.putb(1 /* frame */);
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_uleb32(ptrAtStr(id)); // string
  					wasm.putb(WasmOp.CALL.opcode);
@@ -244,6 +328,8 @@ class WasmCompiler {
  					wasm.put_uleb32(addLocal(id));
  				}
  				Global => {
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.putb(1 /* frame */);
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_uleb32(ptrAtStr(id)); // string
 					compileAST(val);
@@ -254,8 +340,13 @@ class WasmCompiler {
  			}
  			And(left, right) => {
  				compileAST(left);
-				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(IS_TRUE);
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(IS_TRUE_COPY);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
+
 				wasm.putb(WasmOp.IF.opcode);
 				wasm.put_sleb32(BLOCK_SIG); // XXX check if this is correct
 				wasm.putb(WasmOp.DROP.opcode);
@@ -274,8 +365,13 @@ class WasmCompiler {
  			}
  			Or(left, right) => {
  				compileAST(left);
- 				wasm.putb(WasmOp.CALL.opcode);
- 				wasm.put_uleb32(IS_TRUE);
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(IS_TRUE_COPY);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
+
  				wasm.putb(WasmOp.IF.opcode);
  				wasm.put_sleb32(BLOCK_SIG);
 				wasm.putb(WasmOp.DROP.opcode);
@@ -283,6 +379,8 @@ class WasmCompiler {
  				wasm.putb(WasmOp.END.opcode);
  			}
  			Apply(tgt, args) => {
+				wasm.putb(WasmOp.GET_LOCAL.opcode);
+				wasm.putb(1 /* frame */);
 				compileAST(tgt);
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(ASSERT_FUNC); // XXX traps for now
@@ -321,27 +419,35 @@ class WasmCompiler {
 			}
 			Cond(cases) => {
 				wasm.putb(WasmOp.BLOCK.opcode);
-				wasm.put_sleb32(0x7F);
+				wasm.putb(0x7F);
 				for (c in cases) {
 					def cond = c.0;
 					def body = c.1;
 					wasm.putb(WasmOp.BLOCK.opcode);
-					wasm.put_sleb32(0x7F);
+					wasm.putb(0x7F);
 					compileAST(cond);
-					wasm.putb(WasmOp.CALL.opcode);
-					wasm.put_uleb32(IS_FALSE);
+					
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(IS_FALSE_COPY);
+					wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+					wasm.putb(COPY_SIG);
+					wasm.putb(0x00);
+
 					wasm.putb(WasmOp.BR_IF.opcode);
 					wasm.put_uleb32(0); // next case
 					compileAST(body);
-					wasm.putb(WasmOp.BR_IF.opcode);
+					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_uleb32(1); // done
 					wasm.putb(WasmOp.END.opcode);
 				}
-				// FIXME throw exception here for no macthing cond
+				// FIXME throw exception here for no matching cond
 				wasm.putb(WasmOp.UNREACHABLE.opcode);
 				wasm.putb(WasmOp.END.opcode);
 			}
-// 			Raise(exn) => ;
+			Raise(exn) => {
+				wasm.putb(WasmOp.UNREACHABLE.opcode);
+				// FIXME put real implementation here
+			}
 // 			Catch(try, id, mode, catch) => ;
 //  			Func(id, params, body, nonlocals) => {
 // 				// XXX compiling code of function body as part of enclosing compilation
@@ -361,18 +467,21 @@ class WasmCompiler {
 // 			}
  			While(cond, body) => {
 				wasm.putb(WasmOp.BLOCK.opcode);
-				wasm.put_sleb32(0x7F);
+				wasm.putb(0x7F);
 					wasm.putb(WasmOp.LOOP.opcode);
-					wasm.put_sleb32(0x7F); // is this needed?
-					compileAST(cond);
-					wasm.putb(WasmOp.CALL.opcode);
-					wasm.put_uleb32(IS_FALSE);
-					wasm.putb(WasmOp.BR_IF.opcode);
-					wasm.put_uleb32(1); // exit loop
+					wasm.putb(0x7F); // is this needed?
+						compileAST(cond);
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(IS_FALSE_COPY);
+						wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+						wasm.putb(COPY_SIG);
+						wasm.putb(0x00);
+						wasm.putb(WasmOp.BR_IF.opcode);
+						wasm.put_uleb32(1); // exit loop
 
-					compileAST(body);
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_uleb32(0); // back to top of loop
+						compileAST(body);
+						wasm.putb(WasmOp.BR.opcode);
+						wasm.put_uleb32(0); // back to top of loop
 
 					wasm.putb(WasmOp.END.opcode);
 				wasm.putb(WasmOp.END.opcode);
@@ -391,9 +500,15 @@ class WasmCompiler {
 				wasm.put_uleb32(ptrAtStr(field));
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(GET_FIELD); // XXX null on failure
+				// copy for if XXX: awkward
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(COPY);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
 				// check failure condition
 				wasm.putb(WasmOp.IF.opcode);
-				wasm.put_sleb32(BLOCK_SIG); // XXX check if this is correct
+				wasm.put_sleb32(BLOCK_SIG);
 				// okay: do nothing
 				wasm.putb(WasmOp.ELSE.opcode);
 				wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
@@ -405,15 +520,30 @@ class WasmCompiler {
 				wasm.put_uleb32(ptrAtStr(field));
 				compileAST(val);
 				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(GET_FIELD); // XXX false on failure
+				wasm.put_uleb32(SET_FIELD); // XXX false on failure
+				// copy for if XXX: awkward
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(COPY);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
 				// check failure condition
 				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG);
 				wasm.putb(WasmOp.ELSE.opcode);
 				wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
 				wasm.putb(WasmOp.END.opcode);
 			}
 // 			Class(id, superclass, init, fields, methods) => ;
-// 			New(expr) => ;
+ 			New(expr) => {
+				wasm.putb(WasmOp.GET_LOCAL.opcode);
+				wasm.putb(1 /* frame */);
+				compileAST(expr);
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(ASSERT_CLASS); // XXX traps for now
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(CREATE_OBJECT);
+			}
  			List(elems) => {
 				for (elem in elems)
 					compileAST(elem);

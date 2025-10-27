@@ -1,5 +1,6 @@
 (func (f) {
 	(set x 3)
+	(set y 3)
 	x
 })
 

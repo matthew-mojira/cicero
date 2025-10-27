@@ -8,16 +8,10 @@ class WasmFrame extends FrameObject {
 	def eval() {
 		def f = Code.Wasm.!(code.code).wasm;
 		match (f) {
-			Func0(f) => {
-				System.puts("making call into wasm code\n");
-				result = Result.OK(f(this));
-				System.puts("result is ok\n");
-			}
-			Func1(f) => {
-				System.puts("making call into wasm code 2\n");
-				result = Result.OK(f(this, args[0].1));
-				System.puts("result is ok\n");
-			}
+			Func0(f) => result = Result.OK(f(this));
+			Func1(f) => result = Result.OK(f(this, args[0].1));
+			Func2(f) => result = Result.OK(f(this, args[0].1, args[1].1));
+			Func3(f) => result = Result.OK(f(this, args[0].1, args[1].1, args[2].1));
 			_ => {
 				System.puts("unimplemented number of arguments\n");
 				System.error("unimplemented", "WasmFrame.eval: FuncN");
@@ -51,7 +45,7 @@ class WasmFrame extends FrameObject {
 		return nonlocals[idx];
 	}
 
-	def setGlobal(id: string, obj: Object) {
-		globals[id] = obj;
+	def setGlobal(id: string, obj: Object) -> Object {
+		return globals[id] = obj;
 	}
 }

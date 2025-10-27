@@ -1,0 +1,12 @@
+(func (f) {
+      (cond
+	(false "wrong 1")
+	(() "wrong 2")
+	((and true false) "wrong 3")
+	((or false false) "wrong 4")
+	("false" 5)
+	(true "wrong 6")
+      )
+})
+
+(f)
