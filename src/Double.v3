@@ -1,4 +1,5 @@
 def FLOAT_MAX_LENGTH: int = 14;
+def PI = 3.141592653589793d;
 class DoubleObject(val: double) extends Object {
 	// @todo: need to work on display for doubles without need to roundd to floats;
 	// but this would be smthg to work on the virgil side
@@ -12,11 +13,83 @@ class DoubleObject(val: double) extends Object {
 
     def do_display() => Result.OK(StrObjects.fromString(display()));
 
-	/* arithmetic */
+	def do_trunc() -> Result{
+		def v = long.truncd(this.val);
+		return Result.OK(IntObjects.fromLong(v));
+	}
+
+	/* utils */
 
 	def do_sqrt() -> Result {
 		return Result.OK(DoubleObjects.fromDouble(double.sqrt(this.val)));
 	}
+
+	def fmod(x: double, y: double) -> double{
+		if (y == 0){
+			return -1.0;
+		}
+
+		def quotient = int.truncd(x / y);
+		def remainder = x - quotient * y;
+		return remainder;
+	}
+
+	def normalize_angle(x: double) -> double{
+		var x = fmod(x, 2* PI);
+		if (x > PI){
+			x = x - 2*PI;
+		} else if (x < -PI){
+			x = x + 2*PI;
+		}
+		return x;
+	}
+
+	def do_sin() -> Result{
+		var x = normalize_angle(this.val);
+		if (x == -1.0){
+			// should never happen
+			return Result.Exn(ExnObjects.fromVirgil("sin", "Unable to compute `sin`"));
+		}
+		var result = 0.0;
+		var sign = 1.0;
+		var power = x;
+		var factorial = 1.0;
+
+		def terms = 10;
+
+		for (n=0; n < terms; n++){
+			result = result + (sign * power / factorial);
+			sign = sign * -1;
+			power = power * x * x;
+			factorial = factorial * ((2 * n + 2) * (2 * n + 3));
+		}
+		return Result.OK(DoubleObjects.fromDouble(result));
+	}
+
+	def do_cos() -> Result{
+		var x = normalize_angle(this.val);
+		if (x == -1.0){
+			// should never happen
+			return Result.Exn(ExnObjects.fromVirgil("cos", "Unable to compute `cos`"));
+		}
+		var result = 0.0;
+		var sign = 1.0;
+		var power = 1.0;
+		var factorial = 1.0;
+
+		def terms = 10;
+
+		for (n=0; n < terms; n++){
+			result = result + (sign * power / factorial);
+			sign = sign * -1;
+			power = power * x * x;
+			factorial = factorial* ((2 * n + 1) * (2 * n + 2));
+		}
+
+		return Result.OK(DoubleObjects.fromDouble(result));
+	}
+
+	/* arithmetic */
 
 	def do_neg() => Result.OK(DoubleObject.new(- val));
 	def do_add(obj: Object) -> Result{

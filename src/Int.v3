@@ -12,7 +12,7 @@ class IntObject(val: BigInteger) extends Object {
 		if (obj == ClassObjects.classStr){
 			return i_display();
 		} else{
-			return Result.Exn(ExnObjects.fromVirgil("as", Strings.format1("Unable to convert `%s` to `int`", obj.display())));
+			return Result.Exn(ExnObjects.fromVirgil("as", "Unable to convert `int`"));
 		}
 	}
 

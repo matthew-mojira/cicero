@@ -61,6 +61,9 @@ Methods:
 
 * `(d.display)`: returns a string representation of the double by performing round-to-nearest demotion to a float(32-bit)
 * `(d.sqrt)`: returns the sqrt of the double value
+* `(d.trunc)`: perform truncation and return an `int`
+* `(d.sin)`: returns a `double` which is the sine value of angle `d` in radians.
+* `(d.cos)`: returns a `double` which is the cosine value of angle `d` in radians.
 * `(d.+ o)`
 * `(d.- o)`
 * `(d.* o)`
@@ -103,6 +106,7 @@ Represents an signed integer.
 
 Methods:
 * `(i.display)`: returns a string representation of the object
+* `(i.as s)`: converts int to its string representation
 * `(i.succ)`
 * `(i.pred)`
 * `(i.neg)`
