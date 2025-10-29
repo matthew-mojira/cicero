@@ -1,0 +1,888 @@
+; Airplane collision detector simulation based on the Are We Fast Yet benchmark
+; TODO: implement sqrt, sin, cos
+
+(set MIN_X 0.0)
+(set MIN_Y 0.0)
+(set MAX_X 1000.0)
+(set MAX_Y 1000.0)
+(set MIN_Z 0.0)
+(set MAX_Z 10.0)
+(set PROXIMITY_RADIUS 1.0)
+(set GOOD_VOXEL_SIZE (* PROXIMITY_RADIUS 2.0))
+
+(func (_compare_numbers a b){
+    (if (= a b) 0 {
+    ;else
+        (if (< a b) -1 {
+        ;else
+            (if (> a b) 1 {
+            ;else
+                (if (= a a) 1 -1)
+            })
+        })
+    })
+})
+
+(class _Vector2D
+    (field x ())
+    (field y ())
+    (method (init-values x y){
+        (set-field x self x)
+        (set-field y self y)
+    })
+
+    (method (plus other){
+        (set vec (new _Vector2D))
+        (vec.init-values (+ self.x other.x) (+ self.y other.y))
+        vec
+    })
+
+    (method (minus other){
+        (set vec (new _Vector2D))
+        (vec.init-values (- self.x other.x) (- self.y other.y))
+        vec
+    })
+
+    (method (compare_to other){
+        (set result (_compare_numbers self.x other.x))
+        (if (!= result 0) result
+            (_compare_numbers self.y other.y)
+        )
+    })
+)
+
+(class _Vector3D
+    (field x ())
+    (field y ())
+    (field z ())
+
+    (method (init-values x y z){
+        (set-field x self x)
+        (set-field y self y)
+        (set-field z self z)
+    })
+
+    (method (plus other){
+        (set vec (new _Vector3D))
+        (vec.init-values (+ self.x other.x) (+ self.y other.y) (+ self.z other.z))
+        vec
+    })
+
+    (method (minus other){
+        (set vec (new _Vector3D))
+        (vec.init-values (- self.x other.x) (- self.y other.y) (- self.z other.z))
+        vec
+    })
+
+    (method (dot other)
+        (+ (+ (* self.x other.x) (* self.y other.y)) (* self.z other.z))
+    )
+    
+    (method (squared_magnitude)
+        (self.dot self)
+    )
+
+    (method (magnitude)
+        (set x (self.squared_magnitude))
+        (x.sqrt)
+    )
+
+    (method (times amount){
+        (set vec (new _Vector3D))
+        (vec.init-values (* self.x amount) (* self.y amount) (* self.z amount))
+        vec
+    })
+)
+
+(set _horizontal (new _Vector2D))
+(_horizontal.init-values GOOD_VOXEL_SIZE 0.0)
+
+(set _vertical (new _Vector2D))
+(_vertical.init-values 0.0 GOOD_VOXEL_SIZE)
+
+(set RED 1)
+(set BLACK 2)
+
+(func (_tree_minimum x){
+    (set current x)
+    (while (!= current.left ())
+        (set current current.left)
+    )
+    current
+})
+
+(class _Node
+    (field key ())
+    (field value ())
+    (field left ())
+    (field right ())
+    (field parent ())
+    (field color RED)
+
+    (method (init-values key value){
+        (set-field key self key)
+        (set-field value self value)
+    })
+
+    (method (successor){
+        (set x self)
+        (if (!= x.right ()) (_tree_minimum x.right){
+        ;else
+            (set y x.parent)
+            (while (and (!= y ()) (= x y.right)){
+                (set x y)
+                (set y y.parent)
+            })
+            y
+        })
+    })
+
+)
+
+(class _Entry
+    (field key ())
+    (field value ())
+    (method (init-values key value){
+        (set-field key self key)
+        (set-field value self value)
+    })
+)
+
+(class _InsertResult
+    (field is_new_entry false)
+    (field new_node ())
+    (field old_value ())
+
+    (method (init-values is_new_entry new_node old_value){
+        (set-field is_new_entry self is_new_entry)
+        (set-field new_node self new_node)
+        (set-field old_value self old_value)
+    })
+)
+
+(class _RedBlackTree
+    (field _root ())
+
+    (method (put key value){
+        (set insertion_result (self._tree_insert key value))
+        (if (not insertion_result.is_new_entry) insertion_result.old_value {
+            (set x insertion_result.new_node)
+
+            (while (and (!= x self._root) (= x.parent.color RED)){
+                (if (= x.parent x.parent.parent.left){
+                    (set y x.parent.parent.right)
+                    (if (and (!= y ()) (= y.color RED)){
+                        (set-field color x.parent BLACK)
+                        (set-field color y BLACK)
+                        (set-field color x.parent.parent RED)
+                        (set x x.parent.parent)
+                    }{
+                    ;else
+                        (if (= x x.parent.right){
+                            (set x x.parent)
+                            (self._left_rotate x)
+                        }())
+
+                        (set-field color x.parent BLACK)
+                        (set-field color x.parent.parent RED)
+                        (self._right_rotate x.parent.parent)
+                    })
+                }{
+                ;else
+                    (set y x.parent.parent.left)
+                    (if (and (!= y ()) (= y.color RED)){
+                        (set-field color x.parent BLACK)
+                        (set-field color y BLACK)
+                        (set-field color x.parent.parent RED)
+                        (set x x.parent.parent)
+                    }{
+                    ;else
+                        (if (= x x.parent.left){
+                            (set x x.parent)
+                            (self._right_rotate x)
+                        }())
+
+                        (set-field color x.parent BLACK)
+                        (set-field color x.parent.parent RED)
+                        (self._left_rotate x.parent.parent)
+                    })
+                })
+            })
+
+            (set-field color self._root BLACK)
+            ()
+        })
+    })
+
+
+    (method (remove key){
+        (set z (self._find_node key))
+        (if (= z ()) (){
+        ;else
+            (if (or (= z.left ()) (= z.right ())) (set y z) (set y (z.successor)))
+
+            (if (= y.left ()) (set x y.right) (set x y.left))
+
+            (if (!= x ()) {
+                (set-field parent x y.parent)
+                (set x_parent x.parent)
+            }{
+                (set x_parent y.parent)
+            })
+
+            (if (= y.parent ()) (set-field _root self x){
+            ;else
+                (if (= y y.parent.left)
+                    (set-field left y.parent x)
+                ;else
+                    (set-field right y.parent x)
+                )
+            })
+
+            (if (!= y z){
+                (if (= y.color BLACK)
+                    (self._remove_fixup x x_parent)
+                ())
+
+                (set-field parent y z.parent)
+                (set-field color y z.color)
+                (set-field left y z.left)
+                (set-field right y z.right)
+
+                (if (!= z.left ()) (set-field parent z.left y) ())
+                (if (!= z.right ()) (set-field parent z.right y) ())
+
+                (if (!= z.parent ()) {
+                    (if (= z.parent.left z)
+                        (set-field left z.parent y)
+                    ;else
+                        (set-field right z.parent y)
+                    )
+                }{
+                ;else
+                    (set-field _root self y)
+                })
+            }{
+            ;else
+                (if (= y.color BLACK)
+                    (self._remove_fixup x x_parent)
+                ())
+            })
+
+            z.value
+        })
+    })
+
+    (method (get key){
+        (set node (self._find_node key))
+        (if (= node ()) () node.value)
+    })
+
+    (method (for_each fn){
+        (if (= self._root ()) () {
+
+            (set current (_tree_minimum self._root))
+            (while (!= current ()){
+                (set entry (new _Entry))
+                (entry.init-values current.key current.value)
+                (fn entry)
+                (set current (current.successor))
+            })
+        })
+    })
+
+    (method (_find_node key){
+        (set current self._root)
+        (set ret ())
+        (set done false)
+
+        (while (and (not done) (!= current ())) {
+            (set comparison_result (key.compare_to current.key))
+            (if (= comparison_result 0){
+                (set ret current)
+                (set done true)
+            }{
+                (if (< comparison_result 0)
+                    (set current current.left)
+                ; else
+                    (set current current.right)
+                )
+            })
+        })
+        ret
+    })
+
+    (method (_tree_insert key value){
+        (set y ())
+        (set x self._root)
+        (set done false)
+
+        (while (and (not done) (!= x ())) {
+            (set y x)
+            (set comparison_result (key.compare_to x.key))
+            (if (< comparison_result 0) (set x x.left){
+            ;else
+                (if (> comparison_result 0) (set x x.right){
+                ;else
+                    (set old_value x.value)
+                    (set-field value x value)
+                    (set done true)
+                    (set result (new _InsertResult))
+                    (result.init-values false () old_value)
+                })
+            })
+        })
+
+        (if done result {
+        ;else
+            (set z (new _Node))
+            (z.init-values key value)
+            (set-field parent z y)
+            (if (= y ()) (set-field _root self z){
+            ;else
+                (if (< (key.compare_to y.key) 0)
+                    (set-field left y z)
+                ;else
+                    (set-field right y z)
+                )
+            })
+            (set result (new _InsertResult))
+            (result.init-values true z ())
+        })
+    })
+
+    (method (_left_rotate x){
+        (set y x.right)
+
+        (set-field right x y.left)
+        (if (!= y.left ())
+            (set-field parent y.left x)
+        ())
+
+        (set-field parent y x.parent)
+        (if (= x.parent ())
+            (set-field _root self y)
+        ;else
+            (if (= x x.parent.left)
+                (set-field left x.parent y)
+            ;else
+                (set-field right x.parent y)
+            )
+        )
+
+        (set-field left y x)
+        (set-field parent x y)
+        y
+    })
+
+    (method (_right_rotate y){
+        (set x y.left)
+
+        (set-field left y x.right)
+        (if (!= x.right ())
+            (set-field parent x.right y)
+        ())
+
+        (set-field parent x y.parent)
+        (if (= y.parent ())
+            (set-field _root self x)
+        ;else
+            (if (= y y.parent.left)
+                (set-field left y.parent x)
+            ;else
+                (set-field right y.parent x)
+            )
+        )
+
+        (set-field right x y)
+        (set-field parent y x)
+        x
+    })
+
+    (method (_remove_fixup x x_parent){
+        (while (and (!= x self._root) (or (= x ()) (= x.color BLACK))){
+            (if (= x x_parent.left){
+
+                (set w x_parent.right)
+                (if (= w.color RED) {
+                    (set-field color w BLACK)
+                    (set-field color x_parent RED)
+                    (self._left_rotate x_parent)
+                    (set w x_parent.right)
+                }())
+
+                (if (and 
+                    (or (= w.left ()) (= w.left.color BLACK))
+                    (or (= w.right ()) (= w.right.color BLACK))
+                ){
+                    (set-field color w RED)
+                    (set x x_parent)
+                    (set x_parent x.parent)
+                }{
+                ;else
+                    (if (or (= w.right ()) (= w.right.color BLACK)){
+
+                        (set-field color w.left BLACK)
+                        (set-field color w RED)
+                        (self._right_rotate w)
+                        (set w x_parent.right)
+                    }())
+
+                    (set-field color w x_parent.color)
+                    (set-field color x_parent BLACK)
+
+                    (if (!= w.right ())
+                        (set-field color w.right BLACK)
+                    ())
+
+                    (self._left_rotate x_parent)
+                    (set x self._root)
+                    (set x_parent x.parent)
+                })
+            }{
+            ;else
+                (set w x_parent.left)
+                (if (= w.color RED) {
+                    (set-field color w BLACK)
+                    (set-field color x_parent RED)
+                    (self._right_rotate x_parent)
+                    (set w x_parent.left)
+                }())
+
+                (if (and 
+                    (or (= w.right ()) (= w.right.color BLACK))
+                    (or (= w.left ()) (= w.left.color BLACK))
+                ){
+                    (set-field color w RED)
+                    (set x x_parent)
+                    (set x_parent x.parent)
+                }{
+                ;else
+                    (if (or (= w.left ()) (= w.left.color BLACK)){
+
+                        (set-field color w.right BLACK)
+                        (set-field color w RED)
+                        (self._left_rotate w)
+                        (set w x_parent.left)
+                    }())
+
+                    (set-field color w x_parent.color)
+                    (set-field color x_parent BLACK)
+
+                    (if (!= w.left ())
+                        (set-field color w.left BLACK)
+                    ())
+
+                    (self._right_rotate x_parent)
+                    (set x self._root)
+                    (set x_parent x.parent)
+                })
+            })
+        })
+
+        (if (!= x ())
+            (set-field color x BLACK)
+        ())
+    })
+)
+
+(class _CallSign
+    (field _value ())
+    (method (init-values value) (set-field _value self value))
+
+    (method (compare_to other){
+        (if (= self._value other._value) 0 {
+            (if (< self._value other._value) -1 1)
+        })
+    })
+)
+
+(class _Collision
+    (field aircraft_a ())
+    (field aircraft_b ())
+    (field position ())
+    (method (init-values aircraft_a aircraft_b position) {
+        (set-field aircraft_a self aircraft_a)
+        (set-field aircraft_b self aircraft_b)
+        (set-field position self position)
+    })
+)
+
+(class _CollisionDetector
+    (field _state (new _RedBlackTree))
+
+    (method (handle_new_frame frame){
+        (set motions (new Vector))
+        (set seen (new _RedBlackTree))
+
+        (func (each aircraft){
+            (set old_position (self._state.put aircraft.call_sign aircraft.position))
+            (set new_position aircraft.position)
+            (seen.put aircraft.call_sign true)
+
+            (if (= old_position ())
+                (set old_position new_position)
+            ())
+
+            (set motion (new _Motion))
+            (motion.init-values aircraft.call_sign old_position new_position)
+            (motions.append motion)
+        })
+
+        (frame.for_each each)
+        (set to_remove (new Vector))
+
+        (func (for_removal e)
+            (if (not (seen.get e.key))
+                (to_remove.append e.key)
+            ())
+        )
+
+        (self._state.for_each for_removal)
+        (to_remove.for_each self._state.remove)
+
+        (set all_reduced (_reduce_collision_set motions))
+        (set collisions (new Vector))
+
+        (func (find_collisions reduced){
+            (set i 0)
+            (while (< i (reduced.size)){
+                (set motion1 (reduced.at i))
+                (set j (i.succ))
+                (while (< j (reduced.size)){
+                    (set motion2 (reduced.at j))
+                    (set collision (motion1.find_intersection motion2))
+                    (if (!= collision ()) {
+                        (set cs (new _Collision))
+                        (cs.init-values motion1.call_sign motion2.call_sign collision)
+                        (collisions.append cs)
+                    } ())
+
+                    (set j (j.succ))
+                })
+
+                (set i (i.succ))
+            })
+        })
+
+        (all_reduced.for_each find_collisions)
+        collisions
+    })
+)
+
+
+; @todo
+;(set _inf_positive float("inf"))
+;(set _inf_negative float("-inf"))
+
+(func (_is_in_voxel voxel motion){
+    (if (or (> voxel.x MAX_X) (or (< voxel.x MIN_X) (or (> voxel.y MAX_Y) (< voxel.y MIN_Y)))) false {
+    ;else
+        (set init motion.pos_one)
+        (set fin motion.pos_two)
+
+        (set v_s GOOD_VOXEL_SIZE)
+        (set r (/ PROXIMITY_RADIUS 2.0))
+
+        (set v_x voxel.x)
+        (set x0 init.x)
+        (set xv (- fin.x init.x))
+
+        (set v_y voxel.y)
+        (set y0 init.y)
+        (set yv (- fin.y init.y))
+
+        (if (= xv 0.0) {
+            (set low_x (if (<  (- v_x (+ r x0)) 0.0) _inf_negative _inf_positive))
+            (set high_x (if (< (- (+ (+ v_x v_s) r) x0) 0.0) _inf_negative _inf_positive))
+        }{
+            (set low_x (/ (- v_x (+ r x0)) xv))
+            (set high_x (/ (- (+ (+ v_x v_s) r) x0) xv))
+        })
+
+        (if (< xv 0.0) {
+            (set tmp high_x)
+            (set high_x low_x)
+            (set low_x tmp)
+        }())
+
+        (if (= yv 0.0) {
+            (set low_y (if (<  (- v_y (+ r y0)) 0.0) _inf_negative _inf_positive))
+            (set high_y (if (< (- (+ (+ v_y v_s) r) y0) 0.0) _inf_negative _inf_positive))
+        }{
+            (set low_y (/ (- v_y (+ r y0)) yv))
+            (set high_y (/ (- (+ (+ v_y v_s) r) y0) yv))
+        })
+
+        (if (< yv 0.0) {
+            (set tmp high_y)
+            (set high_y low_y)
+            (set low_y tmp)
+        }())
+
+
+        (and
+            (or (and (= xv 0.0) (and (<= v_x (+ x0 r)) (<= (- x0 r) (+ v_x v_s))))
+            (or (and (<= low_x 1.0) (<= 1.0 high_x))
+            (or (and (<= low_x 0.0) (<= 0.0 high_x))
+                (and (<= 0.0 low_x) (<= high_x 1.0))
+            )))
+
+            (and
+                (or (and (= yv 0.0) (and (<= v_y (+ y0 r)) (<= (- y0 r) (+ v_y v_s))))
+                (or (and (<= low_y 1.0) (<= 1.0 high_y))
+                (or (and (<= low_y 0.0) (<= 0.0 high_y))
+                    (and (<= 0.0 low_y) (<= high_y 1.0))
+                )))
+
+                (or (= xv 0.0)
+                (or (= yv 0.0)
+                (or (and (<= low_y high_x) (<= high_x high_y))
+                (or (and (<= low_y low_x) (<= low_x high_y))
+                    (and (<= low_x low_y) (<= high_y high_x))
+                ))))
+            )
+        )
+    })
+})
+
+
+(func (_put_into_map voxel_map voxel motion){
+    (set array (voxel_map.get voxel))
+    (if (= array ()) {
+        (set array (new Vector))
+        (voxel_map.put voxel array)
+    }())
+    (array.append motion)
+})
+
+(func (_recurse voxel_map seen next_voxel motion){
+    (if (_is_in_voxel next_voxel motion){
+        (if (seen.put next_voxel true) (){
+
+            (_put_into_map voxel_map next_voxel motion)
+            (set nv_mi_ho (next_voxel.minus _horizontal))
+            (set nv_pl_ho (next_voxel.plus _horizontal))
+
+            (_recurse voxel_map seen nv_mi_ho motion)
+            (_recurse voxel_map seen nv_pl_ho motion)
+            (_recurse voxel_map seen (next_voxel.minus _vertical) motion)
+            (_recurse voxel_map seen (next_voxel.plus _vertical) motion)
+            (_recurse voxel_map seen (nv_mi_ho.minus _vertical) motion)
+            (_recurse voxel_map seen (nv_mi_ho.plus _vertical) motion)
+            (_recurse voxel_map seen (nv_pl_ho.minus _vertical) motion)
+            (_recurse voxel_map seen (nv_pl_ho.plus _vertical) motion)
+        })
+    }())
+})
+
+(func (_reduce_collision_set motions){
+    (set voxel_map (new _RedBlackTree))
+
+    (func (lambda motion) (_draw_motion_on_voxel_map voxel_map motion))
+    (motions.for_each lambda)
+
+    (set result (new Vector))
+    (func (each e){
+        (if (> (e.value.size) 1) (result.append e.value) ())
+    })
+
+    (voxel_map.for_each each)
+    result
+})
+
+(func (_voxel_hash position){
+    (set x_div position.x) // GOOD_VOXEL_SIZE
+    (set y_div position.y) // GOOD_VOXEL_SIZE
+
+    (set x (* GOOD_VOXEL_SIZE x_div))
+    (set y (* GOOD_VOXEL_SIZE y_div))
+
+    (if (< position.x 0.0) (set x (- x GOOD_VOXEL_SIZE)) ()):
+
+    (if (< position.y 0.0) (set y (- y GOOD_VOXEL_SIZE)) ()):
+
+    (set vec (new _Vector2D))
+    (vec.init-values x y)
+    vec
+})
+
+(func (_draw_motion_on_voxel_map voxel_map motion){
+    (set seen (new _RedBlackTree))
+    (_recurse voxel_map seen (_voxel_hash motion.pos_one) motion)
+})
+
+(class _Motion
+    (field call_sign ())
+    (field pos_one ())
+    (field pos_two ())
+
+    (method (init-values call_sign pos_one pos_two){
+        (set-field call_sign self call_sign)
+        (set-field pos_one self pos_one)
+        (set-field pos_two self pos_two)
+    })
+
+    (method (delta) (self.pos_two.minus self.pos_one))
+
+    (method (find_intersection other){
+        (set init1 self.pos_one)
+        (set init2 other.pos_one)
+        (set vec1 (self.delta))
+        (set vec2 (other.delta))
+        (set radius PROXIMITY_RADIUS)
+
+        (set vec3 (vec2.minus vec1))
+        (set a (vec3.squared_magnitude))
+
+        (if (!= a 0.0){
+            (set initmp (init1.minus init2))
+            (set b (* 2 (initmp.dot (vec1.minus vec2))))
+
+            (set initmp (init2.minus init1))
+            (set c (+ (* (- 0 radius) radius) (initmp.squared_magnitude)))
+
+            (set discr (- (* b b) (* 4.0 (* a c))))
+            (if (< discr 0.0) (){
+            ;else
+                (set v1 (/ (- 0 (+ b (sqrt discr))) (* 2.0 a)))
+                (set v2 (/ (- (sqrt discr) b) (* 2.0 a)))
+
+                (if (and (<= v1 v2)
+                    (or (and (<= v1 1.0) (<= 1.0 v2))
+                        (or (and (<= v1 0.0) (<= 0.0 v2))
+                            (and (<= 0.0 v1) (<= v2 1.0))
+                    ))){
+                        (if (<= v1 0.0) (set v 0.0) (set v v1))
+
+                        (set result1 (init1.plus (vec1.times v)))
+                        (set result2 (init2.plus (vec2.times v)))
+
+                        (set result (result1.plus result2))
+                        (set result (result.times 0.5))
+
+                        (if (and (>= result.x MIN_X)
+                            (and (<= result.x MAX_X)
+                            (and (>= result.y MIN_Y)
+                            (and (<= result.y MAX_Y)
+                            (and (>= result.z MIN_Z)
+                            (<= result.z MAX_Z)
+                        )))))
+                            result
+                        ())
+                } ())
+            })
+        }{
+        ;else
+            (set distmp (init2.minus init1))
+            (set dist (distmp.magnitude))
+            (if (<= dist radius){
+                (set inimp (init1.plus init2))
+                (inimp.times 0.5)
+            } ())
+        })
+    })
+)
+
+(class _Aircraft
+    (field call_sign ())
+    (field position ())
+    (method (init-values call_sign position){
+        (set-field call_sign self call_sign)
+        (set-field position self position)
+    })
+)
+
+(class _Simulator
+    (field _aircraft (new Vector))
+
+    (method (init-values num_aircraft){
+        (set i 0)
+        (while (< i num_aircraft){
+            (set cs (new _CallSign))
+            (cs.init-values i)
+            (self._aircraft.append cs)
+
+            (set i (i.succ))
+        })
+    })
+
+    (method (simulate time){
+        (set frame (new Vector))
+        (set i 0)
+        (while (< i (self._aircraft.size)){
+
+            (set vec1 (new _Vector3D))
+            (vec1.init-values time (+ (* (cos time) 2.0) (* i 3.0)) 10.0)
+            (set aircraft1 (new _Aircraft))
+            (aircraft1.init-values (self._aircraft.at i) vec1)
+            (frame.append aircraft1)
+
+            (set vec2 (new _Vector3D))
+            (vec2.init-values time (+ (* (sin time) 2.0) (* i 3.0)) 10.0)
+            (set aircraft2 (new _Aircraft))
+            (aircraft2.init-values (self._aircraft.at (i.succ)) vec2)
+            (frame.append aircraft2)
+
+            (set i (+ i 2))
+        })
+        frame
+    })
+)
+
+(class CD
+    (method (_benchmark num_aircraft){
+        (set num_frames 200)
+
+        (set simulator (new _Simulator))
+        (simulator.init-values num_aircraft)
+        (set detector (new _CollisionDetector))
+
+        (set actual_collisions 0)
+
+        (set i 0)
+        (while (< i num_frames){
+            (set time (/ i 10.0))
+            (set collisions (detector.handle_new_frame (simulator.simulate time)))
+            (set actual_collisions (+ actual_collisions (collisions.size)))
+
+            (set i (i.succ))
+        })
+        actual_collisions
+    })
+
+    (method (inner_benchmark_loop inner_iterations){
+        (self._verify_result (self._benchmark inner_iterations) inner_iterations)
+    })
+
+    (method (_verify_result actual_collisions num_aircraft){
+        (if (= num_aircraft 1000) (= actual_collisions 14484){
+        ;else
+            (if (= num_aircraft 500) (= actual_collisions 14484){
+            ;else
+                (if (= num_aircraft 250) (= actual_collisions 10830){
+                ;else
+                    (if (= num_aircraft 200) (= actual_collisions 8655){
+                    ;else
+                        (if (= num_aircraft 100) (= actual_collisions 4305){
+                        ;else
+                            (if (= num_aircraft 10) (= actual_collisions 390){
+                            ;else
+                                (if (= num_aircraft 2) (= actual_collisions 42){
+                                ;else
+                                    false
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        })
+    })
+
+    (method (benchmark) (raise "Should never be reached"))
+    (method (verify_result result) (raise "Should never be reached"))
+)
+
+(set x (new CD))
+(x._benchmark 10)
