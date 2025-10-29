@@ -1,6 +1,6 @@
 ; Airplane collision detector simulation based on the Are We Fast Yet benchmark
-; TODO: implement sqrt, sin, cos
 
+{
 (set MIN_X 0.0)
 (set MIN_Y 0.0)
 (set MAX_X 1000.0)
@@ -82,10 +82,10 @@
         (self.dot self)
     )
 
-    (method (magnitude)
+    (method (magnitude){
         (set x (self.squared_magnitude))
         (x.sqrt)
-    )
+    })
 
     (method (times amount){
         (set vec (new _Vector3D))
@@ -348,6 +348,7 @@
             })
             (set result (new _InsertResult))
             (result.init-values true z ())
+            result
         })
     })
 
@@ -570,10 +571,8 @@
     })
 )
 
-
-; @todo
-;(set _inf_positive float("inf"))
-;(set _inf_negative float("-inf"))
+(set _inf_positive 1.7976931348623157e3081)
+(set _inf_negative -1.7976931348623157e3081)
 
 (func (_is_in_voxel voxel motion){
     (if (or (> voxel.x MAX_X) (or (< voxel.x MIN_X) (or (> voxel.y MAX_Y) (< voxel.y MIN_Y)))) false {
@@ -692,15 +691,18 @@
 })
 
 (func (_voxel_hash position){
-    (set x_div position.x) // GOOD_VOXEL_SIZE
-    (set y_div position.y) // GOOD_VOXEL_SIZE
+    (set x_div (/ position.x GOOD_VOXEL_SIZE))
+    (set y_div (/ position.y GOOD_VOXEL_SIZE)) 
+
+    (set x_div (x_div.trunc))
+    (set y_div (y_div.trunc)) 
 
     (set x (* GOOD_VOXEL_SIZE x_div))
     (set y (* GOOD_VOXEL_SIZE y_div))
 
-    (if (< position.x 0.0) (set x (- x GOOD_VOXEL_SIZE)) ()):
+    (if (< position.x 0.0) (set x (- x GOOD_VOXEL_SIZE)) ())
 
-    (if (< position.y 0.0) (set y (- y GOOD_VOXEL_SIZE)) ()):
+    (if (< position.y 0.0) (set y (- y GOOD_VOXEL_SIZE)) ())
 
     (set vec (new _Vector2D))
     (vec.init-values x y)
@@ -745,8 +747,8 @@
             (set discr (- (* b b) (* 4.0 (* a c))))
             (if (< discr 0.0) (){
             ;else
-                (set v1 (/ (- 0 (+ b (sqrt discr))) (* 2.0 a)))
-                (set v2 (/ (- (sqrt discr) b) (* 2.0 a)))
+                (set v1 (/ (- 0 (+ b (discr.sqrt))) (* 2.0 a)))
+                (set v2 (/ (- (discr.sqrt) b) (* 2.0 a)))
 
                 (if (and (<= v1 v2)
                     (or (and (<= v1 1.0) (<= 1.0 v2))
@@ -813,13 +815,13 @@
         (while (< i (self._aircraft.size)){
 
             (set vec1 (new _Vector3D))
-            (vec1.init-values time (+ (* (cos time) 2.0) (* i 3.0)) 10.0)
+            (vec1.init-values time (+ (* (time.cos) 2.0) (* i 3.0)) 10.0)
             (set aircraft1 (new _Aircraft))
             (aircraft1.init-values (self._aircraft.at i) vec1)
             (frame.append aircraft1)
 
             (set vec2 (new _Vector3D))
-            (vec2.init-values time (+ (* (sin time) 2.0) (* i 3.0)) 10.0)
+            (vec2.init-values time (+ (* (time.sin) 2.0) (* i 3.0)) 10.0)
             (set aircraft2 (new _Aircraft))
             (aircraft2.init-values (self._aircraft.at (i.succ)) vec2)
             (frame.append aircraft2)
@@ -885,4 +887,11 @@
 )
 
 (set x (new CD))
-(x._benchmark 10)
+(x.inner_benchmark_loop 2)
+}
+(x.inner_benchmark_loop 10)
+(x.inner_benchmark_loop 100)
+(x.inner_benchmark_loop 200)
+(x.inner_benchmark_loop 250)
+(x.inner_benchmark_loop 500)
+(x.inner_benchmark_loop 1000)
