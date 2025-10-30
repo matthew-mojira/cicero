@@ -1,35 +1,36 @@
 ; Nbody simulation micro benchmark
 ; Based on the `Are We fast Yet` paper
 
-(set PI 3.141592653589793)
-(set SOLAR_MASS (* (* 4 PI) PI))
-(set DAYS_PER_YER 365.24)
+{
+	(set PI 3.141592653589793)
+	(set SOLAR_MASS (* (* 4 PI) PI))
+	(set DAYS_PER_YER 365.24)
 
-(class _Body
-	(field x 0.0)
-	(field y 0.0)
-	(field z 0.0)
-	(field vx 0.0)
-	(field vy 0.0)
-	(field vz 0.0)
-	(field mass 0.0)
+	(class _Body
+		(field x 0.0)
+		(field y 0.0)
+		(field z 0.0)
+		(field vx 0.0)
+		(field vy 0.0)
+		(field vz 0.0)
+		(field mass 0.0)
 
-  	(method (init-values x y z vx vy vz mass){
-		(set-field x self x)
-		(set-field y self y)
-		(set-field z self z)
-		(set-field vx self (* vx DAYS_PER_YER))
-		(set-field vy self (* vy DAYS_PER_YER))
-		(set-field vz self (* vz DAYS_PER_YER))
-		(set-field mass self (* mass SOLAR_MASS))
-	})
+		(method (init-values x y z vx vy vz mass){
+			(set-field x self x)
+			(set-field y self y)
+			(set-field z self z)
+			(set-field vx self (* vx DAYS_PER_YER))
+			(set-field vy self (* vy DAYS_PER_YER))
+			(set-field vz self (* vz DAYS_PER_YER))
+			(set-field mass self (* mass SOLAR_MASS))
+		})
 
-	(method (offset_momentum px py pz){
-		(set-field vx self (- 0 (/ px SOLAR_MASS)))
-		(set-field vy self (- 0 (/ py SOLAR_MASS)))
-		(set-field vz self (- 0 (/ pz SOLAR_MASS)))
-	})
-)
+		(method (offset_momentum px py pz){
+			(set-field vx self (- 0 (/ px SOLAR_MASS)))
+			(set-field vy self (- 0 (/ py SOLAR_MASS)))
+			(set-field vz self (- 0 (/ pz SOLAR_MASS)))
+		})
+	)
 
 (func (jupiter){
 	(set body (new _Body))
@@ -44,6 +45,7 @@
     )
 	body
 })
+}
 
 (func (saturn){
 	(set body (new _Body))

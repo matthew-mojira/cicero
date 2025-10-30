@@ -1,4 +1,6 @@
 ; N-queens problem
+; Micro benchmark
+; Based on the Are We Fast Yet paper
 
 (class Queens
 

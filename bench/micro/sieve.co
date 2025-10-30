@@ -1,5 +1,6 @@
 ; Sieve of Eratosthenes
 ; Implementation based on `Are-we-fast-yet` benchmarks
+
 (class Sieve
   (method (benchmark){
     (self._sieve 5000)
@@ -38,5 +39,7 @@
    })
 )
 (set x (new Sieve))
-(set answer (x.benchmark))
-(x.verify_result answer)
+{
+  (set answer (x.benchmark))
+  (x.verify_result answer)
+}

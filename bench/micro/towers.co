@@ -70,5 +70,7 @@
   (method (verify_result result) (= result 8191))
 )
 (set x (new Towers))
-(set moves (x.benchmark))
-(x.verify_result moves)
+{
+  (set moves (x.benchmark))
+  (x.verify_result moves)
+}

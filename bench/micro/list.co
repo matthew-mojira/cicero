@@ -1,4 +1,6 @@
-;; List creation and traversal micro benchmark
+; List creation and traversal micro benchmark
+; Micro benchmark
+; Based on the Are We Fast Yet paper
 
 (class Element
   (field _val 0)

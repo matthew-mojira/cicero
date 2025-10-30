@@ -1,3 +1,6 @@
+; Mandelbrot micro benchmark
+; Based on the `Are We fast Yet` paper
+
 (class Mandelbrot
       
     (method (inner_benchmark_loop inner_iterations){

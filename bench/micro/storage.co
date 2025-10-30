@@ -1,6 +1,8 @@
 ; Tree of arrays to stress GC
 ; Micro Benchmark
+; Based on the Are We Fast Yet paper
 
+{
 (class Random
   (field _seed 74755)
 
@@ -49,7 +51,10 @@
   
   (method (verify_result result) (= result 5461))
 )
+}
 
 (set x (new Storage))
-(set answer (x.benchmark))
-(x.verify_result answer)
+{
+  (set answer (x.benchmark))
+  (x.verify_result answer)
+}

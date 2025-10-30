@@ -1,3 +1,6 @@
+; Micro benchmark: Permute
+; Based on the Are We Fast Yet paper
+
 (class Permute
   (field _count 0)
   (field _v ())
@@ -37,5 +40,7 @@
 )
 
 (set x (new Permute))
-(set answer (x.benchmark))
-(x.verify_result answer)
+{
+  (set answer (x.benchmark))
+  (x.verify_result answer)
+}

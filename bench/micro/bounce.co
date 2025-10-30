@@ -1,5 +1,6 @@
 ; Simulation of a box with bouncing balls
 ; Micro benchmark
+; Based on the Are We Fast Yet paper
 
 (class Ball
   (field _x 0)
@@ -107,7 +108,9 @@
 (func (custom_abs number)
   (if (>= number 0) number (number.neg))
 )
-
 (set x (new Bounce))
-(set answer (x.benchmark))
-(x.verify_result answer)
+
+{
+  (set answer (x.benchmark))
+  (x.verify_result answer)
+}
