@@ -1,4 +1,5 @@
 ; Requirements: `Vector.co`
+{
 (set _INITIAL_CAPACITY 16)
 
 (class Entry
@@ -236,3 +237,4 @@
     values
    })
 )
+}
