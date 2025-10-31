@@ -1,27 +1,29 @@
+; CD macro benchmark
 ; Airplane collision detector simulation based on the Are We Fast Yet benchmark
 
 {
-(set MIN_X 0.0)
-(set MIN_Y 0.0)
-(set MAX_X 1000.0)
-(set MAX_Y 1000.0)
-(set MIN_Z 0.0)
-(set MAX_Z 10.0)
-(set PROXIMITY_RADIUS 1.0)
-(set GOOD_VOXEL_SIZE (* PROXIMITY_RADIUS 2.0))
+    (set MIN_X 0.0)
+    (set MIN_Y 0.0)
+    (set MAX_X 1000.0)
+    (set MAX_Y 1000.0)
+    (set MIN_Z 0.0)
+    (set MAX_Z 10.0)
+    (set PROXIMITY_RADIUS 1.0)
+    (set GOOD_VOXEL_SIZE (* PROXIMITY_RADIUS 2.0))
 
-(func (_compare_numbers a b){
-    (if (= a b) 0 {
-    ;else
-        (if (< a b) -1 {
+    (func (_compare_numbers a b){
+        (if (= a b) 0 {
         ;else
-            (if (> a b) 1 {
+            (if (< a b) -1 {
             ;else
-                (if (= a a) 1 -1)
+                (if (> a b) 1 {
+                ;else
+                    (if (= a a) 1 -1)
+                })
             })
         })
     })
-})
+}
 
 (class _Vector2D
     (field x ())
@@ -94,22 +96,24 @@
     })
 )
 
-(set _horizontal (new _Vector2D))
-(_horizontal.init-values GOOD_VOXEL_SIZE 0.0)
+{
+    (set _horizontal (new _Vector2D))
+    (_horizontal.init-values GOOD_VOXEL_SIZE 0.0)
 
-(set _vertical (new _Vector2D))
-(_vertical.init-values 0.0 GOOD_VOXEL_SIZE)
+    (set _vertical (new _Vector2D))
+    (_vertical.init-values 0.0 GOOD_VOXEL_SIZE)
 
-(set RED 1)
-(set BLACK 2)
+    (set RED 1)
+    (set BLACK 2)
 
-(func (_tree_minimum x){
-    (set current x)
-    (while (!= current.left ())
-        (set current current.left)
-    )
-    current
-})
+    (func (_tree_minimum x){
+        (set current x)
+        (while (!= current.left ())
+            (set current current.left)
+        )
+        current
+    })
+}
 
 (class _Node
     (field key ())
@@ -888,7 +892,6 @@
 
 (set x (new CD))
 (x.inner_benchmark_loop 2)
-}
 (x.inner_benchmark_loop 10)
 (x.inner_benchmark_loop 100)
 (x.inner_benchmark_loop 200)

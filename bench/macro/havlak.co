@@ -1,5 +1,7 @@
-; Havlak benchmark
+; Havlak macro benchmark
+; Based on the Are We Fast Yet paper
 ; Requirements: `vector.co`, `identity_dictionary.co`, `set.co`, `identity_set.co`
+
 (class Havlak
   (method (inner_benchmark_loop inner_iterations){
     (set looptester (new _LoopTesterApp))
@@ -325,18 +327,20 @@
 
 )
 
-(set _UNVISITED 2_147_483_647)
-(set _MAXNONBACKPREDS (* 32 1024))
+{
+  (set _UNVISITED 2_147_483_647)
+  (set _MAXNONBACKPREDS (* 32 1024))
 
-; No support for enum classes in cicero
-; So just variables used for `_BasicBlockClass`
-(set BB_TOP 0)  ; uninitialized
-(set BB_NONHEADER 1)  ; a regular BB
-(set BB_REDUCIBLE 2)  ; reducible loop
-(set BB_SELF 3)  ; single BB loop
-(set BB_IRREDUCIBLE 4)  ; irreducible loop
-(set BB_DEAD 5)  ; a dead BB
-(set BB_LAST 6)  ; Sentinel
+  ; No support for enum classes in cicero
+  ; So just variables used for `_BasicBlockClass`
+  (set BB_TOP 0)  ; uninitialized
+  (set BB_NONHEADER 1)  ; a regular BB
+  (set BB_REDUCIBLE 2)  ; reducible loop
+  (set BB_SELF 3)  ; single BB loop
+  (set BB_IRREDUCIBLE 4)  ; irreducible loop
+  (set BB_DEAD 5)  ; a dead BB
+  (set BB_LAST 6)  ; Sentinel
+}
 
 (class _HavlakLoopFinder
   (field _cfg ())
@@ -553,9 +557,10 @@
     (back_preds.for_each each)
   })
 )
-(class StateClass (field last_id 0))
-
-(set x (new Havlak))
+{
+  (class StateClass (field last_id 0))
+  (set x (new Havlak))
+}
 (x.inner_benchmark_loop 1)
 (x.inner_benchmark_loop 15)
 (x.inner_benchmark_loop 150)

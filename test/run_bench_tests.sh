@@ -11,13 +11,23 @@ DEPS=''
 
 # Add all the dependencies to provide the executable as arguments
 deps_for_macro(){
+    DEPS=''
     for file in $(cat $SCRIPT_LOC/bench/init.conf | grep -v -E '^=|;'); do
         DEPS+="${SOM}/${file} "
     done
 }
 
-reset_deps(){
-    DEPS=''
+update_deps(){
+    if [ -e "$MACRO/$SUITE.co" ]; then
+        deps_for_macro
+    else 
+        if [ -e "$MICRO/$SUITE.co" ]; then
+            DEPS=''
+        else
+            echo "ERROR: Invalid test suite"
+            exit 1
+        fi
+    fi
 }
 
 source $SCRIPT_LOC/test_core.sh
@@ -36,7 +46,7 @@ for bench in $TEST_SUITES; do
         if [ -e "$MICRO/$BENCH.co" ]; then
             cp $MICRO/$BENCH.co $T
         else 
-            if [ -e "$MICRO/$BENCH.co" ]; then
+            if [ -e "$MACRO/$BENCH.co" ]; then
                 cp $MACRO/$BENCH*.co $T
             else
                 echo "ERROR: Invalid test suite"

@@ -1,4 +1,5 @@
-; Requires `vector.co`, `identity_dictionary.co`
+; DeltaBlue macro benchmark
+; Based on the Are We Fast Yet paper
 
 (class DeltaBlue
   (method (inner_benchmark_loop inner_iterations){
@@ -277,7 +278,7 @@
   (set i 0)
   (while (< i (n.pred)){
     (set dest (dests.at i))
-    (if (!= dest.value (+ (* 5 (i+1)) 1000))
+    (if (!= dest.value (+ (* 5 (+ i 1)) 1000))
       (raise "Projection test 3 failed!")
     ())
 
@@ -288,7 +289,7 @@
   (set i 0)
   (while (< i (n.pred)){
     (set dest (dests.at i))
-    (if (!= dest.value (+ (* 5 (i+1)) 2000))
+    (if (!= dest.value (+ (* 5 (+ i 1)) 2000))
       (raise "Projection test 4 failed!")
     ())
 
@@ -303,51 +304,53 @@
   (method (custom_hash) self._hash)
 )
 
-(set _ABSOLUTE_STRONGEST (new _Sym))
-(_ABSOLUTE_STRONGEST.init-values 0)
+{
+  (set _ABSOLUTE_STRONGEST (new _Sym))
+  (_ABSOLUTE_STRONGEST.init-values 0)
 
-(set _REQUIRED (new _Sym))
-(_REQUIRED.init-values 1)
+  (set _REQUIRED (new _Sym))
+  (_REQUIRED.init-values 1)
 
-(set _STRONG_PREFERRED (new _Sym))
-(_STRONG_PREFERRED.init-values 2)
+  (set _STRONG_PREFERRED (new _Sym))
+  (_STRONG_PREFERRED.init-values 2)
 
-(set _PREFERRED (new _Sym))
-(_PREFERRED.init-values 3)
+  (set _PREFERRED (new _Sym))
+  (_PREFERRED.init-values 3)
 
-(set _STRONG_DEFAULT (new _Sym))
-(_STRONG_DEFAULT.init-values 4)
+  (set _STRONG_DEFAULT (new _Sym))
+  (_STRONG_DEFAULT.init-values 4)
 
-(set _DEFAULT (new _Sym))
-(_DEFAULT.init-values 5)
+  (set _DEFAULT (new _Sym))
+  (_DEFAULT.init-values 5)
 
-(set _WEAK_DEFAULT (new _Sym))
-(_WEAK_DEFAULT.init-values 6)
+  (set _WEAK_DEFAULT (new _Sym))
+  (_WEAK_DEFAULT.init-values 6)
 
-(set _ABSOLUTE_WEAKEST (new _Sym))
-(_ABSOLUTE_WEAKEST.init-values 7)
+  (set _ABSOLUTE_WEAKEST (new _Sym))
+  (_ABSOLUTE_WEAKEST.init-values 7)
 
-(class _Strength
-  (field _symbolic_value ())
-  (field arithmetic_value ())
+  (class _Strength
+    (field _symbolic_value ())
+    (field arithmetic_value ())
 
-  (method (init-values strength_sym){
-    (set-field _symbolic_value self strength_sym)
-    (set-field arithmetic_value self (_strength_table.at strength_sym))
-  })
+    (method (init-values strength_sym){
+      (set-field _symbolic_value self strength_sym)
+      (set-field arithmetic_value self (_strength_table.at strength_sym))
+    })
 
-  (method (same_as s) (= self.arithmetic_value s.arithmetic_value))
-  (method (stronger s) (< self.arithmetic_value s.arithmetic_value))
-  (method (weaker s) (> self.arithmetic_value s.arithmetic_value))
+    (method (same_as s) (= self.arithmetic_value s.arithmetic_value))
+    (method (stronger s) (< self.arithmetic_value s.arithmetic_value))
+    (method (weaker s) (> self.arithmetic_value s.arithmetic_value))
 
-  (method (strongest s)
-    (if (s.stronger self) s self)
+    (method (strongest s)
+      (if (s.stronger self) s self)
+    )
+
+    (method (weakest s)
+      (if (s.weaker self) s self)
+    )
   )
-
-  (method (weakest s)
-    (if (s.weaker self) s self)
-  )
-)
+}
 
 (func (_Strength_of strength){
   (_strength_constant.at strength)
@@ -381,15 +384,17 @@
   strength_constant
 })
 
-(set _strength_table (_create_strength_table))
-(set _strength_constant (_create_strength_constants))
+{
+  (set _strength_table (_create_strength_table))
+  (set _strength_constant (_create_strength_constants))
 
-(set _absolute_weakest (_Strength_of _ABSOLUTE_WEAKEST))
-(set _required (_Strength_of _REQUIRED))
+  (set _absolute_weakest (_Strength_of _ABSOLUTE_WEAKEST))
+  (set _required (_Strength_of _REQUIRED))
 
-; Direction enum values
-(set FORWARD 1)
-(set BACKWARD 2)
+  ; Direction enum values
+  (set FORWARD 1)
+  (set BACKWARD 2)
+}
 
 ; Constraints
 (class _AbstractConstraint
@@ -726,3 +731,7 @@
 
 (set x (new DeltaBlue))
 (x.inner_benchmark_loop 1)
+(x.inner_benchmark_loop 100)
+(x.inner_benchmark_loop 200)
+(x.inner_benchmark_loop 500)
+(x.inner_benchmark_loop 1000)

@@ -108,6 +108,8 @@ run(){
                     SUITE="$(basename "$suite" ".expect")"
                     if [[ "$SUITE" == "init.conf" ]]; then
                         SKIP=0
+                    else
+                        update_deps
                     fi
                 fi
 

@@ -1,33 +1,36 @@
-; Richards benchmark based on the Are we fast yet benchmarks
+; Richards macro benchmark
+; based on the Are we fast yet benchmarks
 
-(set _NO_TASK ())
-(set _NO_WORK ())
+{
+    (set _NO_TASK ())
+    (set _NO_WORK ())
 
-(set _IDLER 0)
-(set _WORKER 1)
-(set _HANDLER_A 2)
-(set _HANDLER_B 3)
-(set _DEVICE_A 4)
-(set _DEVICE_B 5)
+    (set _IDLER 0)
+    (set _WORKER 1)
+    (set _HANDLER_A 2)
+    (set _HANDLER_B 3)
+    (set _DEVICE_A 4)
+    (set _DEVICE_B 5)
 
-(set _NUM_TYPES 6)
+    (set _NUM_TYPES 6)
 
-(set _DEVICE_PACKET_KIND 0)
-(set _WORK_PACKET_KIND 1)
+    (set _DEVICE_PACKET_KIND 0)
+    (set _WORK_PACKET_KIND 1)
 
-(set _DATA_SIZE 4)
+    (set _DATA_SIZE 4)
 
-(set _TRACING false)
+    (set _TRACING false)
 
-(class Richards
+    (class Richards
 
-  (method (benchmark) {
-    (set scheduler (new _Scheduler))
-    (scheduler.start)
-   })
+    (method (benchmark) {
+        (set scheduler (new _Scheduler))
+        (scheduler.start)
+    })
 
-  (method (verify_result result) result)
-)
+    (method (verify_result result) result)
+    )
+}
 
 (class _RBObject
 
@@ -366,20 +369,22 @@
     })
 )
 
-(func (_TaskState_with_running){
-    (set task_state (new _TaskState))
-    (task_state.running)
-})
+{
+    (func (_TaskState_with_running){
+        (set task_state (new _TaskState))
+        (task_state.running)
+    })
 
-(func (_TaskState_with_waiting){
-    (set task_state (new _TaskState))
-    (task_state.waiting)
-})
+    (func (_TaskState_with_waiting){
+        (set task_state (new _TaskState))
+        (task_state.waiting)
+    })
 
-(func (_TaskState_with_waiting_with_packet){
-    (set task_state (new _TaskState))
-    (task_state.waiting_with_packet)
-})
+    (func (_TaskState_with_waiting_with_packet){
+        (set task_state (new _TaskState))
+        (task_state.waiting_with_packet)
+    })
+}
 
 (class _TaskControlBlock
     (extends _TaskState)
@@ -446,5 +451,7 @@
     arr
 })
 
-(set x (new Richards))
-(x.benchmark)
+{
+    (set x (new Richards))
+    (x.benchmark)
+}
