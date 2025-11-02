@@ -5,7 +5,7 @@ class CharObject(char: byte) extends Object {
 	def isTrue()  -> bool   { return true; }
 
 	/* METHODS */
-	def ch_display() => Result.OK(StrObjects.fromString(display()));
+	def ch_display() => Result.OK(StrObjects.fromString(Strings.format1("%c", char)));
 	
 	def ch_concat(obj: Object) -> Result{
 		if (obj.instanceOf(ClassObjects.classStr)){

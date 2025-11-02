@@ -46,8 +46,13 @@ class StrObject(str: string) extends Object {
 		def end_index = end.val.longValue();
 		if (start_index < 0 || start_index > str.length)
 			return Result.Exn(ExnObjects.fromVirgil("str.substring", outOfBounds(str.length, start_index)));
-		if (end_index > str.length || end_index > str.length)
+
+		var max_limit = if(str.length ==0, 1, str.length);
+		if (end_index < 0 || end_index > max_limit)
 			return Result.Exn(ExnObjects.fromVirgil("str.substring", outOfBounds(str.length, end_index)));
+
+		if (str.length == 0 || start_index >= end_index)
+			return Result.OK(StrObjects.fromString(""));
 
 		def sb = StringBuilder.new();
 		var i = start_index;
