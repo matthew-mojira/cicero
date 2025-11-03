@@ -73,6 +73,7 @@ Methods:
 * `(d.< o)`
 * `(d.<= o)`
 * `(d.> o)`
+* `(d.>= o)`
 All the above arithmetic operations(`+`, `-`, `*`, `/`) return a `double`. `o` can be either `double` or `int`. Raises exception if `int`(bigInteger) cannot be represented as a `double`.
 
 ## exn
