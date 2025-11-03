@@ -35,7 +35,7 @@ function print_testing() {
 
 if [ "$TEST_TARGETS" = "" ]; then
     if [ "$TEST_TARGET" = "" ]; then
-        TEST_TARGETS="v3i x86-linux x86-64-linux jvm wave"
+        TEST_TARGETS="v3i x86-linux x86-64-linux jvm wasm-wave"
     else
         TEST_TARGETS="$TEST_TARGET"
     fi
@@ -102,7 +102,11 @@ function run_tests() {
 # Program tests
 for target in $TEST_TARGETS; do
     TEST_TARGET=$target
-    BINARY=$BIN/cicero.$target
+    if [ "$TEST_TARGET" == "wasm-wave" ]; then
+        BINARY="wizeng $BIN/cicero.wasm"
+    else
+	BINARY=$BIN/cicero.$target
+    fi
    
     for tier in $TEST_TIERS; do
         TEST_TIER=$tier
