@@ -1,0 +1,110 @@
+// used to calculate probabilities
+def MAX_NESTING: int = 30;
+
+// used to multiply the random number `x` such that -1 <= x <= 1
+def NUMBER_MULTIPLIER: double = 1e7;
+def NUMBER_OF_CASES: int = 200;
+def OUTPUT_FILE_NAME: string = "double2";
+
+enum Operator(str: string){
+  PLUS("+"),
+  MINUS("-"),
+  MUL("*"),
+  DIV("/")
+}
+def operators: Array<Operator> = [Operator.PLUS, Operator.MINUS, Operator.MUL, Operator.DIV];
+
+class Expr(expr: string, val: double){
+}
+
+def generate(current_nesting: int) -> Expr{
+  def rint = Random.random(MAX_NESTING+1);
+  // Base case
+  if (rint <= current_nesting){
+    // generate a double
+    def random_double: double = rand() * NUMBER_MULTIPLIER;
+    def float_str = float_string(random_double);
+
+		def np = NumberParser.new(float_str);
+    var dval: double = 10.5;
+    if (np.parse()){
+      var fval = NumberParserValue.Float.!(np.val);
+      dval = DoubleParserHelper.f64(fval.sign, fval.exp, fval.mantissa);
+    }
+    return Expr.new(float_string(dval), dval);
+
+  // Recursive base
+  } else {
+    def left = generate(current_nesting+1);
+    def right = generate(current_nesting+1);
+
+    def operator = operators[Random.random(operators.length)];
+    def sb = StringBuilder.new();
+    sb.put3("( %s %s %s )", operator.str, left.expr, right.expr);
+    return Expr.new(sb.toString(), perform_operation(operator, left.val, right.val));
+  }
+}
+
+def init(fd: int){
+  def lines = [
+    "; Double Arithmetic Tests generated using settings:\n",
+    Strings.format1("; MAX_NESTING:          %d\n", MAX_NESTING),
+    Strings.format1("; NUMBER_MULTIPLIER:    %s\n", float_string(NUMBER_MULTIPLIER)),
+    Strings.format1("; NUMBER_OF_CASES:      %d\n", NUMBER_OF_CASES)
+  ];
+  for (line in lines){
+    System.fileWriteK(fd, line, 0, line.length);
+  }
+}
+
+def main(){
+  def fd = System.fileOpen(OUTPUT_FILE_NAME, false);
+  init(fd);
+
+	if (fd > 0) {
+    // init
+    System.fileWriteK(fd, "==\n", 0, 3);
+
+    for (i = 0; i < NUMBER_OF_CASES; i++) {
+        // generate a new expression
+        def expr = generate(0);
+
+        // Write the s-expression string and its value in the required test suite format
+        System.fileWriteK(fd, expr.expr, 0, expr.expr.length);
+        System.fileWriteK(fd, "\n--\n=> ", 0, 7);
+
+        var float_string = float_string(expr.val);
+        System.fileWriteK(fd, float_string, 0, float_string.length);
+        System.fileWriteK(fd, "\n--\n", 0, 4);
+    }
+    System.fileWriteK(fd, "\n", 0, 1);
+
+	} else {
+		System.puts("Could not open file for writing\n");
+	}
+
+	System.fileClose(fd);
+}
+
+/* utils */
+def perform_operation(operator: Operator, val1: double, val2: double) -> double{
+    match (operator) {
+      PLUS => return val1 + val2;
+      MINUS => return val1 - val2;
+      MUL => return val1 * val2;
+      _ => return val1 / val2;
+    }
+}
+
+/* rand double generator */
+def rand() -> double{
+  return (double.!(Random.next()) + 0.5) / double.!(int.max);
+}
+
+/* utils to print floats */
+def FLOAT_MAX_LENGTH: int = 14;
+def float_string(val: double) -> string{
+  var a: Array<byte> = Array<byte>.new(FLOAT_MAX_LENGTH);
+  var l = Floats.renderFloat(float.roundd(val), a, 0);
+	return Strings.format1("%s", Arrays.range(a, 0, l));
+}
