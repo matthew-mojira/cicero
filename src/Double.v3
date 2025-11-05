@@ -1,6 +1,9 @@
 def FLOAT_MAX_LENGTH: int = 14;
 def PI = 3.141592653589793d;
 class DoubleObject(val: double) extends Object {
+
+	private new(){}
+
 	// @todo: need to work on display for doubles without need to roundd to floats;
 	// but this would be smthg to work on the virgil side
 	def display() -> string{
@@ -46,10 +49,10 @@ class DoubleObject(val: double) extends Object {
 
 	def do_sin() -> Result{
 		var x = normalize_angle(this.val);
-		if (x == -1.0){
+		if (CiceroOptions.sanityChecks && x == 1.0)
 			// should never happen
 			return Result.Exn(ExnObjects.fromVirgil("sin", "Unable to compute `sin`"));
-		}
+
 		var result = 0.0;
 		var sign = 1.0;
 		var power = x;
@@ -68,10 +71,10 @@ class DoubleObject(val: double) extends Object {
 
 	def do_cos() -> Result{
 		var x = normalize_angle(this.val);
-		if (x == -1.0){
+		if (CiceroOptions.sanityChecks && x == -1.0)
 			// should never happen
 			return Result.Exn(ExnObjects.fromVirgil("cos", "Unable to compute `cos`"));
-		}
+
 		var result = 0.0;
 		var sign = 1.0;
 		var power = 1.0;
@@ -101,7 +104,7 @@ class DoubleObject(val: double) extends Object {
 			def dval = (DoubleObject.!(obj).val);
 			return Result.OK(DoubleObjects.fromDouble(val + dval));
 		}
-		return Result.Exn(ExnObjects.fromVirgil("+", "Can only perform '+' on a `double` with another `double` or `int`"));
+		return Result.Exn(ExnObjects.fromVirgil("+", Exceptions.invalidNumericOperand("+", "double")));
 	}
 
 	def do_sub(obj: Object) -> Result{
@@ -113,7 +116,7 @@ class DoubleObject(val: double) extends Object {
 			def dval = (DoubleObject.!(obj).val);
 			return Result.OK(DoubleObjects.fromDouble(val - dval));
 		}
-		return Result.Exn(ExnObjects.fromVirgil("-", "Can only perform '-' on a `double` with another `double` or `int`"));
+		return Result.Exn(ExnObjects.fromVirgil("-", Exceptions.invalidNumericOperand("-", "double")));
 	}
 
 	def do_mul(obj: Object) -> Result{
@@ -125,7 +128,7 @@ class DoubleObject(val: double) extends Object {
 			def dval = (DoubleObject.!(obj).val);
 			return Result.OK(DoubleObjects.fromDouble(val * dval));
 		}
-		return Result.Exn(ExnObjects.fromVirgil("*", "Can only perform '*' on a `double` with another `double` or `int`"));
+		return Result.Exn(ExnObjects.fromVirgil("*", Exceptions.invalidNumericOperand("*", "double")));
 	}
 
 	def do_div(obj: Object) -> Result{
@@ -138,7 +141,7 @@ class DoubleObject(val: double) extends Object {
 			if (dval == 0) return Result.Exn(ExnObjects.fromVirgil("double.div", divideByZero));
 			return Result.OK(DoubleObjects.fromDouble(val / dval));
 		}
-		return Result.Exn(ExnObjects.fromVirgil("/", "Can only perform '/' on a `double` with another `double` or `int`"));
+		return Result.Exn(ExnObjects.fromVirgil("/", Exceptions.invalidNumericOperand("/", "double")));
 	}
 
 	/* Comparisons */
@@ -164,7 +167,7 @@ class DoubleObject(val: double) extends Object {
 			def iobj = IntObject.!(obj);
 			return DoubleIntOperations.ltDoubleInt(this, iobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil("<", "Can only perform '<' on a `double` with another `double` or `int`"));
+		return Result.Exn(ExnObjects.fromVirgil("<", Exceptions.invalidNumericOperand("<", "double")));
 	}
 
 	def do_gt(obj: Object) -> Result{
@@ -176,7 +179,7 @@ class DoubleObject(val: double) extends Object {
 			def iobj = IntObject.!(obj);
 			return DoubleIntOperations.gtDoubleInt(this, iobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil(">", "Can only perform '>' on a `double` with another `double` or `int`"));
+		return Result.Exn(ExnObjects.fromVirgil(">", Exceptions.invalidNumericOperand(">", "double")));
 	}
 
 	def do_geq(obj: Object) -> Result{
@@ -188,7 +191,7 @@ class DoubleObject(val: double) extends Object {
 			def iobj = IntObject.!(obj);
 			return DoubleIntOperations.geqDoubleInt(this, iobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil(">=", "Can only perform '>=' on a `double` with another `double` or `int`"));
+		return Result.Exn(ExnObjects.fromVirgil(">=", Exceptions.invalidNumericOperand(">=", "double")));
 	}
 
 	def do_leq(obj: Object) -> Result{
@@ -200,7 +203,7 @@ class DoubleObject(val: double) extends Object {
 			def iobj = IntObject.!(obj);
 			return DoubleIntOperations.leqDoubleInt(this, iobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil("<=", "Can only perform '<=' on a `double` with another `double` or `int`"));
+		return Result.Exn(ExnObjects.fromVirgil("<=", Exceptions.invalidNumericOperand("<=", "double")));
 	}
 }
 

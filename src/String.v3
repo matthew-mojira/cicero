@@ -54,13 +54,9 @@ class StrObject(str: string) extends Object {
 		if (str.length == 0 || start_index >= end_index)
 			return Result.OK(StrObjects.fromString(""));
 
-		def sb = StringBuilder.new();
-		var i = start_index;
-		while (i < end_index){
-			sb.putc(str[i]);
-			i += 1;
-		}
-		return Result.OK(StrObjects.fromString(sb.toString()));
+		def range: Range<byte> = str[start_index ... end_index];
+		def substring: Array<byte> = Ranges.dup(range); // Array<byte> is string
+		return Result.OK(StrObjects.fromString(substring));
 	}
 }
 

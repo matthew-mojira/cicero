@@ -28,7 +28,7 @@ class IntObject(val: BigInteger) extends Object {
 			def dobj = DoubleObject.!(obj);
 			return DoubleIntOperations.addIntDouble(this, dobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil("+", "Can only perform '+' on an `int` with another `int` or `double`"));
+		return Result.Exn(ExnObjects.fromVirgil("+", Exceptions.invalidNumericOperand("+", "int")));
 	}
 
 	def i_sub(obj: Object) -> Result{
@@ -40,7 +40,7 @@ class IntObject(val: BigInteger) extends Object {
 			def dobj = DoubleObject.!(obj);
 			return DoubleIntOperations.subIntDouble(this, dobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil("-", "Can only perform '-' on an `int` with another `int` or `double`"));
+		return Result.Exn(ExnObjects.fromVirgil("-", Exceptions.invalidNumericOperand("-", "int")));
 	}
 
 	def i_mul(obj: Object) -> Result{
@@ -52,7 +52,7 @@ class IntObject(val: BigInteger) extends Object {
 			def dobj = DoubleObject.!(obj);
 			return DoubleIntOperations.mulIntDouble(this, dobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil("*", "Can only perform '*' on an `int` with another `int` or `double`"));
+		return Result.Exn(ExnObjects.fromVirgil("*", Exceptions.invalidNumericOperand("*", "int")));
 	}
 
 	def i_div(obj: Object) -> Result{
@@ -66,7 +66,7 @@ class IntObject(val: BigInteger) extends Object {
 			def dobj = DoubleObject.!(obj);
 			return DoubleIntOperations.divIntDouble(this, dobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil("/", "Can only perform '/' on an `int` with another `int` or `double`"));
+		return Result.Exn(ExnObjects.fromVirgil("/", Exceptions.invalidNumericOperand("/", "int")));
 	}
 
 	def i_mod(that: IntObject) => if (that.val.signum == 0,
@@ -95,7 +95,7 @@ class IntObject(val: BigInteger) extends Object {
 			def dobj = DoubleObject.!(obj);
 			return DoubleIntOperations.ltIntDouble(this, dobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil("<", "Can only perform '<' on an `int` with another `int` or `double`"));
+		return Result.Exn(ExnObjects.fromVirgil("<", Exceptions.invalidNumericOperand("<", "int")));
 	}
 
 	def i_leq(obj: Object) -> Result{
@@ -107,7 +107,7 @@ class IntObject(val: BigInteger) extends Object {
 			def dobj = DoubleObject.!(obj);
 			return DoubleIntOperations.leqIntDouble(this, dobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil("<=", "Can only perform '<=' on an `int` with another `int` or `double`"));
+		return Result.Exn(ExnObjects.fromVirgil("<=", Exceptions.invalidNumericOperand("<=", "int")));
 	}
 
 	def i_gt(obj: Object) -> Result{
@@ -119,7 +119,7 @@ class IntObject(val: BigInteger) extends Object {
 			def dobj = DoubleObject.!(obj);
 			return DoubleIntOperations.gtIntDouble(this, dobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil(">", "Can only perform '>' on an `int` with another `int` or `double`"));
+		return Result.Exn(ExnObjects.fromVirgil(">", Exceptions.invalidNumericOperand(">", "int")));
 	}
 
 	def i_geq(obj: Object) -> Result{
@@ -131,7 +131,7 @@ class IntObject(val: BigInteger) extends Object {
 			def dobj = DoubleObject.!(obj);
 			return DoubleIntOperations.geqIntDouble(this, dobj);
 		}
-		return Result.Exn(ExnObjects.fromVirgil(">=", "Can only perform '>=' on an `int` with another `int` or `double`"));
+		return Result.Exn(ExnObjects.fromVirgil(">=", Exceptions.invalidNumericOperand(">=", "int")));
 	}
 
 	/* logical */
