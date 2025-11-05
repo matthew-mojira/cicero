@@ -1,0 +1,16 @@
+; simple class and method
+(class counter
+  (field value 0)
+  (method (increment)
+    (set-field value self (self.value.succ)))
+  (method (reset)
+    (set-field value self 0))
+)
+(set c (new counter))
+(c.increment)
+(c.increment)
+(c.increment)
+(c.increment)
+(c.increment)
+(c.increment)
+c.value

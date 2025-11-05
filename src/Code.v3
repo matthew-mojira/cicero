@@ -2,7 +2,7 @@ type Code {
 	case Virgil(fn: Range<Object> -> Result);
 	case AST(ast: AST);
 	case Bytecode(bytecode: Bytecode);
-	case Wasm(wasm: WasmFunction);
+	case Wasm(wasm: WasmFunction); // defined at bottom of file
 }
 
 class CodeObject(range: FileRange) extends Object { // XXX range is null if code is virgil
@@ -14,9 +14,11 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 			Virgil   => System.error("compile error", "attempting to compile Virgil code to bytecode");
 			Bytecode => System.error("compile error", "compiling what has already been compiled to bytecode");
 			Wasm     => System.error("compile error", "compiling what has already been compiled to wasm");
-			AST(ast) => code = if(CiceroOptions.enableWasm,
-					Code.Wasm(WasmCompiler.new(ast, params).compile()),
-					Code.Bytecode(BytecodeCompiler.new(ast, params).extract()));
+			AST(ast) => match (CiceroOptions.evalTier) {
+				1 => code = Code.Bytecode(BytecodeCompiler.new(ast, params).extract());
+				2 => code = Code.Wasm(WasmCompiler.new(ast, params).compile());
+				_ => System.error("compile error", "attempting to compile on interpreter tier");
+			}
 		}
 	}
 
@@ -63,4 +65,18 @@ def justReturnPoopCrap(range: Range<Object>) -> Result {
 
 def doNotInstantiateThisClass(range: Range<Object>) -> Result {
 	return Result.Exn(ExnObjects.fromVirgil("doNotInstantiateThisClass", Exceptions.doNotInstantiateThisClass));
+}
+
+// sorted by arity
+type WasmFunction {
+	case Func0(fn: FrameObject -> Object);
+	case Func1(fn: (FrameObject, Object) -> Object);
+	case Func2(fn: (FrameObject, Object, Object) -> Object);
+	case Func3(fn: (FrameObject, Object, Object, Object) -> Object);
+	case Func4(fn: (FrameObject, Object, Object, Object, Object) -> Object);
+	case Func5(fn: (FrameObject, Object, Object, Object, Object, Object) -> Object);
+	case Func6(fn: (FrameObject, Object, Object, Object, Object, Object, Object) -> Object);
+	case Func7(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object) -> Object);
+	case Func8(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object) -> Object);
+	case Func9(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object, Object) -> Object);
 }

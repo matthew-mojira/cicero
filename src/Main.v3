@@ -17,18 +17,11 @@ def main(args: Array<string>) -> int {
 
 		return 0;
 	}
-	match (Option<int>.!(opt.map["tier"]).get()) {
-		0 => CiceroOptions.enableTier1 = false;
-		1 => {
-			CiceroOptions.enableTier1 = true;
-			CiceroOptions.enableIC = Option<bool>.!(opt.map["cache"]).get();
-		}
-		2 => {
-			CiceroOptions.enableTier1 = true;
-			CiceroOptions.enableWasm = true;
-			CiceroOptions.enableIC = false;
-		}
-		_ => System.error("arg error", Strings.format1("unrecognized tier: %d", Option<int>.!(opt.map["tier"]).get()));
+	def tier = Option<int>.!(opt.map["tier"]).get();
+	if (tier < 0 || tier > 2) {
+		System.error("arg error", Strings.format1("unrecognized tier: %d", tier));
+	} else {
+		CiceroOptions.evalTier = tier;
 	}
 
 	def frame = FrameObjects.newTopFrame();
@@ -47,6 +40,10 @@ def main(args: Array<string>) -> int {
 		if (reader.ok) {
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
+				// compile to bytecode if necessary
+				if (CiceroOptions.evalTier > 0)
+					expr.compile([]);
+
 				// evaluate
 				frame.evalCode(expr);
 				match (frame.result) {
@@ -130,8 +127,8 @@ def loadCore(frame: FrameObject) {
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
 		// FIXME compile the core too
- 		if (CiceroOptions.enableTier1) {
- 			// expr.compile([]);
+ 		if (CiceroOptions.evalTier > 0) {
+ 			expr.compile([]);
 		}
 		frame.evalCode(expr);
 	}

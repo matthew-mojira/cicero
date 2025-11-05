@@ -1,0 +1,10 @@
+(set i 0)
+(while (< i 1000) {
+  (set j 0)
+  (while (< j 1000) {
+    (set j (j.succ))
+  })
+  (set i (i.succ))
+})
+i
+j

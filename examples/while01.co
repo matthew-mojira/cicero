@@ -1,0 +1,5 @@
+(set i 0)
+(while (if (< i 10000) i ()) {
+  (set i (i.succ))
+})
+i

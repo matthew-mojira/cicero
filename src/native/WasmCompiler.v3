@@ -1,0 +1,8 @@
+class WasmCompiler {
+	new(ast: AST, params: Array<string>) {}
+
+	def compile() -> WasmFunction {
+		System.error("WasmCompiler", "compiling to wasm not supported on this target");
+		return WasmFunction.Func0(null);
+	}
+}

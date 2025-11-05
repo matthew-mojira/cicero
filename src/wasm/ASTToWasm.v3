@@ -1,5 +1,3 @@
-// def isTrue(o: Object) => o.isTrue();
-
 def GET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.getGlobal));
 def GET_NONLOCAL: u32 = u32.view(CiWasmTarget.functionId(WasmFrame.getNonlocal));
 def SET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.setGlobal));

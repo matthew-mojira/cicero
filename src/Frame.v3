@@ -107,7 +107,12 @@ component FrameObjects {
 	}
 	def newTopFrame() -> FrameObject {
 		var frame: FrameObject;
-		frame = ASTFrame.new(null, null, null, null);
+		match (CiceroOptions.evalTier) {
+			0 => frame = ASTFrame.new(null, null, null, null);
+			1 => frame = BytecodeFrame.new(null, null, null, null);
+			2 => frame = WasmFrame.new(null, null, null, null);
+			_ => ; // unreachable
+		}
 		for (builtin in Builtin.set.all) {
 			frame.globals[builtin.id] = builtin.val;
 		}

@@ -3,9 +3,8 @@ component CiceroOptions {
 	def sanityChecks = false;
 	
 	/* tiering/evaluation options */
-	var enableTier1:  bool;
-	var enableIC:     bool;
-	var enableWasm:   bool;
+	var evalTier: int;
+	def enableIC: bool = false; // XXX always disabled
 
 	/* compile-baked optimizations */
 	def useLazyMethods: bool = true;

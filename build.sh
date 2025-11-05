@@ -31,7 +31,7 @@ if [ ! -e "$VIRGIL_LIB/util/Vector.v3" ]; then
     exit 1
 fi
     
-ENGINE="src/*.v3 src/util/*.v3 src/eval/*.v3 src/wasm/*.v3 $VIRGIL_LIB/util/*.v3"
+ENGINE="src/*.v3 src/util/*.v3 src/eval/*.v3 $VIRGIL_LIB/util/*.v3"
 
 PROGRAM=$1
 TARGET=$2
@@ -58,7 +58,11 @@ function make_build_file() {
 
 # compute sources
 if [ "$PROGRAM" = "cicero" ]; then
-    SOURCES="$ENGINE"
+    if [ "$TARGET" = "wasm-wave" ]; then
+        SOURCES="$ENGINE src/wasm/*.v3"
+    else
+        SOURCES="$ENGINE src/native/*.v3"
+    fi
 else
     exit_usage
 fi
@@ -90,7 +94,7 @@ echo "}" >> "$CICERO_TEXT"
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="-heap-size=1000M -stack-size=16M -O2 -symbols"
+V3C_OPTS="-heap-size=1900M -stack-size=16M -O2 -symbols"
 
 # build
 exe=${PROGRAM}.${TARGET}
