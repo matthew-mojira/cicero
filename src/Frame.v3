@@ -117,7 +117,7 @@ component FrameObjects {
 	/* Frame used to evaluate top-level code. */
 	def newTopFrame() -> FrameObject {
 		var frame: FrameObject;
-		if (CiceroOptions.enableTier1) {
+		if (CLOptions.TIER.get() > 0) {
 			frame = BytecodeFrame.new(null, null, null, null);
 		} else {
 			frame = ASTFrame.new(null, null, null, null);

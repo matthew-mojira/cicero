@@ -1,10 +1,6 @@
+/* Compile-time specific options */
 component CiceroOptions {
-	/* compile-time extras */
 	def sanityChecks = false;
-	
-	/* tiering/evaluation options */
-	var enableTier1:  bool;
-	var enableIC:     bool;
 
 	/* compile-baked optimizations */
 	def useLazyMethods: bool = true;
@@ -16,4 +12,37 @@ component CiceroOptions {
 
 	/* profiling */
 	def profileBytecode = false;
+}
+
+// for parsing
+def opt = BasicOptions.new();
+def ciceroOpt = OptionGroup.new("CICERO", opt);
+
+/* Runtime options (set on the command line or implied by other options) */
+component CLOptions {
+	// cicero options
+	def HELP = ciceroOpt.newBoolOption("help", false, 
+			"Print this help text.");
+	def VERSION = ciceroOpt.newBoolOption("version", false, 
+			"Print the version of this interpreter and exit.");
+	def TIER = ciceroOpt.newIntOption("tier", 0, 
+			"Set the evaluation tier for the interpreter (default: 0).");
+	def CACHE = ciceroOpt.newBoolOption("cache", false, 
+			"Use inline caches for the tier1 interpreter.");
+	def REPL = ciceroOpt.newBoolOption("repl", false, 
+			"Open the REPL after evaluating files.");
+	def SUPPRESS_OUTPUT = ciceroOpt.newBoolOption("suppress-output", false, 
+			"Suppress the output of top-level evaluation (useful for benchmarking).");
+	def CHECK_SYNTAX = ciceroOpt.newBoolOption("check-syntax", false, 
+			"Check syntax of a program only, then exit.");
+	def FUZZING = ciceroOpt.newBoolOption("fuzzing", false, 
+			"Force program to return 0 in known failure conditions (e.g. parse error, unhandled exception). This is useful for fuzz testing, where nonzero exit codes denote some internal failure in the engine which should not happen.");
+	def parse(args: Array<string>) -> Array<string> {
+		return opt.parse(args);
+	}
+	def print() {
+		def buf = StringBuilder.new();
+		ciceroOpt.print(buf);
+		System.puts(buf.extract());
+	}
 }
