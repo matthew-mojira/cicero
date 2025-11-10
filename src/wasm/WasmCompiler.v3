@@ -253,7 +253,9 @@ class WasmCompiler {
 	}
 
 	// from BytecodeCompiler
-	def locals:     Vector<string> = Vector.new();
+	def locals: Vector<string> = Vector.new();
+	def handlerStack: Stack<int> = ArrayStack.new();
+	var blockDepth = 0;
 
 	def compile() -> WasmFunction {
 		/* TODO We will have to figure out all the locals that will be in the function. 
@@ -313,12 +315,6 @@ class WasmCompiler {
 				// TODO disable GC and implement non-moving collector, or target wasm GC
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_sleb32(ptrAt(lit));
-			}
-			// XXX unintuitively, this wildcard case is the default case, and the cases below
-			// supercede this (would go away if nested pattern matching is a thing)
-			_ => {
-				System.puts("wasm compiler error: compiling unsupported case\n");
-				System.error("wasm compiler", "compiling unsupported case");
 			}
   			VarGet(id, mode) => match (mode.data) {
   				Local    => {
@@ -390,9 +386,11 @@ class WasmCompiler {
 
 				wasm.putb(WasmOp.IF.opcode);
 				wasm.put_sleb32(BLOCK_SIG); // XXX check if this is correct
+				blockDepth++;
 				wasm.putb(WasmOp.DROP.opcode);
 				compileAST(right);
 				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
  				/* TODO call to
  			         *   isTrue(val: Object) -> (Object, bool)
  				 *                 [i32] -> [i32 i32]
@@ -415,9 +413,11 @@ class WasmCompiler {
 
  				wasm.putb(WasmOp.IF.opcode);
  				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
 				wasm.putb(WasmOp.DROP.opcode);
  				compileAST(right);
  				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
  			}
  			Apply(tgt, args) => {
 				wasm.putb(WasmOp.GET_LOCAL.opcode);
@@ -453,19 +453,23 @@ class WasmCompiler {
 				wasm.put_uleb32(IS_TRUE);
  				wasm.putb(WasmOp.IF.opcode);
  				wasm.putb(0x7F); // result i32
+				blockDepth++;
  				compileAST(left);
 				wasm.putb(WasmOp.ELSE.opcode);
  				compileAST(right);
  				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
 			}
 			Cond(cases) => {
 				wasm.putb(WasmOp.BLOCK.opcode);
 				wasm.putb(0x7F);
+				blockDepth++;
 				for (c in cases) {
 					def cond = c.0;
 					def body = c.1;
 					wasm.putb(WasmOp.BLOCK.opcode);
 					wasm.putb(0x7F);
+					blockDepth++;
 					compileAST(cond);
 					
 					wasm.putb(WasmOp.I32_CONST.opcode);
@@ -480,18 +484,64 @@ class WasmCompiler {
 					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_uleb32(1); // done
 					wasm.putb(WasmOp.END.opcode);
+					blockDepth--;
 				}
 				// FIXME throw exception here for no matching cond
 				wasm.putb(WasmOp.UNREACHABLE.opcode);
 				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
 			}
 			Raise(exn) => {
-				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(RAISE_EXCEPTION);
-				wasm.putb(WasmOp.UNREACHABLE.opcode);
-				// FIXME put real implementation here
+				compileAST(exn);
+				wasm.putb(WasmOp.BR.opcode);
+				wasm.put_sleb32(blockDepth - handlerStack.peek());
 			}
-// 			Catch(try, id, mode, catch) => ;
+ 			Catch(try, id, mode, catch) => {
+					wasm.putb(WasmOp.BLOCK.opcode);
+					wasm.putb(0x7F);
+					blockDepth++;
+						wasm.putb(WasmOp.BLOCK.opcode);
+						wasm.putb(0x7F);
+						blockDepth++;
+
+						handlerStack.push(blockDepth);
+
+						compileAST(try);
+						wasm.putb(WasmOp.BR.opcode);
+						wasm.put_uleb32(1); // ok
+
+						handlerStack.pop();
+
+						wasm.putb(WasmOp.END.opcode);
+						blockDepth--;
+
+					match (mode.data) {
+						Local => {
+							wasm.putb(WasmOp.TEE_LOCAL.opcode);
+							wasm.put_uleb32(addLocal(id));
+						}
+						Global => {
+							wasm.putb(WasmOp.SET_LOCAL.opcode);
+							wasm.putb(0 /* XXX: what is this? scratch */);
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.putb(1 /* frame */);
+							wasm.putb(WasmOp.I32_CONST.opcode);
+							wasm.put_sleb32(ptrAtStr(id)); // string
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.putb(0 /* XXX: what is this? scratch */);
+							// TODO value here
+							wasm.putb(WasmOp.CALL.opcode);
+							wasm.put_uleb32(SET_GLOBAL);
+						}
+						Nonlocal => System.error("compile error", "illegal case on catch: Nonlocal");
+					}
+					wasm.putb(WasmOp.DROP.opcode);
+					// TODO put assignment of value to mode
+					compileAST(catch);
+
+					wasm.putb(WasmOp.END.opcode);
+					blockDepth--;
+			}
 			Func(id, params, body, nonlocals) => {
  				body.compile(params);
 
@@ -530,8 +580,10 @@ class WasmCompiler {
  			While(cond, body) => {
 				wasm.putb(WasmOp.BLOCK.opcode);
 				wasm.putb(0x7F);
+				blockDepth++;
 					wasm.putb(WasmOp.LOOP.opcode);
 					wasm.putb(0x7F); // is this needed?
+					blockDepth++;
 						compileAST(cond);
 						wasm.putb(WasmOp.I32_CONST.opcode);
 						wasm.put_sleb32(IS_FALSE_COPY);
@@ -546,7 +598,9 @@ class WasmCompiler {
 						wasm.put_uleb32(0); // back to top of loop
 
 					wasm.putb(WasmOp.END.opcode);
+					blockDepth--;
 				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
 			}
  			Begin(exprs) => {
 				for (i < exprs.length - 1) {
@@ -571,10 +625,12 @@ class WasmCompiler {
 				// check failure condition
 				wasm.putb(WasmOp.IF.opcode);
 				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
 				// okay: do nothing
 				wasm.putb(WasmOp.ELSE.opcode);
 				wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
 				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
 			}
  			SetField(field, obj, val) => {
 				compileAST(obj);
@@ -592,9 +648,11 @@ class WasmCompiler {
 				// check failure condition
 				wasm.putb(WasmOp.IF.opcode);
 				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
 				wasm.putb(WasmOp.ELSE.opcode);
 				wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
 				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
 			}
  			Class(id, superclass, init, fields, methods) => {
 				// there are subcodes which are getting compiled here
