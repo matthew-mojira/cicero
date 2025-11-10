@@ -1,0 +1,5 @@
+(try {
+    1
+    (raise "Exn")
+} ; catch
+e e)

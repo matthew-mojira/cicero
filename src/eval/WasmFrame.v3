@@ -1,9 +1,8 @@
 class WasmFrame extends FrameObject {
-	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) super(prev, code, args) {
 	}
 
-	def var locals: Array<Object>;
-	def var nonlocals: Array<Object>;
+	def nonlocals: Array<(string, Object)>;
 
 	def eval() {
 		def f = Code.Wasm.!(code.code).wasm;
@@ -45,8 +44,13 @@ class WasmFrame extends FrameObject {
 		return null;
 	}
 
-	def getNonlocal(idx: int) -> Object {
-		return nonlocals[idx];
+	def getNonlocal(id: string) -> Object { // FIXME don't use string
+		for (p in nonlocals) {
+			if (Strings.equal(p.0, id)) return p.1;
+		}
+		System.puts(Strings.format1("cannot find nonlocal %s\n", id));
+		System.error("internal error", "cannot find nonlocal");
+		return null;
 	}
 
 	def setGlobal(id: string, obj: Object) -> Object {

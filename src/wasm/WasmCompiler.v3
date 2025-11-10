@@ -240,7 +240,10 @@ class WasmCompiler {
 			COPY = wave.new_func(COPY_SIG, Pointer.atContents(copy), copy.length);
 		}
 
-		addLocal("<receiver>"); // part of virgil, ignored
+		addLocal("<receiver>");
+		// XXX I don't know what this receiver local (parameter) is or why virgil compiler adds it.
+		// It is useful in some instances as a scratch local to rearrange the value stack.
+		// so we're using it for that. Hopefully its true value is not necessary (not used anywhere thus far).
 		addLocal("<frame>");    // frame is made available for whenever it's needed
 		Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
 		wasm.put_uleb32(1); // 1 set of
@@ -253,7 +256,9 @@ class WasmCompiler {
 	}
 
 	// from BytecodeCompiler
-	def locals: Vector<string> = Vector.new();
+	def locals:    Vector<string> = Vector.new();
+	def nonlocals: Vector<string> = Vector.new();
+
 	def handlerStack: Stack<int> = ArrayStack.new();
 	var blockDepth = 0;
 
@@ -343,8 +348,10 @@ class WasmCompiler {
 // 				 * to create an exception or otherwise indicate failure.
 // 				 */
   				Nonlocal => {
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.putb(1 /* frame */);
 					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(ptrAtStr(id)); // string
+					wasm.put_sleb32(ptrAtStr(id));
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(GET_NONLOCAL);
 				}
@@ -445,7 +452,6 @@ class WasmCompiler {
 						System.error("compile error", "translating too many arguments");
 					}
 				}
-
 			}
  			If(cond, left, right) => {
 				compileAST(cond);
@@ -535,7 +541,7 @@ class WasmCompiler {
 						}
 						Nonlocal => System.error("compile error", "illegal case on catch: Nonlocal");
 					}
-					wasm.putb(WasmOp.DROP.opcode);
+					wasm.putb(WasmOp.DROP.opcode); // XXX this is unoptimal. Don't TEE on local and create a void-returning global.get
 					// TODO put assignment of value to mode
 					compileAST(catch);
 
@@ -559,6 +565,7 @@ class WasmCompiler {
  					wasm.put_uleb32(addLocal(nonlocal)); // XXX can this be null? (unbound local)
 					nonlocalCount++;
  				}
+				//System.puts(Strings.format1("nonlocal count: %d\n", nonlocalCount));
  				wasm.putb(WasmOp.CALL.opcode);
 				match (nonlocalCount) {
 					0 => wasm.put_uleb32(CREATE_FUNC0);
@@ -637,22 +644,27 @@ class WasmCompiler {
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_sleb32(ptrAtStr(field));
 				compileAST(val);
+				wasm.putb(WasmOp.TEE_LOCAL.opcode);
+				wasm.putb(0 /* XXX */);
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(SET_FIELD); // XXX false on failure
-				// copy for if XXX: awkward
-				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_sleb32(COPY);
-				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
-				wasm.putb(COPY_SIG);
-				wasm.putb(0x00);
-				// check failure condition
-				wasm.putb(WasmOp.IF.opcode);
-				wasm.put_sleb32(BLOCK_SIG);
-				blockDepth++;
-				wasm.putb(WasmOp.ELSE.opcode);
-				wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				wasm.putb(WasmOp.DROP.opcode); // FIXME test for field set failure
+				wasm.putb(WasmOp.GET_LOCAL.opcode);
+				wasm.putb(0 /* XXX */);
+				// // copy for if XXX: awkward
+				// wasm.putb(WasmOp.I32_CONST.opcode);
+				// wasm.put_sleb32(COPY);
+				// wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				// wasm.putb(COPY_SIG);
+				// wasm.putb(0x00);
+				// // check failure condition
+				// wasm.putb(WasmOp.IF.opcode);
+				// wasm.put_sleb32(BLOCK_SIG);
+				// blockDepth++;
+				// wasm.putb(WasmOp.ELSE.opcode);
+				// wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
+				// wasm.putb(WasmOp.END.opcode);
+				// blockDepth--;
 			}
  			Class(id, superclass, init, fields, methods) => {
 				// there are subcodes which are getting compiled here
