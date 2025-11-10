@@ -16,6 +16,7 @@ def LIST_FROM6: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from6));
 def LIST_FROM7: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from7));
 def LIST_FROM8: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from8));
 def LIST_FROM9: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from9));
+def LIST_FROM10:u32 = u32.view(CiWasmTarget.functionId(ListObjects.from10));
 
 def CALL_FUNC0: u32 = u32.view(CiWasmTarget.functionId(callFunc0));
 def CALL_FUNC1: u32 = u32.view(CiWasmTarget.functionId(callFunc1));
@@ -28,8 +29,27 @@ def CALL_FUNC7: u32 = u32.view(CiWasmTarget.functionId(callFunc7));
 def CALL_FUNC8: u32 = u32.view(CiWasmTarget.functionId(callFunc8));
 def CALL_FUNC9: u32 = u32.view(CiWasmTarget.functionId(callFunc9));
 
-// def CREATE_FUNC = CiWasmTarget.functionId(createFunc);
+def CREATE_FUNC0: u32 = u32.view(CiWasmTarget.functionId(createFunc0));
+def CREATE_FUNC1: u32 = u32.view(CiWasmTarget.functionId(createFunc1));
+def CREATE_FUNC2: u32 = u32.view(CiWasmTarget.functionId(createFunc2));
+def CREATE_FUNC3: u32 = u32.view(CiWasmTarget.functionId(createFunc3));
+def CREATE_FUNC4: u32 = u32.view(CiWasmTarget.functionId(createFunc4));
+def CREATE_FUNC5: u32 = u32.view(CiWasmTarget.functionId(createFunc5));
+def CREATE_FUNC6: u32 = u32.view(CiWasmTarget.functionId(createFunc6));
+def CREATE_FUNC7: u32 = u32.view(CiWasmTarget.functionId(createFunc7));
+def CREATE_FUNC8: u32 = u32.view(CiWasmTarget.functionId(createFunc8));
+def CREATE_FUNC9: u32 = u32.view(CiWasmTarget.functionId(createFunc9));
+
+def CREATE_CLASS: u32 = u32.view(CiWasmTarget.functionId(createClass));
 def CREATE_OBJECT: u32 = u32.view(CiWasmTarget.functionId(createObject));
+
+def RAISE_EXCEPTION: u32 = u32.view(CiWasmTarget.functionId(raiseExceptionTemp));
+
+// XXX Exception handling is not supported, but we support `raise` by doing this instead
+def raiseExceptionTemp() {
+	System.puts("Exception raised in wasm-compiled code\n");
+	System.error("eval", "Exception raised in wasm-compiled code");
+}
 
 def assertFunc(val: Object) -> Object {
 	if (!val.instanceOf(ClassObjects.classFunc))
@@ -109,22 +129,33 @@ def callFuncN(prev: FrameObject, fv: FuncObject, args: Array<Object>) -> Object 
 	return frame.getValue();
 }
 
-// def createFunc(funchole: ASTData.Func) -> FuncObject {
-// 	def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
-// 
-// 	def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body);
-// 	for (i = funchole.nonlocals.length - 1; i >= 0; i--) {
-// 		// if the nonlocal is the function itself (for recursion) then do not
-// 		// get it from the stack. you already have it!
-// 		if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
-// 			nonlocals[i] = (funchole.id, fn);
-// 		} else {
-// 			nonlocals[i] = (funchole.nonlocals[i], stack.pop());
-// 		}
-// 	}
-// 
-// 	return fn;
-// }
+def createFunc0(funchole: Box<ASTData.Func>) => createFuncN(funchole.data, []);
+def createFunc1(funchole: Box<ASTData.Func>, o0: Object) => createFuncN(funchole.data, [o0]);
+def createFunc2(funchole: Box<ASTData.Func>, o0: Object, o1: Object) => createFuncN(funchole.data, [o0, o1]);
+def createFunc3(funchole: Box<ASTData.Func>, o0: Object, o1: Object, o2: Object) => createFuncN(funchole.data, [o0, o1, o2]);
+def createFunc4(funchole: Box<ASTData.Func>, o0: Object, o1: Object, o2: Object, o3: Object) => createFuncN(funchole.data, [o0, o1, o2, o3]);
+def createFunc5(funchole: Box<ASTData.Func>, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object) => createFuncN(funchole.data, [o0, o1, o2, o3, o4]);
+def createFunc6(funchole: Box<ASTData.Func>, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object) => createFuncN(funchole.data, [o0, o1, o2, o3, o4, o5]);
+def createFunc7(funchole: Box<ASTData.Func>, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object) => createFuncN(funchole.data, [o0, o1, o2, o3, o4, o5, o6]);
+def createFunc8(funchole: Box<ASTData.Func>, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object) => createFuncN(funchole.data, [o0, o1, o2, o3, o4, o5, o6, o7]);
+def createFunc9(funchole: Box<ASTData.Func>, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object, o8: Object) => createFuncN(funchole.data, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+
+def createFuncN(funchole: ASTData.Func, nonlocalArgs: Array<Object>) -> FuncObject {
+	def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
+
+	var j = 0;
+	def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body);
+	for (i < funchole.nonlocals.length) {
+		// if the nonlocal is the function itself (for recursion)
+		if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
+			nonlocals[i] = (funchole.id, fn);
+		} else {
+			nonlocals[i] = (funchole.nonlocals[i], nonlocalArgs[j++]);
+		}
+	}
+
+	return fn;
+}
 
 def createObject(parentFr: FrameObject, clsObj: ClassObject) -> Object {
 	def obj = Objects.newObject(clsObj);
@@ -166,6 +197,18 @@ def createObject(parentFr: FrameObject, clsObj: ClassObject) -> Object {
 		} 
 	}
 	return obj;
+}
+
+def createClass(o: Object, box: Box<ClassObject -> ClassObject>) -> ClassObject {
+	// FIXME use cicero exceptions
+	if (!o.instanceOf(ClassObjects.classClass)) {
+		System.puts("createClass: expected superclass to be a class, but it isn't\n");
+		System.error("createClass", "superclass is not class");
+	}
+
+	def superclass = ClassObject.!(o);
+	def classhole = box.data;
+	return classhole(superclass);
 }
 
 class WasmCompiler {
@@ -267,9 +310,9 @@ class WasmCompiler {
 	def compileAST(expr: AST) {
 		match (expr.data) {
 			Lit(lit) => {
-				// TODO disable GC and implement non-moving collector
+				// TODO disable GC and implement non-moving collector, or target wasm GC
 				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_uleb32(ptrAt(lit));
+				wasm.put_sleb32(ptrAt(lit));
 			}
 			// XXX unintuitively, this wildcard case is the default case, and the cases below
 			// supercede this (would go away if nested pattern matching is a thing)
@@ -287,7 +330,7 @@ class WasmCompiler {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.putb(1 /* frame */);
 					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_uleb32(ptrAtStr(id)); // string
+					wasm.put_sleb32(ptrAtStr(id)); // string
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(GET_GLOBAL);
 					// TODO raise exception if global not found (currently, function traps)
@@ -305,7 +348,7 @@ class WasmCompiler {
 // 				 */
   				Nonlocal => {
 					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_uleb32(ptrAtStr(id)); // string
+					wasm.put_sleb32(ptrAtStr(id)); // string
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(GET_NONLOCAL);
 				}
@@ -329,7 +372,7 @@ class WasmCompiler {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.putb(1 /* frame */);
 					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_uleb32(ptrAtStr(id)); // string
+					wasm.put_sleb32(ptrAtStr(id)); // string
 					compileAST(val);
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(SET_GLOBAL);
@@ -443,26 +486,47 @@ class WasmCompiler {
 				wasm.putb(WasmOp.END.opcode);
 			}
 			Raise(exn) => {
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(RAISE_EXCEPTION);
 				wasm.putb(WasmOp.UNREACHABLE.opcode);
 				// FIXME put real implementation here
 			}
 // 			Catch(try, id, mode, catch) => ;
-//  			Func(id, params, body, nonlocals) => {
-// 				// XXX compiling code of function body as part of enclosing compilation
-// 				code.compile(params);
-// 			
-// 				for (i < nonlocals.length) {
-// 					def nonlocal = nonlocals[i];
-// 					if (Strings.equal(nonlocal, id))
-// 						// the function itself is captured, but not loaded to a local
-// 						continue;
-// 					// this variable will be captured!
-// 					wasm.putb(WasmOp.GET_LOCAL);
-// 					wasm.put_uleb32(addLocal(nonlocal));
-// 				}
-// 				wasm.putb(WasmOp.CALL.opcode);
-// 				wasm.put_uleb32(CREATE_FUNC);
-// 			}
+			Func(id, params, body, nonlocals) => {
+ 				body.compile(params);
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(ptrAtBox(Box.new(ASTData.Func.!(expr.data))));	// XXX boxing
+ 			
+				var nonlocalCount = 0;
+ 				for (i < nonlocals.length) {
+ 					def nonlocal = nonlocals[i];
+ 					if (Strings.equal(nonlocal, id))
+ 						// the function itself is captured, but not loaded to a local
+ 						continue;
+ 					// this variable will be captured!
+ 					wasm.putb(WasmOp.GET_LOCAL.opcode);
+ 					wasm.put_uleb32(addLocal(nonlocal)); // XXX can this be null? (unbound local)
+					nonlocalCount++;
+ 				}
+ 				wasm.putb(WasmOp.CALL.opcode);
+				match (nonlocalCount) {
+					0 => wasm.put_uleb32(CREATE_FUNC0);
+					1 => wasm.put_uleb32(CREATE_FUNC1);
+					2 => wasm.put_uleb32(CREATE_FUNC2);
+					3 => wasm.put_uleb32(CREATE_FUNC3);
+					4 => wasm.put_uleb32(CREATE_FUNC4);
+					5 => wasm.put_uleb32(CREATE_FUNC5);
+					6 => wasm.put_uleb32(CREATE_FUNC6);
+					7 => wasm.put_uleb32(CREATE_FUNC7);
+					8 => wasm.put_uleb32(CREATE_FUNC8);
+					9 => wasm.put_uleb32(CREATE_FUNC9);
+					_ => {
+						System.puts(Strings.format1("Translating too many nonlocals: %d\n", nonlocalCount));
+						System.error("compile error", "translating too many nonlocals");
+					}
+				}
+ 			}
  			While(cond, body) => {
 				wasm.putb(WasmOp.BLOCK.opcode);
 				wasm.putb(0x7F);
@@ -495,7 +559,7 @@ class WasmCompiler {
  			GetField(field, obj) => {
 				compileAST(obj);
 				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_uleb32(ptrAtStr(field));
+				wasm.put_sleb32(ptrAtStr(field));
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(GET_FIELD); // XXX null on failure
 				// copy for if XXX: awkward
@@ -515,7 +579,7 @@ class WasmCompiler {
  			SetField(field, obj, val) => {
 				compileAST(obj);
 				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_uleb32(ptrAtStr(field));
+				wasm.put_sleb32(ptrAtStr(field));
 				compileAST(val);
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(SET_FIELD); // XXX false on failure
@@ -532,7 +596,34 @@ class WasmCompiler {
 				wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
 				wasm.putb(WasmOp.END.opcode);
 			}
-// 			Class(id, superclass, init, fields, methods) => ;
+ 			Class(id, superclass, init, fields, methods) => {
+				// there are subcodes which are getting compiled here
+				match (superclass) {
+					Nothing => {
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(ptrAt(ClassObjects.classBase));
+					}
+					Just(expr) => compileAST(expr);
+				}
+				var init2: CodeObject;
+				match (init) {
+					Nothing => ;
+					Just(code) => {
+						code.compile(["self"]);
+						init2 = code;
+					}
+				}
+				// XXX compiling subcode
+				for (field in fields) field.1.compile([]);
+				//                                   XXX
+				def classhole = ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc));
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(ptrAtBox(Box.new(classhole))); // XXX this is garbage
+
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(CREATE_CLASS); // XXX traps for now
+			}
  			New(expr) => {
 				wasm.putb(WasmOp.GET_LOCAL.opcode);
 				wasm.putb(1 /* frame */);
@@ -558,6 +649,7 @@ class WasmCompiler {
 					7 => wasm.put_uleb32(LIST_FROM7);
 					8 => wasm.put_uleb32(LIST_FROM8);
 					9 => wasm.put_uleb32(LIST_FROM9);
+					10=> wasm.put_uleb32(LIST_FROM10);
 					_ => {
 						System.puts(Strings.format1("Translating too long of a list literal: %d\n", elems.length));
 						System.error("compile error", "translating too long of a list literal");
@@ -579,9 +671,19 @@ class WasmCompiler {
 	}
 }
 
-def ptrAt(o: Object) -> u32 {
-	return u32.view(Pointer.atObject(o) - Pointer.NULL);
+def ptrAt(o: Object) -> i32 {
+	return Pointer.atObject(o) - Pointer.NULL;
 }
-def ptrAtStr(o: string) -> u32 {
-	return u32.view(Pointer.atObject(o) - Pointer.NULL);
+def ptrAtBox<T>(b: Box<T>) -> i32 {
+	return Pointer.atObject(b) - Pointer.NULL;
+}
+def ptrAtStr(o: string) -> i32 {
+	return Pointer.atObject(o) - Pointer.NULL;
+}
+
+def funcToFunc(f: ASTData.Func) -> FuncObject {
+	// XXX compilation here
+	f.body.compile(Arrays.prepend("self", f.params));
+	// XXX empty map = no variable capture for a method
+	return FuncObjects.newFO(f.id, f.params, [], f.body);
 }

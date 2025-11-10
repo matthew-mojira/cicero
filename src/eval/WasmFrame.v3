@@ -27,7 +27,11 @@ class WasmFrame extends FrameObject {
 				result = Result.OK(value);
 				return value;
 			}
-			_ => System.error("unimplemented", "WasmFrame.eval: FuncN (N != 0)");
+			_ => {
+				// maybe should not happen?
+				System.puts("unimplemented: WasmFrame.eval: FuncN (N != 0)\n");
+				System.error("unimplemented", "WasmFrame.eval: FuncN (N != 0)");
+			}
 		}
 		return null;
 	}

@@ -94,7 +94,7 @@ echo "}" >> "$CICERO_TEXT"
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="-heap-size=1900M -stack-size=16M -O2 -symbols"
+V3C_OPTS="-heap-size=2047M -stack-size=32M -O2 -symbols" # -redef-field=RiGc.verbose=true"
 
 # build
 exe=${PROGRAM}.${TARGET}

@@ -6,5 +6,5 @@ class PoopCrapObject extends Object {
 
 component PoopCrapObjects {
 	/* only one poop and one crap */
-	def instance = PoopCrapObject.new();
+	def instance: Object = PoopCrapObject.new();
 }
