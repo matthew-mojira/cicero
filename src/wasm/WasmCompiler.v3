@@ -291,6 +291,7 @@ class WasmCompiler {
 			2 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object), Object>();
 			3 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object), Object>();
 			4 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object), Object>();
+			5 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object), Object>();
 			_ => {
 				System.puts("params unknown\n");
 				System.error("compile error", "params unknown");
@@ -308,6 +309,7 @@ class WasmCompiler {
 			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object, Object), Object>(Pointer.NULL + fid, void));
 			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (Object, Object, Object, Object), Object>(Pointer.NULL + fid, void));
 			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object), Object>(Pointer.NULL + fid, void));
+			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object), Object>(Pointer.NULL + fid, void));
 		}
 
 		// System.puts("compile successful!\n");
@@ -413,7 +415,7 @@ class WasmCompiler {
  				compileAST(left);
 
 				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_sleb32(IS_TRUE_COPY);
+				wasm.put_sleb32(IS_FALSE_COPY);
 				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
 				wasm.putb(COPY_SIG);
 				wasm.putb(0x00);

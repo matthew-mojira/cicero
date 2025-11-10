@@ -11,6 +11,8 @@ class WasmFrame extends FrameObject {
 			Func1(f) => result = Result.OK(f(this, args[0].1));
 			Func2(f) => result = Result.OK(f(this, args[0].1, args[1].1));
 			Func3(f) => result = Result.OK(f(this, args[0].1, args[1].1, args[2].1));
+			Func4(f) => result = Result.OK(f(this, args[0].1, args[1].1, args[2].1, args[3].1));
+			Func5(f) => result = Result.OK(f(this, args[0].1, args[1].1, args[2].1, args[3].1, args[4].1));
 			_ => {
 				System.puts("unimplemented number of arguments\n");
 				System.error("unimplemented", "WasmFrame.eval: FuncN");
