@@ -4,7 +4,7 @@
 (class Mandelbrot
       
     (method (inner_benchmark_loop inner_iterations){
-        (self._verify_result (self._mandelbrot inner_iterations) inner_iterations)
+        (self._verify_result (self._mandelbrot (inner_iterations.as double)) inner_iterations)
 
     })
 
@@ -43,10 +43,10 @@
         (set byte_acc 0)
         (set bit_num 0)
 
-        (set y 0)
+        (set y 0.0)
         (while (< y size){
             (set ci (- (/ (* 2.0 y) size) 1.0))
-            (set x 0)
+            (set x 0.0)
 
             (while (< x size){
                 (set zrzr 0.0)
@@ -80,7 +80,7 @@
                     (set byte_acc 0)
                     (set bit_num 0)
                 }{
-                    (if (= x (size.pred)){
+                    (if (= x (- size 1.0)){
                         (set byte_acc (byte_acc.<< (- 8 bit_num)))
                         (set _sum (_sum.^ byte_acc))
                         (set byte_acc 0)
@@ -88,9 +88,9 @@
                     }())
                 })
 
-                (set x (x.succ))
+                (set x (+ 1.0 x))
             })
-            (set y (y.succ))
+            (set y (+ 1.0 y))
         })
         _sum
     })

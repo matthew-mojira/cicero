@@ -743,15 +743,15 @@
 
         (if (!= a 0.0){
             (set initmp (init1.minus init2))
-            (set b (* 2 (initmp.dot (vec1.minus vec2))))
+            (set b (* 2.0 (initmp.dot (vec1.minus vec2))))
 
             (set initmp (init2.minus init1))
-            (set c (+ (* (- 0 radius) radius) (initmp.squared_magnitude)))
+            (set c (+ (* (- 0.0 radius) radius) (initmp.squared_magnitude)))
 
             (set discr (- (* b b) (* 4.0 (* a c))))
             (if (< discr 0.0) (){
             ;else
-                (set v1 (/ (- 0 (+ b (discr.sqrt))) (* 2.0 a)))
+                (set v1 (/ (- 0.0 (+ b (discr.sqrt))) (* 2.0 a)))
                 (set v2 (/ (- (discr.sqrt) b) (* 2.0 a)))
 
                 (if (and (<= v1 v2)
@@ -818,14 +818,16 @@
         (set i 0)
         (while (< i (self._aircraft.size)){
 
+            (set i_db (i.as double))
+
             (set vec1 (new _Vector3D))
-            (vec1.init-values time (+ (* (time.cos) 2.0) (* i 3.0)) 10.0)
+            (vec1.init-values time (+ (* (time.cos) 2.0) (* i_db 3.0)) 10.0)
             (set aircraft1 (new _Aircraft))
             (aircraft1.init-values (self._aircraft.at i) vec1)
             (frame.append aircraft1)
 
             (set vec2 (new _Vector3D))
-            (vec2.init-values time (+ (* (time.sin) 2.0) (* i 3.0)) 10.0)
+            (vec2.init-values time (+ (* (time.sin) 2.0) (* i_db 3.0)) 10.0)
             (set aircraft2 (new _Aircraft))
             (aircraft2.init-values (self._aircraft.at (i.succ)) vec2)
             (frame.append aircraft2)
@@ -838,7 +840,7 @@
 
 (class CD
     (method (_benchmark num_aircraft){
-        (set num_frames 200)
+        (set num_frames 200.0)
 
         (set simulator (new _Simulator))
         (simulator.init-values num_aircraft)
@@ -846,13 +848,13 @@
 
         (set actual_collisions 0)
 
-        (set i 0)
+        (set i 0.0)
         (while (< i num_frames){
             (set time (/ i 10.0))
             (set collisions (detector.handle_new_frame (simulator.simulate time)))
             (set actual_collisions (+ actual_collisions (collisions.size)))
 
-            (set i (i.succ))
+            (set i (i.+ 1.0))
         })
         actual_collisions
     })

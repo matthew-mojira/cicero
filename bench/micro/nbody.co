@@ -3,7 +3,7 @@
 
 {
 	(set PI 3.141592653589793)
-	(set SOLAR_MASS (* (* 4 PI) PI))
+	(set SOLAR_MASS (* (* 4.0 PI) PI))
 	(set DAYS_PER_YER 365.24)
 
 	(class _Body
@@ -26,9 +26,9 @@
 		})
 
 		(method (offset_momentum px py pz){
-			(set-field vx self (- 0 (/ px SOLAR_MASS)))
-			(set-field vy self (- 0 (/ py SOLAR_MASS)))
-			(set-field vz self (- 0 (/ pz SOLAR_MASS)))
+			(set-field vx self (- 0.0 (/ px SOLAR_MASS)))
+			(set-field vy self (- 0.0 (/ py SOLAR_MASS)))
+			(set-field vz self (- 0.0 (/ pz SOLAR_MASS)))
 		})
 	)
 
