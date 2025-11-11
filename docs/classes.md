@@ -60,8 +60,9 @@ Represents an signed double. 64 bit value.
 Methods:
 
 * `(d.display)`: returns a string representation of the double by performing round-to-nearest demotion to a float(32-bit)
+* `(d.try o)`: converts `double` to a different type(`str`, `int`). Will **raise exception** if the supported conversion fails. For e.g. for `double` to `int` conversion, the double must not lose precision.
 * `(d.sqrt)`: returns the sqrt of the double value
-* `(d.trunc)`: perform truncation and return an `int`
+* `(d.trunc)`: perform truncation and return a `double`
 * `(d.sin)`: returns a `double` which is the sine value of angle `d` in radians.
 * `(d.cos)`: returns a `double` which is the cosine value of angle `d` in radians.
 * `(d.+ o)`
@@ -107,27 +108,26 @@ Represents an signed integer.
 
 Methods:
 * `(i.display)`: returns a string representation of the object
-* `(i.as s)`: converts int to its string representation
+* `(i.as o)`: converts `int` to a different type. Currently supports `int` to `str` and `double`. `int` value as `double` will not fail.
+* `(i.try o)`: converts `int` to a different type(`str`, `double`). Will **raise exception** if the supported conversion fails. For e.g. if the `int` value(BigInt) cannot be represented as a `double`, it will raise an exception.
 * `(i.succ)`
 * `(i.pred)`
 * `(i.neg)`
-* `(i1.+ o)`
-* `(i1.- o)`
-* `(i1.* o)`
+* `(i1.+ i2)`
+* `(i1.- i2)`
+* `(i1.* i2)`
 * `(i1./ i2)`
 * `(i1.% i2)`
-* `(i1.= o)`
-* `(i1.!= o)`
-* `(i1.< o)`
-* `(i1.<= o)`
-* `(i1.> o)`
+* `(i1.= o)`: checks equality for value and type. E.g. `int` 3 is not equal to `double` 3.0
+* `(i1.!= i2)`
+* `(i1.< i2)`
+* `(i1.<= i2)`
+* `(i1.> i2)`
 * `(i1.& i2)`: bitwise AND
 * `(i1.| i2)`: bitwise OR
 * `(i1.^ i2)`: bitwise XOR
 * `(i1.<< i2)`: shift left
 * `(i1.>> i2)`: shift right
-For the comparison operations: we can compare `int` with `int` or `double`
-For the arithmetic operations: `int op int` -> `int` and `int op double` -> `double`
 
 ## list
 

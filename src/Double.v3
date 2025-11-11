@@ -16,11 +16,49 @@ class DoubleObject(val: double) extends Object {
 
     def do_display() => Result.OK(StrObjects.fromString(display()));
 
-	def do_trunc() -> Result{
-		def v = long.truncd(this.val);
-		return Result.OK(IntObjects.fromLong(v));
+	def do_try(obj: Object) -> Result{
+		if (obj == ClassObjects.classStr)
+			return do_display();
+		else if (obj == ClassObjects.classInt)
+			return DoubleIntConversion.asLong(this);
+		else
+			return Result.Exn(ExnObjects.fromVirgil("try", "Unable to convert `double`"));
 	}
 
+	def trunc() -> DoubleObject{
+		// Edge cases
+		if (val == double.infinity || val == -double.infinity){
+			return this;
+		}
+		// Using https://en.wikipedia.org/wiki/Double-precision_floating-point_format for the IEEE 754 format
+
+		var bits: i64 = i64.view(val); // reinterpret bits of the double
+		var sign = bits >>> 63;
+		var exp  = (bits >>> 52) & long.!(0x7FF); // remove the `sign`
+		var frac = bits & long.!(0xFFFFFFFFFFFFF); // 52 bits of mantissa
+
+		// Exponent bias for double = 1023
+		var e: long = exp - 1023;
+
+		if (e < 0) {
+			return DoubleObjects.fromDouble(0.0d);
+		} else if (e >= 52) {
+			// No fractional part
+			return this;
+		}
+
+		// Mask to zero out fractional bits
+		var mask: long = 0xFFFFFFFFFFFFFFFFL << u8.!(52 - e);
+		frac = frac & mask;
+
+		// Reassemble bits
+		var newBits = (sign << 63) | (exp << 52) | frac;
+		def do = double.view(newBits);
+
+		return DoubleObjects.fromDouble(do);
+	}
+
+	def do_trunc() => Result.OK(this.trunc());
 	/* utils */
 
 	def do_sqrt() -> Result {
@@ -94,54 +132,16 @@ class DoubleObject(val: double) extends Object {
 
 	/* arithmetic */
 
-	def do_neg() => Result.OK(DoubleObject.new(- val));
-	def do_add(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return DoubleIntOperations.addIntDouble(iobj, this);
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dval = (DoubleObject.!(obj).val);
-			return Result.OK(DoubleObjects.fromDouble(val + dval));
-		}
-		return Result.Exn(ExnObjects.fromVirgil("+", Exceptions.invalidNumericOperand("+", "double")));
-	}
+	def do_neg() => Result.OK(DoubleObject.new(0.0d-val));
 
-	def do_sub(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return DoubleIntOperations.subDoubleInt(this, iobj);
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dval = (DoubleObject.!(obj).val);
-			return Result.OK(DoubleObjects.fromDouble(val - dval));
-		}
-		return Result.Exn(ExnObjects.fromVirgil("-", Exceptions.invalidNumericOperand("-", "double")));
-	}
-
-	def do_mul(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return DoubleIntOperations.mulIntDouble(iobj, this);
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dval = (DoubleObject.!(obj).val);
-			return Result.OK(DoubleObjects.fromDouble(val * dval));
-		}
-		return Result.Exn(ExnObjects.fromVirgil("*", Exceptions.invalidNumericOperand("*", "double")));
-	}
+	def do_add(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val + DoubleObject.!(that).val));
+	def do_sub(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val - DoubleObject.!(that).val));
+	def do_mul(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val * DoubleObject.!(that).val));
 
 	def do_div(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return DoubleIntOperations.divDoubleInt(this, iobj);
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dval = (DoubleObject.!(obj).val);
-			if (dval == 0) return Result.Exn(ExnObjects.fromVirgil("double.div", divideByZero));
-			return Result.OK(DoubleObjects.fromDouble(val / dval));
-		}
-		return Result.Exn(ExnObjects.fromVirgil("/", Exceptions.invalidNumericOperand("/", "double")));
+		def dval = (DoubleObject.!(obj).val);
+		if (dval == 0) return Result.Exn(ExnObjects.fromVirgil("double.div", divideByZero));
+		return Result.OK(DoubleObjects.fromDouble(val / dval));
 	}
 
 	/* Comparisons */
@@ -151,60 +151,13 @@ class DoubleObject(val: double) extends Object {
 			def dval = (DoubleObject.!(obj).val);
 			return Result.OK(BoolObjects.fromBool(val == dval));
 		}
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return DoubleIntOperations.eqIntDouble(iobj, this);
-		}
 		return Result.OK(BoolObjects.fromBool(false));
 	}
 
-	def do_lt(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dval = (DoubleObject.!(obj).val);
-			return Result.OK(BoolObjects.fromBool(val < dval));
-		}
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return DoubleIntOperations.ltDoubleInt(this, iobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil("<", Exceptions.invalidNumericOperand("<", "double")));
-	}
-
-	def do_gt(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dval = (DoubleObject.!(obj).val);
-			return Result.OK(BoolObjects.fromBool(val > dval));
-		}
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return DoubleIntOperations.gtDoubleInt(this, iobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil(">", Exceptions.invalidNumericOperand(">", "double")));
-	}
-
-	def do_geq(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dval = (DoubleObject.!(obj).val);
-			return Result.OK(BoolObjects.fromBool(val >= dval));
-		}
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return DoubleIntOperations.geqDoubleInt(this, iobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil(">=", Exceptions.invalidNumericOperand(">=", "double")));
-	}
-
-	def do_leq(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dval = (DoubleObject.!(obj).val);
-			return Result.OK(BoolObjects.fromBool(val <= dval));
-		}
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return DoubleIntOperations.leqDoubleInt(this, iobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil("<=", Exceptions.invalidNumericOperand("<=", "double")));
-	}
+	def do_lt(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val < DoubleObject.!(that).val));
+	def do_leq(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val <= DoubleObject.!(that).val));
+	def do_gt(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val > DoubleObject.!(that).val));
+	def do_geq(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val >= DoubleObject.!(that).val));
 }
 
 component DoubleObjects {

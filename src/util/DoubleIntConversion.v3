@@ -1,0 +1,35 @@
+def MAX_LONG_VALUE_IN_DOUBLE = 9_007_199_254_740_992d; // 2^53
+def MAX_LONG_VALUE_IN_DOUBLE_BI = BigIntegers.fromLong(long.!(MAX_LONG_VALUE_IN_DOUBLE)); // 2^53
+def MIN_LONG_VALUE_IN_DOUBLE = -9_007_199_254_740_992d; // - 2^53
+def MIN_LONG_VALUE_IN_DOUBLE_BI = BigIntegers.fromLong(long.!(MIN_LONG_VALUE_IN_DOUBLE)); // - 2^53
+
+component DoubleIntConversion{
+
+	def asDouble(i: IntObject, enforceLimits: bool) -> Result{
+
+		var inf=double.infinity;
+		if (i.val.compareTo(MAX_LONG_VALUE_IN_DOUBLE_BI) <= 0){
+
+			if ((i.val.compareTo(MIN_LONG_VALUE_IN_DOUBLE_BI)) >= 0){
+				def ival = i.val.longValue();
+				return Result.OK(DoubleObjects.fromDouble(double.!(ival)));
+			} else
+				// -ve infinity
+				inf = 0.0d - inf;
+		}
+		if (enforceLimits)
+			return Result.Exn(ExnObjects.fromVirgil("try", Exceptions.invalidTypeConversion("try", "int", "double")));
+		else
+			return Result.OK(DoubleObjects.fromDouble(inf));
+	}
+
+	def asLong(d: DoubleObject) -> Result{
+
+		if ((d.val <= MAX_LONG_VALUE_IN_DOUBLE)
+			&& (d.val >= MIN_LONG_VALUE_IN_DOUBLE)
+			&& (d.trunc().val == d.val))
+				return Result.OK(IntObjects.fromLong(long.truncd(d.val)));
+
+		return Result.Exn(ExnObjects.fromVirgil("try", Exceptions.invalidTypeConversion("try", "double", "int")));
+	}
+}

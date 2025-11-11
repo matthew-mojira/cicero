@@ -9,130 +9,47 @@ class IntObject(val: BigInteger) extends Object {
 
 	/* METHODS */
 	def i_as(obj: Object) -> Result{
-		if (obj == ClassObjects.classStr){
+		return cast(obj, false);
+	}
+
+	def i_try(obj: Object) -> Result{
+		return cast(obj, true);
+	}
+
+	def cast(obj: Object, strict: bool) -> Result{
+		if (obj == ClassObjects.classStr)
 			return i_display();
-		} else{
+		else if (obj == ClassObjects.classDouble)
+			return DoubleIntConversion.asDouble(this, strict);
+		else
 			return Result.Exn(ExnObjects.fromVirgil("as", "Unable to convert `int`"));
-		}
 	}
 
 	/* arithmetic */
 	def i_neg()  => Result.OK(IntObject.new(val.negate()));
 
-	def i_add(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return Result.OK(IntObject.new(this.val.add(iobj.val)));
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dobj = DoubleObject.!(obj);
-			return DoubleIntOperations.addIntDouble(this, dobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil("+", Exceptions.invalidNumericOperand("+", "int")));
-	}
-
-	def i_sub(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return Result.OK(IntObject.new(this.val.subtract(iobj.val)));
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dobj = DoubleObject.!(obj);
-			return DoubleIntOperations.subIntDouble(this, dobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil("-", Exceptions.invalidNumericOperand("-", "int")));
-	}
-
-	def i_mul(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return Result.OK(IntObject.new(this.val.multiply(iobj.val)));
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dobj = DoubleObject.!(obj);
-			return DoubleIntOperations.mulIntDouble(this, dobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil("*", Exceptions.invalidNumericOperand("*", "int")));
-	}
-
-	def i_div(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def iobj = IntObject.!(obj);
-			return if (iobj.val.signum == 0, 
-				Result.Exn(ExnObjects.fromVirgil("int.div", divideByZero)),
-				Result.OK(IntObject.new(this.val.divide(iobj.val))));
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dobj = DoubleObject.!(obj);
-			return DoubleIntOperations.divIntDouble(this, dobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil("/", Exceptions.invalidNumericOperand("/", "int")));
-	}
+ 	def i_add(that: IntObject) => Result.OK(IntObject.new(this.val.add(that.val)));
+	def i_sub(that: IntObject) => Result.OK(IntObject.new(this.val.subtract(that.val)));
+	def i_mul(that: IntObject) => Result.OK(IntObject.new(this.val.multiply(that.val)));
+	def i_div(that: IntObject) => if (that.val.signum == 0,
+					Result.Exn(ExnObjects.fromVirgil("int.div", divideByZero)),
+					Result.OK(IntObject.new(this.val.divide(that.val))));
 
 	def i_mod(that: IntObject) => if (that.val.signum == 0,
 			Result.Exn(ExnObjects.fromVirgil("int.mod", divideByZero)),
 			Result.OK(IntObject.new(this.val.remainder(that.val))));
 
 	/* comparisons */
-	def i_eq(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def ival = IntObject.!(obj).val;
-			return Result.OK(BoolObjects.fromBool(this.val.equals(ival)));
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dobj = DoubleObject.!(obj);
-			return DoubleIntOperations.eqIntDouble(this, dobj);
-		}
-		return Result.OK(BoolObjects.fromBool(false));
+	def i_eq(that: Object) -> Result {
+			if (!that.instanceOf(ClassObjects.classInt))
+					return Result.OK(BoolObjects.falseObject);
+			return Result.OK(BoolObjects.fromBool(this.val.equals(IntObject.!(that).val)));
 	}
 
-	def i_lt(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def ival = IntObject.!(obj).val;
-			return Result.OK(BoolObjects.fromBool(this.val.compareTo(ival) <  0));
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dobj = DoubleObject.!(obj);
-			return DoubleIntOperations.ltIntDouble(this, dobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil("<", Exceptions.invalidNumericOperand("<", "int")));
-	}
-
-	def i_leq(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def ival = IntObject.!(obj).val;
-			return Result.OK(BoolObjects.fromBool(this.val.compareTo(ival) <=  0));
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dobj = DoubleObject.!(obj);
-			return DoubleIntOperations.leqIntDouble(this, dobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil("<=", Exceptions.invalidNumericOperand("<=", "int")));
-	}
-
-	def i_gt(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def ival = IntObject.!(obj).val;
-			return Result.OK(BoolObjects.fromBool(this.val.compareTo(ival) > 0));
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dobj = DoubleObject.!(obj);
-			return DoubleIntOperations.gtIntDouble(this, dobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil(">", Exceptions.invalidNumericOperand(">", "int")));
-	}
-
-	def i_geq(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classInt)){
-			def ival = IntObject.!(obj).val;
-			return Result.OK(BoolObjects.fromBool(this.val.compareTo(ival) >= 0));
-		}
-		if (obj.instanceOf(ClassObjects.classDouble)){
-			def dobj = DoubleObject.!(obj);
-			return DoubleIntOperations.geqIntDouble(this, dobj);
-		}
-		return Result.Exn(ExnObjects.fromVirgil(">=", Exceptions.invalidNumericOperand(">=", "int")));
-	}
+	def i_lt(that: IntObject)  => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) <  0));
+	def i_leq(that: IntObject) => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) <= 0));
+	def i_gt(that: IntObject)  => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) >  0));
+	def i_geq(that: IntObject) => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) >= 0));
 
 	/* logical */
 	def i_and(that: IntObject) => Result.OK(IntObject.new(this.val.and(that.val)));
