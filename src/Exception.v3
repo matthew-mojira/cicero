@@ -34,6 +34,9 @@ class ExnObject extends Object {
 }
 
 component ExnObjects {
+	def fromWasm(msg: string) -> ExnObject {
+		return ExnObject.new(msg, null, null); // TODO we should get more exception information here
+	}
 	def fromVirgil(fn: string, msg: string) -> ExnObject {
 		return ExnObject.new(msg, fn, null);
 	}
@@ -44,6 +47,7 @@ component ExnObjects {
 }
 
 def formatLine(fn: string, range: FileRange) -> string {
+	if (fn == null) return "  at <wasm func>";
 	def str = StringBuilder.new();
 	str.put1("  at %s (", fn);
 	if (range == null) {

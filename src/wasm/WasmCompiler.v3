@@ -43,14 +43,12 @@ def CREATE_FUNC9: u32 = u32.view(CiWasmTarget.functionId(createFunc9));
 def CREATE_CLASS: u32 = u32.view(CiWasmTarget.functionId(createClass));
 def CREATE_OBJECT: u32 = u32.view(CiWasmTarget.functionId(createObject));
 
-def RAISE_EXCEPTION: u32 = u32.view(CiWasmTarget.functionId(raiseExceptionTemp));
+def RAISE_EXCEPTION: u32 = u32.view(CiWasmTarget.functionId(raiseException));
 def RETURN_OK:  u32 = u32.view(CiWasmTarget.functionId(returnOK));
 def RETURN_EXN: u32 = u32.view(CiWasmTarget.functionId(returnExn));
 
-// XXX Exception handling is not supported, but we support `raise` by doing this instead
-def raiseExceptionTemp() {
-	System.puts("Exception raised in wasm-compiled code\n");
-	System.error("eval", "Exception raised in wasm-compiled code");
+def raiseException(msg: string) -> ExnObject {
+	return ExnObjects.fromWasm(msg);
 }
 
 def assertFunc(val: Object) -> Object {
@@ -66,13 +64,33 @@ def assertClass(val: Object) -> Object {
 
 def isTrue(o: Object)  -> bool => o.isTrue();
 def isFalse(o: Object) -> bool => !o.isTrue();
+def isNull(o: Object)  -> bool => o == null;
+def isOK(r: Box<Result>) -> bool => Result.OK.?(r.data);
+def isExn(r: Box<Result>) -> bool => Result.Exn.?(r.data);
+def resultToObject(r: Box<Result>) -> Object {
+	match (r.data) {
+		OK(o) => return o;
+		Exn(e) => return e;
+		_ => {
+			System.puts("resultToObject called on Uncomputed\n");
+			System.error("internal error", "resultToObject called on Uncomputed\n");
+			return null;
+		}
+	}
+}
 
 def IS_TRUE: u32  = u32.view(CiWasmTarget.functionId(isTrue));
 def IS_FALSE: u32 = u32.view(CiWasmTarget.functionId(isFalse));
+def IS_NULL: u32  = u32.view(CiWasmTarget.functionId(isNull));
+def IS_OK: u32    = u32.view(CiWasmTarget.functionId(isOK));
+def IS_EXN: u32   = u32.view(CiWasmTarget.functionId(isExn));
+def RESULT_TO_OBJECT: u32  = u32.view(CiWasmTarget.functionId(resultToObject));
 // XXX the copy versions are table indices which need to be called with call_indirect
 var IS_TRUE_COPY: int = -1; 
 var IS_FALSE_COPY: int = -1;
+var IS_NULL_COPY: int = -1;
 var COPY: int = -1; 
+var UNPACK_RESULT: int = -1; 
 
 var COPY_SIG: i32 = -1;
 var BLOCK_SIG: i32 = -1;
@@ -92,7 +110,7 @@ def callFunc7(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: 
 def callFunc8(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object) => callFuncN(frame, func, [o0, o1, o2, o3, o4, o5, o6, o7]);
 def callFunc9(frame: FrameObject, func: FuncObject, o0: Object, o1: Object, o2: Object, o3: Object, o4: Object, o5: Object, o6: Object, o7: Object, o8: Object) => callFuncN(frame, func, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
 
-def callFuncN(prev: FrameObject, fv: FuncObject, args: Array<Object>) -> Object {
+def callFuncN(prev: FrameObject, fv: FuncObject, args: Array<Object>) -> Box<Result> {
 	def params = fv.params, code = fv.code;
 
 	// evaluate argument values
@@ -115,20 +133,14 @@ def callFuncN(prev: FrameObject, fv: FuncObject, args: Array<Object>) -> Object 
 		}
 	}
 
-	// FIXME arity check should throw exception instead of trap
 	if (args.length != params.length) {
-		System.puts(Strings.format2("arity mismatch: expected %d, got %d\n", params.length, args.length));
-		System.error("callFuncN", "arity mismatch");
+		return Box.new(Result.Exn(ExnObjects.fromWasm(Exceptions.arityMismatch(params.length, args.length))));
 	}
 
 	// create new frame (and evaluate)
 	def frame = prev.newFrame(fv.id, code, argv, fv.nonlocals);
 	frame.eval();
-	if (frame.isExn()) {
-		System.puts("evaluation of frame in callFuncN raised exception");
-		System.error("callFuncN", "exception raised in called function");
-	}
-	return frame.getValue();
+	return Box.new(frame.result);
 }
 
 def createFunc0(funchole: Box<ASTData.Func>) => createFuncN(funchole.data, []);
@@ -236,12 +248,26 @@ class WasmCompiler {
 			isFalseCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
 			isFalseCopy.put_uleb32(IS_FALSE);
 			isFalseCopy.puta([0x0B]);
+			def isNullCopy: DataWriter = DataWriter.new();
+			isNullCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
+			isNullCopy.put_uleb32(IS_NULL);
+			isNullCopy.puta([0x0B]);
+			def unpackResult: DataWriter = DataWriter.new();
+			unpackResult.puta([0x00, 0x20, 0x00, 0x10]);
+			unpackResult.put_uleb32(RESULT_TO_OBJECT);
+			unpackResult.puta([0x20, 0x00, 0x10]);
+			unpackResult.put_uleb32(IS_EXN);
+			unpackResult.puta([0x0B]);
 			def isTrueCode: Array<byte> = isTrueCopy.extract();
 			def isFalseCode: Array<byte> = isFalseCopy.extract();
+			def isNullCode: Array<byte> = isNullCopy.extract();
+			def unpackResultCode: Array<byte> = unpackResult.extract();
 			def copy: Array<byte> = [0x00, 0x20, 0x00, 0x20, 0x00, 0x0B];
 
-			IS_TRUE_COPY = wave.new_func(COPY_SIG, Pointer.atContents(isTrueCode), isTrueCode.length);
+			IS_TRUE_COPY  = wave.new_func(COPY_SIG, Pointer.atContents(isTrueCode), isTrueCode.length);
 			IS_FALSE_COPY = wave.new_func(COPY_SIG, Pointer.atContents(isFalseCode), isFalseCode.length);
+			IS_NULL_COPY  = wave.new_func(COPY_SIG, Pointer.atContents(isNullCode), isFalseCode.length);
+			UNPACK_RESULT = wave.new_func(COPY_SIG, Pointer.atContents(unpackResultCode), unpackResultCode.length);
 			COPY = wave.new_func(COPY_SIG, Pointer.atContents(copy), copy.length);
 		}
 
@@ -351,7 +377,24 @@ class WasmCompiler {
   				Local    => {
  					wasm.putb(WasmOp.GET_LOCAL.opcode);
  					wasm.put_uleb32(addLocal(id));
- 					// TODO raise exception if local is not initialized (0)
+
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(IS_NULL_COPY);
+					wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+					wasm.putb(COPY_SIG);
+					wasm.putb(0x00);
+
+					wasm.putb(WasmOp.IF.opcode);
+					//wasm.putb(0x00); // XXX is this right?
+					wasm.put_sleb32(BLOCK_SIG);
+					blockDepth++;
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(ptrAt(ExnObjects.fromWasm(Exceptions.unboundLocal(id))));
+						wasm.putb(WasmOp.BR.opcode);
+						wasm.put_sleb32(blockDepth - handlerStack.peek());
+					wasm.putb(WasmOp.END.opcode);
+					blockDepth--;
+
  				}
   				Global => {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
@@ -413,16 +456,6 @@ class WasmCompiler {
 				compileAST(right);
 				wasm.putb(WasmOp.END.opcode);
 				blockDepth--;
- 				/* TODO call to
- 			         *   isTrue(val: Object) -> (Object, bool)
- 				 *                 [i32] -> [i32 i32]
- 				 * This is a static function that determines truthiness of a Cicero value.
- 				 * Recall that the only falsy things are `false` and `()`. These are
- 				 * canonicalized so there are only two instances of false values.
-				 * That could be used in the future to eliminate call to isTrue
-				 *
- 				 * The function gives you the object back, and the truthiness of it.
- 				 */
  			}
  			Or(left, right) => {
  				compileAST(left);
@@ -467,6 +500,21 @@ class WasmCompiler {
 						System.error("compile error", "translating too many arguments");
 					}
 				}
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(UNPACK_RESULT);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
+
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
+					wasm.putb(WasmOp.BR.opcode);
+					wasm.put_sleb32(blockDepth - handlerStack.peek());
+				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
+
 			}
  			If(cond, left, right) => {
 				compileAST(cond);
@@ -514,7 +562,9 @@ class WasmCompiler {
 			}
 			Raise(exn) => {
 				compileAST(exn);
-				// FIXME put full raise implementation here
+				// TODO assert string
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(RAISE_EXCEPTION);
 				wasm.putb(WasmOp.BR.opcode);
 				wasm.put_sleb32(blockDepth - handlerStack.peek());
 			}
