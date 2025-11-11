@@ -7,12 +7,12 @@ class WasmFrame extends FrameObject {
 	def eval() {
 		def f = Code.Wasm.!(code.code).wasm;
 		match (f) {
-			Func0(f) => result = Result.OK(f(this));
-			Func1(f) => result = Result.OK(f(this, args[0].1));
-			Func2(f) => result = Result.OK(f(this, args[0].1, args[1].1));
-			Func3(f) => result = Result.OK(f(this, args[0].1, args[1].1, args[2].1));
-			Func4(f) => result = Result.OK(f(this, args[0].1, args[1].1, args[2].1, args[3].1));
-			Func5(f) => result = Result.OK(f(this, args[0].1, args[1].1, args[2].1, args[3].1, args[4].1));
+			Func0(f) => result = f(this).data;
+			Func1(f) => result = f(this, args[0].1).data;
+			Func2(f) => result = f(this, args[0].1, args[1].1).data;
+			Func3(f) => result = f(this, args[0].1, args[1].1, args[2].1).data;
+			Func4(f) => result = f(this, args[0].1, args[1].1, args[2].1, args[3].1).data;
+			Func5(f) => result = f(this, args[0].1, args[1].1, args[2].1, args[3].1, args[4].1).data;
 			_ => {
 				System.puts("unimplemented number of arguments\n");
 				System.error("unimplemented", "WasmFrame.eval: FuncN");
@@ -24,9 +24,15 @@ class WasmFrame extends FrameObject {
 		def f = Code.Wasm.!(code.code).wasm;
 		match (f) {
 			Func0(f) => {
-				def value = f(this);
-				result = Result.OK(value);
-				return value;
+				result = f(this).data;
+				match (result) {
+					OK(o) => return o;
+					Exn(e) => return null;
+					Uncomputed => {
+						System.puts("evalCode in WasmFrame returned Uncomputed\n");
+						System.error("internal error", "evalCode in WasmFrame returned Uncomputed\n");
+					}
+				}
 			}
 			_ => {
 				// maybe should not happen?

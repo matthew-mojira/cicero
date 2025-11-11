@@ -44,6 +44,8 @@ def CREATE_CLASS: u32 = u32.view(CiWasmTarget.functionId(createClass));
 def CREATE_OBJECT: u32 = u32.view(CiWasmTarget.functionId(createObject));
 
 def RAISE_EXCEPTION: u32 = u32.view(CiWasmTarget.functionId(raiseExceptionTemp));
+def RETURN_OK:  u32 = u32.view(CiWasmTarget.functionId(returnOK));
+def RETURN_EXN: u32 = u32.view(CiWasmTarget.functionId(returnExn));
 
 // XXX Exception handling is not supported, but we support `raise` by doing this instead
 def raiseExceptionTemp() {
@@ -211,6 +213,9 @@ def createClass(o: Object, box: Box<ClassObject -> ClassObject>) -> ClassObject 
 	return classhole(superclass);
 }
 
+def returnOK(o: Object) -> Box<Result> => Box.new(Result.OK(o));
+def returnExn(e: ExnObject) -> Box<Result> => Box.new(Result.Exn(e));
+
 class WasmCompiler {
 	// TODO need extra information about parameters and locals
 	// TODO get better wasm code generator (use Aeneas?)
@@ -248,10 +253,29 @@ class WasmCompiler {
 		Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
 		wasm.put_uleb32(1); // 1 set of
 		wasm.put_uleb32(10);// 10 of
-		wasm.putb(0x7F);    // i32
-		compileAST(ast);
 		// TODO fill hole with locals.length
-		// wasm.putb(WasmOp.RETURN.opcode);
+		wasm.putb(0x7F);    // i32
+
+		// FUNCTION BODY
+		wasm.putb(WasmOp.BLOCK.opcode);
+		wasm.putb(0x7F);    // (result i32)
+		blockDepth++;
+			handlerStack.push(blockDepth);
+
+			compileAST(ast);
+			
+			wasm.putb(WasmOp.CALL.opcode);
+			wasm.put_uleb32(RETURN_OK);
+			wasm.putb(WasmOp.RETURN.opcode); 
+			wasm.putb(WasmOp.UNREACHABLE.opcode); 
+
+			handlerStack.pop(); // XXX unnecessary
+		wasm.putb(WasmOp.END.opcode);
+		blockDepth--;
+
+		wasm.putb(WasmOp.CALL.opcode);
+		wasm.put_uleb32(RETURN_EXN);
+
 		wasm.putb(WasmOp.END.opcode);
 	}
 
@@ -286,12 +310,12 @@ class WasmCompiler {
 
 		var sig: int;
 		match (params.length) {
-			0 => sig = CiWasmTarget.functionTypeId<(int, Object), Object>();
-			1 => sig = CiWasmTarget.functionTypeId<(int, Object, Object), Object>();
-			2 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object), Object>();
-			3 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object), Object>();
-			4 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object), Object>();
-			5 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object), Object>();
+			0 => sig = CiWasmTarget.functionTypeId<(int, Object), Box<Result>>();
+			1 => sig = CiWasmTarget.functionTypeId<(int, Object, Object), Box<Result>>();
+			2 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object), Box<Result>>();
+			3 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object), Box<Result>>();
+			4 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object), Box<Result>>();
+			5 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object), Box<Result>>();
 			_ => {
 				System.puts("params unknown\n");
 				System.error("compile error", "params unknown");
@@ -304,12 +328,12 @@ class WasmCompiler {
 		}
 		var func: WasmFunction;
 		match (params.length) {
-			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, Object, Object>(Pointer.NULL + fid, void));
-			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, (Object, Object), Object>(Pointer.NULL + fid, void));
-			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object, Object), Object>(Pointer.NULL + fid, void));
-			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (Object, Object, Object, Object), Object>(Pointer.NULL + fid, void));
-			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object), Object>(Pointer.NULL + fid, void));
-			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object), Object>(Pointer.NULL + fid, void));
+			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, Object, Box<Result>>(Pointer.NULL + fid, void));
+			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, (Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
 		}
 
 		// System.puts("compile successful!\n");
@@ -338,17 +362,6 @@ class WasmCompiler {
  					wasm.put_uleb32(GET_GLOBAL);
 					// TODO raise exception if global not found (currently, function traps)
 				}
-// 				/* TODO This should be a call out to a function
-// 				 *   WasmFrame.getGlobal(name: string) -> Object
-// 				 * which would actually become 
-// 				 *   (WasmFrame, name) -> Object
-// 				 *           [i32 i32] -> i32
-// 				 * which means that the frame that a function is executing for
-// 				 * needs to be passed in as a local (voluntary local) 
-// 				 *
-// 				 * Note that this function may fail to lookup a global, so we need
-// 				 * to create an exception or otherwise indicate failure.
-// 				 */
   				Nonlocal => {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.putb(1 /* frame */);
@@ -501,6 +514,7 @@ class WasmCompiler {
 			}
 			Raise(exn) => {
 				compileAST(exn);
+				// FIXME put full raise implementation here
 				wasm.putb(WasmOp.BR.opcode);
 				wasm.put_sleb32(blockDepth - handlerStack.peek());
 			}

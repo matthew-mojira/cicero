@@ -69,14 +69,14 @@ def doNotInstantiateThisClass(range: Range<Object>) -> Result {
 
 // sorted by arity
 type WasmFunction {
-	case Func0(fn: FrameObject -> Object);
-	case Func1(fn: (FrameObject, Object) -> Object);
-	case Func2(fn: (FrameObject, Object, Object) -> Object);
-	case Func3(fn: (FrameObject, Object, Object, Object) -> Object);
-	case Func4(fn: (FrameObject, Object, Object, Object, Object) -> Object);
-	case Func5(fn: (FrameObject, Object, Object, Object, Object, Object) -> Object);
-	case Func6(fn: (FrameObject, Object, Object, Object, Object, Object, Object) -> Object);
-	case Func7(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object) -> Object);
-	case Func8(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object) -> Object);
-	case Func9(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object, Object) -> Object);
+	case Func0(fn: FrameObject -> Box<Result>);
+	case Func1(fn: (FrameObject, Object) -> Box<Result>);
+	case Func2(fn: (FrameObject, Object, Object) -> Box<Result>);
+	case Func3(fn: (FrameObject, Object, Object, Object) -> Box<Result>);
+	case Func4(fn: (FrameObject, Object, Object, Object, Object) -> Box<Result>);
+	case Func5(fn: (FrameObject, Object, Object, Object, Object, Object) -> Box<Result>);
+	case Func6(fn: (FrameObject, Object, Object, Object, Object, Object, Object) -> Box<Result>);
+	case Func7(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object) -> Box<Result>);
+	case Func8(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object) -> Box<Result>);
+	case Func9(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object, Object) -> Box<Result>);
 }
