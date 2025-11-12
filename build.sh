@@ -15,6 +15,11 @@ if [ ! -x "$V3C" ]; then
     exit 1
 fi
 
+# Set compiler optimization level to `-O2` if not set by the user
+if [ "$V3C_O" = "" ]; then
+    V3C_O="-O2"
+fi
+
 if [ "$VIRGIL_LIB" = "" ]; then
     if [ "$VIRGIL_LOC" = "" ]; then
 	V3C_LOC=$(dirname $(which v3c))
@@ -90,7 +95,7 @@ echo "}" >> "$CICERO_TEXT"
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="$V3C_OPTS -symbols -shadow-stack-size=10M -heap-size=200M -stack-size=16M -O2"
+V3C_OPTS="-symbols -shadow-stack-size=10M -heap-size=200M -stack-size=16M $V3C_O"
 
 # build
 exe=${PROGRAM}.${TARGET}

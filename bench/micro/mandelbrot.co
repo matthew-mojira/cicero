@@ -97,5 +97,3 @@
 )
 (set x (new Mandelbrot))
 (x.inner_benchmark_loop 500)
-(x.inner_benchmark_loop 750)
-(x.inner_benchmark_loop 1)

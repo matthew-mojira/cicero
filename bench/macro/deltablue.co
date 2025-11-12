@@ -730,8 +730,4 @@
 )
 
 (set x (new DeltaBlue))
-(x.inner_benchmark_loop 1)
-(x.inner_benchmark_loop 100)
-(x.inner_benchmark_loop 200)
-(x.inner_benchmark_loop 500)
 (x.inner_benchmark_loop 1000)

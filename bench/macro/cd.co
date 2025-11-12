@@ -893,10 +893,4 @@
 )
 
 (set x (new CD))
-(x.inner_benchmark_loop 2)
-(x.inner_benchmark_loop 10)
 (x.inner_benchmark_loop 100)
-(x.inner_benchmark_loop 200)
-(x.inner_benchmark_loop 250)
-(x.inner_benchmark_loop 500)
-(x.inner_benchmark_loop 1000)

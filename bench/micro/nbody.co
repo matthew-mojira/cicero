@@ -224,5 +224,4 @@
 )
 
 (set nbody (new NBody))
-(nbody.inner_benchmark_loop 1)
 (nbody.inner_benchmark_loop 250000)
