@@ -22,11 +22,11 @@ MACRO_DIR=$(cd $SCRIPT_LOC/macro && pwd)
 BIN_DIR=$(cd $SCRIPT_LOC/../bin && pwd)
 
 # Create empty .co file for also calculating built in base time
-if [ -d "/tmp/$USER/cicero-bench/" ]; then
-    rm -rf /tmp/$USER/cicero-bench/
+if [ -d "/tmp/$USER/cicero-benchmarks/" ]; then
+    rm -rf /tmp/$USER/cicero-benchmarks/
 fi
 
-T=/tmp/$USER/cicero-bench
+T=/tmp/$USER/cicero-benchmarks
 mkdir -p $T
 touch $T/empty.co
 
@@ -75,3 +75,4 @@ do
     echo "Virgil Opitmization Level: $V3C_O"
     run_benchmarks
 done
+python3 $SCRIPT_LOC/create_markdown.py $T
