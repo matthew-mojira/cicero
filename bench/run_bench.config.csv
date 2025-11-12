@@ -10,5 +10,5 @@ sieve,micro/sieve.co,50
 storage,micro/storage.co,50
 towers,micro/towers.co,50
 nbody,micro/nbody.co,10
-madelbrot,micro/madelbrot.co,10
+mandelbrot,micro/mandelbrot.co,10
 cd,som/constants.co som/vector.co macro/cd.co,10

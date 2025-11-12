@@ -12,7 +12,7 @@ if [ "$TARGETS" = "" ]; then
 fi
 
 if [ "$TIERS" = "" ]; then
-    TIERS="0 1"
+    declare -a TIERS=("0" "1") 
 fi
 
 SCRIPT_LOC=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
@@ -40,7 +40,6 @@ csv_file_name(){
 
 # Runs all benchmarks(across all targets and tiers) for a given virgil compiler optimization level
 run_benchmarks(){
-    read -r -a _TIERS <<< "$TIERS"
     for target in $TARGETS; do
         if [ "$target" = "wasm-wave" ]; then
             BINARY=$BIN_DIR/cicero.wasm
@@ -48,7 +47,7 @@ run_benchmarks(){
             BINARY=$BIN_DIR/cicero.$target
         fi
     
-        for tier in "${_TIERS[@]}"; do
+        for tier in "${TIERS[@]}"; do
             # base time builtin with empty file
             CSV_FILE=$(csv_file_name "empty" $tier $o_level $target)
             hyperfine --warmup 5 --runs 50 "$BINARY -suppress-output=true -tier=$tier $T/empty.co" --export-csv $CSV_FILE
@@ -67,7 +66,7 @@ run_benchmarks(){
 
 for o_level in {0..2}
 do
-    V3C_O="-O$o_level"
+    export V3C_O="-O$o_level"
     # Build birectory
     cd $BIN_DIR/..
     # Build cicero for the new optimization level
