@@ -1,12 +1,14 @@
 from __future__ import annotations
 from collections import defaultdict
 import csv
+import datetime
 import os
 import sys
 import re
 
 # csv files argument needs to be provided
 PATH_TO_CSV_FILES = sys.argv[1]
+OUTPUR_PATH_FOR_MD = sys.argv[2]
 
 # pattern: benchmark-tier{tier}-opt{opt}-{target}.csv
 # e.g. deltablue-tier0-opt2-jvm.csv
@@ -17,13 +19,11 @@ DATA = defaultdict(
 
 
 class BenchmarkData:
-    def __init__(self, mean, stddev, user, system, min, max):
+    def __init__(self, mean, stddev, user, system):
         self.mean = float(mean) * 1000
         self.stddev = float(stddev) * 1000
         self.user = float(user) * 1000
         self.system = float(system) * 1000
-        self.min = float(min) * 1000
-        self.max = float(max) * 1000
 
     def __repr__(self):
         return f"Data: {self.mean}"
@@ -38,8 +38,6 @@ def get_csv_data(path: str) -> BenchmarkData:
                 row["stddev"],
                 row["user"],
                 row["system"],
-                row["min"],
-                row["max"],
             )
 
 
@@ -76,32 +74,21 @@ def main():
             for tier in all_tiers:
                 entry = opt_data.get(opt, {}).get(tier)
                 if entry:
-                    cell = create_div_element(entry)
+                    cell = (f"Mean: {entry.mean:.2f}ms ± {entry.stddev:.2f}ms"
+                           f"<br><small>User: {entry.user:.2f}ms, System: {entry.system:.2f}ms</small>")
                 else:
-                    cell = "<span>–</span>"
+                    cell = "–"
                 row.append(cell)
             output.append("| " + " | ".join(row) + " |")
         output.append("\n")
 
     # Write Markdown
-    with open(f"{PATH_TO_CSV_FILES}/benchmark-results.md", "w") as f:
+    date = datetime.datetime.now().strftime("%Y-%b-%d-%Hh-%Mm-%Ss")
+    file_name = f"{OUTPUR_PATH_FOR_MD}/benchmark-results-{date}.md"
+    with open(file_name, "w") as f:
         f.write("\n".join(output))
-
-
-def create_div_element(entry: BenchmarkData):
-    return (
-        f"<div style='font-size:85%; line-height:1.3;'>"
-        f"<small>Mean: </small>"
-        f"<span style='color:#65a765; font-weight:600;'>{entry.mean:.2f}ms"
-        f" ± {entry.stddev:.2f}ms</span><br> "
-        f"<small>Range: </small>"
-        f"<span style='color:#4B77BE;font-size:85%;'>"
-        f"{entry.min:.1f} .. {entry.max:.1f} ms</span><br>"
-        f"<span style='color:#9ca3af; font-size:80%;'>"
-        f"user {entry.user:.1f} ms, sys {entry.system:.1f} ms</span></div>"
-    )
 
 
 if __name__ == "__main__":
     main()
-    print(f"Done: .md file in {PATH_TO_CSV_FILES}")
+    print(f"Done: .md file in {OUTPUR_PATH_FOR_MD}")

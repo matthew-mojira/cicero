@@ -52,13 +52,13 @@
 | Opt-2 | <div style='font-size:85%; line-height:1.3;'><small>Mean: </small><span style='color:#65a765; font-weight:600;'>52.45ms ± 3.09ms</span><br> <small>Range: </small><span style='color:#4B77BE;font-size:85%;'>42.2 .. 55.0 ms</span><br><span style='color:#9ca3af; font-size:80%;'>user 44.0 ms, sys 8.5 ms</span></div> | <div style='font-size:85%; line-height:1.3;'><small>Mean: </small><span style='color:#65a765; font-weight:600;'>83.15ms ± 0.89ms</span><br> <small>Range: </small><span style='color:#4B77BE;font-size:85%;'>81.3 .. 85.1 ms</span><br><span style='color:#9ca3af; font-size:80%;'>user 66.8 ms, sys 16.3 ms</span></div> |
 
 
-## Benchmark: `madelbrot` (x86-linux)
+## Benchmark: `mandelbrot` (x86-linux)
 
 | Opt/Tier | Tier 0 | Tier 1 |
 |-----------|-----------|-----------|
-| Opt-0 | <span>–</span> | <span>–</span> |
-| Opt-1 | <span>–</span> | <span>–</span> |
-| Opt-2 | <span>–</span> | <span>–</span> |
+| Opt-0 | <div style='font-size:85%; line-height:1.3;'><small>Mean: </small><span style='color:#65a765; font-weight:600;'>181840.82ms ± 80.79ms</span><br> <small>Range: </small><span style='color:#4B77BE;font-size:85%;'>181735.0 .. 181974.4 ms</span><br><span style='color:#9ca3af; font-size:80%;'>user 181686.9 ms, sys 121.4 ms</span></div> | <div style='font-size:85%; line-height:1.3;'><small>Mean: </small><span style='color:#65a765; font-weight:600;'>213916.63ms ± 155.59ms</span><br> <small>Range: </small><span style='color:#4B77BE;font-size:85%;'>213838.3 .. 214356.9 ms</span><br><span style='color:#9ca3af; font-size:80%;'>user 213764.6 ms, sys 108.6 ms</span></div> |
+| Opt-1 | <div style='font-size:85%; line-height:1.3;'><small>Mean: </small><span style='color:#65a765; font-weight:600;'>175677.73ms ± 28.02ms</span><br> <small>Range: </small><span style='color:#4B77BE;font-size:85%;'>175653.4 .. 175750.0 ms</span><br><span style='color:#9ca3af; font-size:80%;'>user 175518.9 ms, sys 121.5 ms</span></div> | <div style='font-size:85%; line-height:1.3;'><small>Mean: </small><span style='color:#65a765; font-weight:600;'>204258.17ms ± 106.46ms</span><br> <small>Range: </small><span style='color:#4B77BE;font-size:85%;'>204074.5 .. 204408.3 ms</span><br><span style='color:#9ca3af; font-size:80%;'>user 204094.4 ms, sys 124.2 ms</span></div> |
+| Opt-2 | <div style='font-size:85%; line-height:1.3;'><small>Mean: </small><span style='color:#65a765; font-weight:600;'>173170.04ms ± 19.62ms</span><br> <small>Range: </small><span style='color:#4B77BE;font-size:85%;'>173143.5 .. 173200.1 ms</span><br><span style='color:#9ca3af; font-size:80%;'>user 173018.9 ms, sys 120.0 ms</span></div> | <div style='font-size:85%; line-height:1.3;'><small>Mean: </small><span style='color:#65a765; font-weight:600;'>204111.77ms ± 48.97ms</span><br> <small>Range: </small><span style='color:#4B77BE;font-size:85%;'>204009.0 .. 204163.8 ms</span><br><span style='color:#9ca3af; font-size:80%;'>user 203968.0 ms, sys 100.9 ms</span></div> |
 
 
 ## Benchmark: `nbody` (x86-linux)

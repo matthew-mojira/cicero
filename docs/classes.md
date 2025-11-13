@@ -65,16 +65,16 @@ Methods:
 * `(d.trunc)`: perform truncation and return a `double`
 * `(d.sin)`: returns a `double` which is the sine value of angle `d` in radians.
 * `(d.cos)`: returns a `double` which is the cosine value of angle `d` in radians.
-* `(d.+ o)`
-* `(d.- o)`
-* `(d.* o)`
-* `(d./ o)`
+* `(d.+ d)`
+* `(d.- d)`
+* `(d.* d)`
+* `(d./ d)`
 * `(d.= o)`
-* `(d.!= o)`
-* `(d.< o)`
-* `(d.<= o)`
-* `(d.> o)`
-* `(d.>= o)`
+* `(d.!= d)`
+* `(d.< d)`
+* `(d.<= d)`
+* `(d.> d)`
+* `(d.>= d)`
 All the above arithmetic operations(`+`, `-`, `*`, `/`) return a `double`. `o` can be either `double` or `int`. Raises exception if `int`(bigInteger) cannot be represented as a `double`.
 
 ## exn

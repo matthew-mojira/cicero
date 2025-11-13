@@ -6,19 +6,35 @@ if [ ! -x "$V3C" ]; then
     exit 1
 fi
 
+HYPERFINE=${HYPERFINE:=$(which hyperfine)}
+if [ ! -x "$HYPERFINE" ]; then
+    echo "Hyperfine command line benchmarking tool not found!"
+    exit 1
+fi
+
+PYTHON3=${PYTHON3:=$(which python3)}
+if [ ! -x "$PYTHON3" ]; then
+    echo "Python3 not found."
+    exit 1
+fi
+
 if [ "$TARGETS" = "" ]; then
-    # TARGETS="x86-linux x86-64-linux jvm wasm-wave"
-    TARGETS="x86-linux"
+    declare -a TARGETS=("x86-64-linux")
+else
+    IFS=' ' read -r -a TARGETS <<< "$TARGETS"
 fi
 
 if [ "$TIERS" = "" ]; then
     declare -a TIERS=("0" "1") 
+else
+    IFS=' ' read -r -a TIERS <<< "$TIERS"
 fi
 
 SCRIPT_LOC=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
-SOM_DIR=$(cd $SCRIPT_LOC/som && pwd)
-MICRO_DIR=$(cd $SCRIPT_LOC/micro && pwd)
-MACRO_DIR=$(cd $SCRIPT_LOC/macro && pwd)
+BENCH_DIR=$(cd $SCRIPT_LOC/../bench/ && pwd)
+SOM_DIR=$(cd $BENCH_DIR/som && pwd)
+MICRO_DIR=$(cd $BENCH_DIR/micro && pwd)
+MACRO_DIR=$(cd $BENCH_DIR/macro && pwd)
 BIN_DIR=$(cd $SCRIPT_LOC/../bin && pwd)
 
 # Create empty .co file for also calculating built in base time
@@ -40,7 +56,7 @@ csv_file_name(){
 
 # Runs all benchmarks(across all targets and tiers) for a given virgil compiler optimization level
 run_benchmarks(){
-    for target in $TARGETS; do
+    for target in ${TARGETS[@]}; do
         if [ "$target" = "wasm-wave" ]; then
             BINARY=$BIN_DIR/cicero.wasm
         else
@@ -50,15 +66,15 @@ run_benchmarks(){
         for tier in "${TIERS[@]}"; do
             # base time builtin with empty file
             CSV_FILE=$(csv_file_name "empty" $tier $o_level $target)
-            hyperfine --warmup 5 --runs 50 "$BINARY -suppress-output=true -tier=$tier $T/empty.co" --export-csv $CSV_FILE
+            $HYPERFINE --warmup 5 --runs 50 "$BINARY -suppress-output=true -tier=$tier $T/empty.co" --export-csv $CSV_FILE
 
             # run the benchmarks
             IFS=','
             # Read the CSV file line by line to run each benchmark
-            tail -n +2 "$SCRIPT_LOC/run_bench.config.csv" | while read -r benchmark files runs; do
-                cd $SCRIPT_LOC
+            tail -n +2 "$BENCH_DIR/run_bench.config.csv" | while read -r benchmark files runs; do
+                cd $BENCH_DIR
                 CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
-                hyperfine --warmup 5 --runs $runs "$BINARY -suppress-output=true -tier=$tier $files" --export-csv $CSV_FILE
+                $HYPERFINE --warmup 5 --runs $runs "$BINARY -suppress-output=true -tier=$tier $files" --export-csv $CSV_FILE
             done
         done
     done
@@ -74,4 +90,4 @@ do
     echo "Virgil Opitmization Level: $V3C_O"
     run_benchmarks
 done
-python3 $SCRIPT_LOC/create_markdown.py $T
+$PYTHON3 $SCRIPT_LOC/create_markdown.py $T $BENCH_DIR/results
