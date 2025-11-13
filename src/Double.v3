@@ -65,26 +65,6 @@ class DoubleObject(val: double) extends Object {
 		return Result.OK(DoubleObjects.fromDouble(double.sqrt(this.val)));
 	}
 
-	def fmod(x: double, y: double) -> double{
-		if (y == 0){
-			return -1.0;
-		}
-
-		def quotient = int.truncd(x / y);
-		def remainder = x - quotient * y;
-		return remainder;
-	}
-
-	def normalize_angle(x: double) -> double{
-		var x = fmod(x, 2* PI);
-		if (x > PI){
-			x = x - 2*PI;
-		} else if (x < -PI){
-			x = x + 2*PI;
-		}
-		return x;
-	}
-
 	def do_sin() -> Result{
 		var x = normalize_angle(this.val);
 		if (CiceroOptions.sanityChecks && x == 1.0)
@@ -134,14 +114,13 @@ class DoubleObject(val: double) extends Object {
 
 	def do_neg() => Result.OK(DoubleObject.new(0.0d-val));
 
-	def do_add(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val + DoubleObject.!(that).val));
-	def do_sub(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val - DoubleObject.!(that).val));
-	def do_mul(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val * DoubleObject.!(that).val));
+	def do_add(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val + that.val));
+	def do_sub(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val - that.val));
+	def do_mul(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val * that.val));
 
-	def do_div(obj: Object) -> Result{
-		def dval = (DoubleObject.!(obj).val);
-		if (dval == 0) return Result.Exn(ExnObjects.fromVirgil("double.div", divideByZero));
-		return Result.OK(DoubleObjects.fromDouble(val / dval));
+	def do_div(that: DoubleObject) -> Result{
+		if (that.val == 0) return Result.Exn(ExnObjects.fromVirgil("double.div", divideByZero));
+		return Result.OK(DoubleObjects.fromDouble(val / that.val));
 	}
 
 	/* Comparisons */
@@ -154,13 +133,34 @@ class DoubleObject(val: double) extends Object {
 		return Result.OK(BoolObjects.fromBool(false));
 	}
 
-	def do_lt(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val < DoubleObject.!(that).val));
-	def do_leq(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val <= DoubleObject.!(that).val));
-	def do_gt(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val > DoubleObject.!(that).val));
-	def do_geq(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val >= DoubleObject.!(that).val));
+	def do_lt(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val < that.val));
+	def do_leq(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val <= that.val));
+	def do_gt(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val > that.val));
+	def do_geq(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val >= that.val));
 }
 
 component DoubleObjects {
 	def fromDouble(val: double) => DoubleObject.new(val);
 }
 def divideByZero = "division by zero";
+
+/* Helper functions */
+
+def fmod(x: double, y: double) -> double{
+	if (y == 0){
+		return -1.0;
+	}
+	def quotient = int.truncd(x / y);
+	def remainder = x - quotient * y;
+	return remainder;
+}
+
+def normalize_angle(x: double) -> double{
+	var x = fmod(x, 2* PI);
+	if (x > PI){
+		x = x - 2*PI;
+	} else if (x < -PI){
+		x = x + 2*PI;
+	}
+	return x;
+}

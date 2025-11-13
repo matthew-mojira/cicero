@@ -82,12 +82,12 @@ run_benchmarks(){
 
 for o_level in {0..2}
 do
-    export V3C_O="-O$o_level"
+    export V3C_OPTS="-O$o_level"
     # Build birectory
     cd $BIN_DIR/..
     # Build cicero for the new optimization level
     make -B
-    echo "Virgil Opitmization Level: $V3C_O"
+    echo "Virgil Opitmization Level: $V3C_OPTS"
     run_benchmarks
 done
 $PYTHON3 $SCRIPT_LOC/create_markdown.py $T $BENCH_DIR/results

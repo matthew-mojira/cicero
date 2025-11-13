@@ -41,9 +41,9 @@ class IntObject(val: BigInteger) extends Object {
 
 	/* comparisons */
 	def i_eq(that: Object) -> Result {
-			if (!that.instanceOf(ClassObjects.classInt))
-					return Result.OK(BoolObjects.falseObject);
-			return Result.OK(BoolObjects.fromBool(this.val.equals(IntObject.!(that).val)));
+		if (!that.instanceOf(ClassObjects.classInt))
+			return Result.OK(BoolObjects.falseObject);
+		return Result.OK(BoolObjects.fromBool(this.val.equals(IntObject.!(that).val)));
 	}
 
 	def i_lt(that: IntObject)  => Result.OK(BoolObjects.fromBool(this.val.compareTo(that.val) <  0));
