@@ -11,6 +11,14 @@ component Exceptions {
 		return Strings.format2("expected %d arguments but got %d", exp, act);
 	}
 
+	def invalidNumericOperand(op: string, ty: string) -> string {
+		return Strings.format2("Can only perform '%s' on a `%s` with another `double` or `int`", op, ty);
+	}
+
+	def invalidTypeConversion(op: string, ty1: string, ty2: string) -> string {
+		return Strings.format3("Cannot perform '%s' as the `%s` cannot be represented as a `%s`", op, ty1, ty2);
+	}
+
 	def noTrueBranch = "cond expression has no true branch";
 	def doNotInstantiateThisClass = "object cannot be instantiated using new expression";
 

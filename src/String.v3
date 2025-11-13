@@ -11,15 +11,53 @@ class StrObject(str: string) extends Object {
 
 	/* METHODS */
 
-	def s_concat(str: StrObject) => Result.OK(StrObjects.fromString(Arrays.concat(this.str, str.str)));
+	def s_concat(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classStr)){
+			def str_value = (StrObject.!(obj).str);
+			return Result.OK(StrObjects.fromString(Arrays.concat(this.str, str_value)));
+
+		} else if (obj.instanceOf(ClassObjects.classChar)){
+			def char_value = (CharObject.!(obj).char);
+			return Result.OK(StrObjects.fromString(Arrays.concat(this.str, [char_value])));
+
+		} else{
+			return Result.Exn(ExnObjects.fromVirgil("+", "Invalid type for string concatenation"));
+		}
+	}
+
 	def s_charAt(idx: IntObject) -> Result {
 		def realIndex = idx.val.longValue();
 		if (realIndex < 0 || realIndex >= str.length)
-			return Result.Exn(ExnObjects.fromVirgil("str.char-at", outOfBounds(realIndex, str.length)));
+			return Result.Exn(ExnObjects.fromVirgil("str.char-at", outOfBounds(str.length, realIndex)));
 		return Result.OK(CharObjects.fromByte(str[realIndex]));
 	}
 
+ 	def s_length() -> Result {
+		return Result.OK(IntObjects.fromLong(str.length));
+	}
 	def s_display() => Result.OK(StrObjects.fromString(display()));
+
+	def s_chars() -> Result{
+		return Result.OK(ListObjects.fromArray(Arrays.map(this.str, CharObjects.fromByte)));
+	}
+
+	def s_substring(start: IntObject, end: IntObject) -> Result{
+		def start_index = start.val.longValue();
+		def end_index = end.val.longValue();
+		if (start_index < 0 || start_index > str.length)
+			return Result.Exn(ExnObjects.fromVirgil("str.substring", outOfBounds(str.length, start_index)));
+
+		var max_limit = if(str.length ==0, 1, str.length);
+		if (end_index < 0 || end_index > max_limit)
+			return Result.Exn(ExnObjects.fromVirgil("str.substring", outOfBounds(str.length, end_index)));
+
+		if (str.length == 0 || start_index >= end_index)
+			return Result.OK(StrObjects.fromString(""));
+
+		def range: Range<byte> = str[start_index ... end_index];
+		def substring: Array<byte> = Ranges.dup(range); // Array<byte> is string
+		return Result.OK(StrObjects.fromString(substring));
+	}
 }
 
 def outOfBounds(len: long, idx: long) => Strings.format2("access at index %d is out of bounds for string of length %d", idx, len);

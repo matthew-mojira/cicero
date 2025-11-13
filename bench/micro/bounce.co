@@ -1,0 +1,116 @@
+; Simulation of a box with bouncing balls
+; Micro benchmark
+; Based on the Are We Fast Yet paper
+
+(class Ball
+  (field _x 0)
+  (field _y 0)
+  (field _x_vel 0)
+  (field _y_vel 0)
+
+  (method (init-values random){
+    (set-field _x self (% (random.next) 500))
+    (set-field _y self (% (random.next) 500))
+    (set-field _x_vel self (- (% (random.next) 300) 150))
+    (set-field _y_vel self (- (% (random.next) 300) 150))
+   })
+
+  (method (bounce){
+    (set x_limit 500)
+    (set y_limit 500)
+    (set bounced false)
+
+    (set-field _x self (+ self._x self._x_vel))
+    (set-field _y self (+ self._y self._y_vel))
+
+    (if (> self._x x_limit){
+      (set-field _x self x_limit)
+      (set-field _x_vel self (- 0 (custom_abs self._x_vel)))
+      (set bounced true)
+     }())
+
+    (if (< self._x 0){
+      (set-field _x self 0)
+      (set-field _x_vel self (custom_abs self._x_vel))
+      (set bounced true)
+     }())
+
+    (if (> self._y y_limit){
+      (set-field _y self y_limit)
+      (set-field _y_vel self (- 0 (custom_abs self._y_vel)))
+      (set bounced true)
+     }())
+
+    (if (< self._y 0){
+      (set-field _y self 0)
+      (set-field _y_vel self (custom_abs self._y_vel))
+      (set bounced true)
+     }())
+
+    bounced
+   })
+
+)
+
+(class Bounce
+
+  (method (benchmark){
+    (set random (new Random))
+
+    (set ball_count 100)
+    (set bounces 0)
+
+    ; balls = [()] * ball_count
+    (set i 0)
+    (set balls [])
+    (while (< i ball_count){
+      (balls.put ())
+      (set i (i.succ))
+     })
+
+    (set i 0)
+    (while (< i ball_count){
+      (set ball (new Ball))
+      (ball.init-values random)
+      (balls.set i ball)
+
+      (set i (i.succ))
+     })
+
+    (set i 0)
+    (while (< i 50){
+      ; for ball in balls
+      (set j 0)
+      (while (< j (balls.length)){
+        (set ball (balls.get j))
+        (if (ball.bounce) (set bounces (bounces.succ)) ())
+
+        (set j (j.succ))
+       })
+      (set i (i.succ))
+     })
+
+    bounces
+   })
+
+  (method (verify_result result) (= result 1331))
+)
+
+(class Random
+  (field _seed 74755)
+
+  (method (next){
+    (set-field _seed self (& (+ (* self._seed 1309) 13849) 65535))
+    self._seed
+   })
+)
+
+(func (custom_abs number)
+  (if (>= number 0) number (number.neg))
+)
+(set x (new Bounce))
+
+{
+  (set answer (x.benchmark))
+  (x.verify_result answer)
+}

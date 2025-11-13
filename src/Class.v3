@@ -55,6 +55,8 @@ def b:  Array<ClassObject> = Array.new(1);
 def o:  Array<ClassObject> = Array.new(1);
 def s:  Array<ClassObject> = Array.new(1);
 def i:  Array<ClassObject> = Array.new(1);
+def d:  Array<ClassObject> = Array.new(1);
+def ii:  Array<ClassObject> = Array.new(2);
 def io: Array<ClassObject> = Array.new(2);
 def so: Array<ClassObject> = Array.new(2);
 
@@ -106,7 +108,10 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod1("or",  b,  BoolObject.b_or)
 			]);
 	def classChar  = ClassObject.new("char",  classBase, CodeObjects.virgilFail, [],
-			[FuncObjects.fromVirgilMethod0("display", CharObject.ch_display)]);
+			[FuncObjects.fromVirgilMethod0("display", CharObject.ch_display),
+			 FuncObjects.fromVirgilMethod0("ascii", CharObject.ch_ascii_value),
+			 FuncObjects.fromVirgilMethod1("+", o,    CharObject.ch_concat)
+			]);
 	def classClass = ClassObject.new("class", classBase,
 			CodeObjects.virgilFail, 
  			[], 
@@ -117,6 +122,24 @@ component ClassObjects {
 	def classCode  = ClassObject.new("code",  classBase, CodeObjects.virgilFail, [],
 			[FuncObjects.fromVirgilMethod0("display",     CodeObject.co_display),
 			 FuncObjects.fromVirgilMethod0("disassemble", CodeObject.co_disassemble)]);
+	def classDouble  = ClassObject.new("double",  classBase, CodeObjects.virgilFail, [],
+			[FuncObjects.fromVirgilMethod0("display",     DoubleObject.do_display),
+			 FuncObjects.fromVirgilMethod0("neg",      DoubleObject.do_neg),
+			 FuncObjects.fromVirgilMethod0("trunc",    DoubleObject.do_trunc),
+			 FuncObjects.fromVirgilMethod0("sin",      DoubleObject.do_sin),
+			 FuncObjects.fromVirgilMethod0("cos",      DoubleObject.do_cos),
+			 FuncObjects.fromVirgilMethod0("sqrt",     DoubleObject.do_sqrt),
+			 FuncObjects.fromVirgilMethod1("try", o,   DoubleObject.do_try),
+			 FuncObjects.fromVirgilMethod1("+",   d,   DoubleObject.do_add),
+			 FuncObjects.fromVirgilMethod1("-",   d,   DoubleObject.do_sub),
+			 FuncObjects.fromVirgilMethod1("*",   d,   DoubleObject.do_mul),
+			 FuncObjects.fromVirgilMethod1("/",   d,   DoubleObject.do_div),
+			 FuncObjects.fromVirgilMethod1("=",   o,   DoubleObject.do_eq),
+			 FuncObjects.fromVirgilMethod1("<",   d,   DoubleObject.do_lt),
+			 FuncObjects.fromVirgilMethod1(">",   d,   DoubleObject.do_gt),
+			 FuncObjects.fromVirgilMethod1("<=",  d,   DoubleObject.do_leq),
+			 FuncObjects.fromVirgilMethod1(">=",  d,   DoubleObject.do_geq)
+			]);
 	def classExn   = ClassObject.new("exn",   classBase, CodeObjects.virgilFail, [], 
 			[FuncObjects.fromVirgilMethod0("display",    ExnObject.e_display),
 			 FuncObjects.fromVirgilMethod0("stacktrace", ExnObject.e_stacktrace)]);
@@ -138,6 +161,8 @@ component ClassObjects {
 			 FuncObjects.fromCiceroMethod ("succ",    CiceroTexts.i_succ),
 			 FuncObjects.fromCiceroMethod ("pred",    CiceroTexts.i_pred),
 			 FuncObjects.fromVirgilMethod0("neg",     IntObject.i_neg),
+			 FuncObjects.fromVirgilMethod1("as", o,   IntObject.i_as),
+			 FuncObjects.fromVirgilMethod1("try",o,   IntObject.i_try),
 			 FuncObjects.fromVirgilMethod1("+",  i,   IntObject.i_add),
 			 FuncObjects.fromVirgilMethod1("-",  i,   IntObject.i_sub),
 			 FuncObjects.fromVirgilMethod1("*",  i,   IntObject.i_mul),
@@ -180,9 +205,12 @@ component ClassObjects {
 	def classPoopCrap = ClassObject.new("poopcrap", classBase, CodeObjects.virgilFail, [], 
 			[FuncObjects.fromVirgilMethod0("display", PoopCrapObject.u_display)]);
 	def classStr = ClassObject.new("str", classBase, CodeObjects.virgilFail, [],
-			[FuncObjects.fromVirgilMethod0("display",    StrObject.s_display),
-			 FuncObjects.fromVirgilMethod1("+", s,       StrObject.s_concat),
-			 FuncObjects.fromVirgilMethod1("char-at", i, StrObject.s_charAt)]);
+			[FuncObjects.fromVirgilMethod0("display",    	StrObject.s_display),
+			 FuncObjects.fromVirgilMethod0("length",     	StrObject.s_length),
+			 FuncObjects.fromVirgilMethod0("chars",      	StrObject.s_chars),
+			 FuncObjects.fromVirgilMethod1("+", o,       	StrObject.s_concat),
+			 FuncObjects.fromVirgilMethod1("char-at", i, 	StrObject.s_charAt),
+			 FuncObjects.fromVirgilMethod2("substring", ii, StrObject.s_substring)]);
 
 
 	/* Returns the function which creates class objects when given the
@@ -201,5 +229,6 @@ def stuff5 = io[1] = ClassObjects.classBase;
 def stuff6 = so[0] = ClassObjects.classStr;
 def stuff7 = so[1] = ClassObjects.classBase;
 def stuff8 = s[0] = ClassObjects.classStr;
-
-
+def stuff9 = ii[0] = ClassObjects.classInt;
+def stuff10 = ii[1] = ClassObjects.classInt;
+def stuff11 = d[0]  = ClassObjects.classDouble;

@@ -1,0 +1,91 @@
+(set inf 1e1000)
+(set n_inf (- 0.0 inf))
+--
+=> Infinity
+=> -Infinity
+==
+{ (set x 0.0) (x.trunc) }
+--
+=> 0
+--
+{ (set x -0.0) (x.trunc) }
+--
+=> 0
+--
+{ (set x 3.75) (x.trunc) }
+--
+=> 3.0
+--
+{ (set x -2.9) (x.trunc) }
+--
+=> -2.0
+--
+{ (set x 123456.999) (x.trunc) }
+--
+=> 123456.0
+--
+{ (set x -123456.999) (x.trunc) }
+--
+=> -123456.0
+--
+{ (set x 0.999999999) (x.trunc) }
+--
+=> 0
+--
+{ (set x -0.999999999) (x.trunc) }
+--
+=> 0
+--
+{ (set x 1.000000001) (x.trunc) }
+--
+=> 1.0
+--
+{ (set x -1.000000001) (x.trunc) }
+--
+=> -1.0
+--
+{ (set x 9007199254740992.0) (x.trunc) }
+--
+=> 9.007199E15
+--
+{ (set x 9007199254740997.0) (x.trunc) }
+--
+=> 9.007199E15
+--
+{ (set x 1E10) (x.trunc) }
+--
+=> 1E10
+--
+{ (set x -1E10) (x.trunc) }
+--
+=> -1E10
+--
+{ (set x 1E20) (x.trunc) }
+--
+=> 1E20
+--
+{ (set x -1E20) (x.trunc) }
+--
+=> -1E20
+--
+{ (set x 1E-10) (x.trunc) }
+--
+=> 0
+--
+{ (set x -1E-10) (x.trunc) }
+--
+=> 0
+--
+{ (set x 4.9e-324) (x.trunc) }
+--
+=> 0
+--
+(inf.trunc)
+--
+=> Infinity
+--
+(n_inf.trunc)
+--
+=> -Infinity
+--
+

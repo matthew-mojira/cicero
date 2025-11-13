@@ -1,0 +1,240 @@
+; Requirements: `Vector.co`
+{
+(set _INITIAL_CAPACITY 16)
+
+(class Entry
+  (field hash 0)
+  (field key 0)
+  (field value 0)
+  (field next ())
+
+  (method (init-values hash_ key value next_){
+    (set-field hash self hash_)
+    (set-field key self key)
+    (set-field value self value)
+    (set-field next self next_)
+   })
+
+  (method (match hash_ key){
+    (and (= self.hash hash_) (= key self.key))
+   })
+)
+
+(func (_hash key){
+  (if (= key ()) 0 {
+    ;else
+    (set hash_ (key.custom_hash))
+    (^ hash_ (hash_.>> 16))
+   })
+ })
+
+(class Dictionary
+  (field _buckets (empty_vec _INITIAL_CAPACITY ()))
+  (field _size 0)
+
+  (method (init-values size){
+    (set-field _buckets self (empty_vec size ()))
+   })
+
+  (method (size) self._size)
+  (method (is_empty) (= self._size 0))
+
+  (method (_get_bucket_idx hash_)
+    (& (- (self._buckets.length) 1) hash_)
+  )
+
+  (method (_get_bucket hash_)
+    (self._buckets.get (self._get_bucket_idx hash_))
+  )
+
+  (method (at key){
+    (set hash_ (_hash key))
+    (set e (self._get_bucket hash_))
+
+    (set ret ())
+    (set done false)
+
+    (while (and (!= e ()) (= done false)){
+      (if (e.match hash_ key){
+        (set ret e.value)
+        (set done true)
+       }
+      ;else
+        (set e e.next)
+      )
+     })
+
+    ret
+   })
+
+  (method (contains_key key){
+    (set hash_ (_hash key))
+    (set e (self._get_bucket hash_))
+
+    (set ret false)
+    (while (and (!= e ()) (= ret false)){
+      (if (e.match hash_ key){
+        (set ret true)
+       }
+      ;else
+        (set e e.next)
+      )
+     })
+    ret
+   })
+
+  (method (at_put key value){
+    (set hash_ (_hash key))
+    (set i (self._get_bucket_idx hash_))
+
+    (set current (self._buckets.get i))
+
+    (if (= current ()) {
+      (self._buckets.set i (self._new_entry key value hash_))
+      (set-field _size self (self._size.succ))
+     }{
+      ;else
+      (self._insert_bucket_entry key value hash_ current)
+     })
+
+    (if (> self._size (self._buckets.length)) (self._resize) ())
+   })
+
+  (method (_new_entry key value hash_) {
+    (set x (new Entry))
+    (x.init-values hash_ key value ())
+    x
+   })
+
+  (method (_insert_bucket_entry key value hash_ head){
+    (set current head)
+    (set loop true)
+
+    (while loop {
+      (if (current.match hash_ key){
+        (set-field value current value)
+        (set loop false)
+
+       }{
+         ;else
+         (if (= current.next ()){
+           (set-field _size self (self._size.succ))
+           (set-field next current (self._new_entry key value hash_))
+           (set loop false)
+          }{
+            ;else
+            (set current current.next)
+          })
+       })
+     })
+   })
+
+  (method (_resize){
+    (set old_storage self._buckets)
+
+    (set new_storage (empty_vec (* (old_storage.length) 2) ()))
+    (set-field _buckets self new_storage)
+    (self._transfer_entries old_storage)
+   })
+
+  (method (_transfer_entries old_storage){
+    (set i 0)
+    (while (< i (old_storage.length)){
+
+      (set current (old_storage.get i))
+      (if (!= current ()){
+        (old_storage.set i ())
+
+        (if (= current.next ()){
+          (self._buckets.set (& current.hash (- (self._buckets.length) 1)) current)
+         }{
+           (self._split_bucket old_storage i current)
+         })
+       }())
+
+      (set i (i.succ))
+     })
+   })
+
+  (method (_split_bucket old_storage i head){
+    (set lo_head ())
+    (set lo_tail ())
+    (set hi_head ())
+    (set hi_tail ())
+    (set current head)
+
+    (while (!= current ()){
+      (if (= (& current.hash (old_storage.length)) 0){
+        (if (= lo_tail ()){
+          (set lo_head current)
+         }{
+           (set-field next lo_tail current)
+         })
+        (set lo_tail current)
+       }{
+        ;else
+        (if (= hi_tail ()){
+          (set hi_head current)
+         }{
+           (set-field next hi_tail current)
+         })
+        (set hi_tail current)
+       })
+
+      (set current current.next)
+     })
+
+    (if (!= lo_tail ()){
+      (set-field next lo_tail ())
+      (self._buckets.set i lo_head)
+     }())
+
+    (if (!= hi_tail ()){
+      (set-field next hi_tail ())
+      (self._buckets.set (+ i (old_storage.length)) hi_head)
+     }())
+
+   })
+
+  (method (remove_all){
+    (set-field _buckets self (empty_vec (self._buckets.length) ()))
+    (set-field _size self 0)
+   })
+
+  (method (get_keys){
+    (set keys (new Vector))
+    (keys.init-values self._size)
+
+    (set i 0)
+    (while (< i (self._buckets.length)){
+      (set current (self._buckets.get i))
+      (while (!= current ()){
+        (keys.append current.key)
+        (set current current.next)
+       })
+
+      (set i (i.succ))
+     })
+
+    keys
+   })
+
+  (method (get_values){
+    (set values (new Vector))
+    (values.init-values self._size)
+
+    (set i 0)
+    (while (< i (self._buckets.length)){
+      (set current (self._buckets.get i))
+      (while (!= current ()){
+        (values.append current.value)
+        (set current current.next)
+       })
+
+      (set i (i.succ))
+     })
+
+    values
+   })
+)
+}

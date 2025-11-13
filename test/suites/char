@@ -1,0 +1,54 @@
+(set c 'c')
+(set s "test_string")
+--
+=> 'c'
+=> "test_string"
+==
+'a'
+--
+=> 'a'
+--
+(c.ascii)
+--
+=> 99
+--
+'\\'
+--
+=> '\'
+--
+(s.char-at 0)
+--
+=> 't'
+--
+(try (s.char-at 100) else "pass")
+--
+=> "pass"
+--
+(c.display)
+--
+=> "c"
+--
+(s.+ c)
+--
+=> "test_stringc"
+--
+(c.+ s)
+--
+=> "ctest_string"
+--
+(c.+ c)
+--
+=> "cc"
+--
+(c.+ 'a')
+--
+=> "ca"
+--
+(try (c.+ 10) exp "pass")
+--
+=> "pass"
+--
+(if 'c' "pass" "fail")
+--
+=> "pass"
+--

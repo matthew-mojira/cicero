@@ -1,0 +1,733 @@
+; DeltaBlue macro benchmark
+; Based on the Are We Fast Yet paper
+
+(class DeltaBlue
+  (method (inner_benchmark_loop inner_iterations){
+    (_Planner_chain_test inner_iterations)
+    (_Planner_projection_test inner_iterations)
+    true
+  })
+
+  (method (benchmark) (raise "Should never be reached"))
+  (method (verify_result result) (raise "Should never be reached"))
+)
+
+(class _Plan
+  (extends Vector)
+  (init (self.init-values 15))
+
+  (method (execute) {
+    (func (lambda c) (c.execute))
+    (self.for_each lambda)
+  })
+)
+
+(class _Planner
+  (field _current_mark 1)
+
+  (method (incremental_add c){
+    (set mark (self._new_mark))
+    (set overridden (c.satisfy mark self))
+
+    (while (!= overridden ())
+      (set overridden (overridden.satisfy mark self))
+    )
+  })
+
+  (method (incremental_remove c){
+    (set out (c.get_output))
+    (c.mark_unsatisfied)
+    (c.remove_from_graph)
+
+    (set unsatisfied (self._remove_propagate_from out))
+    (unsatisfied.for_each self.incremental_add)
+  })
+    
+  (method (extract_plan_from_constraints constraints){
+    (set sources (new Vector))
+
+    (func (each c){
+      (if (and (c.is_input) (c.is_satisfied)) (sources.append c) ())
+
+    })
+
+    (constraints.for_each each)
+    (self._make_plan sources)
+  })
+
+  (method (_make_plan sources){
+    (set mark (self._new_mark))
+    (set plan (new _Plan))
+    (set todo sources)
+
+    (while (not (todo.is_empty)){
+      (set c (todo.remove_first))
+
+      (set output (c.get_output))
+      (if (and (!= output.mark mark) (c.inputs_known mark)){
+        (plan.append c)
+        (set output (c.get_output))
+        (set-field mark output mark)
+        (self._add_constraints_consuming_to (c.get_output) todo)
+      }())
+    })
+    plan
+  })
+
+  (method (propagate_from v){
+    (set todo (new Vector))
+    (self._add_constraints_consuming_to v todo)
+
+    (while (not (todo.is_empty)){
+      (set c (todo.remove_first))
+      (c.execute)
+      (self._add_constraints_consuming_to (c.get_output) todo)
+    })
+  })
+
+  (method (_add_constraints_consuming_to v coll){
+    (set determining_c v.determined_by)
+
+    (func (each c){
+      (if (and (!= c determining_c) (c.is_satisfied))
+        (coll.append c)
+      ())
+    })
+
+    (v.constraints.for_each each)
+  })
+
+  (method (add_propagate c mark){
+    (set todo (vector_with c))
+
+    (set ret true)
+    (while (and ret (not (todo.is_empty))){
+      (set d (todo.remove_first))
+
+      (set output (d.get_output))
+      (if (= output.mark mark) {
+        (self.incremental_remove c)
+        (set ret false)
+      }{
+      ;else
+        (d.recalculate)
+        (self._add_constraints_consuming_to (d.get_output) todo)
+      })
+    })
+    ret
+  })
+
+  (method (change var new_value){
+    (set edit_c (new _EditConstraint))
+    (edit_c.init-values var _PREFERRED self)
+
+    (set edit_v (vector_with edit_c))
+    (set plan (self.extract_plan_from_constraints edit_v))
+    (set i 0)
+    (while (< i 10){
+      (set-field value var new_value)
+      (plan.execute)
+
+      (set i (i.succ))
+    })
+    (edit_c.destroy_constraint self)
+  })
+
+
+  (method (_constraints_consuming v fn){
+    (set determining_c v.determined_by)
+
+    (func (each c){
+      (if (and (!= c determining_c) (c.is_satisfied))
+        (fn c)
+      ())
+    })
+
+    (v.constraints.for_each each)
+  })
+
+  (method (_new_mark){
+    (set-field _current_mark self (self._current_mark.succ))
+    self._current_mark
+  })
+
+  (method (_remove_propagate_from out){
+    (set unsatisfied (new Vector))
+
+    (set-field determined_by out ())
+    (set-field walk_strength out _absolute_weakest)
+    (set-field stay out true)
+
+    (set todo (vector_with out))
+
+    (while (not (todo.is_empty)){
+      (set v (todo.remove_first))
+
+      (func (each c){
+        (if (c.is_satisfied) (){
+          (unsatisfied.append c)
+        })
+      })
+
+      (v.constraints.for_each each)
+
+      (func (recalc c){
+        (c.recalculate)
+        (todo.append (c.get_output))
+      })
+
+      (self._constraints_consuming v recalc)
+    })
+
+    (func (comp c1 c2)
+      (if (c1.strength.stronger c2.strength) -1 1)
+    )
+
+    (unsatisfied.sort comp)
+    unsatisfied
+  })
+
+)
+
+(func (_Planner_chain_test n){
+  (set planner (new _Planner))
+  (set variables (empty_vec (n.succ) ()))
+
+  (set i 0)
+  (while (<= i n){
+    (set variable (new _Variable))
+    (variable.init-values 0)
+    (variables.set i variable)
+
+    (set i (i.succ))
+  })
+
+  (set i 0)
+  (while (< i n){
+    (set v1 (variables.get i))
+    (set v2 (variables.get (i.succ)))
+    (set ec (new _EqualityConstraint))
+    (ec.init-values v1 v2 _REQUIRED planner)
+
+    (set i (i.succ))
+  })
+
+  (set sc (new _StayConstraint))
+  (sc.init-values (variables.get n) _STRONG_DEFAULT planner)
+
+  (set edit_c (new _EditConstraint))
+  (edit_c.init-values (variables.get 0) _PREFERRED planner)
+
+  (set edit_v (vector_with edit_c))
+  (set plan (planner.extract_plan_from_constraints edit_v))
+
+  (set i 0)
+  (while (< i 100){
+    (set variable (variables.get 0))
+    (set-field value variable i)
+    (plan.execute)
+
+    (set variable (variables.get n))
+    (if (!= variable.value i)
+        (raise "Chain test failed!")
+    ())
+
+    (set i (i.succ))
+  })
+  
+  (edit_c.destroy_constraint planner)
+})
+
+(func (_Planner_projection_test n){
+  (set planner (new _Planner))
+
+  (set dests (new Vector))
+
+  (set scale (new _Variable))
+  (scale.init-values 10)
+  (set offset (new _Variable))
+  (offset.init-values 1000)
+
+  (set src ())
+  (set dst ())
+
+  (set i 1)
+  (while (<= i n){
+    (set src (new _Variable))
+    (src.init-values i)
+    (set dst (new _Variable))
+    (dst.init-values i)
+
+    (dests.append dst)
+    (set stay_c (new _StayConstraint))
+    (stay_c.init-values src _DEFAULT planner)
+
+    (set scale_c (new _ScaleConstraint))
+    (scale_c.init-values src scale offset dst _REQUIRED planner)
+
+    (set i (i.succ))
+  })
+
+  (planner.change src 17)
+  (if (!= dst.value 1170) (raise "Projection test 1 failed!") ())
+
+  (planner.change dst 1050)
+  (if (!= src.value 5) (raise "Projection test 2 failed!") ())
+
+  (planner.change scale 5)
+  (set i 0)
+  (while (< i (n.pred)){
+    (set dest (dests.at i))
+    (if (!= dest.value (+ (* 5 (+ i 1)) 1000))
+      (raise "Projection test 3 failed!")
+    ())
+
+    (set i (i.succ))
+  })
+
+  (planner.change offset 2000)
+  (set i 0)
+  (while (< i (n.pred)){
+    (set dest (dests.at i))
+    (if (!= dest.value (+ (* 5 (+ i 1)) 2000))
+      (raise "Projection test 4 failed!")
+    ())
+
+    (set i (i.succ))
+  })
+})
+
+(class _Sym
+  (field _hash 0)
+
+  (method (init-values hash_) (set-field _hash self hash_))
+  (method (custom_hash) self._hash)
+)
+
+{
+  (set _ABSOLUTE_STRONGEST (new _Sym))
+  (_ABSOLUTE_STRONGEST.init-values 0)
+
+  (set _REQUIRED (new _Sym))
+  (_REQUIRED.init-values 1)
+
+  (set _STRONG_PREFERRED (new _Sym))
+  (_STRONG_PREFERRED.init-values 2)
+
+  (set _PREFERRED (new _Sym))
+  (_PREFERRED.init-values 3)
+
+  (set _STRONG_DEFAULT (new _Sym))
+  (_STRONG_DEFAULT.init-values 4)
+
+  (set _DEFAULT (new _Sym))
+  (_DEFAULT.init-values 5)
+
+  (set _WEAK_DEFAULT (new _Sym))
+  (_WEAK_DEFAULT.init-values 6)
+
+  (set _ABSOLUTE_WEAKEST (new _Sym))
+  (_ABSOLUTE_WEAKEST.init-values 7)
+
+  (class _Strength
+    (field _symbolic_value ())
+    (field arithmetic_value ())
+
+    (method (init-values strength_sym){
+      (set-field _symbolic_value self strength_sym)
+      (set-field arithmetic_value self (_strength_table.at strength_sym))
+    })
+
+    (method (same_as s) (= self.arithmetic_value s.arithmetic_value))
+    (method (stronger s) (< self.arithmetic_value s.arithmetic_value))
+    (method (weaker s) (> self.arithmetic_value s.arithmetic_value))
+
+    (method (strongest s)
+      (if (s.stronger self) s self)
+    )
+
+    (method (weakest s)
+      (if (s.weaker self) s self)
+    )
+  )
+}
+
+(func (_Strength_of strength){
+  (_strength_constant.at strength)
+})
+
+(func (_create_strength_table){
+  (set strength_table (new IdentityDictionary))
+  (strength_table.at_put _ABSOLUTE_STRONGEST -10000)
+  (strength_table.at_put _REQUIRED -800)
+  (strength_table.at_put _STRONG_PREFERRED -600)
+  (strength_table.at_put _PREFERRED -400)
+  (strength_table.at_put _STRONG_DEFAULT -200)
+  (strength_table.at_put _DEFAULT 0)
+  (strength_table.at_put _WEAK_DEFAULT 500)
+  (strength_table.at_put _ABSOLUTE_WEAKEST 10000)
+  strength_table
+})
+
+(func (_create_strength_constants){
+  (set strength_constant (new IdentityDictionary))
+
+  (func (lambda key) {
+    (set s (new _Strength))
+    (s.init-values key)
+    (strength_constant.at_put key s)
+  })
+
+  (set keys (_strength_table.get_keys))
+  (keys.for_each lambda)
+
+  strength_constant
+})
+
+{
+  (set _strength_table (_create_strength_table))
+  (set _strength_constant (_create_strength_constants))
+
+  (set _absolute_weakest (_Strength_of _ABSOLUTE_WEAKEST))
+  (set _required (_Strength_of _REQUIRED))
+
+  ; Direction enum values
+  (set FORWARD 1)
+  (set BACKWARD 2)
+}
+
+; Constraints
+(class _AbstractConstraint
+  (field strength ())
+
+  (method (init-strength strength){
+    (set-field strength self (_Strength_of strength))
+  })
+
+  (method (is_input) false)
+
+  (method (add_constraint planner){
+    (self.add_to_graph)
+    (planner.incremental_add self)
+  })
+
+
+  (method (destroy_constraint planner){
+    (if (self.is_satisfied) (planner.incremental_remove self) ())
+
+    (self.remove_from_graph)
+  })
+
+  (method (inputs_known mark){
+    (func (lambda v){
+      (not
+        (or (= v.mark mark) (or v.stay (= v.determined_by ())))
+      )
+    })
+
+    (not (self.inputs_has_one lambda))
+  })
+
+  (method (satisfy mark planner){
+    (self.choose_method mark)
+
+    (if (self.is_satisfied){
+      (func (each input_) (set-field mark input_ mark))
+
+      (self.inputs_do each)
+
+      (set out (self.get_output))
+      (set overridden out.determined_by)
+      (if (!= overridden ()) (overridden.mark_unsatisfied) ())
+
+      (set-field determined_by out self)
+      (if (not (planner.add_propagate self mark)) (raise "Cycle encountered") ())
+
+      (set-field mark out mark)
+    }{
+      ;else
+      (set overridden ())
+      (if (self.strength.same_as _required) (raise "Could not satisfy a required constraint") ())
+    })
+
+    overridden
+  })
+
+  ; Abstract methods
+  (method (is_satisfied) (raise "Abstract method `is_satisfied` : Needs to be implemented"))
+  (method (add_to_graph) (raise "Abstract method `add_to_graph`: Needs to be implemented"))
+  (method (remove_from_graph) (raise "Abstract method `remove_from_graph`: Needs to be implemented"))
+  (method (choose_method mark) (raise "Abstract method `choose_method`: Needs to be implemented"))
+  (method (execute) (raise "Abstract method `execute`: Needs to be implemented"))
+  (method (inputs_do fn) (raise "Abstract method `inputs do`: Needs to be implemented"))
+  (method (inputs_has_one fn) (raise "Abstract method `inputs_has_one`: Needs to be implemented"))
+  (method (mark_unsatisfied) (raise "Abstract method `mark_unsatisfied`: Needs to be implemented"))
+  (method (get_output) (raise "Abstract method `get_output`: Needs to be implemented"))
+  (method (recalculate) (raise "Abstract method `recalculate`: Needs to be implemented"))
+)
+
+(class _BinaryConstraint
+  (extends _AbstractConstraint)
+  (field _v1 ())
+  (field _v2 ())
+  (field _direction ())
+
+  (method (init-binary-constraint var1 var2 strength _planner){
+    (self.init-strength strength)
+    (set-field _v1 self var1)
+    (set-field _v2 self var2)
+  })
+
+  (method (is_satisfied) (!= self._direction ()))
+
+  (method (add_to_graph){
+    (self._v1.add_constraint self)
+    (self._v2.add_constraint self)
+    (set-field _direction self ())
+  })
+
+  (method (remove_from_graph){
+    (if (!= self._v1 ()) (self._v1.remove_constraint self) ())
+    (if (!= self._v2 ()) (self._v2.remove_constraint self) ())
+    (set-field _direction self ())
+  })
+
+  (method (choose_method mark){
+    (if (= self._v1.mark mark) {
+      (if (and (!= self._v2.mark mark) (self.strength.stronger self._v2.walk_strength)){
+        (set-field _direction self FORWARD)
+      }{
+      ;else
+        (set-field _direction self ())
+      })
+      self._direction
+
+    }{
+    ;else
+      (if (= self._v2.mark mark){
+        (if (and (!= self._v1.mark mark) (self.strength.stronger self._v1.walk_strength)){
+          (set-field _direction self BACKWARD)
+        }{
+        ;else
+          (set-field _direction self ())
+        })
+        self._direction
+      }{
+      ;else
+        (if (self._v1.walk_strength.weaker self._v2.walk_strength){
+          (if (self.strength.stronger self._v1.walk_strength){
+            (set-field _direction self BACKWARD)
+          } ;else
+            (set-field _direction self ())
+          )
+          self._direction
+        }{
+        ;else
+          (if (self.strength.stronger self._v2.walk_strength){
+            (set-field _direction self FORWARD)
+          } ;else
+            (set-field _direction self ())
+          )
+          self._direction
+        })
+      })
+    })
+  })
+
+  (method (inputs_do fn){
+    (if (= self._direction FORWARD) (fn self._v1) (fn self._v2))
+    ()
+  })
+
+  (method (inputs_has_one fn)
+    (if (= self._direction FORWARD) (fn self._v1) (fn self._v2))
+  )
+
+  (method (mark_unsatisfied) (set-field _direction self ()))
+
+  (method (get_output)
+    (if (= self._direction FORWARD) self._v2 self._v1)
+  )
+
+  (method (recalculate){
+    (if (= self._direction FORWARD){
+      (set input_ self._v1)
+      (set output self._v2)
+    }{
+    ;else
+      (set input_ self._v2)
+      (set output self._v1)
+    })
+
+    (set-field walk_strength output (self.strength.weakest input_.walk_strength))
+    (set-field stay output input_.stay)
+    (if output.stay (self.execute) ())
+  })
+)
+
+(class _UnaryConstraint
+  (extends _AbstractConstraint)
+  (field _output ())
+  (field _satisfied false)
+
+  (method (init-values v strength planner){
+    (self.init-strength strength)
+    (set-field _output self v)
+    (self.add_constraint planner)
+  })
+
+  (method (is_satisfied) self._satisfied)
+
+  (method (add_to_graph){
+    (self._output.add_constraint self)
+    (set-field _satisfied self false)
+  })
+
+  (method (remove_from_graph){
+    (if (!= self._output ()) (self._output.remove_constraint self) ())
+    (set-field _satisfied self false)
+  })
+
+  (method (choose_method mark)
+    (set-field _satisfied self
+      (and (!= self._output.mark mark) (self.strength.stronger self._output.walk_strength))
+    )
+  )
+
+  (method (inputs_do fn) ())
+
+  (method (inputs_has_one fn) false)
+
+  (method (mark_unsatisfied) (set-field _satisfied self false))
+
+  (method (get_output) self._output)
+
+  (method (recalculate){
+    (set-field walk_strength self._output self.strength)
+    (set-field stay self._output (not (self.is_input)))
+    (if self._output.stay (self.execute) ())
+  })
+)
+
+(class _EditConstraint
+  (extends _UnaryConstraint)
+  (method (is_input) true)
+  (method (execute) ())
+)
+
+(class _EqualityConstraint
+  (extends _BinaryConstraint)
+  (method (init-values var1 var2 strength planner){
+    (self.init-binary-constraint var1 var2 strength planner)
+    (self.add_constraint planner)
+  })
+
+  (method (execute){
+    (if (= self._direction FORWARD)
+      (set-field value self._v2 self._v1.value)
+    ;else
+      (set-field value self._v1 self._v2.value)
+    )
+  })
+)
+
+(class _ScaleConstraint
+  (extends _BinaryConstraint)
+  (field _scale ())
+  (field _offset ())
+
+  (method (init-values src scale offset dest strength planner){
+    (self.init-binary-constraint src dest strength planner)
+    (set-field _scale self scale)
+    (set-field _offset self offset)
+    (self.add_constraint planner)
+  })
+
+  (method (add_to_graph){
+    (self._v1.add_constraint self)
+    (self._v2.add_constraint self)
+    (self._scale.add_constraint self)
+    (self._offset.add_constraint self)
+    (set-field _direction self ())
+  })
+
+  (method (remove_from_graph){
+    (if (!= self._v1 ()) (self._v1.remove_constraint self) ())
+    (if (!= self._v2 ()) (self._v2.remove_constraint self) ())
+    (if (!= self._scale ()) (self._scale.remove_constraint self) ())
+    (if (!= self._offset ()) (self._offset.remove_constraint self) ())
+
+    (set-field _direction self ())
+  })
+
+  (method (execute){
+    (if (= self._direction FORWARD)
+      (set-field value self._v2
+        (+ (* self._v1.value self._scale.value) self._offset.value)
+      )
+    ;else
+      (set-field value self._v1
+        (/ (- self._v2.value self._offset.value) self._scale.value)
+      )
+    )
+  })
+
+  (method (inputs_do fn){
+    (if (= self._direction FORWARD){
+      (fn self._v1)
+      (fn self._scale)
+      (fn self._offset)
+    }{
+      (fn self._v2)
+      (fn self._scale)
+      (fn self._offset)
+    })
+  })
+
+  (method (recalculate){
+    (if (= self._direction FORWARD){
+      (set input_ self._v1)
+      (set output self._v2)
+    }{
+    ;else
+      (set output self._v1)
+      (set input_ self._v2)
+    })
+
+    (set-field walk_strength output (self.strength.weakest input_.walk_strength))
+    (set-field stay output (and (and input_.stay self._scale.stay) self._offset.stay))
+
+    (if output.stay (self.execute) ())
+  })
+)
+
+(class _StayConstraint
+  (extends _UnaryConstraint)
+  (method (execute) ())
+)
+
+; Variables
+(class _Variable
+  (field value 0)
+  (field constraints ())
+  (field determined_by ())
+  (field mark 0)
+  (field walk_strength _absolute_weakest)
+  (field stay true)
+
+  (method (init-values value){
+    (set-field value self value)
+    (set-field constraints self (new Vector))
+    (self.constraints.init-values 2)
+  })
+
+  (method (add_constraint c) (self.constraints.append c))
+
+  (method (remove_constraint c) {
+    (self.constraints.remove c)
+    (if (= self.determined_by c) (set-field determined_by self ()) ())
+  })
+)
+
+(set x (new DeltaBlue))
+(x.inner_benchmark_loop 1000)

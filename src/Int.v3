@@ -8,15 +8,33 @@ class IntObject(val: BigInteger) extends Object {
 	def isTrue()  => true;
 
 	/* METHODS */
+	def i_as(obj: Object) -> Result{
+		return cast(obj, false);
+	}
+
+	def i_try(obj: Object) -> Result{
+		return cast(obj, true);
+	}
+
+	def cast(obj: Object, strict: bool) -> Result{
+		if (obj == ClassObjects.classStr)
+			return i_display();
+		else if (obj == ClassObjects.classDouble)
+			return DoubleIntConversion.asDouble(this, strict);
+		else
+			return Result.Exn(ExnObjects.fromVirgil("as", "Unable to convert `int`"));
+	}
 
 	/* arithmetic */
 	def i_neg()  => Result.OK(IntObject.new(val.negate()));
-	def i_add(that: IntObject) => Result.OK(IntObject.new(this.val.add(that.val)));
+
+ 	def i_add(that: IntObject) => Result.OK(IntObject.new(this.val.add(that.val)));
 	def i_sub(that: IntObject) => Result.OK(IntObject.new(this.val.subtract(that.val)));
 	def i_mul(that: IntObject) => Result.OK(IntObject.new(this.val.multiply(that.val)));
 	def i_div(that: IntObject) => if (that.val.signum == 0,
-			Result.Exn(ExnObjects.fromVirgil("int.div", divideByZero)),
-			Result.OK(IntObject.new(this.val.divide(that.val))));
+					Result.Exn(ExnObjects.fromVirgil("int.div", divideByZero)),
+					Result.OK(IntObject.new(this.val.divide(that.val))));
+
 	def i_mod(that: IntObject) => if (that.val.signum == 0,
 			Result.Exn(ExnObjects.fromVirgil("int.mod", divideByZero)),
 			Result.OK(IntObject.new(this.val.remainder(that.val))));

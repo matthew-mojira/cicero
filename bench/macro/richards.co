@@ -1,0 +1,457 @@
+; Richards macro benchmark
+; based on the Are we fast yet benchmarks
+
+{
+    (set _NO_TASK ())
+    (set _NO_WORK ())
+
+    (set _IDLER 0)
+    (set _WORKER 1)
+    (set _HANDLER_A 2)
+    (set _HANDLER_B 3)
+    (set _DEVICE_A 4)
+    (set _DEVICE_B 5)
+
+    (set _NUM_TYPES 6)
+
+    (set _DEVICE_PACKET_KIND 0)
+    (set _WORK_PACKET_KIND 1)
+
+    (set _DATA_SIZE 4)
+
+    (set _TRACING false)
+
+    (class Richards
+
+    (method (benchmark) {
+        (set scheduler (new _Scheduler))
+        (scheduler.start)
+    })
+
+    (method (verify_result result) result)
+    )
+}
+
+(class _RBObject
+
+    (method (append packet queue_head){
+        (set-field link packet _NO_WORK)
+        (if (= _NO_WORK queue_head) packet {
+
+            (set mouse queue_head)
+
+            (set loop true)
+            (while loop {
+                (set link mouse.link)
+                (if (= link _NO_WORK)
+                    (set loop false)
+                ;else
+                    (set mouse link)
+                )
+            })
+
+            (set-field link mouse packet)
+            queue_head
+        })
+    })
+)
+
+(class _Scheduler
+    (extends _RBObject)
+    
+    ; init tracing
+    (field _layout 0)
+
+    ; init scheduler
+    (field _task_list _NO_TASK)
+    (field _current_task _NO_TASK)
+    (field _current_task_identity 0)
+
+    (field _task_table (empty_vec _NUM_TYPES _NO_TASK))
+
+    (field _queue_count 0)
+    (field _hold_count 0)
+
+    (method (create_device identity priority work state){
+        (set data (new _DeviceTaskDataRecord))
+
+        (func (fn function_work data_record){
+            (if (= _NO_WORK function_work){
+                (set function_work data_record.pending)
+                (if (= _NO_WORK function_work) (self.mark_waiting){
+                    (set-field pending data_record _NO_WORK)
+                    (self.queue_packet function_work)
+                })
+            }{
+            ;else
+                (set-field pending data_record function_work)
+                (if _TRACING (self._trace function_work.datum)())
+                (self._hold_self)
+            })
+        })
+        
+        (self.create_task identity priority work state data fn)
+    })
+
+    (method (create_handler identity priority work state){
+        (set data (new _HandlerTaskDataRecord))
+
+        (func (fn work_arg data_record){
+            (if (!= _NO_WORK work_arg){
+                (if (= _WORK_PACKET_KIND work_arg.kind)
+                    (data_record.work_in_add work_arg)
+                ;else
+                    (data_record.device_in_add work_arg)
+                )
+            }())
+
+            (set work_packet data_record.work_in)
+            (if (= _NO_WORK work_packet) (self.mark_waiting) {
+            ;else
+                (set count work_packet.datum)
+                (if (>= count _DATA_SIZE){
+                    (set-field work_in data_record work_packet.link)
+                    (self.queue_packet work_packet)
+                }{
+                ;else
+                (set device_packet data_record.device_in)
+                (if (= _NO_WORK device_packet) (self.mark_waiting){
+                ;else
+                    (set-field device_in data_record device_packet.link)
+                    (set-field datum device_packet (work_packet.data.get count))
+                    (set-field datum work_packet (count.succ))
+                    (self.queue_packet device_packet)
+                })
+                })
+            })
+        })
+
+        (self.create_task identity priority work state data fn)
+    })
+
+    (method (create_idler identity priority work state){
+        (set data (new _IdleTaskDataRecord))
+
+        (func (fn _work data_record){
+            (set-field count data_record (data_record.count.pred))
+            (if (= 0 data_record.count) (self._hold_self){
+            ;else
+
+                (if (= 0 (& data_record.control 1)){
+                    (set-field control data_record (/ data_record.control 2))
+                    (self.release _DEVICE_A)
+                }{
+                ;else
+                    (set-field control data_record (^ (/ data_record.control 2) 53256))
+                    (self.release _DEVICE_B)
+                })
+            })
+        })
+        
+        (self.create_task identity priority work state data fn)
+    })
+
+    (method (create_packet link identity kind) {
+        (set packet (new _Packet))
+        (packet.init-values link identity kind)
+        packet
+    })
+    
+    (method (create_task identity priority work state data fn){
+        (set t (new _TaskControlBlock))
+        (t.init-values self._task_list identity priority work state data fn)
+
+        (set-field _task_list self t)
+        (self._task_table.set identity t)
+    })
+
+    (method (create_worker identity priority work state){
+        (set data (new _WorkerTaskDataRecord))
+
+        (func (fn work data_record){
+            (if (= _NO_WORK work) (self.mark_waiting){
+            ;else
+                (set-field destination data_record (if (= _HANDLER_A data_record.destination) _HANDLER_B _HANDLER_A))
+
+                (set-field identity work data_record.destination)
+                (set-field datum work 0)
+
+                (set i 0)
+                (while (< i _DATA_SIZE){
+                    (set-field count data_record (data_record.count.succ))
+                    (if (> data_record.count 26) (set-field count data_record 1) ())
+
+                    (work.data.set i (+ 65 (- data_record.count 1)))
+
+                    (set i (i.succ))
+                })
+
+                (self.queue_packet work)
+            })
+        })
+
+        (self.create_task identity priority work state data fn)
+    })
+
+    (method (start){
+        (self.create_idler _IDLER 0 _NO_WORK (_TaskState_with_running))
+        (set wkq (self.create_packet _NO_WORK _WORKER _WORK_PACKET_KIND))
+        (set wkq (self.create_packet wkq _WORKER _WORK_PACKET_KIND))
+
+        (self.create_worker _WORKER 1000 wkq (_TaskState_with_waiting_with_packet))
+        (set wkq (self.create_packet _NO_WORK _DEVICE_A _DEVICE_PACKET_KIND))
+        (set wkq (self.create_packet wkq _DEVICE_A _DEVICE_PACKET_KIND))
+        (set wkq (self.create_packet wkq _DEVICE_A _DEVICE_PACKET_KIND))
+
+        (self.create_handler _HANDLER_A 2000 wkq (_TaskState_with_waiting_with_packet))
+
+        (set wkq (self.create_packet _NO_WORK _DEVICE_B _DEVICE_PACKET_KIND))
+        (set wkq (self.create_packet wkq _DEVICE_B _DEVICE_PACKET_KIND))
+        (set wkq (self.create_packet wkq _DEVICE_B _DEVICE_PACKET_KIND))
+
+        (self.create_handler _HANDLER_B 3000 wkq (_TaskState_with_waiting_with_packet))
+        (self.create_device _DEVICE_A 4000 _NO_WORK (_TaskState_with_waiting))
+        (self.create_device _DEVICE_B 5000 _NO_WORK (_TaskState_with_waiting))
+
+        (self.schedule)
+        (and (= self._queue_count 23246) (= self._hold_count 9297))
+    })
+
+    (method (find_task identity){
+        (set t (self._task_table.get identity))
+        (if (= _NO_TASK t) (raise "find_task failed") t)
+    })
+
+    (method (_hold_self){
+        (set-field _hold_count self (self._hold_count.succ))
+        (self._current_task.set_task_holding true)
+        self._current_task.link
+    })
+
+    (method (queue_packet packet){
+        (set task (self.find_task packet.identity))
+        (if (= _NO_TASK task) _NO_TASK {
+        ;else
+            (set-field _queue_count self (self._queue_count.succ))
+            (set-field link packet _NO_WORK)
+            (set-field identity packet self._current_task_identity)
+            (task.add_input_and_check_priority packet self._current_task)
+        })
+    })
+
+    (method (release identity){
+        (set task (self.find_task identity))
+        (if (= _NO_TASK task) _NO_TASK {
+        ;else
+            (task.set_task_holding false)
+            (if (> task.priority self._current_task.priority) task self._current_task)
+        })
+    })
+
+    (method (_trace msg){
+        (set-field _layout self (self._layout.pred))
+        (if (>= 0 self._layout) (set-field _layout self 50) ())
+        msg
+    })
+
+    (method (mark_waiting){
+        (self._current_task.set_task_waiting true)
+        self._current_task
+    })
+
+    (method (schedule){
+        (set-field _current_task self self._task_list)
+        (while (!= _NO_TASK self._current_task){
+            (if (self._current_task.is_task_holding_or_waiting){
+                (set-field _current_task self self._current_task.link)
+            }{
+            ;else
+                (set-field _current_task_identity self self._current_task.identity)
+                (if _TRACING (self._trace self._current_task_identity) ())
+                (set-field _current_task self (self._current_task.run_task))
+            })
+        })
+    })
+)
+
+(class _DeviceTaskDataRecord
+    (extends _RBObject)
+    (field pending _NO_WORK)
+)
+
+(class _HandlerTaskDataRecord
+    (extends _RBObject)
+    (field work_in _NO_WORK)
+    (field device_in _NO_WORK)
+
+    (method (device_in_add packet){
+        (set-field device_in self (self.append packet self.device_in))
+    })
+
+    (method (work_in_add packet){
+        (set-field work_in self (self.append packet self.work_in))
+    })
+)
+
+(class _IdleTaskDataRecord
+    (extends _RBObject)
+    (field control 1)
+    (field count 10000)
+)
+
+(class _Packet
+    (extends _RBObject)
+    (field link ())
+    (field kind ())
+    (field identity ())
+    (field datum 0)
+    (field data (empty_vec _DATA_SIZE 0))
+
+    (method (init-values link identity kind){
+        (set-field link self link)
+        (set-field kind self kind)
+        (set-field identity self identity)
+    })
+)
+
+(class _TaskState
+    (extends _RBObject)
+    (field _task_holding false)
+    (field _task_waiting false)
+    (field _packet_pending false)
+
+    (method (is_packet_pending) self._packet_pending)
+    (method (is_task_waiting) self._task_waiting)
+    (method (is_task_holding) self._task_holding)
+
+    (method (set_task_holding task)
+        (set-field _task_holding self task)
+    )
+
+    (method (set_task_waiting task)
+        (set-field _task_waiting self task)
+    )
+
+    (method (packet_pending){
+        (set-field _packet_pending self true)
+        (set-field _task_waiting self false)
+        (set-field _task_holding self false)
+        self
+    })
+    
+    (method (running){
+        (set-field _packet_pending self false)
+        (set-field _task_waiting self false)
+        (set-field _task_holding self false)
+        self
+    })
+
+    (method (waiting){
+        (set-field _packet_pending self false)
+        (set-field _task_holding self false)
+        (set-field _task_waiting self true)
+        self
+    })
+
+    (method (waiting_with_packet){
+        (set-field _task_holding self false)
+        (set-field _packet_pending self true)
+        (set-field _task_waiting self true)
+        self
+    })
+
+    (method (is_task_holding_or_waiting){
+        (or self._task_holding (and (self._packet_pending.not) self._task_waiting))
+    })
+
+    (method (is_waiting_with_packet){
+        (and (and self._packet_pending self._task_waiting) (self._task_holding.not))
+    })
+)
+
+{
+    (func (_TaskState_with_running){
+        (set task_state (new _TaskState))
+        (task_state.running)
+    })
+
+    (func (_TaskState_with_waiting){
+        (set task_state (new _TaskState))
+        (task_state.waiting)
+    })
+
+    (func (_TaskState_with_waiting_with_packet){
+        (set task_state (new _TaskState))
+        (task_state.waiting_with_packet)
+    })
+}
+
+(class _TaskControlBlock
+    (extends _TaskState)
+    (field link ())
+    (field identity ())
+    (field function ())
+    (field priority ())
+    (field _input ())
+    (field _handle ())
+
+    (field _packet_pending ())
+    (field _task_waiting ())
+    (field _task_holding ())
+
+    (method (init-values link identity priority initial_work_queue initial_state private_data fn){
+        (set-field link self link)
+        (set-field identity self identity)
+        (set-field function self fn)
+        (set-field priority self priority)
+        (set-field _input self initial_work_queue)
+        (set-field _handle self private_data)
+
+        (set-field _packet_pending self (initial_state.is_packet_pending))
+        (set-field _task_waiting self (initial_state.is_task_waiting))
+        (set-field _task_holding self (initial_state.is_task_holding))
+    })
+
+    (method (add_input_and_check_priority packet old_task){
+        (if (= _NO_WORK self._input){
+            (set-field _input self packet)
+            (set-field _packet_pending self true)
+            (if (> self.priority old_task.priority) self old_task)
+        }{
+            (set-field _input self (self.append packet self._input))
+            old_task
+        })
+    })
+
+    (method (run_task){
+        (if (self.is_waiting_with_packet){
+            (set message self._input)
+            (set-field _input self message.link)
+            (if (= _NO_WORK self._input) (self.running) (self.packet_pending))
+        }{
+            (set message _NO_WORK)
+        })
+        (self.function message self._handle)
+    })
+)
+
+(class _WorkerTaskDataRecord
+    (extends _RBObject)
+    (field destination _HANDLER_A)
+    (field count 0)
+)
+
+(func (empty_vec size value){
+    (set arr [])
+    (set i 0)
+    (while (< i size){
+      (arr.put value)
+      (set i (i.succ))
+     })
+    arr
+})
+
+{
+    (set x (new Richards))
+    (x.benchmark)
+}

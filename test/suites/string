@@ -1,8 +1,10 @@
 (set i 0)
 (set s "")
+(set x "hello_world")
 --
 => 0
 => ""
+=> "hello_world"
 ==
 ""
 --
@@ -56,4 +58,60 @@ s
 --
 => false
 => "seaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseaseasea"
+--
+(s.length)
+--
+=> 0
+--
+(x.length)
+--
+=> 11
+--
+(s.chars)
+--
+=> []
+--
+(x.chars)
+--
+=> ['h', 'e', 'l', 'l', 'o', '_', 'w', 'o', 'r', 'l', 'd']
+--
+(x.+ 'a')
+--
+=> "hello_worlda"
+--
+(s.+ 'a')
+--
+=> "a"
+--
+(x.substring 0 (x.length))
+--
+=> "hello_world"
+--
+(try (x.substring 0 1000) else "pass")
+--
+=> "pass"
+--
+(try (x.substring -4 10) else "pass")
+--
+=> "pass"
+--
+(x.substring 3 0)
+--
+=> ""
+--
+(s.substring 0 0)
+--
+=> ""
+--
+(s.substring 0 1)
+--
+=> ""
+--
+(try (s.substring 0 10) else "pass")
+--
+=> "pass"
+--
+(try (s.substring 4 0) else "pass")
+--
+=> "pass"
 --

@@ -16,6 +16,7 @@ a singleton object of class `poopcrap`.
   * `char`
   * `class`
   * `code`
+  * `double`
   * `exn`
   * `frame`
   * `func`
@@ -86,7 +87,7 @@ Here is how the easy things evaluate:
 Some values are provided as variables in the global environment. They are
 
 * `true` and `false`
-* `base`, `bool`, `char`, `class`, `code`, `exn`, `frame`, `func`, `int`, 
+* `base`, `bool`, `char`, `class`, `code`, `double`, `exn`, `frame`, `func`, `int`, 
   `list`, `map`, `method`, `poopcrap`, `str` referring to those classes (note
   that `func` is overloaded for the syntactic function declaration)
 
@@ -127,6 +128,7 @@ Values of type
 * bool
 * poopcrap
 * string
+* char
 
 have one unique instance for each underlying value. The underlying value is
 immutable, but the fields are mutable. This may make things strange if you mess 

@@ -32,6 +32,8 @@ Represents a character
 
 Methods:
 * `(ch.display)`: returns a string representation of the object
+* `(ch.+ o)`: returns a string that concatenates this char with another string/char
+* `(ch.ascii)`: returns the ASCII numerical representation of a character
 
 ## class
 
@@ -51,6 +53,29 @@ Methods:
 * `(co.display)`: returns a string representation of the object
 * `(co.disassemble)`: returns a string representation of a disassembly of the
   bytecode. Raises an exception if code hasn't been compiled to bytecode.
+
+## double
+Represents an signed double. 64 bit value.
+
+Methods:
+
+* `(d.display)`: returns a string representation of the double by performing round-to-nearest demotion to a float(32-bit)
+* `(d.try o)`: converts `double` to a different type(`str`, `int`). Will **raise exception** if the supported conversion fails. For e.g. for `double` to `int` conversion, the double must not lose precision.
+* `(d.sqrt)`: returns the sqrt of the double value
+* `(d.trunc)`: perform truncation and return a `double`
+* `(d.sin)`: returns a `double` which is the sine value of angle `d` in radians.
+* `(d.cos)`: returns a `double` which is the cosine value of angle `d` in radians.
+* `(d.+ d)`
+* `(d.- d)`
+* `(d.* d)`
+* `(d./ d)`
+* `(d.= o)`
+* `(d.!= d)`
+* `(d.< d)`
+* `(d.<= d)`
+* `(d.> d)`
+* `(d.>= d)`
+All the above arithmetic operations(`+`, `-`, `*`, `/`) return a `double`. `o` can be either `double` or `int`. Raises exception if `int`(bigInteger) cannot be represented as a `double`.
 
 ## exn
 
@@ -83,6 +108,8 @@ Represents an signed integer.
 
 Methods:
 * `(i.display)`: returns a string representation of the object
+* `(i.as o)`: converts `int` to a different type. Currently supports `int` to `str` and `double`. `int` value as `double` will not fail.
+* `(i.try o)`: converts `int` to a different type(`str`, `double`). Will **raise exception** if the supported conversion fails. For e.g. if the `int` value(BigInt) cannot be represented as a `double`, it will raise an exception.
 * `(i.succ)`
 * `(i.pred)`
 * `(i.neg)`
@@ -91,7 +118,7 @@ Methods:
 * `(i1.* i2)`
 * `(i1./ i2)`
 * `(i1.% i2)`
-* `(i1.= i2)`
+* `(i1.= o)`: checks equality for value and type. E.g. `int` 3 is not equal to `double` 3.0
 * `(i1.!= i2)`
 * `(i1.< i2)`
 * `(i1.<= i2)`
@@ -175,6 +202,9 @@ Methods:
 * `(s.char-at i)`: returns a character object representing the character at
   index i of the string
 * `(s.display)`: returns a string representation for this object.
-* `(s.+ s)`: concatenates this string with another string
+* `(s.length)`: returns the length of the string which is the number of bytes
+* `(s.chars)`: returns a list of char objects.
+* `(s.substring startIndex endIndex)`: returns a substring in the range {startIndex} to {endIndex}. {endIndex} is exclusive.
+* `(s.+ o)`: returns the concatenation of this string with another string/char
 
 

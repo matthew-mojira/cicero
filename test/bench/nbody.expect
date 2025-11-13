@@ -1,0 +1,10 @@
+=> <func 'jupiter'>
+=> <func 'saturn'>
+=> <func 'uranus'>
+=> <func 'neptune'>
+=> <func 'sun'>
+=> <func '_create_bodies'>
+=> <class 'NBodySystem'>
+=> <class 'NBody'>
+=> <object>
+=> true

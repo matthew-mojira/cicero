@@ -1,0 +1,166 @@
+def FLOAT_MAX_LENGTH: int = 14;
+def PI = 3.141592653589793d;
+class DoubleObject(val: double) extends Object {
+
+	private new(){}
+
+	// @todo: need to work on display for doubles without need to roundd to floats;
+	// but this would be smthg to work on the virgil side
+	def display() -> string{
+		var a: Array<byte> = Array<byte>.new(FLOAT_MAX_LENGTH);
+		var l = Floats.renderFloat(float.roundd(val), a, 0);
+		return Strings.format1("%s", Arrays.range(a, 0, l));
+	}
+
+	def isTrue()  => true;
+
+    def do_display() => Result.OK(StrObjects.fromString(display()));
+
+	def do_try(obj: Object) -> Result{
+		if (obj == ClassObjects.classStr)
+			return do_display();
+		else if (obj == ClassObjects.classInt)
+			return DoubleIntConversion.asLong(this);
+		else
+			return Result.Exn(ExnObjects.fromVirgil("try", "Unable to convert `double`"));
+	}
+
+	def trunc() -> DoubleObject{
+		// Edge cases
+		if (val == double.infinity || val == -double.infinity){
+			return this;
+		}
+		// Using https://en.wikipedia.org/wiki/Double-precision_floating-point_format for the IEEE 754 format
+
+		var bits: i64 = i64.view(val); // reinterpret bits of the double
+		var sign = bits >>> 63;
+		var exp  = (bits >>> 52) & long.!(0x7FF); // remove the `sign`
+		var frac = bits & long.!(0xFFFFFFFFFFFFF); // 52 bits of mantissa
+
+		// Exponent bias for double = 1023
+		var e: long = exp - 1023;
+
+		if (e < 0) {
+			return DoubleObjects.fromDouble(0.0d);
+		} else if (e >= 52) {
+			// No fractional part
+			return this;
+		}
+
+		// Mask to zero out fractional bits
+		var mask: long = 0xFFFFFFFFFFFFFFFFL << u8.!(52 - e);
+		frac = frac & mask;
+
+		// Reassemble bits
+		var newBits = (sign << 63) | (exp << 52) | frac;
+		def do = double.view(newBits);
+
+		return DoubleObjects.fromDouble(do);
+	}
+
+	def do_trunc() => Result.OK(this.trunc());
+	/* utils */
+
+	def do_sqrt() -> Result {
+		return Result.OK(DoubleObjects.fromDouble(double.sqrt(this.val)));
+	}
+
+	def do_sin() -> Result{
+		var x = normalize_angle(this.val);
+		if (CiceroOptions.sanityChecks && x == 1.0)
+			// should never happen
+			return Result.Exn(ExnObjects.fromVirgil("sin", "Unable to compute `sin`"));
+
+		var result = 0.0;
+		var sign = 1.0;
+		var power = x;
+		var factorial = 1.0;
+
+		def terms = 10;
+
+		for (n=0; n < terms; n++){
+			result = result + (sign * power / factorial);
+			sign = sign * -1;
+			power = power * x * x;
+			factorial = factorial * ((2 * n + 2) * (2 * n + 3));
+		}
+		return Result.OK(DoubleObjects.fromDouble(result));
+	}
+
+	def do_cos() -> Result{
+		var x = normalize_angle(this.val);
+		if (CiceroOptions.sanityChecks && x == -1.0)
+			// should never happen
+			return Result.Exn(ExnObjects.fromVirgil("cos", "Unable to compute `cos`"));
+
+		var result = 0.0;
+		var sign = 1.0;
+		var power = 1.0;
+		var factorial = 1.0;
+
+		def terms = 10;
+
+		for (n=0; n < terms; n++){
+			result = result + (sign * power / factorial);
+			sign = sign * -1;
+			power = power * x * x;
+			factorial = factorial* ((2 * n + 1) * (2 * n + 2));
+		}
+
+		return Result.OK(DoubleObjects.fromDouble(result));
+	}
+
+	/* arithmetic */
+
+	def do_neg() => Result.OK(DoubleObject.new(0.0d-val));
+
+	def do_add(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val + that.val));
+	def do_sub(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val - that.val));
+	def do_mul(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val * that.val));
+
+	def do_div(that: DoubleObject) -> Result{
+		if (that.val == 0) return Result.Exn(ExnObjects.fromVirgil("double.div", divideByZero));
+		return Result.OK(DoubleObjects.fromDouble(val / that.val));
+	}
+
+	/* Comparisons */
+
+	def do_eq(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classDouble)){
+			def dval = (DoubleObject.!(obj).val);
+			return Result.OK(BoolObjects.fromBool(val == dval));
+		}
+		return Result.OK(BoolObjects.fromBool(false));
+	}
+
+	def do_lt(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val < that.val));
+	def do_leq(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val <= that.val));
+	def do_gt(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val > that.val));
+	def do_geq(that: DoubleObject) => Result.OK(BoolObjects.fromBool(val >= that.val));
+}
+
+component DoubleObjects {
+	def fromDouble(val: double) => DoubleObject.new(val);
+}
+def divideByZero = "division by zero";
+
+/* Helper functions */
+
+def fmod(x: double, y: double) -> double{
+	if (y == 0){
+		return -1.0;
+	}
+	def quotient = int.truncd(x / y);
+	def remainder = x - quotient * y;
+	return remainder;
+}
+
+def normalize_angle(x: double) -> double{
+	var x = fmod(x, 2* PI);
+	if (x > PI){
+		x = x - 2*PI;
+	} else if (x < -PI){
+		x = x + 2*PI;
+	}
+	return x;
+}
