@@ -24,7 +24,8 @@ class WasmFrame extends FrameObject {
 		def f = Code.Wasm.!(code.code).wasm;
 		match (f) {
 			Func0(f) => {
-				result = f(this).data;
+				def x = f(this);
+				result = x.data;
 				match (result) {
 					OK(o) => return o;
 					Exn(e) => return null;
@@ -47,8 +48,6 @@ class WasmFrame extends FrameObject {
 	def getGlobal(id: string) -> Object {
 		if (globals.has(id))
 			return globals[id];
-		System.puts(Strings.format1("cicero exception: global %s not found\n", id));
-		System.error("cicero exception", Strings.format1("global %s not found", id));
 		return null;
 	}
 

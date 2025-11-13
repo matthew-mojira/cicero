@@ -1,8 +1,6 @@
 def GET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.getGlobal));
 def GET_NONLOCAL: u32 = u32.view(CiWasmTarget.functionId(WasmFrame.getNonlocal));
 def SET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.setGlobal));
-def ASSERT_FUNC: u32  = u32.view(CiWasmTarget.functionId(assertFunc));
-def ASSERT_CLASS: u32 = u32.view(CiWasmTarget.functionId(assertClass));
 def GET_FIELD: u32    = u32.view(CiWasmTarget.functionId(Object.getField)); // null = failure
 def SET_FIELD: u32    = u32.view(CiWasmTarget.functionId(Object.setField)); // false = failure
 
@@ -44,6 +42,7 @@ def CREATE_CLASS: u32 = u32.view(CiWasmTarget.functionId(createClass));
 def CREATE_OBJECT: u32 = u32.view(CiWasmTarget.functionId(createObject));
 
 def RAISE_EXCEPTION: u32 = u32.view(CiWasmTarget.functionId(raiseException));
+def TYPE_MISMATCH: u32 = u32.view(CiWasmTarget.functionId(Exceptions.typeMismatch));
 def RETURN_OK:  u32 = u32.view(CiWasmTarget.functionId(returnOK));
 def RETURN_EXN: u32 = u32.view(CiWasmTarget.functionId(returnExn));
 
@@ -51,17 +50,9 @@ def raiseException(msg: string) -> ExnObject {
 	return ExnObjects.fromWasm(msg);
 }
 
-def assertFunc(val: Object) -> Object {
-	if (!val.instanceOf(ClassObjects.classFunc))
-		return null;
-	return val;
-}
-def assertClass(val: Object) -> Object {
-	if (!val.instanceOf(ClassObjects.classClass))
-		return null;
-	return val;
-}
-
+def isFunc(val: Object)  -> bool => val.instanceOf(ClassObjects.classFunc);
+def isClass(val: Object) -> bool => val.instanceOf(ClassObjects.classClass);
+def isString(val: Object)-> bool => val.instanceOf(ClassObjects.classStr);
 def isTrue(o: Object)  -> bool => o.isTrue();
 def isFalse(o: Object) -> bool => !o.isTrue();
 def isNull(o: Object)  -> bool => o == null;
@@ -79,6 +70,9 @@ def resultToObject(r: Box<Result>) -> Object {
 	}
 }
 
+def IS_FUNC: u32  = u32.view(CiWasmTarget.functionId(isFunc));
+def IS_CLASS: u32 = u32.view(CiWasmTarget.functionId(isClass));
+def IS_STRING: u32= u32.view(CiWasmTarget.functionId(isString));
 def IS_TRUE: u32  = u32.view(CiWasmTarget.functionId(isTrue));
 def IS_FALSE: u32 = u32.view(CiWasmTarget.functionId(isFalse));
 def IS_NULL: u32  = u32.view(CiWasmTarget.functionId(isNull));
@@ -86,13 +80,20 @@ def IS_OK: u32    = u32.view(CiWasmTarget.functionId(isOK));
 def IS_EXN: u32   = u32.view(CiWasmTarget.functionId(isExn));
 def RESULT_TO_OBJECT: u32  = u32.view(CiWasmTarget.functionId(resultToObject));
 // XXX the copy versions are table indices which need to be called with call_indirect
-var IS_TRUE_COPY: int = -1; 
+// TODO: we can probably get rid of these since we are abusing the receiver as 
+// scratch local0
+var IS_FUNC_COPY:  int = -1; 
+var IS_CLASS_COPY: int = -1;
+var IS_STRING_COPY:int = -1;
+var IS_TRUE_COPY:  int = -1; 
 var IS_FALSE_COPY: int = -1;
-var IS_NULL_COPY: int = -1;
-var COPY: int = -1; 
+var IS_NULL_COPY:  int = -1;
+var COPY:          int = -1; 
+var SWAP:          int = -1; 
 var UNPACK_RESULT: int = -1; 
 
 var COPY_SIG: i32 = -1;
+var SWAP_SIG: i32 = -1;
 var BLOCK_SIG: i32 = -1;
 
 /* the callFuncN receives the function (already asserted) and arguments, and
@@ -239,6 +240,7 @@ class WasmCompiler {
 		if (BLOCK_SIG < 0) {
 			BLOCK_SIG = CiWasmTarget.functionTypeId<Object, Object>();
 			COPY_SIG  = CiWasmTarget.functionTypeId<Object, (Object, Object)>();
+			SWAP_SIG  = CiWasmTarget.functionTypeId<(Object, Object), (Object, Object)>();
 
 			def isTrueCopy: DataWriter = DataWriter.new();
 			isTrueCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
@@ -248,6 +250,18 @@ class WasmCompiler {
 			isFalseCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
 			isFalseCopy.put_uleb32(IS_FALSE);
 			isFalseCopy.puta([0x0B]);
+			def isFuncCopy: DataWriter = DataWriter.new();
+			isFuncCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
+			isFuncCopy.put_uleb32(IS_FUNC);
+			isFuncCopy.puta([0x0B]);
+			def isClassCopy: DataWriter = DataWriter.new();
+			isClassCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
+			isClassCopy.put_uleb32(IS_CLASS);
+			isClassCopy.puta([0x0B]);
+			def isStringCopy: DataWriter = DataWriter.new();
+			isStringCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
+			isStringCopy.put_uleb32(IS_STRING);
+			isStringCopy.puta([0x0B]);
 			def isNullCopy: DataWriter = DataWriter.new();
 			isNullCopy.puta([0x00, 0x20, 0x00, 0x20, 0x00, 0x10]);
 			isNullCopy.put_uleb32(IS_NULL);
@@ -258,17 +272,25 @@ class WasmCompiler {
 			unpackResult.puta([0x20, 0x00, 0x10]);
 			unpackResult.put_uleb32(IS_EXN);
 			unpackResult.puta([0x0B]);
-			def isTrueCode: Array<byte> = isTrueCopy.extract();
+			def isFuncCode:  Array<byte> = isFuncCopy.extract();
+			def isClassCode: Array<byte> = isClassCopy.extract();
+			def isStringCode: Array<byte>= isStringCopy.extract();
+			def isTrueCode:  Array<byte> = isTrueCopy.extract();
 			def isFalseCode: Array<byte> = isFalseCopy.extract();
-			def isNullCode: Array<byte> = isNullCopy.extract();
+			def isNullCode:  Array<byte> = isNullCopy.extract();
 			def unpackResultCode: Array<byte> = unpackResult.extract();
 			def copy: Array<byte> = [0x00, 0x20, 0x00, 0x20, 0x00, 0x0B];
+			def swap: Array<byte> = [0x00, 0x20, 0x01, 0x20, 0x00, 0x0B];
 
+			IS_FUNC_COPY  = wave.new_func(COPY_SIG, Pointer.atContents(isFuncCode), isFuncCode.length);
+			IS_CLASS_COPY = wave.new_func(COPY_SIG, Pointer.atContents(isClassCode), isClassCode.length);
+			IS_STRING_COPY= wave.new_func(COPY_SIG, Pointer.atContents(isStringCode), isStringCode.length);
 			IS_TRUE_COPY  = wave.new_func(COPY_SIG, Pointer.atContents(isTrueCode), isTrueCode.length);
 			IS_FALSE_COPY = wave.new_func(COPY_SIG, Pointer.atContents(isFalseCode), isFalseCode.length);
 			IS_NULL_COPY  = wave.new_func(COPY_SIG, Pointer.atContents(isNullCode), isFalseCode.length);
 			UNPACK_RESULT = wave.new_func(COPY_SIG, Pointer.atContents(unpackResultCode), unpackResultCode.length);
 			COPY = wave.new_func(COPY_SIG, Pointer.atContents(copy), copy.length);
+			SWAP = wave.new_func(SWAP_SIG, Pointer.atContents(swap), swap.length);
 		}
 
 		addLocal("<receiver>");
@@ -342,6 +364,10 @@ class WasmCompiler {
 			3 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object), Box<Result>>();
 			4 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object), Box<Result>>();
 			5 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object), Box<Result>>();
+			6 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object), Box<Result>>();
+			7 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object), Box<Result>>();
+			8 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object, Object), Box<Result>>();
+			9 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object), Box<Result>>();
 			_ => {
 				System.puts("params unknown\n");
 				System.error("compile error", "params unknown");
@@ -352,17 +378,19 @@ class WasmCompiler {
 			System.puts("failed validation, terminating\n");
 			System.error("failed validation", "generated function failed validation");
 		}
-		var func: WasmFunction;
+		var func: WasmFunction = WasmFunction.Func0(fun (f: FrameObject) => Box.new(Result.Uncomputed));
 		match (params.length) {
-			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, Object, Box<Result>>(Pointer.NULL + fid, void));
-			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, (Object, Object), Box<Result>>(Pointer.NULL + fid, void));
-			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
-			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
-			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
-			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, FrameObject, Box<Result>>(Pointer.NULL + fid, void));	
+			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, (FrameObject, Object), Box<Result>>(Pointer.NULL + fid, void));
+			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (FrameObject, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			6 => func = WasmFunction.Func6(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			7 => func = WasmFunction.Func7(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			8 => func = WasmFunction.Func8(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
+			9 => func = WasmFunction.Func9(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object, Object), Box<Result>>(Pointer.NULL + fid, void));
 		}
-
-		// System.puts("compile successful!\n");
 		return func;
 	}
 	
@@ -378,14 +406,15 @@ class WasmCompiler {
  					wasm.putb(WasmOp.GET_LOCAL.opcode);
  					wasm.put_uleb32(addLocal(id));
 
+					// null check
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(IS_NULL_COPY);
 					wasm.putb(WasmOp.CALL_INDIRECT.opcode);
 					wasm.putb(COPY_SIG);
 					wasm.putb(0x00);
 
+					// throw exception if null
 					wasm.putb(WasmOp.IF.opcode);
-					//wasm.putb(0x00); // XXX is this right?
 					wasm.put_sleb32(BLOCK_SIG);
 					blockDepth++;
 						wasm.putb(WasmOp.I32_CONST.opcode);
@@ -403,7 +432,24 @@ class WasmCompiler {
 					wasm.put_sleb32(ptrAtStr(id)); // string
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(GET_GLOBAL);
-					// TODO raise exception if global not found (currently, function traps)
+
+					// null check
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(IS_NULL_COPY);
+					wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+					wasm.putb(COPY_SIG);
+					wasm.putb(0x00);
+
+					// throw exception if null
+					wasm.putb(WasmOp.IF.opcode);
+					wasm.put_sleb32(BLOCK_SIG);
+					blockDepth++;
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(ptrAt(ExnObjects.fromWasm(Exceptions.unboundGlobal(id))));
+						wasm.putb(WasmOp.BR.opcode);
+						wasm.put_sleb32(blockDepth - handlerStack.peek());
+					wasm.putb(WasmOp.END.opcode);
+					blockDepth--;
 				}
   				Nonlocal => {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
@@ -412,16 +458,8 @@ class WasmCompiler {
 					wasm.put_sleb32(ptrAtStr(id));
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(GET_NONLOCAL);
+					// could emit a null check if using sanity checks
 				}
-// 				/* TODO This should be a call out to a function
-// 				 *   WasmFrame.getNonlocal(name: string) -> Object
-// 				 * This is the same as the above global, and since everything is
-// 				 * in a Virgil-level WasmFrame, we can use the frame as effectively
-// 				 * Virgil-level state to add to the Wasm bytecode. But does this
-// 				 * significantly compromise speed? (In theory, yes. In practice, no,
-// 				 * because global and nonlocal accesses are infrequent compared to
-// 				 * local variable accesses.)
-// 				 */
 			}
  			VarSet(id, mode, val) => match (mode.data) {
  				Local => {
@@ -433,7 +471,7 @@ class WasmCompiler {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.putb(1 /* frame */);
 					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(ptrAtStr(id)); // string
+					wasm.put_sleb32(ptrAtStr(id));
 					compileAST(val);
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(SET_GLOBAL);
@@ -450,10 +488,10 @@ class WasmCompiler {
 				wasm.putb(0x00);
 
 				wasm.putb(WasmOp.IF.opcode);
-				wasm.put_sleb32(BLOCK_SIG); // XXX check if this is correct
+				wasm.put_sleb32(BLOCK_SIG);
 				blockDepth++;
-				wasm.putb(WasmOp.DROP.opcode);
-				compileAST(right);
+					wasm.putb(WasmOp.DROP.opcode);
+					compileAST(right);
 				wasm.putb(WasmOp.END.opcode);
 				blockDepth--;
  			}
@@ -469,8 +507,8 @@ class WasmCompiler {
  				wasm.putb(WasmOp.IF.opcode);
  				wasm.put_sleb32(BLOCK_SIG);
 				blockDepth++;
-				wasm.putb(WasmOp.DROP.opcode);
- 				compileAST(right);
+					wasm.putb(WasmOp.DROP.opcode);
+					compileAST(right);
  				wasm.putb(WasmOp.END.opcode);
 				blockDepth--;
  			}
@@ -478,8 +516,39 @@ class WasmCompiler {
 				wasm.putb(WasmOp.GET_LOCAL.opcode);
 				wasm.putb(1 /* frame */);
 				compileAST(tgt);
-				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(ASSERT_FUNC); // XXX traps for now
+
+				// assert func
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(IS_FUNC_COPY);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
+
+				// throw exception if not func
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
+					// skip
+				wasm.putb(WasmOp.ELSE.opcode);
+					// top of stack is problematic object
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(ptrAt(ClassObjects.classFunc));
+
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(SWAP);
+					wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+					wasm.putb(SWAP_SIG);
+					wasm.putb(0x00);
+
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(TYPE_MISMATCH);
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(RAISE_EXCEPTION);
+					wasm.putb(WasmOp.BR.opcode);
+					wasm.put_sleb32(blockDepth - handlerStack.peek());
+				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
+
 				for (arg in args)
 					compileAST(arg);
 				// dispatch on number of args to variadic function
@@ -501,12 +570,14 @@ class WasmCompiler {
 					}
 				}
 
+				// unpack result
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_sleb32(UNPACK_RESULT);
 				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
 				wasm.putb(COPY_SIG);
 				wasm.putb(0x00);
 
+				// if exception, find handler
 				wasm.putb(WasmOp.IF.opcode);
 				wasm.put_sleb32(BLOCK_SIG);
 				blockDepth++;
@@ -523,9 +594,9 @@ class WasmCompiler {
  				wasm.putb(WasmOp.IF.opcode);
  				wasm.putb(0x7F); // result i32
 				blockDepth++;
- 				compileAST(left);
+					compileAST(left);
 				wasm.putb(WasmOp.ELSE.opcode);
- 				compileAST(right);
+					compileAST(right);
  				wasm.putb(WasmOp.END.opcode);
 				blockDepth--;
 			}
@@ -555,14 +626,51 @@ class WasmCompiler {
 					wasm.putb(WasmOp.END.opcode);
 					blockDepth--;
 				}
-				// FIXME throw exception here for no matching cond
-				wasm.putb(WasmOp.UNREACHABLE.opcode);
+
+				// throw exception
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(ptrAt(ExnObjects.fromWasm(Exceptions.noTrueBranch)));
+				wasm.putb(WasmOp.BR.opcode);
+				wasm.put_sleb32(blockDepth - handlerStack.peek());
+
 				wasm.putb(WasmOp.END.opcode);
 				blockDepth--;
 			}
 			Raise(exn) => {
 				compileAST(exn);
-				// TODO assert string
+
+				// assert string
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(IS_STRING_COPY);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
+
+				// throw exception if not string
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
+					// skip
+				wasm.putb(WasmOp.ELSE.opcode);
+					// top of stack is problematic object
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(ptrAt(ClassObjects.classStr));
+
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(SWAP);
+					wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+					wasm.putb(SWAP_SIG);
+					wasm.putb(0x00);
+
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(TYPE_MISMATCH);
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(RAISE_EXCEPTION);
+					wasm.putb(WasmOp.BR.opcode);
+					wasm.put_sleb32(blockDepth - handlerStack.peek());
+				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
+
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(RAISE_EXCEPTION);
 				wasm.putb(WasmOp.BR.opcode);
@@ -761,13 +869,44 @@ class WasmCompiler {
 				wasm.put_uleb32(CREATE_CLASS); // XXX traps for now
 			}
  			New(expr) => {
-				wasm.putb(WasmOp.GET_LOCAL.opcode);
-				wasm.putb(1 /* frame */);
-				compileAST(expr);
-				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(ASSERT_CLASS); // XXX traps for now
-				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(CREATE_OBJECT);
+ 				wasm.putb(WasmOp.GET_LOCAL.opcode);
+ 				wasm.putb(1 /* frame */);
+ 				compileAST(expr);
+				
+				// assert class
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(IS_CLASS_COPY);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
+
+				// throw exception if not class
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
+					// skip
+				wasm.putb(WasmOp.ELSE.opcode);
+					// top of stack is problematic object
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(ptrAt(ClassObjects.classStr));
+
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(SWAP);
+					wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+					wasm.putb(SWAP_SIG);
+					wasm.putb(0x00);
+
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(TYPE_MISMATCH);
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(RAISE_EXCEPTION);
+					wasm.putb(WasmOp.BR.opcode);
+					wasm.put_sleb32(blockDepth - handlerStack.peek());
+				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
+
+ 				wasm.putb(WasmOp.CALL.opcode);
+ 				wasm.put_uleb32(CREATE_OBJECT);
 			}
  			List(elems) => {
 				for (elem in elems)
