@@ -40,7 +40,7 @@ class Bytecode(instrs:     Array<byte>,
 	def var cache: Array<Pair<ClassObject, int>>;
 
 	new() {
-		if (CiceroOptions.enableIC) {
+		if (CLOptions.CACHE.get()) {
 			cache = Array.new(sourceMap.length);
 			for (i < cache.length)
 				cache[i] = Pair.new(null, -1);

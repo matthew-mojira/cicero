@@ -99,7 +99,7 @@ class BytecodeFrame extends FrameObject {
 
 			/* Inline caches */
 			var cache: Pair<ClassObject, int>;
-  			if (CiceroOptions.enableIC) cache = b.cache[pc >> 2];
+  			if (CLOptions.CACHE.get()) cache = b.cache[pc >> 2];
  
  			def opcode = bytecode.opcode;
 			def operand  = bytecode.operand;
@@ -332,7 +332,7 @@ class BytecodeFrame extends FrameObject {
 					def obj = stack.pop();
 					def field = strings[operand];
 
-					if (CiceroOptions.enableIC) {
+					if (CLOptions.CACHE.get()) {
 						def cls = obj.getClass();
 						/* Inline cache */
 						if (cache.fst == cls) {
