@@ -1,0 +1,8 @@
+component Handlers {
+	def handle_NOP() {
+				
+	}
+	def handle_LOAD_CONST(constPool: Array<Object>, operand: int) -> Object {
+		return constPool[operand];
+	}
+}
