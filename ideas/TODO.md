@@ -85,7 +85,7 @@ Potpourri of potentially bigger things
 - [ ] rename XObjects component (e.g. getIntObject -> fromLong)
 - [ ] return, break, continue
 - [ ] namespaces?
-- [ ] rename PoopCrap to something more school-appropriate (and maybe Classhole too)
+- [X] rename PoopCrap to something more school-appropriate (and maybe Classhole too)
 - [ ] lambdas should be their own class (and func should extend lambda)
 
 ## nonlocal variables

@@ -42,7 +42,7 @@
  * them eagerly means allocating its methods, creating an infinite loop). These
  * are represented by `null` values. These are the only null values allowed
  * in the array, as the language requires that all fields be initialized (they
- * may be initialized with the language-level poopcrap).
+ * may be initialized with the language-level unit).
  */
 class Object {
 	private var cls: ClassObject;
@@ -82,7 +82,7 @@ class Object {
  	 		x: IntObject    => cls = ClassObjects.classInt;
  	 		x: ListObject   => cls = ClassObjects.classList;
  	 		x: MapObject    => cls = ClassObjects.classMap;
- 	 		x: PoopCrapObject => cls = ClassObjects.classPoopCrap;
+ 	 		x: UnitObject   => cls = ClassObjects.classUnit;
  	 		x: StrObject    => cls = ClassObjects.classStr;
 		}
 

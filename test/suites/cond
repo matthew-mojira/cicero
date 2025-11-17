@@ -18,7 +18,7 @@
 --
 (cond
   ((true.not) (raise "do not evaluate me"))
-  (() "poopcrap")
+  (() "unit")
   (() (if 123 13423423 234098))
   ((if 9324 () true) (class X))
   (((lambda (x) false) 3) games)

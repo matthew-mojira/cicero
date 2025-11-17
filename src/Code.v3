@@ -69,12 +69,12 @@ component CodeObjects {
 	def virgilFail: CodeObject = fromVirgil(doNotInstantiateThisClass);
 
 	/* Always return () */
-	def virgilPoopCrap: CodeObject = fromVirgil(justReturnPoopCrap);
+	def virgilUnit: CodeObject = fromVirgil(justReturnUnit);
 }
 
-def justReturnPoopCrap(range: Range<Object>) -> Result {
-	if (range.length > 0) System.error("internal error", "poopcrap virgil > 0");
-	return Result.OK(PoopCrapObjects.instance);
+def justReturnUnit(range: Range<Object>) -> Result {
+	if (range.length > 0) System.error("internal error", "unit virgil > 0");
+	return Result.OK(UnitObjects.instance);
 }
 
 def doNotInstantiateThisClass(range: Range<Object>) -> Result {

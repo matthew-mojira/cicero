@@ -202,8 +202,8 @@ component ClassObjects {
 			[], 
 			[FuncObjects.fromVirgilMethod0("display", MethodObject.m_display),
 			 FuncObjects.fromVirgilMethod0("object",  MethodObject.m_object)]);
-	def classPoopCrap = ClassObject.new("poopcrap", classBase, CodeObjects.virgilFail, [], 
-			[FuncObjects.fromVirgilMethod0("display", PoopCrapObject.u_display)]);
+	def classUnit = ClassObject.new("unit", classBase, CodeObjects.virgilFail, [], 
+			[FuncObjects.fromVirgilMethod0("display", UnitObject.u_display)]);
 	def classStr = ClassObject.new("str", classBase, CodeObjects.virgilFail, [],
 			[FuncObjects.fromVirgilMethod0("display",    	StrObject.s_display),
 			 FuncObjects.fromVirgilMethod0("length",     	StrObject.s_length),

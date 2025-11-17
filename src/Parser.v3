@@ -131,7 +131,7 @@ class Parser extends TextReader {
 				
 				// check for unit
 				if (opt1(')') >= 0) {
-					return AST.new(ASTData.Lit(PoopCrapObjects.instance), FileRange.new(fileName, startLine, startColumn, line, column));
+					return AST.new(ASTData.Lit(UnitObjects.instance), FileRange.new(fileName, startLine, startColumn, line, column));
 				}
 
 				// check for keyword
@@ -161,7 +161,7 @@ class Parser extends TextReader {
 						def exprT = readExpr();
 						var exprF: AST;
 						if (ParseOption.allowMissingElse && opt1(')') >= 0) {
-								exprF = AST.new(ASTData.Lit(PoopCrapObjects.instance), null);
+								exprF = AST.new(ASTData.Lit(UnitObjects.instance), null);
 						} else {
 							exprF = readExpr();
 							req1(')');

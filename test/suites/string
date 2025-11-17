@@ -20,24 +20,24 @@
 --
 (puts "string")
 --
-string=> <poopcrap>
+string=> ()
 --
 (puts "string\n")
 --
 string
-=> <poopcrap>
+=> ()
 --
 (puts "\"string\"")
 --
-"string"=> <poopcrap>
+"string"=> ()
 --
 (puts "\'character\'")
 --
-'character'=> <poopcrap>
+'character'=> ()
 --
 (puts "t\ta\tb")
 --
-t	a	b=> <poopcrap>
+t	a	b=> ()
 --
 (while (< i 10) {
   (set s (+ s "s"))
