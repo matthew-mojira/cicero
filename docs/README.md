@@ -4,11 +4,6 @@
 
 All values are objects.
 
-### Poopcrap
-
-Poopcrap is the unit type (null, nil, None, ()). The literal is `()` and it is
-a singleton object of class `poopcrap`.
-
 ### Built-in classes
 
 * `base`: the parent class of all objects
@@ -24,14 +19,14 @@ a singleton object of class `poopcrap`.
   * `int`
   * `list`
   * `map`
-  * `poopcrap`
   * `str`
+  * `unit`
 
 Learn more about their methods and what they mean [here](./classes.md).
 
 ### Truthiness
 
-The truthiness of PoopCrap and `false` is False. Every other value is True.
+The truthiness of () and `false` is False. Every other value is True.
 
 ## Syntax
 
@@ -54,7 +49,7 @@ behavior so you probably shouldn't do it (and I should probably disallow it).
 The literals are:
 
 * an integer encoded in base 10
-* `()` as the PoopCrap literal
+* `()` as the single value of type unit
 
 ### Comments
 
@@ -88,7 +83,7 @@ Some values are provided as variables in the global environment. They are
 
 * `true` and `false`
 * `base`, `bool`, `char`, `class`, `code`, `double`, `exn`, `frame`, `func`, `int`, 
-  `list`, `map`, `method`, `poopcrap`, `str` referring to those classes (note
+  `list`, `map`, `method`, `unit`, `str` referring to those classes (note
   that `func` is overloaded for the syntactic function declaration)
 
 These are not literals but are instead variables defined in the global 
@@ -126,7 +121,7 @@ possible to modify a global variable in an expression not at the top level.
 Values of type
 
 * bool
-* poopcrap
+* unit
 * string
 * char
 

@@ -425,8 +425,8 @@
 => 5
 => 6
 => 7
-=> [<poopcrap>, <poopcrap>, <poopcrap>, <poopcrap>, <poopcrap>, <poopcrap>, <poopcrap>, <poopcrap>, <poopcrap>, <poopcrap>]
-=> <poopcrap>
+=> [(), (), (), (), (), (), (), (), (), ()]
+=> ()
 => 0
 => 0
 => <func 'task/findtcb'>
