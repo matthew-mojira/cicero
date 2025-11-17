@@ -3,7 +3,6 @@ component CiceroOptions {
 	def sanityChecks = false;
 	
 	/* tiering/evaluation options */
-	var evalTier: int;
 	def enableIC: bool = false; // XXX always disabled
 
 	/* compile-baked optimizations */

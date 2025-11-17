@@ -30,7 +30,9 @@ def main(args: Array<string>) -> int {
 	for (filename in files) {
 		// read in file
 		def file = System.fileLoad(filename);
-		if (file == null) System.error("init error", Strings.format1("unable to load file %s", filename));
+		if (file == null) {
+			System.error("init error", Strings.format1("unable to load file %s", filename));
+		}
 		// parse
 		var reader = Parser.new(filename, file);
 		if (reader.ok) {

@@ -23,7 +23,7 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 			Virgil   => System.error("compile error", "attempting to compile Virgil code to bytecode");
 			Bytecode => System.error("compile error", "compiling what has already been compiled to bytecode");
 			Wasm     => System.error("compile error", "compiling what has already been compiled to wasm");
-			AST(ast) => match (CiceroOptions.evalTier) {
+			AST(ast) => match (CLOptions.TIER.get()) {
 				1 => code = Code.Bytecode(BytecodeCompiler.new(ast, params).extract());
 				2 => code = Code.Wasm(WasmCompiler.new(ast, params).compile());
 				_ => System.error("compile error", "attempting to compile on interpreter tier");
