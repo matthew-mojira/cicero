@@ -2,7 +2,7 @@ def GET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.getGlobal));
 def GET_NONLOCAL: u32 = u32.view(CiWasmTarget.functionId(WasmFrame.getNonlocal));
 def SET_GLOBAL: u32   = u32.view(CiWasmTarget.functionId(WasmFrame.setGlobal));
 def GET_FIELD: u32    = u32.view(CiWasmTarget.functionId(Object.getField)); // null = failure
-def SET_FIELD: u32    = u32.view(CiWasmTarget.functionId(Object.setField)); // false = failure
+def SET_FIELD: u32    = u32.view(CiWasmTarget.functionId(Object.setFieldNull)); // false = failure
 
 def LIST_FROM0: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from0));
 def LIST_FROM1: u32 = u32.view(CiWasmTarget.functionId(ListObjects.from1));
@@ -41,8 +41,11 @@ def CREATE_FUNC9: u32 = u32.view(CiWasmTarget.functionId(createFunc9));
 def CREATE_CLASS: u32 = u32.view(CiWasmTarget.functionId(createClass));
 def CREATE_OBJECT: u32 = u32.view(CiWasmTarget.functionId(createObject));
 
+def TO_STRING: u32 = u32.view(CiWasmTarget.functionId(StrObject.str));
+
 def RAISE_EXCEPTION: u32 = u32.view(CiWasmTarget.functionId(raiseException));
 def TYPE_MISMATCH: u32 = u32.view(CiWasmTarget.functionId(Exceptions.typeMismatch));
+def MISSING_FIELD: u32 = u32.view(CiWasmTarget.functionId(Exceptions.missingField));
 def RETURN_OK:  u32 = u32.view(CiWasmTarget.functionId(returnOK));
 def RETURN_EXN: u32 = u32.view(CiWasmTarget.functionId(returnExn));
 
@@ -172,7 +175,7 @@ def createFuncN(funchole: ASTData.Func, nonlocalArgs: Array<Object>) -> FuncObje
 	return fn;
 }
 
-def createObject(parentFr: FrameObject, clsObj: ClassObject) -> Object {
+def createObject(parentFr: FrameObject, clsObj: ClassObject) -> Box<Result> {
 	def obj = Objects.newObject(clsObj);
 
 	def classes: Vector<ClassObject> = Vector.new();
@@ -192,8 +195,7 @@ def createObject(parentFr: FrameObject, clsObj: ClassObject) -> Object {
 			def frame = parentFr.newFrame(Strings.format2("%s.%s", cls.name, name), expr, [], []);
 			frame.eval();
 			if (frame.isExn()) {
-				// XXX rethrow exception
-				return null;
+				return Box.new(frame.result);
 			}
 			obj.setField(name, frame.getValue());
 		}
@@ -206,24 +208,21 @@ def createObject(parentFr: FrameObject, clsObj: ClassObject) -> Object {
 			def frame = parentFr.newFrame(Strings.format1("%s.init", cls.name), code, args, []);
 			frame.eval();
 			if (frame.isExn()) {
-				// XXX rethrow exception
-				return null;
+				return Box.new(frame.result);
 			}
 		} 
 	}
-	return obj;
+	return Box.new(Result.OK(obj));
 }
 
-def createClass(o: Object, box: Box<ClassObject -> ClassObject>) -> ClassObject {
-	// FIXME use cicero exceptions
+def createClass(o: Object, box: Box<ClassObject -> ClassObject>) -> Box<Result> {
 	if (!o.instanceOf(ClassObjects.classClass)) {
-		System.puts("createClass: expected superclass to be a class, but it isn't\n");
-		System.error("createClass", "superclass is not class");
+		return Box.new(Result.Exn(ExnObjects.fromWasm(Exceptions.typeMismatch(ClassObjects.classClass, o))));
 	}
 
 	def superclass = ClassObject.!(o);
 	def classhole = box.data;
-	return classhole(superclass);
+	return Box.new(Result.OK(classhole(superclass)));
 }
 
 def returnOK(o: Object) -> Box<Result> => Box.new(Result.OK(o));
@@ -672,6 +671,8 @@ class WasmCompiler {
 				blockDepth--;
 
 				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(TO_STRING);
+				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(RAISE_EXCEPTION);
 				wasm.putb(WasmOp.BR.opcode);
 				wasm.put_sleb32(blockDepth - handlerStack.peek());
@@ -793,13 +794,18 @@ class WasmCompiler {
 			}
  			GetField(field, obj) => {
 				compileAST(obj);
+				
+				// XXX store object in local0
+				wasm.putb(WasmOp.TEE_LOCAL.opcode);
+				wasm.putb(0 /*scratch*/);
+
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_sleb32(ptrAtStr(field));
 				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(GET_FIELD); // XXX null on failure
-				// copy for if XXX: awkward
+				wasm.put_uleb32(GET_FIELD); // null on failure
+
 				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_sleb32(COPY);
+				wasm.put_sleb32(IS_NULL_COPY);
 				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
 				wasm.putb(COPY_SIG);
 				wasm.putb(0x00);
@@ -807,38 +813,58 @@ class WasmCompiler {
 				wasm.putb(WasmOp.IF.opcode);
 				wasm.put_sleb32(BLOCK_SIG);
 				blockDepth++;
-				// okay: do nothing
-				wasm.putb(WasmOp.ELSE.opcode);
-				wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
+					wasm.putb(WasmOp.DROP.opcode);
+
+					wasm.putb(WasmOp.GET_LOCAL.opcode); // XXX local0
+					wasm.putb(0 /*scratch*/);
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(ptrAtStr(field));
+
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(MISSING_FIELD);
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(RAISE_EXCEPTION);
+					
+					wasm.putb(WasmOp.BR.opcode);
+					wasm.put_sleb32(blockDepth - handlerStack.peek());
 				wasm.putb(WasmOp.END.opcode);
 				blockDepth--;
 			}
  			SetField(field, obj, val) => {
 				compileAST(obj);
+				wasm.putb(WasmOp.TEE_LOCAL.opcode);
+				wasm.putb(0 /* XXX */);
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_sleb32(ptrAtStr(field));
 				compileAST(val);
-				wasm.putb(WasmOp.TEE_LOCAL.opcode);
-				wasm.putb(0 /* XXX */);
 				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(SET_FIELD); // XXX false on failure
-				wasm.putb(WasmOp.DROP.opcode); // FIXME test for field set failure
-				wasm.putb(WasmOp.GET_LOCAL.opcode);
-				wasm.putb(0 /* XXX */);
-				// // copy for if XXX: awkward
-				// wasm.putb(WasmOp.I32_CONST.opcode);
-				// wasm.put_sleb32(COPY);
-				// wasm.putb(WasmOp.CALL_INDIRECT.opcode);
-				// wasm.putb(COPY_SIG);
-				// wasm.putb(0x00);
-				// // check failure condition
-				// wasm.putb(WasmOp.IF.opcode);
-				// wasm.put_sleb32(BLOCK_SIG);
-				// blockDepth++;
-				// wasm.putb(WasmOp.ELSE.opcode);
-				// wasm.putb(WasmOp.UNREACHABLE.opcode); // trap if fail
-				// wasm.putb(WasmOp.END.opcode);
-				// blockDepth--;
+				wasm.put_uleb32(SET_FIELD); // null on failure
+				
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(IS_NULL_COPY);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
+				// check failure condition
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
+					wasm.putb(WasmOp.DROP.opcode);
+
+					wasm.putb(WasmOp.GET_LOCAL.opcode); // XXX local0
+					wasm.putb(0 /*scratch*/);
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(ptrAtStr(field));
+
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(MISSING_FIELD);
+					wasm.putb(WasmOp.CALL.opcode);
+					wasm.put_uleb32(RAISE_EXCEPTION);
+					
+					wasm.putb(WasmOp.BR.opcode);
+					wasm.put_sleb32(blockDepth - handlerStack.peek());
+				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
 			}
  			Class(id, superclass, init, fields, methods) => {
 				// there are subcodes which are getting compiled here
@@ -857,16 +883,30 @@ class WasmCompiler {
 						init2 = code;
 					}
 				}
-				// XXX compiling subcode
 				for (field in fields) field.1.compile([]);
-				//                                   XXX
 				def classhole = ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc));
 
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_sleb32(ptrAtBox(Box.new(classhole))); // XXX this is garbage
 
 				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_uleb32(CREATE_CLASS); // XXX traps for now
+				wasm.put_uleb32(CREATE_CLASS);
+
+				// unpack result
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(UNPACK_RESULT);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
+
+				// if exception, find handler
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
+					wasm.putb(WasmOp.BR.opcode);
+					wasm.put_sleb32(blockDepth - handlerStack.peek());
+				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
 			}
  			New(expr) => {
  				wasm.putb(WasmOp.GET_LOCAL.opcode);
@@ -907,6 +947,22 @@ class WasmCompiler {
 
  				wasm.putb(WasmOp.CALL.opcode);
  				wasm.put_uleb32(CREATE_OBJECT);
+
+				// unpack result
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(UNPACK_RESULT);
+				wasm.putb(WasmOp.CALL_INDIRECT.opcode);
+				wasm.putb(COPY_SIG);
+				wasm.putb(0x00);
+
+				// if exception, find handler
+				wasm.putb(WasmOp.IF.opcode);
+				wasm.put_sleb32(BLOCK_SIG);
+				blockDepth++;
+					wasm.putb(WasmOp.BR.opcode);
+					wasm.put_sleb32(blockDepth - handlerStack.peek());
+				wasm.putb(WasmOp.END.opcode);
+				blockDepth--;
 			}
  			List(elems) => {
 				for (elem in elems)

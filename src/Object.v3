@@ -133,6 +133,13 @@ class Object {
 		fields[fieldMap[name]] = obj;
 		return true;
 	}
+	def setFieldNull(name: string, obj: Object) -> Object {
+		if (cls == null) initClass();
+
+		if (!fieldMap.has(name)) return null;
+		fields[fieldMap[name]] = obj;
+		return obj;
+	}
 
  	def setFieldByIndex(idx: int, obj: Object) {
  		fields[idx] = obj;
