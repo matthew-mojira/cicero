@@ -1,0 +1,16 @@
+; Requirements: `dictionary.co`
+{
+(class _IdEntry
+  (extends Entry)
+  (method (match hash_ key) (and (= self.hash hash_) (= key self.key)))
+)
+
+(class IdentityDictionary
+  (extends Dictionary)
+  (method (_new_entry key value hash_){
+    (set entry (new _IdEntry))
+    (entry.init-values hash_ key value ())
+    entry
+   })
+)
+}

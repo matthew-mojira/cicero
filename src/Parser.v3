@@ -1,3 +1,7 @@
+/* If a keyword appears as the first element of an s-expression, i.e.
+ *   (if ...)
+ * it gets parsed differently. Otherwise, it's treated as an identifier.
+ */
 enum Keyword(id: string) {
 	IF("if"),
 	COND("cond"),
@@ -18,6 +22,14 @@ enum Keyword(id: string) {
 	TRY("try")
 }
 
+/* Same as Keyword except inside a class definition
+ * (class
+ *   (extends ...)
+ *   ...
+ * )
+ * But note that inside the class definition one of these class keywords must
+ * appear in an s-expression. This is a special syntax.
+ */
 enum ClassKeyword(id: string) {
 	EXTENDS("extends"),
 	INIT("init"),
@@ -493,27 +505,55 @@ class Parser extends TextReader {
 				return AST.new(ASTData.Lit(StrObjects.getStrObject(str)),
 					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
+			'\'' =>{
+				def char = readChar();
+				return AST.new(ASTData.Lit(CharObjects.fromByte(char)),
+					FileRange.new(fileName, startLine, startColumn, line, column));
+			}
 			_ => {
-				// this is an identifier
 				def strs = readQualifiedName();
 				def range = FileRange.new(fileName, startLine, startColumn, line, column);
 				var expr: AST;
 
-				// parse first identifier for decimal integer literal
+				var strIndex = 1;
 				def str = strs[0];
-				// TODO implement parsing big ints
-				def res = Ints.parseDecimal(str, 0);
-				def status = res.0, value = res.1;
-				if (status > 0) {
-					if (status != str.length) {
-//						System.puts(Strings.format3("string is \"%s\", found %d characters and length is %d\n",
-//									str, status, str.length));
-						fail("trailing information after integer literal");
+
+				// Number (integer or double)
+				if ((strs.length == 1 || strs.length == 2)
+					&& (str.length > 0)
+					&& ((str[0] >= '0' && str[0] <= '9') || ((str[0] == '-') && (str.length > 1)))){
+
+					def string_value = if(strs.length ==1, strs[0], Arrays.concat(Arrays.concat(strs[0], ['.']), strs[1]));
+
+					def np = NumberParser.new(string_value);
+					if (np.parse()){
+						// TODO: Handle big integers and floats
+						if (np.is_float) {
+							// double
+							var fval = NumberParserValue.Float.!(np.val);
+							var dval = DoubleParserHelper.f64(fval.sign, fval.exp, fval.mantissa);
+							if (string_value.length == np.pos){
+								expr = AST.new(ASTData.Lit(DoubleObjects.fromDouble(dval)), range);
+								strIndex = 2;
+							} else {
+								// dealing with field-access like (3.+ 34)
+								def rounded_long = long.!(dval); // explicit because value must be the same
+								expr = AST.new(ASTData.Lit(IntObjects.fromLong(rounded_long)), range);
+							}
+						} else if (string_value.length == np.pos){
+							// integer
+							var ival = NumberParserValue.Int.!(np.val).v;
+							expr = AST.new(ASTData.Lit(IntObjects.fromLong(long.view(ival))), range);
+
+						} else{
+							fail("error parsing number literal");
+							return null;
+						}
+					} else{
+						failRel(-(np.pos + 1), "error parsing number literal");
 						return null;
 					}
-					// any characters that start an integer literal cannot be part of a valid identifier
-					expr = AST.new(ASTData.Lit(IntObjects.fromLong(value)), range);
-				} else {
+				} else{
 					// VarGet: local or global?
 					var b: Box<AccessMode>;
 
@@ -530,7 +570,7 @@ class Parser extends TextReader {
 				}
 
 				// remaining strings are field accesses
-				for (i = 1; i < strs.length; i++) {
+				for (i = strIndex; i < strs.length; i++) {
 					expr = AST.new(ASTData.GetField(strs[i], expr), range);
 				}
 
@@ -548,6 +588,17 @@ class Parser extends TextReader {
 		}
 		advance(chars);
 		return str;
+	}
+
+	private def readChar() -> byte {
+		def a = Chars.parseLiteral(data, pos);
+		def chars = a.0, char = a.1;
+		if (chars < 0) {
+			fail("malformed char literal");
+			return 0;
+		}
+		advance(chars);
+		return char;
 	}
 
 	private def readQualifiedName() -> Array<string> {

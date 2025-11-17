@@ -1,4 +1,7 @@
-(func (f x)
-  (lambda (y) (+ x y)))
+(func (f) {
+  (set p (lambda (y) (+ x y)))
+  (set x 10)
+  p
+})
 
-((f 1) 2)
+(f)

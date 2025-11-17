@@ -1,8 +1,11 @@
+/* An associative map object, backed by a Virgil HashMap. */
 class MapObject extends Object {
 	def map: HashMap<string, Object> = Strings.newMap();
 
 	def display() -> string { return "<map>"; }
 	def isTrue()  -> bool   { return true; }
+	
+	/* METHODS */
 
 	def p_set(key: StrObject, val: Object) -> Result {
 		map[key.str] = val;

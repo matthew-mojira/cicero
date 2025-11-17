@@ -1,0 +1,227 @@
+; Nbody simulation micro benchmark
+; Based on the `Are We fast Yet` paper
+
+{
+	(set PI 3.141592653589793)
+	(set SOLAR_MASS (* (* 4.0 PI) PI))
+	(set DAYS_PER_YER 365.24)
+
+	(class _Body
+		(field x 0.0)
+		(field y 0.0)
+		(field z 0.0)
+		(field vx 0.0)
+		(field vy 0.0)
+		(field vz 0.0)
+		(field mass 0.0)
+
+		(method (init-values x y z vx vy vz mass){
+			(set-field x self x)
+			(set-field y self y)
+			(set-field z self z)
+			(set-field vx self (* vx DAYS_PER_YER))
+			(set-field vy self (* vy DAYS_PER_YER))
+			(set-field vz self (* vz DAYS_PER_YER))
+			(set-field mass self (* mass SOLAR_MASS))
+		})
+
+		(method (offset_momentum px py pz){
+			(set-field vx self (- 0.0 (/ px SOLAR_MASS)))
+			(set-field vy self (- 0.0 (/ py SOLAR_MASS)))
+			(set-field vz self (- 0.0 (/ pz SOLAR_MASS)))
+		})
+	)
+
+(func (jupiter){
+	(set body (new _Body))
+	(body.init-values
+        4.84143144246472090
+        -1.16032004402742839
+        -1.03622044471123109e-1
+        1.66007664274403694e-3
+        7.69901118419740425e-3
+        -6.90460016972063023e-5
+        9.54791938424326609e-4
+    )
+	body
+})
+}
+
+(func (saturn){
+	(set body (new _Body))
+	(body.init-values
+		8.34336671824457987
+        4.12479856412430479
+        -4.03523417114321381e-1
+        -2.76742510726862411e-3
+        4.99852801234917238e-3
+        2.30417297573763929e-5
+        2.85885980666130812e-4
+    )
+	body
+})
+
+(func (uranus){
+	(set body (new _Body))
+	(body.init-values
+		1.28943695621391310e1
+        -1.51111514016986312e1
+        -2.23307578892655734e-1
+        2.96460137564761618e-3
+        2.37847173959480950e-3
+        -2.96589568540237556e-5
+        4.36624404335156298e-5
+    )
+	body
+})
+
+(func (neptune){
+	(set body (new _Body))
+	(body.init-values
+		1.53796971148509165e1
+        -2.59193146099879641e1
+        1.79258772950371181e-1
+        2.68067772490389322e-3
+        1.62824170038242295e-3
+        -9.51592254519715870e-5
+        5.15138902046611451e-5
+    )
+	body
+})
+
+(func (sun){
+	(set body (new _Body))
+	(body.init-values 0.0 0.0 0.0 0.0 0.0 0.0 1.0)
+	body
+})
+
+(func (_create_bodies){
+	(set bodies [(sun) (jupiter) (saturn) (uranus) (neptune)])
+
+    (set px 0.0)
+    (set py 0.0)
+    (set pz 0.0)
+	
+    (set i 0)
+    (while (< i (bodies.length)){
+		(set b (bodies.get i))
+
+		(set px (+ px (* b.vx b.mass)))
+		(set py (+ py (* b.vy b.mass)))
+		(set pz (+ pz (* b.vz b.mass)))
+
+		(set i (i.succ))
+	})
+
+    (set body (bodies.get 0))
+	(body.offset_momentum px py pz)
+    bodies
+})
+
+(class NBodySystem
+	(field _bodies (_create_bodies))
+	(method (advance dt){
+		(set i 0)
+		(while (< i (self._bodies.length)){
+			(set i_body (self._bodies.get i))
+
+			(set j (i.succ))
+			(while (< j (self._bodies.length)){
+				(set j_body (self._bodies.get j))
+
+				(set dx (- i_body.x j_body.x))
+				(set dy (- i_body.y j_body.y))
+				(set dz (- i_body.z j_body.z))
+
+				(set d_squared (+ (+ (* dx dx) (* dy dy)) (* dz dz)))
+				(set distance (d_squared.sqrt))
+				(set mag (/ dt (* d_squared distance)))
+
+				(set-field vx i_body (- i_body.vx (* (* dx j_body.mass) mag)))
+				(set-field vy i_body (- i_body.vy (* (* dy j_body.mass) mag)))
+				(set-field vz i_body (- i_body.vz (* (* dz j_body.mass) mag)))
+
+				(set-field vx j_body (+ j_body.vx (* (* dx i_body.mass) mag)))
+				(set-field vy j_body (+ j_body.vy (* (* dy i_body.mass) mag)))
+				(set-field vz j_body (+ j_body.vz (* (* dz i_body.mass) mag)))
+
+				(set j (j.succ))
+			})
+
+			(set i (i.succ))
+		})
+		
+		(set i 0)
+		(while (< i (self._bodies.length)){
+			(set body (self._bodies.get i))
+			(set-field x body (+ body.x (* dt body.vx)))
+			(set-field y body (+ body.y (* dt body.vy)))
+			(set-field z body (+ body.z (* dt body.vz)))
+
+			(set i (i.succ))
+		})
+	})
+
+	(method (energy){
+		(set e 0.0)
+
+		(set i 0)
+		(while (< i (self._bodies.length)){
+			(set i_body (self._bodies.get i))
+			(set tmp (+ (+ (* i_body.vx i_body.vx) (* i_body.vy i_body.vy)) (* i_body.vz i_body.vz)))
+			(set e (+ e (* (* 0.5 i_body.mass) tmp)))
+
+			(set j (i.succ))
+			(while (< j (self._bodies.length)){
+				(set j_body (self._bodies.get j))
+				(set dx (- i_body.x j_body.x))
+				(set dy (- i_body.y j_body.y))
+				(set dz (- i_body.z j_body.z))
+
+				(set distance_sqr (+ (+ (* dx dx) (* dy dy)) (* dz dz)))
+				(set distance (distance_sqr.sqrt))
+				(set e (- e (/ (* i_body.mass j_body.mass) distance)))
+
+				(set j (j.succ))
+			})
+
+			(set i (i.succ))
+		})
+		e
+	})
+)
+
+(class NBody
+	(method (inner_benchmark_loop inner_iterations){
+		(set system (new NBodySystem))
+		(set i 0)
+		(while (< i inner_iterations){
+            (system.advance 0.01)
+			(set i (i.succ))
+		})
+        (self._verify_result (system.energy) inner_iterations)
+	})
+
+	(method (_verify_result result inner_iterations){
+        (if (= inner_iterations 250000){
+            (= result -0.1690859889909308)
+		}{
+		;else
+			(if (= inner_iterations 1){
+            	(= result -0.16907495402506745)
+			}{
+			;else
+				(println (+ (+ "No verification result for " (inner_iterations.as str)) " found"))
+        		(println (+ "Result is: " (result.as str)))
+				false
+			})
+		})
+	})
+
+
+	(method (benchmark) (raise "Should never be reached"))
+	(method (verify_result result) (raise "Should never be reached"))
+)
+
+(set nbody (new NBody))
+(nbody.inner_benchmark_loop 250000)

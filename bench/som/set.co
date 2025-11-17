@@ -1,0 +1,38 @@
+; Requires `vector.co` to be loaded beforehand
+
+(class Set
+  (field _items (new Vector))
+
+  (method (init-values size){
+    (self._items.init-values size)
+  })
+
+  (method (size) (self._items.size))
+
+  (method (for_each block) (self._items.for_each block))
+
+  (method (has_some block) (self._items.has_some block))
+
+  (method (get_one block) (self._items.get_one block))
+
+  (method (add obj)
+    (if (self.contains obj) (){
+      ;else
+      (self._items.append obj)
+     })
+  )
+
+  (method (collect block){
+    (set coll (new Vector))
+    (func (lambda e){
+      (coll.append (block e))
+     })
+    (self.for_each lambda)
+    coll
+   })
+
+  (method (contains obj){
+    (func (lambda it) (= it obj))
+    (self.has_some lambda)
+   })
+)

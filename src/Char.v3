@@ -1,0 +1,40 @@
+class CharObject(char: byte) extends Object {
+	private new() {}
+
+	def display() -> string { return Strings.format1("'%c'", char); }
+	def isTrue()  -> bool   { return true; }
+
+	/* METHODS */
+	def ch_display() => Result.OK(StrObjects.fromString(Strings.format1("%c", char)));
+	
+	def ch_concat(obj: Object) -> Result{
+		if (obj.instanceOf(ClassObjects.classStr)){
+			def str_value = (StrObject.!(obj).str);
+			return Result.OK(StrObjects.fromString(Arrays.concat([this.char], str_value)));
+
+		} else if (obj.instanceOf(ClassObjects.classChar)){
+			def char_value = (CharObject.!(obj).char);
+			return Result.OK(StrObjects.fromString(Arrays.concat([this.char], [char_value])));
+
+		} else{
+			return Result.Exn(ExnObjects.fromVirgil("+", "Invalid type for char/string concatenation"));
+		}
+	}
+
+	def ch_ascii_value() => Result.OK(IntObjects.fromLong(this.char));
+}
+
+def charObjects: Array<CharObject> = Array.new(256);
+
+component CharObjects {
+	def fromByte(char: byte) -> CharObject {
+		if (charObjects[char] == null) {
+			def cObj = CharObject.new(char);
+			charObjects[char] = cObj;
+			return cObj;
+		}
+		return charObjects[char];
+	}
+}
+
+

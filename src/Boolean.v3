@@ -1,11 +1,16 @@
+/* Represents a Cicero boolean object */
 class BoolObject(val: bool) extends Object {
 	def display() -> string { return if(val, "true", "false"); }
 	def isTrue()  -> bool   { return val; }
 
+	/* METHODS */
+
+	/* boolean operations */
 	def b_not()                 => Result.OK(BoolObjects.fromBool(!val));
 	def b_and(that: BoolObject) => Result.OK(BoolObjects.fromBool(this.val && that.val));
 	def b_or(that: BoolObject)  => Result.OK(BoolObjects.fromBool(this.val || that.val));
 
+	/* common operations */
 	def b_display()             => Result.OK(StrObjects.fromString(display()));
 }
 

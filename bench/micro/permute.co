@@ -1,0 +1,46 @@
+; Micro benchmark: Permute
+; Based on the Are We Fast Yet paper
+
+(class Permute
+  (field _count 0)
+  (field _v ())
+
+  (method (benchmark) {
+    (set-field _count self 0)
+    (set-field _v self [0 0 0 0 0 0])
+    (self._permute 6)
+
+    self._count
+   })
+
+  (method (_permute n){
+    (set-field _count self (self._count.succ))
+    (if (!= n 0){
+      (set n1 (- n 1))
+      (self._permute n1)
+
+      (set i n1)
+      (while (>= i 0){
+          (self._swap n1 i)
+          (self._permute n1)
+          (self._swap n1 i)
+
+          (set i (i.pred))
+       })
+     }())
+   })
+
+  (method (_swap i j){
+    (set tmp (self._v.get i))
+    (self._v.set i (self._v.get j))
+    (self._v.set j tmp)
+   })
+
+  (method (verify_result result) (= result 8660))
+)
+
+(set x (new Permute))
+{
+  (set answer (x.benchmark))
+  (x.verify_result answer)
+}

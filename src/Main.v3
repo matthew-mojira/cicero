@@ -1,35 +1,31 @@
 def main(args: Array<string>) -> int {
-	def opt = getOptions();
-	def files = opt.parse(args);
-	if (Option<bool>.!(opt.map["help"]).get()) {
-		// Show help text option.
-		System.puts(Strings.format2("Cicero %s.%d\n", Version.version, Version.minorVersion));
-		System.puts(Strings.format1("Build data: %s\n", Version.buildData));
-		System.puts("Usage: cicero [options]\n");
-		System.puts("Usage: cicero [options] <co files>\n");
+	def files = CLOptions.parse(args);
 
-		System.puts("\nOptions:\n");
-		System.puts("  -help: print this help text\n");
-		System.puts("  -tier=0: evaluation tier (0=AST, 1=bytecode)\n");
-		System.puts("  -cache=false: use inline cache in tier1 interpreter\n");
-		System.puts("  -suppress-output=false: do not print out results of evaluation (useful for benchmarking)\n");
-		System.puts("  -repl=false: when files are provided, open repl after evaluation\n");
+	if (CLOptions.VERSION.get()) {
+		printVersion();
+		printBuildData();
 
 		return 0;
 	}
-	def tier = Option<int>.!(opt.map["tier"]).get();
+	if (CLOptions.HELP.get()) {
+		printVersion();
+		printBuildData();
+		printHelp();
+
+		return 0;
+	}
+
+	def tier = CLOptions.TIER.get();
 	if (tier < 0 || tier > 2) {
-		System.error("arg error", Strings.format1("unrecognized tier: %d", tier));
-	} else {
-		CiceroOptions.evalTier = tier;
+		System.error("argument error", Strings.format1("unrecognized tier: %d", tier));
+		return 1;
 	}
 
 	def frame = FrameObjects.newTopFrame();
-
 	loadCore(frame);
-	
-	def output = !Option<bool>.!(opt.map["suppress-output"]).get();
 
+	def FAILURE = if(CLOptions.FUZZING.get(), 0, 1);
+	
 	// evaluate files (if present)
 	for (filename in files) {
 		// read in file
@@ -38,21 +34,27 @@ def main(args: Array<string>) -> int {
 		// parse
 		var reader = Parser.new(filename, file);
 		if (reader.ok) {
+			if (CLOptions.CHECK_SYNTAX.get()) continue;
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
 				// compile to bytecode if necessary
-				if (CiceroOptions.evalTier > 0)
-					expr.compile([]);
+				if (CLOptions.TIER.get() > 0) expr.compile([]);
 
 				// evaluate
 				frame.evalCode(expr);
 				match (frame.result) {
 					Exn(exn) => {
 						exn.print();
+						return FAILURE;
+					}
+					OK(val) => {
+						if (!CLOptions.SUPPRESS_OUTPUT.get()) 
+							System.puts(Strings.format1("=> %s\n", val.display()));
+					}
+					_ => {
+						System.error("eval error", "frame did not give result");
 						return 1;
 					}
-					OK(val) => if (output) System.puts(Strings.format1("=> %s\n", val.display()));
-					_       => System.error("eval error", "frame did not give result");
 				}
 			}
 		} else {
@@ -70,12 +72,12 @@ def main(args: Array<string>) -> int {
 			sb.ln();
 
  			System.puts(sb.extract());
-			return 1;
+			return FAILURE;
 		}
 	}
 
 	// run repl (if requested)
-	if (files.length == 0 || Option<bool>.!(opt.map["repl"]).get()) {
+	if (files.length == 0 || CLOptions.REPL.get()) {
 		var scanner = Scanner.new();
 		while (true) {
 			System.puts("cicero> ");
@@ -84,8 +86,8 @@ def main(args: Array<string>) -> int {
 				def exprs = reader.getExprs();
 
 				for (expr in exprs) {
-					if (CiceroOptions.evalTier > 0)
-						expr.compile([]);
+					// compile to bytecode if necessary
+					if (CLOptions.TIER.get() > 0) expr.compile([]);
 
 					// evaluate
 					frame.evalCode(expr);
@@ -129,23 +131,22 @@ def loadCore(frame: FrameObject) {
 	def reader = Parser.new("core", CiceroTexts.core);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
-		// FIXME compile the core too
- 		if (CiceroOptions.evalTier > 0) {
+ 		if (CLOptions.TIER.get() > 0) {
  			expr.compile([]);
 		}
 		frame.evalCode(expr);
 	}
 }
 
-// TODO steal OptionsGroup from virgil or wizard
-def getOptions() -> Options {
-	def opt = BasicOptions.new();
-
-	opt.newBoolOption("help", false);
-	opt.newIntOption("tier", 0);
-	opt.newBoolOption("cache", false);
-	opt.newBoolOption("repl", false);
-	opt.newBoolOption("suppress-output", false);
-
-	return opt;
+def printVersion() {
+	System.puts(Strings.format2("Cicero %s.%d\n", Version.version, Version.minorVersion));
+}
+def printBuildData() {
+	System.puts(Strings.format1("Build data: %s\n", Version.buildData));
+}
+def printHelp() {
+	System.puts("Usage: cicero [options]\n");
+	System.puts("Usage: cicero [options] <.co files>\n");
+	System.ln();
+	CLOptions.print();
 }

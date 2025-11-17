@@ -1,0 +1,72 @@
+; N-queens problem
+; Micro benchmark
+; Based on the Are We Fast Yet paper
+
+(class Queens
+
+  (field _free_rows ())
+  (field _free_maxs ())
+  (field _free_mins ())
+  (field _queen_rows ())
+
+  (method (benchmark){
+    (set result true)
+    (set i 0)
+    (while (< i 10){
+      (set result (and result (self.queens)))
+      (set i (i.succ))
+     })
+    result
+   })
+
+  (method (verify_result result) result)
+
+  (method (queens){
+    (set-field _free_rows self [true true true true true true true true])
+    (set-field _free_maxs self [true true true true true true true true true true true true true true true true])
+    (set-field _free_mins self [true true true true true true true true true true true true true true true true])
+    (set-field _queen_rows self [-1 -1 -1 -1 -1 -1 -1 -1])
+
+    (self.place_queen 0)
+   })
+
+  (method (place_queen c){
+    (set r 0)
+    (set ret false)
+    (while (and (< r 8) (ret.not)){
+
+      (if (self.get_row_column r c) {
+        (self._queen_rows.set r c)
+        (self.set_row_column r c false)
+
+        (if (= c 7) (set ret true) {
+          ;else
+          (if (self.place_queen (c.succ)) (set ret true) {
+            ;else
+
+            (self.set_row_column r c true)
+           })
+         })
+        }())
+
+        (set r (r.succ))
+     })
+
+    ret
+   })
+
+  (method (get_row_column r c)
+    (and
+      (and (self._free_rows.get r) (self._free_maxs.get (+ c r)))
+      (self._free_mins.get (+ (- c r) 7))
+    )
+   )
+
+  (method (set_row_column r c v){
+    (self._free_rows.set r v)
+    (self._free_maxs.set (+ c r) v)
+    (self._free_mins.set (+ (- c r) 7) v)
+   })
+)
+(set x (new Queens))
+(x.benchmark)

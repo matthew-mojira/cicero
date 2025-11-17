@@ -1,3 +1,5 @@
+/* The bytecode compiler translates an AST into bytecode.
+ */
 class BytecodeCompiler {
 	def writer:     DataWriter     = DataWriter.new();
 
@@ -11,7 +13,12 @@ class BytecodeCompiler {
 	/* Source mappings */
 	def source: Vector<FileRange>  = Vector.new();
 
-	// Creating object will initiate compilation process
+	/* Creating the object will initiate compilation process.
+	 *
+	 * If you are compiling a function, then you must prove the list of
+	 * parameters, which will become the first locals of the Bytecode
+	 * object.
+	 */
 	new(ast: AST, params: Array<string>) {
 		locals.puta(params);
 		if (CiceroOptions.traceBytecodeCompilation) {
@@ -23,6 +30,9 @@ class BytecodeCompiler {
 		}
 	}
 
+	/* This method extracts the result of the compilation and invalidates
+	 * this object.
+	 */
 	def extract() -> Bytecode {
 		def b = Bytecode.new(writer.extract(), 
 				locals.extract(), 

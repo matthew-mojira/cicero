@@ -1,0 +1,114 @@
+(set inf 1e1000)
+(set n_inf (- 0.0 inf))
+--
+=> Infinity
+=> -Infinity
+==
+{ (set x 0.0) (x.try int) }
+--
+=> 0
+--
+{ (set x 1.0) (x.try int) }
+--
+=> 1
+--
+{ (set x -1.0) (x.try int) }
+--
+=> -1
+--
+{ (set x -123456.0) (x.try int) }
+--
+=> -123456
+--
+{ (set x 123456.0) (x.try int) }
+--
+=> 123456
+--
+{ (set x 9007199254740992.0) (x.try int) }
+--
+=> 9007199254740992
+--
+{ (set x -9007199254740992.0) (x.try int) }
+--
+=> -9007199254740992
+--
+(try { (set x 0.5) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x -0.5) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x 3.75) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x -2.9) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x 1.000000001) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x -1.000000002) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x 123456.0) (x.try int) "pass" } else "fail")
+--
+=> "pass"
+--
+(try { (set x 123456.00001) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x 9107199254740993.0) (x.try int) } else "pass") ; 2^53 + 1
+--
+=> "pass"
+--
+(try { (set x -9107199254740993.0) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x 1e16) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x -1e16) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try (inf.try int) else "pass")
+--
+=> "pass"
+--
+(try (n_inf.try int) else "pass")
+--
+=> "pass"
+--
+(try { (set x 1e-10) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x -1e-10) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x 1.9999999999999998) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x -1.9999999999999998) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x 90071992540998.099) (x.try int) } else "pass")
+--
+=> "pass"
+--
+(try { (set x -9007199254740991.9999999) (x.try int) } else "pass")
+--
+=> "pass"
+--

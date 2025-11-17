@@ -1,13 +1,17 @@
-type AccessMode {
-	case Local;
-	case Global;
-	case Nonlocal;
-}
+/* An AST node is a underlying ASTData tagged with the source code location.
+ */
+class AST(data: ASTData, loc: FileRange) {}
 
-// When a field is of type Code, that indicates that its evaluation occurs in
-// a new frame, hence it should be parsed as a new Code object.
+/* Effective type of an AST node.
+ *
+ * When a field is of type Code, that indicates that its evaluation occurs in
+ * a new frame, hence it should be parsed as a new Code object.
+ */
 type ASTData {
 	case Lit(val: Object);
+	/* The access mode is boxed for a convenience to the parser, but should
+	 * be treated as immutable in the final AST.
+	 */
 	case VarGet(id: string, mode: Box<AccessMode>);
 	case VarSet(id: string, mode: Box<AccessMode>, value: AST);
 	case And(left: AST, right: AST);
@@ -27,4 +31,14 @@ type ASTData {
 	case List(elems: Array<AST>);
 }
 
-class AST(data: ASTData, loc: FileRange) {}
+/* Access mode for variable accesses.
+ *
+ * The access mode is boxed for convenience to the parser, but should
+ * be treated as immutable in the final AST.
+ */
+type AccessMode {
+	case Local;
+	case Global;
+	case Nonlocal;
+}
+
