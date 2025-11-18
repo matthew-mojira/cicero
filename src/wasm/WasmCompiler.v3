@@ -299,8 +299,7 @@ class WasmCompiler {
 		addLocal("<frame>");    // frame is made available for whenever it's needed
 		Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
 		wasm.put_uleb32(1); // 1 set of
-		wasm.put_uleb32(10);// 10 of
-		// TODO fill hole with locals.length
+		def hole = wasm.skip_leb32();
 		wasm.putb(0x7F);    // i32
 
 		// FUNCTION BODY
@@ -324,6 +323,9 @@ class WasmCompiler {
 		wasm.put_uleb32(RETURN_EXN);
 
 		wasm.putb(WasmOp.END.opcode);
+
+		wasm.at(hole);
+		wasm.overwrite_uleb32(locals.length);
 	}
 
 	// from BytecodeCompiler
