@@ -1,35 +1,35 @@
-enum Opcode {
-	NOP,
+enum Opcode(fallthrough: bool, jump: bool) {
+	NOP               (true, false),
 	// Loads
-	LOAD_CONST,    // [0] index into the constant pool
-	LOAD_GLOBAL,   // [0] index into the string pool
-	LOAD_LOCAL,    // [0] index into the runtime locals
-	LOAD_FIELD,    // [1] index into the string pool
-	LOAD_NONLOCAL, // [1] index into the nonlocal variables
+	LOAD_CONST        (true, false),  // [0] index into the constant pool
+	LOAD_GLOBAL       (true, false),  // [0] index into the string pool
+	LOAD_LOCAL        (true, false),  // [0] index into the runtime locals
+	LOAD_FIELD        (true, false),  // [1] index into the string pool
+	LOAD_NONLOCAL     (true, false),  // [1] index into the nonlocal variables
 	// Stores
-	STORE_GLOBAL,  // [1] index into the string pool
-	STORE_LOCAL,   // [0] index into the runtime locals
-	STORE_FIELD,   // [2] index into the string pool
+	STORE_GLOBAL      (true, false),  // [1] index into the string pool
+	STORE_LOCAL       (true, false),  // [0] index into the runtime locals
+	STORE_FIELD       (true, false),  // [2] index into the string pool
 	// Control flow
-	CALL,          // [n] number of arguments (not including function!)
-	JUMP,          // [0] offset of pc
-	JUMP_IF_FALSE, // [1] offset of pc
-	JUMP_IF_TRUE_PEEK,  // [1] offset of pc
-	JUMP_IF_FALSE_PEEK, // [1] offset of pc
+	CALL              (true, false),  // [n] number of arguments (not including function!)
+	JUMP              (false, true),  // [0] offset of pc
+	JUMP_IF_FALSE     (true, true),   // [1] offset of pc
+	JUMP_IF_TRUE_PEEK (true, true),   // [1] offset of pc
+	JUMP_IF_FALSE_PEEK(true, true),   // [1] offset of pc
 	// Exceptions
-	RAISE,         // [1]
-	TRY,           // [0] offset from this bytecode of the catch
-	CATCH,         // [0]
-	ASSERT_FUNC    // [1]
+	RAISE             (false, false), // [1]
+	TRY               (true, false),  // [0] offset from this bytecode of the catch
+	CATCH             (true, false),  // [0]
+	ASSERT_FUNC       (true, false),  // [1]
 	// Object creation
-	CREATE_OBJECT, // [1]
-	CREATE_CLASS,  // [1] index into the classhole pool
-	CREATE_LIST,   // [1] how many elements to pull
-	CREATE_FUNC,   // [n] index into the funchole pool
+	CREATE_OBJECT     (true, false),  // [1]
+	CREATE_CLASS      (true, false),  // [1] index into the classhole pool
+	CREATE_LIST       (true, false),  // [1] how many elements to pull
+	CREATE_FUNC       (true, false),  // [n] index into the funchole pool
 	// Stack manipulation
-	POP,           // [1] how many values to pull
-	DUPE,          // index of element to dupe to top of stack (0 = top)
-	SWAP,          // index of element to swap top of stack with (0 = top)
+	POP               (true, false),  // [1] how many values to pull
+	DUPE              (true, false),  // index of element to dupe to top of stack (0 = top)
+	SWAP              (true, false)   // index of element to swap top of stack with (0 = top)
 }
 
 /*
