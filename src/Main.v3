@@ -40,6 +40,9 @@ def main(args: Array<string>) -> int {
 				// compile to tier1 bytecode
 				if (CLOptions.TIER.get() > 0) expr.compile([]);
 
+				// TODO beyond relooper
+				CFGraph.new(Code.Bytecode.!(expr.code).bytecode).display();
+
 				// evaluate
 				frame.evalCode(expr);
 				match (frame.result) {

@@ -41,4 +41,15 @@ class HashSet<T> extends HashMap<T, void> {
 	def size() -> int {
 		return toArray().length;
 	}
+	// XXX really, really slow
+	def pop() -> T {
+		def a = toArray();
+		def s: HashSet<T> = HashSet.new(hash, equals);
+		for (i < a.length - 1) {
+			s.add(a[i]);
+		}
+		def t = a[a.length - 1];
+		retainAll(s);
+		return t;
+	}
 }

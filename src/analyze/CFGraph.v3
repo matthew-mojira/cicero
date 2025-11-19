@@ -1,23 +1,12 @@
-/* The first part of the beyond relooper implementation is to construct a
- * control-flow graph for Cicero bytecode.
- */
-
-/* One complicating factor is Cicero's exception handling. Exception handling
- * has a very particular bytecode structure:
- *   TRY <offset to handler>
- *   <try code>
- *   CATCH
- *   JUMP <offset to end of handler>
- *   <handler>
- * Since jumping due to exceptions turn the CFG upside-down (and we are going
- * to compile it as Wasm exceptions or at least a special block construct), it
- * is best to get this out of the way first.
- *
- * For now, we'll ignore the existence of any try/catch block.
- */
-
 // I don't believe it's possible to construct syntactically unreachable code,
 // but removing it would be an optimization this implicitly performs.
+
+def ignoreExceptions = false;
+
+// XXX unused
+enum EdgeType {
+	UNCONDITIONAL, TRUE, FALSE, EXN
+}
 
 class CFGraph(bytecode: Bytecode) {
 	def var head:    BasicBlock;
@@ -27,8 +16,12 @@ class CFGraph(bytecode: Bytecode) {
 		def bc = bytecode.instrs;
 		def boundaries: Array<bool> = Array.new(bc.length + 4);
 		def map: Array<int> = Array.new(bc.length + 4);
+		def handlerStk: Stack<int> = ArrayStack.new();
+		def handlerLoc: Array<int> = Array.new(bc.length + 4);
 		if (bc.length > 0)
 			boundaries[0] = true; // entry point
+		if (!ignoreExceptions)
+			handlerStk.push(bc.length); // no handler = exit function
 
 		var pc = 0;
 		while (pc < bc.length) {
@@ -37,11 +30,23 @@ class CFGraph(bytecode: Bytecode) {
 			def operand = ins.operand;
 
 			pc += 4;
+			if (!ignoreExceptions) {
+				match (opcode) {
+					TRY   => handlerStk.push(pc + operand);
+					CATCH => handlerStk.pop();
+					_     => ;
+				}
+			}
+
 			if (opcode.jump) {
 				System.puts(Strings.format1("pc+operand: %d\n", pc + i24.view(operand)));
 				boundaries[pc + i24.view(operand)] = true;
-				if (opcode.fallthrough)
-					boundaries[pc] = true;
+				boundaries[pc] = true;
+			}
+			if (!ignoreExceptions && opcode.exception) {
+				boundaries[handlerStk.peek()] = true; // XXX duplicate set many, many times
+				handlerLoc[pc] = handlerStk.peek();
+				boundaries[pc] = true;
 			}
 		}
 
@@ -75,6 +80,12 @@ class CFGraph(bytecode: Bytecode) {
 				            | (u24.!(block.bytes[block.bytes.length - 2]) << 8)
 				            |  u24.!(block.bytes[block.bytes.length - 3]);
 				def target = lastPc + i24.view(operand);
+				block.successors.add(basicBlocks[map[target]]);
+				basicBlocks[map[target]].predecessors.add(block);
+			}
+			if (!ignoreExceptions && lastOp.exception) {
+				// get target from its mapping in handlerLoc
+				def target = handlerLoc[lastPc];
 				block.successors.add(basicBlocks[map[target]]);
 				basicBlocks[map[target]].predecessors.add(block);
 			}
@@ -151,14 +162,23 @@ class CFGraph(bytecode: Bytecode) {
 		}
 	}
 
+	def entryNodes() -> Array<BasicBlock> {
+		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.predecessors.size() == 0);
+	}
+
+	def exitNodes() -> Array<BasicBlock> {
+		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.successors.size() == 0);
+	}
+
 	def display() {
+		System.puts("===\nBytecode:\n");
+		System.puts(bytecode.display());
+		System.ln();
 		for (block in basicBlocks.copy()) {
 			block.display();
 		}		
 	}
 }
-
-// TODO paths between basic blocks
 
 class BasicBlock(bytes: Range<byte>, startPc: int) {
 	def successors:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
@@ -189,11 +209,11 @@ class BasicBlock(bytes: Range<byte>, startPc: int) {
 			2 => System.puts(Strings.format2("=> [%d, %d]\n", successors[0].startPc, successors[1].startPc));
 			_ => System.error("branch error", "at least three targets in basic block");
 		}
-		if (immDom != null) {
-			System.puts(Strings.format1("=> imm dom is: %d\n", immDom.startPc));
-		} else {
-			System.puts("=> imm dom is: null\n");
-		}
+// 		if (immDom != null) {
+// 			System.puts(Strings.format1("=> imm dom is: %d\n", immDom.startPc));
+// 		} else {
+// 			System.puts("=> imm dom is: null\n");
+// 		}
 		def bc = Ranges.dup(bytes);
 		var pc = 0;
 		while (pc < bc.length) {

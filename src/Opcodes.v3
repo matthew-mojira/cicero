@@ -1,35 +1,35 @@
-enum Opcode(fallthrough: bool, jump: bool) {
-	NOP               (true, false),
+enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
+	NOP               (true, false, false),
 	// Loads
-	LOAD_CONST        (true, false),  // [0] index into the constant pool
-	LOAD_GLOBAL       (true, false),  // [0] index into the string pool
-	LOAD_LOCAL        (true, false),  // [0] index into the runtime locals
-	LOAD_FIELD        (true, false),  // [1] index into the string pool
-	LOAD_NONLOCAL     (true, false),  // [1] index into the nonlocal variables
+	LOAD_CONST        (true, false, false),  // [0] index into the constant pool
+	LOAD_GLOBAL       (true, false, true),   // [0] index into the string pool
+	LOAD_LOCAL        (true, false, true),   // [0] index into the runtime locals
+	LOAD_FIELD        (true, false, true),   // [1] index into the string pool
+	LOAD_NONLOCAL     (true, false, false),  // [1] index into the nonlocal variables
 	// Stores
-	STORE_GLOBAL      (true, false),  // [1] index into the string pool
-	STORE_LOCAL       (true, false),  // [0] index into the runtime locals
-	STORE_FIELD       (true, false),  // [2] index into the string pool
+	STORE_GLOBAL      (true, false, false),  // [1] index into the string pool
+	STORE_LOCAL       (true, false, false),  // [0] index into the runtime locals
+	STORE_FIELD       (true, false, true),   // [2] index into the string pool
 	// Control flow
-	CALL              (true, false),  // [n] number of arguments (not including function!)
-	JUMP              (false, true),  // [0] offset of pc
-	JUMP_IF_FALSE     (true, true),   // [1] offset of pc
-	JUMP_IF_TRUE_PEEK (true, true),   // [1] offset of pc
-	JUMP_IF_FALSE_PEEK(true, true),   // [1] offset of pc
+	CALL              (true, false, true),   // [n] number of arguments (not including function!)
+	JUMP              (false, true, false),  // [0] offset of pc
+	JUMP_IF_FALSE     (true, true, false),   // [1] offset of pc
+	JUMP_IF_TRUE_PEEK (true, true, false),   // [1] offset of pc
+	JUMP_IF_FALSE_PEEK(true, true, false),   // [1] offset of pc
 	// Exceptions
-	RAISE             (false, false), // [1]
-	TRY               (true, false),  // [0] offset from this bytecode of the catch
-	CATCH             (true, false),  // [0]
-	ASSERT_FUNC       (true, false),  // [1]
+	RAISE             (false, false, true),  // [1]
+	TRY               (true, false, false),  // [0] offset from this bytecode of the catch
+	CATCH             (true, false, false),  // [0]
+	ASSERT_FUNC       (true, false, true),   // [1]
 	// Object creation
-	CREATE_OBJECT     (true, false),  // [1]
-	CREATE_CLASS      (true, false),  // [1] index into the classhole pool
-	CREATE_LIST       (true, false),  // [1] how many elements to pull
-	CREATE_FUNC       (true, false),  // [n] index into the funchole pool
+	CREATE_OBJECT     (true, false, true),   // [1]
+	CREATE_CLASS      (true, false, true),   // [1] index into the classhole pool
+	CREATE_LIST       (true, false, false),  // [1] how many elements to pull
+	CREATE_FUNC       (true, false, false),  // [n] index into the funchole pool
 	// Stack manipulation
-	POP               (true, false),  // [1] how many values to pull
-	DUPE              (true, false),  // index of element to dupe to top of stack (0 = top)
-	SWAP              (true, false)   // index of element to swap top of stack with (0 = top)
+	POP               (true, false, false),  // [1] how many values to pull
+	DUPE              (true, false, false),  // index of element to dupe to top of stack (0 = top)
+	SWAP              (true, false, false)   // index of element to swap top of stack with (0 = top)
 }
 
 /*
@@ -72,3 +72,4 @@ def nothing() -> int {
 	return 1;
 }
 def nothing2 = nothing();
+

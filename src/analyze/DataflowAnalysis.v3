@@ -1,0 +1,6 @@
+class DataflowAnalysis<S> {
+	private new() {}
+	def runAnalysis(cfg: CFGraph) -> HashMap<BasicBlock, S>;
+	def initialState(cfg: CFGraph) -> S;
+	def processResults(cfg: CFGraph, result: HashMap<BasicBlock, S>) -> void;
+}
