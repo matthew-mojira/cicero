@@ -41,7 +41,16 @@ def main(args: Array<string>) -> int {
 				if (CLOptions.TIER.get() > 0) expr.compile([]);
 
 				// TODO beyond relooper
-				CFGraph.new(Code.Bytecode.!(expr.code).bytecode).display();
+				def cfg = CFGraph.new(Code.Bytecode.!(expr.code).bytecode);
+				cfg.computeDominators();
+				cfg.computeImmediateDominator();
+				cfg.display();
+
+				System.puts("==\n==\nRUNNING ANALYSIS!!\n==\n==\n");
+				// analysis
+				def analysis = UninitializedLocalAnalysis.new();
+				def result = analysis.runAnalysis(cfg);
+				analysis.processResults(cfg, result);
 
 				// evaluate
 				frame.evalCode(expr);

@@ -3,6 +3,7 @@
 class BytecodeCompiler {
 	def writer:     DataWriter     = DataWriter.new();
 
+	def params:     Array<string>; // XXX used by analysis only
 	def strings:    Vector<string> = Vector.new();
 	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
 	def funcholes:  Vector<ASTData.Func> = Vector.new();
@@ -36,6 +37,7 @@ class BytecodeCompiler {
 	def extract() -> Bytecode {
 		def b = Bytecode.new(writer.extract(), 
 				locals.extract(), 
+				params,
 				nonlocals.extract(),
 				strings.extract(), 
 				constants.extract(), 

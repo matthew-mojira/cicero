@@ -1,0 +1,89 @@
+type LocalAccess {
+	case Bot { // don't know (not necessarily bad--otherwise bad <= good and the join doesn't work)
+		def join(l: LocalAccess) => l;
+		def display() => "Bot";
+	}
+	case Good { // always an initialized load
+		def join(l: LocalAccess) => if(l == this || l == LocalAccess.Bot, this, LocalAccess.Top);
+		def display() => "Good";
+	}
+	case Bad { // always an uninitialized load
+		def join(l: LocalAccess) => if(l == this || l == LocalAccess.Bot, this, LocalAccess.Top);
+		def display() => "Bad";
+	}
+	case Top { // may be either initialized or uninitialized
+		def join(l: LocalAccess) => this;
+		def display() => "Top";
+	}
+
+	def join(l: LocalAccess) -> LocalAccess;
+	def display() -> string;
+}
+
+class LocalAnalysisState(cfg: CFGraph) {
+	private def locals: Array<LocalAccess> = Array.new(cfg.bytecode.locals.length);
+
+	def [i: int] -> LocalAccess => locals[i];
+	def [i: int] = l: LocalAccess { locals[i] = l; }
+
+	def join(state: LocalAnalysisState) -> LocalAnalysisState {
+		def newState = this.dup();
+		for (i < locals.length) {
+			locals[i] = LocalAccess.join(locals[i], state[i]);
+		}
+		return newState;
+	}
+	def dup() -> LocalAnalysisState {
+		def newState = LocalAnalysisState.new(cfg);
+		Arrays.copy(locals, newState.locals);
+		return newState;
+	}
+}
+
+class UninitializedLocalAnalysis extends ForwardFlowAnalysis<LocalAnalysisState> {
+	def initialState(cfg: CFGraph) -> LocalAnalysisState {
+		/* rules for initial state:
+		 * - parameters are assumed to be uninitialized
+		 * - everything else is bot (we don't know yet)
+		 */
+		def bytecode = cfg.bytecode;
+		def state = LocalAnalysisState.new(cfg);
+		for (i < bytecode.params.length)
+			state[i] = LocalAccess.Good;
+		return state;
+	}
+	def processResults(cfg: CFGraph, result: HashMap<BasicBlock, LocalAnalysisState>) -> void {
+		def blocks = Lists.toArray(Maps.keyList(result));
+		for (block in blocks) {
+			block.display();
+			def state = result[block];
+
+			def locals = cfg.bytecode.locals;
+			for (i < state.locals.length) {
+				System.puts(Strings.format2("%s: %s\n", locals[i], state[i].display()));
+			}
+		}
+	}
+	def bottomState(cfg: CFGraph) -> LocalAnalysisState {
+		return LocalAnalysisState.new(cfg);
+	}
+	def joinStates(state1: LocalAnalysisState, state2: LocalAnalysisState) -> LocalAnalysisState {
+		return state1.join(state2);
+	}
+	def forwardFlow(bb: BasicBlock, inputState: LocalAnalysisState) -> LocalAnalysisState {
+		/* need to iterate through the bytecodes in the basic block to determine if they set locals */
+		def outputState = inputState.dup();
+		def bytes = Ranges.dup(bb.bytes);
+		for (pc = 0; pc < bytes.length; pc += 4) {
+			def instr   = Ref<Instruction>.at(bytes, pc);
+			def opcode  = instr.opcode;
+			def operand = instr.operand;
+
+			match (opcode) {
+				STORE_LOCAL => outputState[operand] = LocalAccess.Good;
+				_ => ;
+			}
+		}
+		return outputState;
+	}
+}

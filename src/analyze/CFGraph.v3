@@ -192,7 +192,12 @@ class BasicBlock(bytes: Range<byte>, startPc: int) {
 	}
 
 	def display() {
-		System.puts(Strings.format1("block at pc=%d\n", startPc));
+		System.puts(Strings.format1("block at pc=%d ", startPc));
+ 		if (immDom != null) {
+ 			System.puts(Strings.format1("(=> imm dom: %d)\n", immDom.startPc));
+ 		} else {
+ 			System.puts("(=> imm dom: none)\n");
+ 		}
 		
 		def predecessors = predecessors.toArray();
 		System.puts("   [");
@@ -201,19 +206,14 @@ class BasicBlock(bytes: Range<byte>, startPc: int) {
 		}
 		if (predecessors.length > 0)
 			System.puts(Strings.format1("%d", predecessors[predecessors.length - 1].startPc));
-		System.puts(Strings.format1("] => %d ", startPc));
+		System.puts(Strings.format1("] -> %d ", startPc));
 		def successors = successors.toArray();
 		match (successors.length) {
-			0 => System.puts("=> []\n");
-			1 => System.puts(Strings.format1("=> [%d]\n", successors[0].startPc));
-			2 => System.puts(Strings.format2("=> [%d, %d]\n", successors[0].startPc, successors[1].startPc));
+			0 => System.puts("-> []\n");
+			1 => System.puts(Strings.format1("-> [%d]\n", successors[0].startPc));
+			2 => System.puts(Strings.format2("-> [%d, %d]\n", successors[0].startPc, successors[1].startPc));
 			_ => System.error("branch error", "at least three targets in basic block");
 		}
-// 		if (immDom != null) {
-// 			System.puts(Strings.format1("=> imm dom is: %d\n", immDom.startPc));
-// 		} else {
-// 			System.puts("=> imm dom is: null\n");
-// 		}
 		def bc = Ranges.dup(bytes);
 		var pc = 0;
 		while (pc < bc.length) {

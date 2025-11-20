@@ -19,6 +19,7 @@ layout Instruction {
 class Bytecode(instrs:     Array<byte>, 
 		locals:     Array<string>,
 		nonlocals:  Array<string>,
+		params:     Array<string>, // XXX used by analysis only
 		/* String pool is used for lookups by name (e.g. globals) */
                 stringPool: Array<string>,
                 constPool:  Array<Object>,
