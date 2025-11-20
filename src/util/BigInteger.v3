@@ -473,13 +473,13 @@ class BigInteger(mag: Array<int>, signum: int) {
 		if (val.signum == 0) return this;
 		if (signum == 0) return val;
 		if (signum == val.signum)
-			return BigInteger.new(addMag(mag, val.mag), signum);
+			return BigIntegers.canonicalizeInt(BigInteger.new(addMag(mag, val.mag), signum));
 		
 		def cmp = compareMagnitude(val);
 		if (cmp == 0) return ZERO;
 		def resultMag = if(cmp > 0, subtractMag(mag, val.mag), subtractMag(val.mag, mag));
 
-		return BigInteger.new(stripLeadingZeros(resultMag), if(cmp == signum, 1, -1));
+		return BigIntegers.canonicalizeInt(BigInteger.new(stripLeadingZeros(resultMag), if(cmp == signum, 1, -1)));
 	}
 
 	def subtract(val: BigInteger) -> BigInteger {
@@ -897,6 +897,11 @@ class BigInteger(mag: Array<int>, signum: int) {
 
 		return BigInteger.new(stripLeadingZeros(upperInts), 1);
 	}
+
+	private def hash() -> int {
+		if (mag.length == 0) return 0;
+		return mag[0];
+	}
 }
 
 
@@ -1191,11 +1196,26 @@ def javaIncrement(val: Array<int>) -> Array<int> {
 	return val;
 }
 
+// def CANONICAL_MAX = BigIntegers.fromLong(
+// def CANONICAL_MIN = 
+
 component BigIntegers {
+	private def canonicalInts: HashMap<BigInteger, BigInteger> = HashMap.new(BigInteger.hash, BigInteger.equals);
+	def canonicalizeInt(i: BigInteger) -> BigInteger {
+		if (canonicalInts.has(i)) {
+			System.puts("h");
+			return canonicalInts[i];
+		}
+		System.puts("m");
+		return canonicalInts[i] = i;
+	}
+
 	/* BigInteger(long val) */
 	def fromLong(val: long) -> BigInteger {
 		if (val == 0)
 			return ZERO;
+		if (val == 1)
+			return ONE;
 
 		var signum: int;
 		if (val < 0) {

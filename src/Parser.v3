@@ -54,6 +54,7 @@ class Vars {
 }
 
 class Parser extends TextReader {
+
 	private def exprs: Vector<CodeObject>          = Vector.new();
 	def errors: Vector<(int, int, string)> = Vector.new();
 
@@ -608,7 +609,7 @@ class Parser extends TextReader {
 			return null;
 		}
 		def str = readToken(len).image;
-		return Strings.split(str, ".", -1);
+		return Arrays.map(Strings.split(str, ".", -1), canonicalizeString);
 	}
 
 	private def readIdentifier() -> string {
@@ -618,7 +619,7 @@ class Parser extends TextReader {
 			return null;
 		}
 		def str = readToken(len).image;
-		return str;
+		return canonicalizeString(str);
 	}
 	
 	/* this reads a keyword, returning the keyword found and consuming it
@@ -761,4 +762,11 @@ def contains(vec: Vector<string>, str: string) -> bool {
 	  if (Strings.equal(vec[i], str)) return true;
   }
   return false;
+}
+
+def canonicalStrings: HashMap<string, string> = Strings.newMap();
+def canonicalizeString(str: string) -> string {
+	if (canonicalStrings.has(str))
+		return canonicalStrings[str];
+	return canonicalStrings[str] = str;
 }
