@@ -12,24 +12,31 @@ class ForwardFlowAnalysis<S> extends DataflowAnalysis<S> {
 		for (i < cfg.basicBlocks.length) {
 			def bb = cfg.basicBlocks[i];
 			inputStates[bb] = bottomState(cfg);
+			worklist.add(bb);
 		}
 
-		for (bb in cfg.exitNodes()) {
+		for (bb in cfg.entryNodes()) {
 			inputStates[bb] = initialState(cfg);
 		}
 
 		while (worklist.size() > 0) {
 			def bb = worklist.pop();
 
+			//System.puts(Strings.format1("Working on: %d\n", bb.startPc));
+
 			// TODO consider edge type
 			for (bb2 in bb.successors.toArray()) {
+				//System.puts(Strings.format1("  successor: %d", bb2.startPc));
+
 				def edgeOutput = forwardFlow(bb, inputStates[bb]);
 				def newInput = joinStates(inputStates[bb2], edgeOutput);
 
-				if (!stateEquals(inputStates[bb], edgeOutput)) {
+				if (!stateEquals(inputStates[bb2], edgeOutput)) {
+					//System.puts("...UPDATE!");
 					inputStates[bb2] = newInput;
 					worklist.add(bb2);
 				}
+				//System.ln();
 			}
 		}
 		return inputStates;

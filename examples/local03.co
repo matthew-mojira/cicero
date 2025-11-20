@@ -1,0 +1,7 @@
+(func (f x) {
+  (if cond 
+    (set y 1)
+    10)
+  x
+  y
+})

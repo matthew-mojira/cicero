@@ -52,6 +52,10 @@ class Bytecode(instrs:     Array<byte>,
 	def display() -> string {
 		def str = StringBuilder.new();
 
+		str.puts("Locals: ");
+		str.putRange("%s", locals);
+		str.ln();
+
 		def bc = instrs;
 		var pc = 0;
 		while (pc < bc.length) {
