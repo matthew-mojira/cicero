@@ -120,19 +120,6 @@ class BytecodeCompiler {
 			Func(id, params, code, nonlocals) => {
 				// XXX compiling code
 				code.compile(params);
-
-				// TODO analyze and print results
-				def cfg = CFGraph.new(Code.Bytecode.!(code.code).bytecode);
-				cfg.computeDominators();
-				cfg.computeImmediateDominator();
-				cfg.display();
-
-				System.puts("\nRUNNING ANALYSIS!!\n\n");
-				// analysis
-				def analysis = UninitializedLocalAnalysis.new();
-				def result = analysis.runAnalysis(cfg);
-				analysis.processResults(cfg, result);
-
 			
 				for (i < nonlocals.length) {
 					def nonlocal = nonlocals[i];

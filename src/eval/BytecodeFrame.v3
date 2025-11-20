@@ -155,6 +155,9 @@ class BytecodeFrame extends FrameObject {
 					else
 						stack.push(local);
 				}
+				LOAD_LOCAL_FAST => {
+					stack.push(locals[operand]);
+				}
 				LOAD_NONLOCAL => {
 					def nonlocal = nonlocals[operand];
 					if (CiceroOptions.sanityChecks) {

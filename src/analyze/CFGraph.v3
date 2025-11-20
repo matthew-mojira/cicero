@@ -39,7 +39,6 @@ class CFGraph(bytecode: Bytecode) {
 			}
 
 			if (opcode.jump) {
-				System.puts(Strings.format1("pc+operand: %d\n", pc + i24.view(operand)));
 				boundaries[pc + i24.view(operand)] = true;
 				boundaries[pc] = true;
 			}

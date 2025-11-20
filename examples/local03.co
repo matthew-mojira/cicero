@@ -5,3 +5,6 @@
   x
   y
 })
+
+(set cond true)
+(f 2)

@@ -48,6 +48,17 @@ class Bytecode(instrs:     Array<byte>,
 		}
 	}
 
+	def optimize() {
+		/* local variable optimization */
+		if (locals.length > 0) {
+			def cfg = CFGraph.new(this);
+
+			def analysis = UninitializedLocalAnalysis.new();
+			def result = analysis.runAnalysis(cfg);
+			analysis.processResults(cfg, result);
+		}
+	}
+
 	/* print this bytecode */
 	def display() -> string {
 		def str = StringBuilder.new();

@@ -55,23 +55,40 @@ class UninitializedLocalAnalysis extends ForwardFlowAnalysis<LocalAnalysisState>
 			state[i] = LocalAccess.Good;
 		return state;
 	}
+	/* NOTE: the analysis returns the state at the start of the block,
+	 * but there may be STORE_LOCAL in this block (before a LOAD_LOCAL)
+	 * that ultimately makes the access safe
+	 */
 	def processResults(cfg: CFGraph, result: HashMap<BasicBlock, LocalAnalysisState>) -> void {
 		def blocks: Range<BasicBlock> = Lists.toArray(Maps.keyList(result));
-		Ranges.quicksort(blocks, fun(b1: BasicBlock, b2: BasicBlock) => b1.startPc <= b2.startPc);
+		//Ranges.quicksort(blocks, fun(b1: BasicBlock, b2: BasicBlock) => b1.startPc <= b2.startPc);
 		for (block in blocks) {
-			block.display();
 			def state = result[block];
 
-			/* NOTE: the analysis returns the state at the start of the block,
-			 * but there may be STORE_LOCAL in this block (before a LOAD_LOCAL)
-			 * that ultimately makes the access safe
-			 */
+			def bytecode = cfg.bytecode.instrs;
+			for (pc = block.startPc; pc - block.startPc < block.bytes.length; pc += 4) {
+				def instr   = Ref<Instruction>.at(bytecode, pc);
+				def opcode  = instr.opcode;
+				def operand = instr.operand;
 
-			def locals = cfg.bytecode.locals;
-			for (i < locals.length) {
-				System.puts(Strings.format2("%s: %s\n", locals[i], state[i].display()));
+				match (opcode) {
+					// XXX this destroys the analysis result, so don't reuse it
+					STORE_LOCAL => state[operand] = LocalAccess.Good;
+					LOAD_LOCAL => if (state[operand] == LocalAccess.Good) {
+						// Reap the benefits of optimization!
+						bytecode[pc] = Opcode.LOAD_LOCAL_FAST.tag;
+					}
+					_ => ;
+				}
 			}
-			System.ln();
+
+			// debug display stuff
+			// def locals = cfg.bytecode.locals;
+			// block.display();
+			// for (i < locals.length) {
+			// 	System.puts(Strings.format2("%s: %s\n", locals[i], state[i].display()));
+			// }
+			// System.ln();
 		}
 	}
 	def bottomState(cfg: CFGraph) -> LocalAnalysisState {
