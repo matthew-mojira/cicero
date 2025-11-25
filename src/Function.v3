@@ -74,7 +74,9 @@ component FuncObjects {
 			def code = reader.getExprs()[0]; // XXX only use first read item
 			def fn = ASTData.Func.!(Code.AST.!(code.code).ast.data);
 
-			if (CLOptions.TIER.get() > 0) fn.body.compile(Arrays.prepend("self", fn.params));
+			if (CLOptions.TIER.get() > 0) {
+				fn.body.compile(Arrays.prepend("self", fn.params));
+			}
 			return newFO(id, Arrays.deleteAt(fn.params, 0), [], fn.body);
 		} else {
 			System.error("init error", "failed to parse built-in cicero method");

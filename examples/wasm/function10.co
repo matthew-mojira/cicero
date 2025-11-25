@@ -1,0 +1,9 @@
+(class X
+       (field value 10))
+
+(func (f) {
+	(set obj (new X))
+	obj.value
+})
+
+(f)

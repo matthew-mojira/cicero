@@ -6,6 +6,7 @@ type Code {
 	case Virgil(fn: Range<Object> -> Result);
 	case AST(ast: AST);
 	case Bytecode(bytecode: Bytecode);
+	case Wasm(wasm: WasmBytecode);
 }
 
 /* Wraps around a pieces of Code. However, it also contains logic to compile
@@ -21,7 +22,12 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 		match (code) {
 			Virgil   => System.error("compile error", "attempting to compile Virgil code to bytecode");
 			Bytecode => System.error("compile error", "compiling what has already been compiled to bytecode");
-			AST(ast) => code = Code.Bytecode(BytecodeCompiler.new(ast, params).extract());
+			Wasm     => System.error("compile error", "compiling what has already been compiled to wasm");
+			AST(ast) => match (CLOptions.TIER.get()) {
+				1 => code = Code.Bytecode(BytecodeCompiler.new(ast, params).extract());
+				2 => code = Code.Wasm(WasmCompiler.new(ast, params).compile());
+				_ => System.error("compile error", "attempting to compile on interpreter tier");
+			}
 		}
 	}
 

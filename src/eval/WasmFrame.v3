@@ -1,0 +1,75 @@
+class WasmFrame extends FrameObject {
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) super(prev, code, args) {
+	}
+	// TODO unwrap CodeObject like in BytecodeFrame...
+	// and in general.. are they similar? can refactor?
+
+	def nonlocals: Array<(string, Object)>;
+	def objects: Vector<Object>; /* TODO implement this heap */
+	def strings: Array<string>;
+
+	def eval() {
+		def f = Code.Wasm.!(code.code).wasm;
+		var exn: bool;
+		match (f) {
+			Func0(f) => exn = f();
+			Func1(f) => exn = f(args[0].1);
+			Func2(f) => exn = f(args[0].1, args[1].1);
+			Func3(f) => exn = f(args[0].1, args[1].1, args[2].1);
+			Func4(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1);
+			Func5(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1);
+			Func6(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1);
+			Func7(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1);
+			Func8(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1, args[7].1);
+			Func9(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1, args[7].1, args[8].1);
+		}
+		if (exn) {
+			result = Result.Exn(WasmRuntime.objects[WasmRuntime.result]);
+		} else {
+			result = Result.OK(WasmRuntime.objects[WasmRuntime.result]);
+		}
+	}
+
+	def evalCode(code: CodeObject) -> Object {
+		def f = Code.Wasm.!(code.code).wasm;
+		match (f) {
+			Func0(f) => {
+				def x = f(this);
+				result = x;
+				match (result) {
+					OK(o) => return o;
+					Exn(e) => return null;
+					Uncomputed => {
+						System.puts("evalCode in WasmFrame returned Uncomputed\n");
+						System.error("internal error", "evalCode in WasmFrame returned Uncomputed\n");
+					}
+				}
+			}
+			_ => {
+				// maybe should not happen?
+				System.puts("unimplemented: WasmFrame.eval: FuncN (N != 0)\n");
+				System.error("unimplemented", "WasmFrame.eval: FuncN (N != 0)");
+			}
+		}
+		return null;
+	}
+
+	def getGlobal(id: string) -> Object {
+		if (globals.has(id))
+			return globals[id];
+		return null;
+	}
+
+	def getNonlocal(id: string) -> Object { // FIXME don't use string
+		for (p in nonlocals) {
+			if (Strings.equal(p.0, id)) return p.1;
+		}
+		System.puts(Strings.format1("cannot find nonlocal %s\n", id));
+		System.error("internal error", "cannot find nonlocal");
+		return null;
+	}
+
+	def setGlobal(id: string, obj: Object) -> Object {
+		return globals[id] = obj;
+	}
+}
