@@ -31,6 +31,7 @@ def main(args: Array<string>) -> int {
 		// read in file
 		def file = System.fileLoad(filename);
 		if (file == null) {
+			System.puts(Strings.format1("init error: unable to load file %s", filename));
 			System.error("init error", Strings.format1("unable to load file %s", filename));
 		}
 		// parse

@@ -6,7 +6,7 @@ type Code {
 	case Virgil(fn: Range<Object> -> Result);
 	case AST(ast: AST);
 	case Bytecode(bytecode: Bytecode);
-	case Wasm(wasm: WasmFunction); // defined at bottom of file
+	case Wasm(wasm: WasmBytecode);
 }
 
 /* Wraps around a pieces of Code. However, it also contains logic to compile
@@ -85,18 +85,4 @@ def justReturnPoopCrap(range: Range<Object>) -> Result {
 
 def doNotInstantiateThisClass(range: Range<Object>) -> Result {
 	return Result.Exn(ExnObjects.fromVirgil("doNotInstantiateThisClass", Exceptions.doNotInstantiateThisClass));
-}
-
-// sorted by arity
-type WasmFunction {
-	case Func0(fn: FrameObject -> Box<Result>);
-	case Func1(fn: (FrameObject, Object) -> Box<Result>);
-	case Func2(fn: (FrameObject, Object, Object) -> Box<Result>);
-	case Func3(fn: (FrameObject, Object, Object, Object) -> Box<Result>);
-	case Func4(fn: (FrameObject, Object, Object, Object, Object) -> Box<Result>);
-	case Func5(fn: (FrameObject, Object, Object, Object, Object, Object) -> Box<Result>);
-	case Func6(fn: (FrameObject, Object, Object, Object, Object, Object, Object) -> Box<Result>);
-	case Func7(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object) -> Box<Result>);
-	case Func8(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object) -> Box<Result>);
-	case Func9(fn: (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object, Object) -> Box<Result>);
 }

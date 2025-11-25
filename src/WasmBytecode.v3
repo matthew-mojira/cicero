@@ -1,0 +1,23 @@
+class WasmBytecode(
+		f: WasmFunction, 
+		locals:     Array<string>,
+		nonlocals:  Array<string>,
+                stringPool: Array<string>,
+                constPool:  Array<Object>,
+                classPool:  Array<ClassObject -> ClassObject>,
+                funcPool:   Array<ASTData.Func>
+		) // XXX no sourcemap
+{}
+
+type WasmFunction {
+	case Func0(fn: () -> bool);
+	case Func1(fn: Object -> bool);
+	case Func2(fn: (Object, Object) -> bool);
+	case Func3(fn: (Object, Object, Object) -> bool);
+	case Func4(fn: (Object, Object, Object, Object) -> bool);
+	case Func5(fn: (Object, Object, Object, Object, Object) -> bool);
+	case Func6(fn: (Object, Object, Object, Object, Object, Object) -> bool);
+	case Func7(fn: (Object, Object, Object, Object, Object, Object, Object) -> bool);
+	case Func8(fn: (Object, Object, Object, Object, Object, Object, Object, Object) -> bool);
+	case Func9(fn: (Object, Object, Object, Object, Object, Object, Object, Object, Object) -> bool);
+}

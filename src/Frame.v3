@@ -102,7 +102,10 @@ component FrameObjects {
 				if (i < args.length - 1)
 					System.puts(", ");
 			}
-			System.puts(")\n");
+			System.puts(")");
+			if (Code.AST.?(code.code))
+				System.puts(" AST FRAME!");
+			System.ln();
 		}
 
 		var frame: FrameObject;

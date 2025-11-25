@@ -1,26 +1,32 @@
 class WasmFrame extends FrameObject {
 	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) super(prev, code, args) {
 	}
+	// TODO unwrap CodeObject like in BytecodeFrame...
+	// and in general.. are they similar? can refactor?
 
 	def nonlocals: Array<(string, Object)>;
+	def objects: Vector<Object>; /* TODO implement this heap */
+	def strings: Array<string>;
 
 	def eval() {
 		def f = Code.Wasm.!(code.code).wasm;
+		var exn: bool;
 		match (f) {
-			Func0(f) => result = f(this).data;
-			Func1(f) => result = f(this, args[0].1).data;
-			Func2(f) => result = f(this, args[0].1, args[1].1).data;
-			Func3(f) => result = f(this, args[0].1, args[1].1, args[2].1).data;
-			Func4(f) => result = f(this, args[0].1, args[1].1, args[2].1, args[3].1).data;
-			Func5(f) => result = f(this, args[0].1, args[1].1, args[2].1, args[3].1, args[4].1).data;
-			Func6(f) => result = f(this, args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1).data;
-			Func7(f) => result = f(this, args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1).data;
-			Func8(f) => result = f(this, args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1, args[7].1).data;
-			Func9(f) => result = f(this, args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1, args[7].1, args[8].1).data;
-// 			_ => {
-// 				System.puts("unimplemented number of arguments\n");
-// 				System.error("unimplemented", "WasmFrame.eval: FuncN");
-// 			}
+			Func0(f) => exn = f();
+			Func1(f) => exn = f(args[0].1);
+			Func2(f) => exn = f(args[0].1, args[1].1);
+			Func3(f) => exn = f(args[0].1, args[1].1, args[2].1);
+			Func4(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1);
+			Func5(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1);
+			Func6(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1);
+			Func7(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1);
+			Func8(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1, args[7].1);
+			Func9(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1, args[7].1, args[8].1);
+		}
+		if (exn) {
+			result = Result.Exn(WasmRuntime.objects[WasmRuntime.result]);
+		} else {
+			result = Result.OK(WasmRuntime.objects[WasmRuntime.result]);
 		}
 	}
 
@@ -29,7 +35,7 @@ class WasmFrame extends FrameObject {
 		match (f) {
 			Func0(f) => {
 				def x = f(this);
-				result = x.data;
+				result = x;
 				match (result) {
 					OK(o) => return o;
 					Exn(e) => return null;
@@ -48,7 +54,6 @@ class WasmFrame extends FrameObject {
 		return null;
 	}
 
-	// TODO handle error condition
 	def getGlobal(id: string) -> Object {
 		if (globals.has(id))
 			return globals[id];
