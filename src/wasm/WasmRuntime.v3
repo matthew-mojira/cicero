@@ -1,4 +1,5 @@
 /* The runtime is the target of Wasm-level indirections for the GC */
+def traceRuntime = true;
 
 component WasmRuntime {
 	/* this are not stacks, since Frame will be responsible for
@@ -66,18 +67,19 @@ component WasmRuntime {
 
 	/* Calls to other functions */
 	/* TODO make compiler inline these functions */
-	def callFunc0(func: FuncObject) => callFuncN(func, []);
-	def callFunc1(func: FuncObject, o0: int) => callFuncN(func, [o0]);
-	def callFunc2(func: FuncObject, o0: int, o1: int) => callFuncN(func, [o0, o1]);
-	def callFunc3(func: FuncObject, o0: int, o1: int, o2: int) => callFuncN(func, [o0, o1, o2]);
-	def callFunc4(func: FuncObject, o0: int, o1: int, o2: int, o3: int) => callFuncN(func, [o0, o1, o2, o3]);
-	def callFunc5(func: FuncObject, o0: int, o1: int, o2: int, o3: int, o4: int) => callFuncN(func, [o0, o1, o2, o3, o4]);
-	def callFunc6(func: FuncObject, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5]);
-	def callFunc7(func: FuncObject, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6]);
-	def callFunc8(func: FuncObject, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7]);
-	def callFunc9(func: FuncObject, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+	def callFunc0(func: int) => callFuncN(func, []);
+	def callFunc1(func: int, o0: int) => callFuncN(func, [o0]);
+	def callFunc2(func: int, o0: int, o1: int) => callFuncN(func, [o0, o1]);
+	def callFunc3(func: int, o0: int, o1: int, o2: int) => callFuncN(func, [o0, o1, o2]);
+	def callFunc4(func: int, o0: int, o1: int, o2: int, o3: int) => callFuncN(func, [o0, o1, o2, o3]);
+	def callFunc5(func: int, o0: int, o1: int, o2: int, o3: int, o4: int) => callFuncN(func, [o0, o1, o2, o3, o4]);
+	def callFunc6(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5]);
+	def callFunc7(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6]);
+	def callFunc8(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7]);
+	def callFunc9(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
 
-	def callFuncN(fv: FuncObject, args: Array<int>) -> bool { /* returns if exception */
+	def callFuncN(fvIdx: int, args: Array<int>) -> bool { /* returns if exception */
+		def fv = FuncObject.!(objects[fvIdx]);
 		def params = fv.params, code = fv.code;
 
 		// evaluate argument values

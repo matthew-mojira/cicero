@@ -1,17 +1,50 @@
 class WasmFrame extends FrameObject {
-	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) super(prev, code, args) {
-	}
-	// TODO unwrap CodeObject like in BytecodeFrame...
-	// and in general.. are they similar? can refactor?
 
-	def nonlocals: Array<(string, Object)>;
-	def objects: Vector<Object>; /* TODO implement this heap */
-	def strings: Array<string>;
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
+		if (code != null) {
+			wasm = Code.Wasm.!(code.code).wasm;
+			// XXX some slow unification here, which might lead to some nonlocals not being used from the args?
+			nonlocals = Array.new(wasm.nonlocals.length);
+			for (i < nonlocals.length) {
+				def id = wasm.nonlocals[i];
+				// search for id in nonlocal args
+				var found: bool;
+				for (p in nonlocalArgs) {
+					if (Strings.equal(id, p.0)) {
+						nonlocals[i] = p;
+						found = true;
+						break;
+					}
+				}
+				if (!found) {
+					// might this ever happen?
+					System.error("eval error", "unable to unify nonlocal arguments");
+				}
+			}
+		}
+	}
+
+	def var wasm: WasmBytecode;
+	def var nonlocals: Array<(string, Object)>;
 
 	def eval() {
-		def f = Code.Wasm.!(code.code).wasm;
+		/* swap runtime components */
+		def oldFrame      = WasmRuntime.frame;
+		def oldStrings    = WasmRuntime.strings;
+		def oldFuncholes  = WasmRuntime.funcholes;
+		def oldClassholes = WasmRuntime.classholes;
+		def oldObjects    = WasmRuntime.objects;
+		def oldResult     = WasmRuntime.result;
+
+		WasmRuntime.frame      = this;
+		WasmRuntime.strings    = wasm.stringPool;
+		WasmRuntime.funcholes  = wasm.funcPool;
+		WasmRuntime.classholes = wasm.classPool;
+		WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
+		WasmRuntime.result     = 0;
+
 		var exn: bool;
-		match (f) {
+		match (wasm.f) {
 			Func0(f) => exn = f();
 			Func1(f) => exn = f(args[0].1);
 			Func2(f) => exn = f(args[0].1, args[1].1);
@@ -24,18 +57,36 @@ class WasmFrame extends FrameObject {
 			Func9(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1, args[7].1, args[8].1);
 		}
 		if (exn) {
-			result = Result.Exn(WasmRuntime.objects[WasmRuntime.result]);
+			result = Result.Exn(ExnObject.!(WasmRuntime.objects[WasmRuntime.result]));
 		} else {
 			result = Result.OK(WasmRuntime.objects[WasmRuntime.result]);
 		}
+
+		/* unswap runtime components */
+		WasmRuntime.frame      = oldFrame;
+		WasmRuntime.strings    = oldStrings;
+		WasmRuntime.funcholes  = oldFuncholes;
+		WasmRuntime.classholes = oldClassholes;
+		WasmRuntime.objects    = oldObjects;
+		WasmRuntime.result     = oldResult;
 	}
 
 	def evalCode(code: CodeObject) -> Object {
-		def f = Code.Wasm.!(code.code).wasm;
-		match (f) {
+		WasmRuntime.frame      = this;
+		WasmRuntime.result     = 0;
+		def wasm = Code.Wasm.!(code.code).wasm;
+		WasmRuntime.strings    = wasm.stringPool;
+		WasmRuntime.funcholes  = wasm.funcPool;
+		WasmRuntime.classholes = wasm.classPool;
+		WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
+		match (wasm.f) {
 			Func0(f) => {
-				def x = f(this);
-				result = x;
+				def exn = f();
+				if (exn) {
+					result = Result.Exn(ExnObject.!(WasmRuntime.objects[WasmRuntime.result]));
+				} else {
+					result = Result.OK(WasmRuntime.objects[WasmRuntime.result]);
+				}
 				match (result) {
 					OK(o) => return o;
 					Exn(e) => return null;

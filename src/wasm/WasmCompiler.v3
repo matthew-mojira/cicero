@@ -79,6 +79,8 @@ class WasmCompiler {
 			SWAP_SIG  = CiWasmTarget.functionTypeId<(Object, Object), (Object, Object)>();
 		}
 
+		addConst(null);
+
 		scratch0 = addLocal("<receiver>"); /* also used as scratch */
 		// XXX I don't know what this receiver local (parameter) is or why virgil compiler adds it.
 		Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
@@ -155,16 +157,16 @@ class WasmCompiler {
 
 		var sig: int;
 		match (params.length) {
-			0 => sig = CiWasmTarget.functionTypeId<(int, Object), bool>();
-			1 => sig = CiWasmTarget.functionTypeId<(int, Object, Object), bool>();
-			2 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object), bool>();
-			3 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object), bool>();
-			4 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object), bool>();
-			5 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object), bool>();
-			6 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object), bool>();
-			7 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object), bool>();
-			8 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object, Object), bool>();
-			9 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object, Object, Object), bool>();
+			0 => sig = CiWasmTarget.functionTypeId<int, bool>();
+			1 => sig = CiWasmTarget.functionTypeId<(int, Object), bool>();
+			2 => sig = CiWasmTarget.functionTypeId<(int, Object, Object), bool>();
+			3 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object), bool>();
+			4 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object), bool>();
+			5 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object), bool>();
+			6 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object), bool>();
+			7 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object), bool>();
+			8 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object), bool>();
+			9 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object, Object), bool>();
 			_ => {
 				System.puts("params unknown\n");
 				System.error("compile error", "params unknown");
@@ -175,25 +177,25 @@ class WasmCompiler {
 			System.puts("failed validation, terminating\n");
 			System.error("failed validation", "generated function failed validation");
 		}
-		var func: WasmFunction = WasmFunction.Func0(fun (f: FrameObject) => Box.new(Result.Uncomputed));
+		var func: WasmFunction;
 		match (params.length) {
-			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, FrameObject, bool>(Pointer.NULL + fid, void));	
-			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, (FrameObject, Object), bool>(Pointer.NULL + fid, void));
-			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (FrameObject, Object, Object), bool>(Pointer.NULL + fid, void));
-			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			6 => func = WasmFunction.Func6(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			7 => func = WasmFunction.Func7(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			8 => func = WasmFunction.Func8(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			9 => func = WasmFunction.Func9(CiRuntime.forgeClosure<void, (FrameObject, Object, Object, Object, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
+			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, void, bool>(Pointer.NULL + fid, void));	
+			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, Object, bool>(Pointer.NULL + fid, void));
+			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object), bool>(Pointer.NULL + fid, void));
+			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (Object, Object, Object), bool>(Pointer.NULL + fid, void));
+			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
+			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
+			6 => func = WasmFunction.Func6(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
+			7 => func = WasmFunction.Func7(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
+			8 => func = WasmFunction.Func8(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
+			9 => func = WasmFunction.Func9(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
 		}
 		return WasmBytecode.new(
 				func,
 				locals.extract(), 
 				nonlocals.extract(),
 				strings.extract(), 
-				constants.extract(), 
+				consts.extract(), 
 				classholes.extract(), 
 				funcholes.extract()
 				);
@@ -261,7 +263,7 @@ class WasmCompiler {
 					wasm.put_sleb32(BLOCK_SIG);
 					blockDepth++;
 						wasm.putb(WasmOp.I32_CONST.opcode);
-						wasm.put_sleb32(addObject(ExnObjects.fromWasm(Exceptions.unboundGlobal(id))));
+						wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.unboundGlobal(id))));
 						wasm.putb(WasmOp.BR.opcode);
 						wasm.put_sleb32(blockDepth - handlerStack.peek());
 					wasm.putb(WasmOp.END.opcode);
@@ -423,7 +425,7 @@ class WasmCompiler {
 
 				// throw exception
 				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_uleb32(addConst(ExnObjects.fromWasm(Exceptions.noTrueBranch)));
+				wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.noTrueBranch)));
 				wasm.putb(WasmOp.BR.opcode);
 				wasm.put_sleb32(blockDepth - handlerStack.peek());
 
@@ -486,11 +488,11 @@ class WasmCompiler {
 						}
 						Global => {
 							wasm.putb(WasmOp.SET_LOCAL.opcode);
-							wasm.putb(scratch0);
+							wasm.put_uleb32(scratch0);
 							wasm.putb(WasmOp.I32_CONST.opcode);
 							wasm.put_sleb32(addString(id));
 							wasm.putb(WasmOp.GET_LOCAL.opcode);
-							wasm.putb(scratch0);
+							wasm.put_uleb32(scratch0);
 							wasmDup();
 							wasm.putb(WasmOp.CALL.opcode);
 							wasm.put_uleb32(SET_GLOBAL); /* call to RTS */
@@ -574,7 +576,7 @@ class WasmCompiler {
 				compileAST(obj);
 				
 				wasm.putb(WasmOp.TEE_LOCAL.opcode);
-				wasm.putb(scratch1); // stash object
+				wasm.put_uleb32(scratch1); // stash object
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_sleb32(addString(field));
 				wasm.putb(WasmOp.CALL.opcode);
@@ -590,7 +592,7 @@ class WasmCompiler {
 					wasm.putb(WasmOp.DROP.opcode);
 
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
-					wasm.putb(scratch1); // unstash object
+					wasm.put_uleb32(scratch1); // unstash object
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(addString(field));
 					wasm.putb(WasmOp.CALL.opcode);
@@ -604,7 +606,7 @@ class WasmCompiler {
  			SetField(field, obj, val) => {
 				compileAST(obj);
 				wasm.putb(WasmOp.TEE_LOCAL.opcode);
-				wasm.putb(scratch1); // stash object
+				wasm.put_uleb32(scratch1); // stash object
 
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.put_sleb32(addString(field));
@@ -614,7 +616,7 @@ class WasmCompiler {
 				wasmDup();
 				
 				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_sleb32(IS_NULL); /* call to RTS */
+				wasm.put_uleb32(IS_NULL); /* call to RTS */
 				// check failure condition
 				wasm.putb(WasmOp.IF.opcode);
 				wasm.put_sleb32(BLOCK_SIG);
@@ -622,7 +624,7 @@ class WasmCompiler {
 					wasm.putb(WasmOp.DROP.opcode);
 
 					wasm.putb(WasmOp.GET_LOCAL.opcode); // unstash
-					wasm.putb(scratch1);
+					wasm.put_uleb32(scratch1);
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(addString(field));
 					wasm.putb(WasmOp.CALL.opcode);
@@ -680,7 +682,7 @@ class WasmCompiler {
 				
 				// assert class
 				wasm.putb(WasmOp.CALL.opcode);
-				wasm.put_sleb32(IS_CLASS);  /* call to RTS */
+				wasm.put_uleb32(IS_CLASS);  /* call to RTS */
 
 				// throw exception if not class
 				wasm.putb(WasmOp.IF.opcode);
