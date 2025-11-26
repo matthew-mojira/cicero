@@ -1,0 +1,17 @@
+benchmark   | tier0 | tier1 | tier2 |
+------------|-------|-------|-------|
+bounce      | pass  | pass  | pass  |
+cd          | FAIL! | FAIL! | FAIL! |
+deltablue   | FAIL! | FAIL? | FAIL! |
+havlak      | FAIL! | FAIL! | FAIL! |
+json        | pass* | pass* | pass* |
+list        | pass* | pass  | pass  |
+mandelbrot  | FAIL! | FAIL! | FAIL! |
+nbody       | FAIL! | FAIL! | FAIL! |
+permute     | pass* | pass  | pass  |
+queens      | pass* | pass  | FAIL! |
+richards    | pass* | pass  | FAIL? |
+sieve       | pass  | pass  | pass  |
+storage     | pass* | pass  | pass  |
+towers      | pass* | pass  | pass  |
+
