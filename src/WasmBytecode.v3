@@ -11,13 +11,13 @@ class WasmBytecode(
 
 type WasmFunction {
 	case Func0(fn: () -> bool);
-	case Func1(fn: Object -> bool);
-	case Func2(fn: (Object, Object) -> bool);
-	case Func3(fn: (Object, Object, Object) -> bool);
-	case Func4(fn: (Object, Object, Object, Object) -> bool);
-	case Func5(fn: (Object, Object, Object, Object, Object) -> bool);
-	case Func6(fn: (Object, Object, Object, Object, Object, Object) -> bool);
-	case Func7(fn: (Object, Object, Object, Object, Object, Object, Object) -> bool);
-	case Func8(fn: (Object, Object, Object, Object, Object, Object, Object, Object) -> bool);
-	case Func9(fn: (Object, Object, Object, Object, Object, Object, Object, Object, Object) -> bool);
+	case Func1(fn: int -> bool);
+	case Func2(fn: (int, int) -> bool);
+	case Func3(fn: (int, int, int) -> bool);
+	case Func4(fn: (int, int, int, int) -> bool);
+	case Func5(fn: (int, int, int, int, int) -> bool);
+	case Func6(fn: (int, int, int, int, int, int) -> bool);
+	case Func7(fn: (int, int, int, int, int, int, int) -> bool);
+	case Func8(fn: (int, int, int, int, int, int, int, int) -> bool);
+	case Func9(fn: (int, int, int, int, int, int, int, int, int) -> bool);
 }

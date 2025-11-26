@@ -43,18 +43,29 @@ class WasmFrame extends FrameObject {
 		WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
 		WasmRuntime.result     = 0;
 
+		var arg0: int = if(args.length > 0, WasmRuntime.alloc(args[0].1));
+		var arg1: int = if(args.length > 1, WasmRuntime.alloc(args[1].1));
+		var arg2: int = if(args.length > 2, WasmRuntime.alloc(args[2].1));
+		var arg3: int = if(args.length > 3, WasmRuntime.alloc(args[3].1));
+		var arg4: int = if(args.length > 4, WasmRuntime.alloc(args[4].1));
+		var arg5: int = if(args.length > 5, WasmRuntime.alloc(args[5].1));
+		var arg6: int = if(args.length > 6, WasmRuntime.alloc(args[6].1));
+		var arg7: int = if(args.length > 7, WasmRuntime.alloc(args[7].1));
+		var arg8: int = if(args.length > 8, WasmRuntime.alloc(args[8].1));
+		var arg9: int = if(args.length > 9, WasmRuntime.alloc(args[9].1));
+
 		var exn: bool;
 		match (wasm.f) {
 			Func0(f) => exn = f();
-			Func1(f) => exn = f(args[0].1);
-			Func2(f) => exn = f(args[0].1, args[1].1);
-			Func3(f) => exn = f(args[0].1, args[1].1, args[2].1);
-			Func4(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1);
-			Func5(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1);
-			Func6(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1);
-			Func7(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1);
-			Func8(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1, args[7].1);
-			Func9(f) => exn = f(args[0].1, args[1].1, args[2].1, args[3].1, args[4].1, args[5].1, args[6].1, args[7].1, args[8].1);
+			Func1(f) => exn = f(arg0);
+			Func2(f) => exn = f(arg0, arg1);
+			Func3(f) => exn = f(arg0, arg1, arg2);
+			Func4(f) => exn = f(arg0, arg1, arg2, arg3);
+			Func5(f) => exn = f(arg0, arg1, arg2, arg3, arg4);
+			Func6(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5);
+			Func7(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+			Func8(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+			Func9(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 		}
 		if (exn) {
 			result = Result.Exn(ExnObject.!(WasmRuntime.objects[WasmRuntime.result]));

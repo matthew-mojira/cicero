@@ -15,6 +15,8 @@ component WasmRuntime {
 	/* assume null object = 0 in objects */
 
 	def isNull(idx: int) -> bool {
+		//System.puts(Strings.format1("isNull(%d)\n", idx));
+		//System.puts(Strings.format1("  len(objects) = %d\n", objects.length));
 		return objects[idx] == null; /* XXX should also be idx == 0 */
 	}
 	def isTrue(idx: int)  -> bool => objects[idx].isTrue();
@@ -24,18 +26,24 @@ component WasmRuntime {
 	def isString(idx: int)-> bool => objects[idx].instanceOf(ClassObjects.classStr);
 
 	def getGlobal(idx: int) -> int {
+		//System.puts(Strings.format1("getGlobal(%d)\n", idx));
 		def id = strings[idx];
 		def obj = frame.getGlobal(id);
 		return alloc(obj);
 	}
 
 	def getNonlocal(idx: int) -> int {
+		//System.puts(Strings.format1("getNonlocal(%d)\n", idx));
 		def id = strings[idx];
 		def obj = frame.getNonlocal(id);
 		return alloc(obj);
 	}
 
 	def setGlobal(strIdx: int, objIdx: int) -> int {
+		// System.puts(Strings.format2("setGlobal(%d, %d)\n", strIdx, objIdx));
+		// System.puts(Strings.format1("  len(objects) = %d\n", objects.length));
+		// System.puts(Strings.format1("  len(strings) = %d\n", strings.length));
+		// System.puts(Strings.format1("  isNul(frame) = %z\n", frame == null));
 		def obj = objects[objIdx];
 		def id = strings[strIdx];
 		frame.setGlobal(id, obj);
@@ -231,20 +239,20 @@ component WasmRuntime {
 	}
 
 	/* lists */
-	def createList0() => ListObjects.fromArray([]);
-	def createList1(o0: int) => ListObjects.fromArray(Arrays.map([o0], objects.[]));
-	def createList2(o0: int, o1: int) => ListObjects.fromArray(Arrays.map([o0, o1], objects.[]));
-	def createList3(o0: int, o1: int, o2: int) => ListObjects.fromArray(Arrays.map([o0, o1, o2], objects.[]));
-	def createList4(o0: int, o1: int, o2: int, o3: int) => ListObjects.fromArray(Arrays.map([o0, o1, o2, o3], objects.[]));
-	def createList5(o0: int, o1: int, o2: int, o3: int, o4: int) => ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4], objects.[]));
-	def createList6(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5], objects.[]));
-	def createList7(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6], objects.[]));
-	def createList8(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7], objects.[]));
-	def createList9(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8], objects.[]));
-	def createList10(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int) => ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8, o9], objects.[]));
+	def createList0() => alloc(ListObjects.fromArray([]));
+	def createList1(o0: int) => alloc(ListObjects.fromArray(Arrays.map([o0], objects.[])));
+	def createList2(o0: int, o1: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1], objects.[])));
+	def createList3(o0: int, o1: int, o2: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2], objects.[])));
+	def createList4(o0: int, o1: int, o2: int, o3: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3], objects.[])));
+	def createList5(o0: int, o1: int, o2: int, o3: int, o4: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4], objects.[])));
+	def createList6(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5], objects.[])));
+	def createList7(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6], objects.[])));
+	def createList8(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7], objects.[])));
+	def createList9(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8], objects.[])));
+	def createList10(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8, o9], objects.[])));
 
 
-	private def alloc(obj: Object) -> int {
+	def alloc(obj: Object) -> int {
 		if (obj == null) return 0;
 
 		def idx = objects.length;

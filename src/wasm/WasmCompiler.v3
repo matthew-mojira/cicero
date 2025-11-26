@@ -158,15 +158,15 @@ class WasmCompiler {
 		var sig: int;
 		match (params.length) {
 			0 => sig = CiWasmTarget.functionTypeId<int, bool>();
-			1 => sig = CiWasmTarget.functionTypeId<(int, Object), bool>();
-			2 => sig = CiWasmTarget.functionTypeId<(int, Object, Object), bool>();
-			3 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object), bool>();
-			4 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object), bool>();
-			5 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object), bool>();
-			6 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object), bool>();
-			7 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object), bool>();
-			8 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object), bool>();
-			9 => sig = CiWasmTarget.functionTypeId<(int, Object, Object, Object, Object, Object, Object, Object, Object, Object), bool>();
+			1 => sig = CiWasmTarget.functionTypeId<(int, int), bool>();
+			2 => sig = CiWasmTarget.functionTypeId<(int, int, int), bool>();
+			3 => sig = CiWasmTarget.functionTypeId<(int, int, int, int), bool>();
+			4 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int), bool>();
+			5 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int), bool>();
+			6 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int), bool>();
+			7 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int), bool>();
+			8 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int, int), bool>();
+			9 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int, int, int), bool>();
 			_ => {
 				System.puts("params unknown\n");
 				System.error("compile error", "params unknown");
@@ -180,15 +180,15 @@ class WasmCompiler {
 		var func: WasmFunction;
 		match (params.length) {
 			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, void, bool>(Pointer.NULL + fid, void));	
-			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, Object, bool>(Pointer.NULL + fid, void));
-			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (Object, Object), bool>(Pointer.NULL + fid, void));
-			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			6 => func = WasmFunction.Func6(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			7 => func = WasmFunction.Func7(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			8 => func = WasmFunction.Func8(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
-			9 => func = WasmFunction.Func9(CiRuntime.forgeClosure<void, (Object, Object, Object, Object, Object, Object, Object, Object, Object), bool>(Pointer.NULL + fid, void));
+			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, int, bool>(Pointer.NULL + fid, void));
+			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (int, int), bool>(Pointer.NULL + fid, void));
+			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (int, int, int), bool>(Pointer.NULL + fid, void));
+			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (int, int, int, int), bool>(Pointer.NULL + fid, void));
+			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			6 => func = WasmFunction.Func6(CiRuntime.forgeClosure<void, (int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			7 => func = WasmFunction.Func7(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			8 => func = WasmFunction.Func8(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			9 => func = WasmFunction.Func9(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
 		}
 		return WasmBytecode.new(
 				func,
@@ -286,7 +286,6 @@ class WasmCompiler {
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(addString(id));
 					compileAST(val);
-					wasmDup();
  					wasm.putb(WasmOp.CALL.opcode);
  					wasm.put_uleb32(SET_GLOBAL); /* call to RTS */
 				}
@@ -493,7 +492,6 @@ class WasmCompiler {
 							wasm.put_sleb32(addString(id));
 							wasm.putb(WasmOp.GET_LOCAL.opcode);
 							wasm.put_uleb32(scratch0);
-							wasmDup();
 							wasm.putb(WasmOp.CALL.opcode);
 							wasm.put_uleb32(SET_GLOBAL); /* call to RTS */
 							wasm.putb(WasmOp.DROP.opcode);
