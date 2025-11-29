@@ -61,6 +61,7 @@ def CREATE_LIST7: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList7
 def CREATE_LIST8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8));
 def CREATE_LIST9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9));
 def CREATE_LIST10:u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList10));
+def CREATE_LIST16:u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList16));
 
 
 class WasmCompiler {
@@ -734,6 +735,7 @@ class WasmCompiler {
 					8 => wasm.put_uleb32(CREATE_LIST8);
 					9 => wasm.put_uleb32(CREATE_LIST9);
 					10=> wasm.put_uleb32(CREATE_LIST10);
+					16=> wasm.put_uleb32(CREATE_LIST16);
 					_ => {
 						System.puts(Strings.format1("Translating too long of a list literal: %d\n", elems.length));
 						System.error("compile error", "translating too long of a list literal");

@@ -3,24 +3,25 @@ class WasmFrame extends FrameObject {
 	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
 		if (code != null) {
 			wasm = Code.Wasm.!(code.code).wasm;
-			// XXX some slow unification here, which might lead to some nonlocals not being used from the args?
-			nonlocals = Array.new(wasm.nonlocals.length);
-			for (i < nonlocals.length) {
-				def id = wasm.nonlocals[i];
-				// search for id in nonlocal args
-				var found: bool;
-				for (p in nonlocalArgs) {
-					if (Strings.equal(id, p.0)) {
-						nonlocals[i] = p;
-						found = true;
-						break;
-					}
-				}
-				if (!found) {
-					// might this ever happen?
-					System.error("eval error", "unable to unify nonlocal arguments");
-				}
-			}
+			nonlocals = nonlocalArgs;
+			// XXX can do better here
+// 			Array.new(wasm.nonlocals.length);
+// 			for (i < wasm.nonlocals.length) {
+// 				def id = wasm.nonlocals[i];
+// 				// search for id in nonlocal args
+// 				var found: bool;
+// 				for (p in nonlocalArgs) {
+// 					if (Strings.equal(id, p.0)) {
+// 						nonlocals[i] = p;
+// 						found = true;
+// 						break;
+// 					}
+// 				}
+// 				if (!found) {
+// 					// might this ever happen?
+// 					System.error("eval error", "unable to unify nonlocal arguments");
+// 				}
+// 			}
 		}
 	}
 

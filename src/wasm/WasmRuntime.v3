@@ -250,7 +250,7 @@ component WasmRuntime {
 	def createList8(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7], objects.[])));
 	def createList9(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8], objects.[])));
 	def createList10(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8, o9], objects.[])));
-
+	def createList16(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int, o10: int, o11: int, o12: int, o13: int, o14: int, o15: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15], objects.[])));
 
 	def alloc(obj: Object) -> int {
 		if (obj == null) return 0;

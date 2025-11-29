@@ -1,0 +1,3 @@
+(set c 'c')
+(set s "test_string")
+(try (c.+ 10) exp "pass")

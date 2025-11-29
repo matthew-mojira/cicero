@@ -1,0 +1,8 @@
+(func (f) {
+  (set x 1)
+  (func (g) x)
+  (set x 2)
+  g
+})
+(f)
+((f))
