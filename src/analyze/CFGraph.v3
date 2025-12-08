@@ -162,7 +162,7 @@ class CFGraph(bytecode: Bytecode) {
 	}
 
 	def entryNodes() -> Array<BasicBlock> {
-		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.predecessors.size() == 0);
+		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.startPc == 0);
 	}
 
 	def exitNodes() -> Array<BasicBlock> {
