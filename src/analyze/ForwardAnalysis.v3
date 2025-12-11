@@ -1,3 +1,5 @@
+def traceAnalysis = false;
+
 class ForwardFlowAnalysis<S> extends DataflowAnalysis<S> {
 	def bottomState(cfg: CFGraph) -> S;
 	def joinStates(state1: S, state2: S) -> S;
@@ -19,24 +21,26 @@ class ForwardFlowAnalysis<S> extends DataflowAnalysis<S> {
 			inputStates[bb] = initialState(cfg);
 		}
 
+		if (traceAnalysis) System.puts("START ANALYSIS!!\n");
+
 		while (worklist.size() > 0) {
 			def bb = worklist.pop();
 
-			//System.puts(Strings.format1("Working on: %d\n", bb.startPc));
+			if (traceAnalysis) System.puts(Strings.format1("Working on: %d\n", bb.startPc));
 
 			// TODO consider edge type
 			for (bb2 in bb.successors.toArray()) {
-				//System.puts(Strings.format1("  successor: %d", bb2.startPc));
+				if (traceAnalysis) System.puts(Strings.format1("  successor: %d", bb2.startPc));
 
 				def edgeOutput = forwardFlow(bb, inputStates[bb]);
 				def newInput = joinStates(inputStates[bb2], edgeOutput);
 
 				if (!stateEquals(inputStates[bb2], edgeOutput)) {
-					//System.puts("...UPDATE!");
+					if (traceAnalysis) System.puts("...UPDATE!");
 					inputStates[bb2] = newInput;
 					worklist.add(bb2);
 				}
-				//System.ln();
+				if (traceAnalysis) System.ln();
 			}
 		}
 		return inputStates;

@@ -3,11 +3,6 @@
 
 def ignoreExceptions = false;
 
-// XXX unused
-enum EdgeType {
-	UNCONDITIONAL, TRUE, FALSE, EXN
-}
-
 class CFGraph(bytecode: Bytecode) {
 	def var head:    BasicBlock;
 	def basicBlocks: Vector<BasicBlock> = Vector.new();

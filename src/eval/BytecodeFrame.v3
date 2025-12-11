@@ -105,7 +105,7 @@ class BytecodeFrame extends FrameObject {
 			def operand  = bytecode.operand;
 
  			if (CiceroOptions.profileBytecode) {
- 				Profiling.bytecodeMap[opcode.tag] += 1;
+ 				Profiling.dynamicCounts[opcode.tag] += 1;
  			}
 
   			if (CiceroOptions.traceBytecodeEvaluation) {
@@ -155,7 +155,7 @@ class BytecodeFrame extends FrameObject {
 					else
 						stack.push(local);
 				}
-				LOAD_LOCAL_FAST => {
+				LOAD_LOCAL_SAFE => {
 					stack.push(locals[operand]);
 				}
 				LOAD_NONLOCAL => {
@@ -254,6 +254,24 @@ class BytecodeFrame extends FrameObject {
 						continue;
 					}
 					stack.push(frame.getValue());
+				}
+				ADD => {
+					def arg2 = stack.pop();
+					def arg1 = stack.pop();
+
+					def plus = globals["+"];
+					def fv = FuncObject.!(plus); // this cast succeeds because of ASSERT_FUNC
+					def code = fv.code;
+					def argv = [("x", arg1), ("y", arg2)];
+					
+					def frame = newFrame(fv.id, code, argv, fv.nonlocals);
+					frame.eval();
+					if (frame.isExn()) {
+						rethrow(frame.getExn());
+						continue;
+					}
+					stack.push(frame.getValue());
+
 				}
 				TRY => {
 					handlers.push((pc + operand, stack.top));

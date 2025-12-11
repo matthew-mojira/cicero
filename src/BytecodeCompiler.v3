@@ -35,7 +35,8 @@ class BytecodeCompiler {
 	 * this object.
 	 */
 	def extract() -> Bytecode {
-		def b = Bytecode.new(writer.extract(), 
+		def bytecode = writer.extract();
+		def b = Bytecode.new(bytecode, 
 				locals.extract(), 
 				nonlocals.extract(),
 				params,
@@ -78,12 +79,22 @@ class BytecodeCompiler {
 				fillHole(hole, writer.pos - hole - 4);
 			}
 			Apply(tgt, args) => {
-				compileAST(tgt);
-				writeInstr(loc, Opcode.ASSERT_FUNC);
-				for (arg in args) {
-					compileAST(arg);
+				if (CiceroOptions.replaceGlobals && args.length == 2 && ASTData.VarGet.?(tgt.data)) {
+					def get = ASTData.VarGet.!(tgt.data);
+					if (Strings.equal(get.id, "+") && get.mode.data == AccessMode.Global) {
+						for (arg in args) {
+							compileAST(arg);
+						}
+						writeInstrWithOperand(loc, Opcode.ADD, 0);
+					}
+				} else {
+					compileAST(tgt);
+					writeInstr(loc, Opcode.ASSERT_FUNC);
+					for (arg in args) {
+						compileAST(arg);
+					}
+					writeInstrWithOperand(loc, Opcode.CALL, args.length);
 				}
-				writeInstrWithOperand(loc, Opcode.CALL, args.length);
 			}
 			If(cond, tru, fals) => {
 				compileAST(cond);
@@ -233,6 +244,9 @@ class BytecodeCompiler {
 		writer.putbbb(operand, operand >> 8, operand >> 16);
 
 		source.put(loc);
+		if (CiceroOptions.profileBytecode) {
+			Profiling.staticCounts[op.tag]++;
+		}
 	}
 
 	def writeInstrDeferOperand(loc: FileRange, op: Opcode) -> int {

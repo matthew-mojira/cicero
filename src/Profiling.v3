@@ -1,3 +1,4 @@
 component Profiling {
-	def bytecodeMap: Array<int> = Array.new(Opcodes.numOpcodes);
+	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
 }

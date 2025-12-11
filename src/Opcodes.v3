@@ -4,7 +4,7 @@ enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
 	LOAD_CONST        (true, false, false),  // [0] index into the constant pool
 	LOAD_GLOBAL       (true, false, true),   // [0] index into the string pool
 	LOAD_LOCAL        (true, false, true),   // [0] index into the runtime locals
-	LOAD_LOCAL_FAST   (true, false, false),  // [0] index into the runtime locals
+	LOAD_LOCAL_SAFE   (true, false, false),  // [0] index into the runtime locals
 	LOAD_FIELD        (true, false, true),   // [1] index into the string pool
 	LOAD_NONLOCAL     (true, false, false),  // [1] index into the nonlocal variables
 	// Stores
@@ -30,7 +30,9 @@ enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
 	// Stack manipulation
 	POP               (true, false, false),  // [1] how many values to pull
 	DUPE              (true, false, false),  // index of element to dupe to top of stack (0 = top)
-	SWAP              (true, false, false)   // index of element to swap top of stack with (0 = top)
+	SWAP              (true, false, false),  // index of element to swap top of stack with (0 = top)
+	// Optimized globals
+	ADD               (true, false, true)
 }
 
 /*
@@ -38,7 +40,7 @@ enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
  * 01 LOAD_CONST  
  * 02 LOAD_GLOBAL 
  * 03 LOAD_LOCAL  
- * 04 LOAD_LOCAL_FAST
+ * 04 LOAD_LOCAL_SAFE
  * 05 LOAD_FIELD  
  * 06 LOAD_NONLOCAL
  * 07 STORE_GLOBAL
@@ -63,7 +65,7 @@ enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
  */
 
 component Opcodes {
-	def numOpcodes: int = 26;
+	def numOpcodes: int = 27;
 	def map: Array<Opcode> = Array.new(numOpcodes); // XXX update this with the number of opcodes
 }
 

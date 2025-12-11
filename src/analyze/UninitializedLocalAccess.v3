@@ -3,13 +3,13 @@ type LocalAccess {
 		def join(l: LocalAccess) => l;
 		def display() => "Bot";
 	}
-	case Good { // always an initialized load
+	case Safe { // always an initialized load
 		def join(l: LocalAccess) => if(l == this || l == LocalAccess.Bot, this, LocalAccess.Top);
-		def display() => "Good";
+		def display() => "Safe";
 	}
-	case Bad { // always an uninitialized load
+	case Unsafe { // always an uninitialized load
 		def join(l: LocalAccess) => if(l == this || l == LocalAccess.Bot, this, LocalAccess.Top);
-		def display() => "Bad";
+		def display() => "Unsafe";
 	}
 	case Top { // may be either initialized or uninitialized
 		def join(l: LocalAccess) => this;
@@ -41,18 +41,28 @@ class LocalAnalysisState(cfg: CFGraph) {
 	def equals(s: LocalAnalysisState) => Arrays.equal(locals, s.locals);
 }
 
+component LocalAnalysisResults {
+	def displayResults = false;
+	var locals = 0;
+	var localsSafe = 0;
+	var localsUnsafe = 0;
+	var localsTop = 0;
+}
+
+def displayResults = false;
+
 class UninitializedLocalAnalysis extends ForwardFlowAnalysis<LocalAnalysisState> {
 	def initialState(cfg: CFGraph) -> LocalAnalysisState {
 		/* rules for initial state:
-		 * - parameters are assumed to be uninitialized
+		 * - parameters are assumed to be initialized
 		 * - everything else is bot (we don't know yet)
 		 */
 		def bytecode = cfg.bytecode;
 		def state = LocalAnalysisState.new(cfg);
 		for (i < bytecode.locals.length)
-			state[i] = LocalAccess.Bad;
+			state[i] = LocalAccess.Unsafe;
 		for (i < bytecode.params.length)
-			state[i] = LocalAccess.Good;
+			state[i] = LocalAccess.Safe;
 		return state;
 	}
 	/* NOTE: the analysis returns the state at the start of the block,
@@ -73,22 +83,33 @@ class UninitializedLocalAnalysis extends ForwardFlowAnalysis<LocalAnalysisState>
 
 				match (opcode) {
 					// XXX this destroys the analysis result, so don't reuse it
-					STORE_LOCAL => state[operand] = LocalAccess.Good;
-					LOAD_LOCAL => if (state[operand] == LocalAccess.Good) {
-						// Reap the benefits of optimization!
-						bytecode[pc] = Opcode.LOAD_LOCAL_FAST.tag;
+					STORE_LOCAL => state[operand] = LocalAccess.Safe;
+					LOAD_LOCAL => {
+						LocalAnalysisResults.locals++;
+						match (state[operand]) {
+							Safe => {
+								// Reap the benefits of optimization!
+								bytecode[pc] = Opcode.LOAD_LOCAL_SAFE.tag;
+								LocalAnalysisResults.localsSafe++;
+							}
+							Unsafe => LocalAnalysisResults.localsUnsafe++;
+							Top => LocalAnalysisResults.localsTop++;
+							Bot => System.error("local analysis", "bot encountered in using results");
+						}
 					}
 					_ => ;
 				}
 			}
 
 			// debug display stuff
-			// def locals = cfg.bytecode.locals;
-			// block.display();
-			// for (i < locals.length) {
-			// 	System.puts(Strings.format2("%s: %s\n", locals[i], state[i].display()));
-			// }
-			// System.ln();
+			if (displayResults) {
+				def locals = cfg.bytecode.locals;
+				block.display();
+				for (i < locals.length) {
+					System.puts(Strings.format2("%s: %s\n", locals[i], state[i].display()));
+				}
+				System.ln();
+			}
 		}
 	}
 	def bottomState(cfg: CFGraph) -> LocalAnalysisState {
@@ -108,7 +129,7 @@ class UninitializedLocalAnalysis extends ForwardFlowAnalysis<LocalAnalysisState>
 			def operand = instr.operand;
 
 			match (opcode) {
-				STORE_LOCAL => outputState[operand] = LocalAccess.Good;
+				STORE_LOCAL => outputState[operand] = LocalAccess.Safe;
 				_ => ;
 			}
 		}
