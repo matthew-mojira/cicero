@@ -40,22 +40,24 @@ def main(args: Array<string>) -> int {
 				// compile to tier1 bytecode
 				if (CLOptions.TIER.get() > 0) expr.compile([]);
 
- 				// evaluate
- 				frame.evalCode(expr);
- 				match (frame.result) {
- 					Exn(exn) => {
- 						exn.print();
- 						return FAILURE;
- 					}
- 					OK(val) => {
- 						if (!CLOptions.SUPPRESS_OUTPUT.get()) 
- 							System.puts(Strings.format1("=> %s\n", val.display()));
- 					}
- 					_ => {
- 						System.error("eval error", "frame did not give result");
- 						return 1;
- 					}
- 				}
+				if (!CLOptions.DO_NOT_EVALUATE.get()) {
+					// evaluate
+					frame.evalCode(expr);
+					match (frame.result) {
+						Exn(exn) => {
+							exn.print();
+							return FAILURE;
+						}
+						OK(val) => {
+							if (!CLOptions.SUPPRESS_OUTPUT.get()) 
+								System.puts(Strings.format1("=> %s\n", val.display()));
+						}
+						_ => {
+							System.error("eval error", "frame did not give result");
+							return 1;
+						}
+					}
+				}
 			}
 		} else {
 			def sb = StringBuilder.new();
