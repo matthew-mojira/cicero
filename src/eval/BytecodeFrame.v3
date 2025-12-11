@@ -142,10 +142,9 @@ class BytecodeFrame extends FrameObject {
 				}
 				LOAD_GLOBAL => {
 					def id = strings[operand];
-					if (globals.has(id)) {
-						stack.push(globals[id]);
-					} else {
-						throw(Exceptions.unboundGlobal(id));
+					match (Globals.loadGlobal(id)){
+						Some(v) => stack.push(v);
+						None => throw(Exceptions.unboundGlobal(id));
 					}
 				}
 				LOAD_LOCAL => {
@@ -167,7 +166,7 @@ class BytecodeFrame extends FrameObject {
 				STORE_GLOBAL => {
 					def id = strings[operand];
 					def top = stack.pop();
-					globals[id] = top;
+					Globals.storeGlobal(id, top);
 				}
 				STORE_LOCAL => {
 					def top = stack.pop();

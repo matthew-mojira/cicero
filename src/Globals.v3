@@ -1,0 +1,29 @@
+component Globals {
+   // Globals cannot be deleted in cicero
+   def values: Vector<Object> = Vector.new(); // holds all the values and grows as new globals are added
+   def indices: HashMap<string, int> = Strings.newMap(); // holds a mapping of global variable names and its index in values
+
+   def storeGlobal(id:string, v: Object){
+      if (indices.has(id)){
+         values[indices[id]] = v;
+      } else {
+         indices[id] = values.length;
+         values.put(v);
+      }
+   }
+
+   // Optimized version to store new globals
+   def storeNewGlobal(id:string, v: Object){
+      indices[id] = values.length;
+      values.put(v);
+   }
+
+   def loadGlobal(id: string) -> Choice{
+      if (indices.has(id)){
+         def v = values[indices[id]];
+         return Choice.Some(v);
+      } else {
+         return Choice.None;
+      }
+   }
+}

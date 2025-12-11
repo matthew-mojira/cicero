@@ -1,0 +1,4 @@
+type Choice #unboxed {
+	case Some(value: Object);
+	case None;
+}

@@ -44,11 +44,12 @@ class ASTFrame extends FrameObject {
 					}
 				}
 				Global => {
-					if (globals.has(id))
-						value = globals[id];
-					else {
-						throw(Exceptions.unboundGlobal(id));
-						return value;
+					match (Globals.loadGlobal(id)){
+						Some(v) => value = v;
+						None => {
+							throw(Exceptions.unboundGlobal(id));
+							return value;
+						}
 					}
 				}
 				Nonlocal => {
@@ -64,7 +65,7 @@ class ASTFrame extends FrameObject {
 				if (isExn()) return value;
 				match (mode.data) {
 					Local  => locals[id] = v;
-					Global => globals[id] = v;
+					Global => Globals.storeGlobal(id, v);
 					Nonlocal => System.error("interp error", "attempting to set nonlocal variable");
 				}
 				value = v;
@@ -172,7 +173,7 @@ class ASTFrame extends FrameObject {
 					resetExn();
 					match (b.data) { // bind exception to variable
 						Local =>  locals[exnvar]  = val;
-						Global => globals[exnvar] = val;
+						Global => Globals.storeGlobal(exnvar, val);
 						Nonlocal => System.error("interp error", "trying to bind to a nonlocal variable");
 					}
 					def e = evalAST(catch);

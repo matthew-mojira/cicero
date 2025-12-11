@@ -6,17 +6,11 @@ class FrameObject extends Object {
 	def args: Array<(string, Object)>;
 	def display() -> string { return Strings.format1("<frame '%s'>", name); }
 	def isTrue()  -> bool   { return true; }
-
-	var globals: HashMap<string, Object>;
 	def var name: string;
 
 	/* private = don't create this class explicitly */
 	private new(prev: FrameObject, code, args) {
-		if (prev == null) {
-			globals = Strings.newMap();
-		} else {
-			globals = prev.globals;
-		}
+		// if current frame is the top level frame, the hash-map and array for globals is empty
 	}
 
 	// status flags as the result of evaluation
@@ -123,7 +117,7 @@ component FrameObjects {
 			frame = ASTFrame.new(null, null, null, null);
 		}
 		for (builtin in Builtin.set.all) {
-			frame.globals[builtin.id] = builtin.val;
+			Globals.storeNewGlobal(builtin.id, builtin.val);
 		}
 		frame.name = "repl";
 		return frame;
