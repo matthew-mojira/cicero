@@ -45,8 +45,9 @@ class ASTFrame extends FrameObject {
 				}
 				Global => {
 					match (Globals.loadGlobal(id)){
-						Some(v) => value = v;
-						None => {
+						// `v` is a tuple -> (Object, int)
+						Just(v) => value = v.0;
+						Nothing => {
 							throw(Exceptions.unboundGlobal(id));
 							return value;
 						}

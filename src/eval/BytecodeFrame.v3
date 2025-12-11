@@ -143,8 +143,19 @@ class BytecodeFrame extends FrameObject {
 				LOAD_GLOBAL => {
 					def id = strings[operand];
 					match (Globals.loadGlobal(id)){
-						Some(v) => stack.push(v);
-						None => throw(Exceptions.unboundGlobal(id));
+						// `v` is a tuple -> (Object, int)
+						Just(v) => {
+							stack.push(v.0);
+
+							if (CiceroOptions.useOptimizedGlobals) {
+								// perform bytecode rewriting to replace `LOAD_GLOBAL` with `LOAD_GLOBAL_BY_INDEX`
+								// `v.1` gives us the index into the `Globals.values` vector
+								def global_index = v.1;
+								// arguments: bytecode array, opcode index to replace, new opcode, index into `Global.values` vector
+								performBytecodeRewritingForGlobalVar(code, pc - 4, Opcode.LOAD_GLOBAL_BY_INDEX, global_index);
+							}
+						}
+						Nothing => throw(Exceptions.unboundGlobal(id));
 					}
 				}
 				LOAD_GLOBAL_BY_INDEX => {
@@ -170,7 +181,14 @@ class BytecodeFrame extends FrameObject {
 				STORE_GLOBAL => {
 					def id = strings[operand];
 					def top = stack.pop();
-					Globals.storeGlobal(id, top);
+					// index into the `Globals.values` vector
+					def global_index = Globals.storeGlobal(id, top);
+
+					if (CiceroOptions.useOptimizedGlobals) {
+						// perform bytecode rewriting to replace `STORE_GLOBAL` with `STORE_GLOBAL_BY_INDEX`
+						// arguments: bytecode array, opcode index to replace, new opcode, index into `Global.values` vector
+						performBytecodeRewritingForGlobalVar(code, pc - 4, Opcode.STORE_GLOBAL_BY_INDEX, global_index);
+					}
 				}
 				STORE_GLOBAL_BY_INDEX => {
 					def top = stack.pop();
@@ -420,4 +438,16 @@ class BytecodeFrame extends FrameObject {
 		if (CiceroOptions.traceBytecodeEvaluation) System.puts("RETURN\n");
 		return stack.peek();
 	}
+}
+
+// `global_index` is assumed to have big endian representation when passed!
+def performBytecodeRewritingForGlobalVar(code: Array<byte>, op_index: int, new_op: Opcode, global_index: int){
+	// replace opcode
+	code[op_index] = new_op.tag;
+
+	// replace operand with index into `Globals.values` vector
+	// Little endian representation used to store in bytecode
+	code[op_index + 1] = byte.!(global_index & 0xFF);
+	code[op_index + 2] = byte.!((global_index >> 8) & 0xFF);
+	code[op_index + 3] = byte.!((global_index >> 16) & 0xFF);
 }

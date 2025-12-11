@@ -3,35 +3,45 @@ component Globals {
    def values: Vector<Object> = Vector.new(); // holds all the values and grows as new globals are added
    def indices: HashMap<string, int> = Strings.newMap(); // holds a mapping of global variable names and its index in values
 
-   def storeGlobal(id:string, v: Object){
+   // Returns the index of the stored global object in the `Globals.values` vector
+   def storeGlobal(id:string, v: Object) -> int{
       if (indices.has(id)){
-         values[indices[id]] = v;
+         def index = indices[id];
+         values[index] = v;
+         return index;
+      } else
+         return storeNewGlobal(id, v);
+   }
+
+   // Returns the index of the stored global object in the `Globals.values` vector
+   def storeNewGlobal(id:string, v: Object) -> int{
+      var index = values.length;
+      indices[id] = index;
+      values.put(v);
+      return index;
+   }
+
+   // if valid lookup -> returns the `Object` 
+   //    as well as its index in the `Globals.values` vector for bytecode rewriting purposes
+   def loadGlobal(id: string) -> Maybe<(Object, int)>{
+      if (indices.has(id)){
+         def index = indices[id];
+         def v = values[index];
+         return Maybe.Just((v, index));
       } else {
-         indices[id] = values.length;
-         values.put(v);
+         return Maybe.Nothing;
       }
    }
 
-   // Optimized version to store new globals
-   def storeNewGlobal(id:string, v: Object){
-      indices[id] = values.length;
-      values.put(v);
-   }
+   /* 
+      Optimized functions that bypass the map lookup for globals
+      Used by `LOAD_GLOBAL_BY_INDEX` and `STORE_GLOBAL_BY_INDEX` opcodes
+   */
 
-   def storeGlobalByIndex(index:int, v: Object){
+   def storeGlobalByIndex(index: int, v: Object){
       values[index] = v;
    }
-
-   def loadGlobal(id: string) -> Choice{
-      if (indices.has(id)){
-         def v = values[indices[id]];
-         return Choice.Some(v);
-      } else {
-         return Choice.None;
-      }
-   }
-
-   def loadGlobalByIndex(index:int) -> Object{
+   def loadGlobalByIndex(index: int) -> Object{
       return values[index];
    }
 }
