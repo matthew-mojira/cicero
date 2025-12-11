@@ -1,0 +1,15 @@
+; Basic benchmark to test global load/store
+; Used for comparing global load/store optimization performed with bytecode rewriting
+{
+    (set one 1)
+    ; 'counter' is the global we are testing access speed on
+    (set counter 0)
+    (set limit 1_000_000) ; 1 Million iterations
+
+    ; The first time this body runs, everything should be a Hash Lookup.
+    ; After that, it should be much quicker
+    (while (< counter limit) {
+        (set counter (+ counter one))
+    })
+    counter
+}

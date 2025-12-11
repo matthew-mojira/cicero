@@ -1,0 +1,16 @@
+; Minimal but stressful benchmark using one single global variable with a very long name
+; Without global optimization, every load/store will be a hash map lookup which is O(length of variable)
+; So, with bytecode rewriting to load/store globals with index, we should see a big improvement
+{
+    (set this_is_a_really_really_really_long_global_variable_name_used_for_stress_testing_of_the_global_lookup_mechanism________________________________________________________________________________________________________________________ 0)
+    
+    (set i 0)
+    (while (< i 100_000) {
+        (set this_is_a_really_really_really_long_global_variable_name_used_for_stress_testing_of_the_global_lookup_mechanism________________________________________________________________________________________________________________________ 
+            (1.+ this_is_a_really_really_really_long_global_variable_name_used_for_stress_testing_of_the_global_lookup_mechanism________________________________________________________________________________________________________________________ 
+            )
+        )
+        (set i (i.+ 1))
+    })
+    this_is_a_really_really_really_long_global_variable_name_used_for_stress_testing_of_the_global_lookup_mechanism________________________________________________________________________________________________________________________ 
+}
