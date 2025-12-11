@@ -18,6 +18,10 @@ component Globals {
       values.put(v);
    }
 
+   def storeGlobalByIndex(index:int, v: Object){
+      values[index] = v;
+   }
+
    def loadGlobal(id: string) -> Choice{
       if (indices.has(id)){
          def v = values[indices[id]];
@@ -25,5 +29,9 @@ component Globals {
       } else {
          return Choice.None;
       }
+   }
+
+   def loadGlobalByIndex(index:int) -> Object{
+      return values[index];
    }
 }

@@ -147,6 +147,10 @@ class BytecodeFrame extends FrameObject {
 						None => throw(Exceptions.unboundGlobal(id));
 					}
 				}
+				LOAD_GLOBAL_BY_INDEX => {
+					def value = Globals.loadGlobalByIndex(operand);
+					stack.push(value);
+				}
 				LOAD_LOCAL => {
 					def local = locals[operand];
 					if (local == null)
@@ -167,6 +171,10 @@ class BytecodeFrame extends FrameObject {
 					def id = strings[operand];
 					def top = stack.pop();
 					Globals.storeGlobal(id, top);
+				}
+				STORE_GLOBAL_BY_INDEX => {
+					def top = stack.pop();
+					Globals.storeGlobalByIndex(operand, top);
 				}
 				STORE_LOCAL => {
 					def top = stack.pop();

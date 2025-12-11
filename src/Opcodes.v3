@@ -1,67 +1,71 @@
 enum Opcode {
 	NOP,
 	// Loads
-	LOAD_CONST,    // [0] index into the constant pool
-	LOAD_GLOBAL,   // [0] index into the string pool
-	LOAD_LOCAL,    // [0] index into the runtime locals
-	LOAD_FIELD,    // [1] index into the string pool
-	LOAD_NONLOCAL, // [1] index into the nonlocal variables
+	LOAD_CONST,			// [0] index into the constant pool
+	LOAD_GLOBAL,			// [0] index into the string pool
+	LOAD_GLOBAL_BY_INDEX,		// [0] index into the Globals.values vector
+	LOAD_LOCAL,    			// [0] index into the runtime locals
+	LOAD_FIELD,    			// [1] index into the string pool
+	LOAD_NONLOCAL, 			// [1] index into the nonlocal variables
 	// Stores
-	STORE_GLOBAL,  // [1] index into the string pool
-	STORE_LOCAL,   // [0] index into the runtime locals
-	STORE_FIELD,   // [2] index into the string pool
+	STORE_GLOBAL,  			// [1] index into the string pool
+	STORE_GLOBAL_BY_INDEX,	  	// [1] index into the Globals.values vector
+	STORE_LOCAL,   			// [0] index into the runtime locals
+	STORE_FIELD,   			// [2] index into the string pool
 	// Control flow
-	CALL,          // [n] number of arguments (not including function!)
-	JUMP,          // [0] offset of pc
-	JUMP_IF_FALSE, // [1] offset of pc
-	JUMP_IF_TRUE_PEEK,  // [1] offset of pc
-	JUMP_IF_FALSE_PEEK, // [1] offset of pc
+	CALL,          			 // [n] number of arguments (not including function!)
+	JUMP,          			 // [0] offset of pc
+	JUMP_IF_FALSE, 			 // [1] offset of pc
+	JUMP_IF_TRUE_PEEK,  	  	 // [1] offset of pc
+	JUMP_IF_FALSE_PEEK, 	  	 // [1] offset of pc
 	// Exceptions
-	RAISE,         // [1]
-	TRY,           // [0] offset from this bytecode of the catch
-	CATCH,         // [0]
-	ASSERT_FUNC    // [1]
+	RAISE,         			 // [1]
+	TRY,           			 // [0] offset from this bytecode of the catch
+	CATCH,         			 // [0]
+	ASSERT_FUNC    			 // [1]
 	// Object creation
-	CREATE_OBJECT, // [1]
-	CREATE_CLASS,  // [1] index into the classhole pool
-	CREATE_LIST,   // [1] how many elements to pull
-	CREATE_FUNC,   // [n] index into the funchole pool
+	CREATE_OBJECT, 			 // [1]
+	CREATE_CLASS,  			 // [1] index into the classhole pool
+	CREATE_LIST,   			 // [1] how many elements to pull
+	CREATE_FUNC,   			 // [n] index into the funchole pool
 	// Stack manipulation
-	POP,           // [1] how many values to pull
-	DUPE,          // index of element to dupe to top of stack (0 = top)
-	SWAP,          // index of element to swap top of stack with (0 = top)
+	POP,           			 // [1] how many values to pull
+	DUPE,          			 // index of element to dupe to top of stack (0 = top)
+	SWAP,          			 // index of element to swap top of stack with (0 = top)
 }
 
 /*
  * 00 NOP
  * 01 LOAD_CONST  
  * 02 LOAD_GLOBAL 
- * 03 LOAD_LOCAL  
- * 04 LOAD_FIELD  
- * 05 LOAD_NONLOCAL
- * 06 STORE_GLOBAL
- * 07 STORE_LOCAL 
- * 08 STORE_FIELD 
- * 09 CALL        
- * 0A JUMP        
- * 0B JUMP_IF_FALSE
- * 0C JUMP_IF_TRUE_PEEK
- * 0D JUMP_IF_FALSE_PEEK
- * 0E RAISE      
- * 0F TRY        
- * 10 CATCH      
- * 11 ASSERT_FUNC 
- * 12 CREATE_OBJECT
- * 13 CREATE_CLASS 
- * 14 CREATE_LIST  
- * 15 CREATE_FUNC  
- * 16 POP
- * 17 DUPE
- * 18 SWAP
+ * 03 LOAD_GLOBAL_BY_INDEX
+ * 04 LOAD_LOCAL  
+ * 05 LOAD_FIELD  
+ * 06 LOAD_NONLOCAL
+ * 07 STORE_GLOBAL
+ * 08 STORE_GLOBAL_BY_INDEX
+ * 09 STORE_LOCAL 
+ * 0A STORE_FIELD 
+ * 0B CALL        
+ * 0C JUMP        
+ * 0D JUMP_IF_FALSE
+ * 0E JUMP_IF_TRUE_PEEK
+ * 0F JUMP_IF_FALSE_PEEK
+ * 10 RAISE      
+ * 11 TRY        
+ * 12 CATCH      
+ * 13 ASSERT_FUNC 
+ * 14 CREATE_OBJECT
+ * 15 CREATE_CLASS 
+ * 16 CREATE_LIST  
+ * 17 CREATE_FUNC  
+ * 18 POP
+ * 19 DUPE
+ * 1A SWAP
  */
 
 component Opcodes {
-	def numOpcodes: int = 25;
+	def numOpcodes: int = 27;
 	def map: Array<Opcode> = Array.new(numOpcodes); // XXX update this with the number of opcodes
 }
 
