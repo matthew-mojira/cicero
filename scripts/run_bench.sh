@@ -33,7 +33,7 @@ else
 fi
 
 if [ "$MAX_TASKS" = "" ]; then
-    MAX_TASKS=20
+    MAX_TASKS=5
 fi
 
 abort_run_bench() {
@@ -96,8 +96,10 @@ csv_file_name(){
 run_hyperfine(){
     # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file
     cd $BENCH_DIR
-    $HYPERFINE --warmup 2 --runs $1 "$2 -suppress-output=true -tier=$3 $4" --export-csv $5
+    $HYPERFINE --style none --warmup 5 --runs "$1" "$2 -suppress-output=true -tier=$3 $4" --export-csv "$5" 2>&1
 }
+# Export the function so background subshells can see it
+export -f run_hyperfine
 
 # Runs all benchmarks(across all targets and tiers) for a given virgil compiler optimization level
 run_benchmarks(){
@@ -111,13 +113,13 @@ run_benchmarks(){
         for tier in "${TIERS[@]}"; do
             # base time builtin with empty file
             CSV_FILE=$(csv_file_name "empty" $tier $o_level $target)
-            $HYPERFINE --warmup 5 --runs 50 "$BINARY -suppress-output=true -tier=$tier $T/empty.co" --export-csv $CSV_FILE
+            $HYPERFINE --style none --warmup 5 --runs 50 "$BINARY -suppress-output=true -tier=$tier $T/empty.co" --export-csv $CSV_FILE 2>&1
 
             # run the benchmarks
             while IFS=',' read -r benchmark files runs; do
                 CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
                 # run async
-                # run_with_lock run_hyperfine $runs $BINARY $tier $files $CSV_FILE $BENCH_DIR
+                run_with_lock run_hyperfine $runs "$BINARY" "$tier" "$files" "$CSV_FILE" "$BENCH_DIR"
             done < <(tail -n +2 "$BENCH_DIR/run_bench.config.csv")
         done
     done
@@ -133,5 +135,6 @@ do
     echo "Virgil Opitmization Level: $V3C_OPTS"
     run_benchmarks
     wait
+    echo "Completed running all benchmarks for $V3C_OPTS"
 done
 $PYTHON3 $SCRIPT_LOC/create_markdown.py $T $BENCH_DIR/results
