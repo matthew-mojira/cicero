@@ -21,7 +21,13 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 		match (code) {
 			Virgil   => System.error("compile error", "attempting to compile Virgil code to bytecode");
 			Bytecode => System.error("compile error", "compiling what has already been compiled to bytecode");
-			AST(ast) => code = Code.Bytecode(BytecodeCompiler.new(ast, params).extract());
+			AST(ast) => {
+				def bytecode = BytecodeCompiler.new(ast, params).extract();
+				if (CiceroOptions.optimizeBytecode) {
+					bytecode.optimize();
+				}
+				code = Code.Bytecode(bytecode);
+			}
 		}
 	}
 

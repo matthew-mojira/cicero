@@ -4,6 +4,8 @@ component CiceroOptions {
 
 	/* compile-baked optimizations */
 	def useLazyMethods: bool = true;
+	def optimizeBytecode: bool = false;
+	def replaceGlobals = false;
 
 	/* tracing */
 	def traceFunctionCalls = false;
@@ -11,7 +13,7 @@ component CiceroOptions {
 	def traceBytecodeEvaluation = false;
 
 	/* profiling */
-	def profileBytecode = false;
+	def profileBytecode = true;
 }
 
 // for parsing
@@ -37,6 +39,8 @@ component CLOptions {
 			"Check syntax of a program only, then exit.");
 	def FUZZING = ciceroOpt.newBoolOption("fuzzing", false, 
 			"Force program to return 0 in known failure conditions (e.g. parse error, unhandled exception). This is useful for fuzz testing, where nonzero exit codes denote some internal failure in the engine which should not happen.");
+	def DO_NOT_EVALUATE = ciceroOpt.newBoolOption("do-not-evaluate", false, 
+			"Load program and compile it, but stop short of evaluating it.");
 	def parse(args: Array<string>) -> Array<string> {
 		return opt.parse(args);
 	}

@@ -40,31 +40,27 @@ def main(args: Array<string>) -> int {
 				// compile to tier1 bytecode
 				if (CLOptions.TIER.get() > 0) expr.compile([]);
 
-				// evaluate
-				frame.evalCode(expr);
-				match (frame.result) {
-					Exn(exn) => {
-						exn.print();
-						return FAILURE;
-					}
-					OK(val) => {
-						if (!CLOptions.SUPPRESS_OUTPUT.get()) 
-							System.puts(Strings.format1("=> %s\n", val.display()));
-					}
-					_ => {
-						System.error("eval error", "frame did not give result");
-						return 1;
+				if (!CLOptions.DO_NOT_EVALUATE.get()) {
+					// evaluate
+					frame.evalCode(expr);
+					match (frame.result) {
+						Exn(exn) => {
+							exn.print();
+							return FAILURE;
+						}
+						OK(val) => {
+							if (!CLOptions.SUPPRESS_OUTPUT.get()) 
+								System.puts(Strings.format1("=> %s\n", val.display()));
+						}
+						_ => {
+							System.error("eval error", "frame did not give result");
+							return 1;
+						}
 					}
 				}
 			}
 		} else {
 			def sb = StringBuilder.new();
-// 
-// 			for (err in reader.errors.copy()) {
-// 				sb.puts(reader.fileName);
-// 				sb.put3(":%d:%d: parse error: %s\n", err.0, err.1, err.2);
-// 				sb.ln();
-// 			}
 
 			sb.puts(reader.fileName);
 			sb.put3(":%d:%d: parse error: %s\n", reader.error_line, reader.error_column, reader.error_msg);
@@ -113,11 +109,33 @@ def main(args: Array<string>) -> int {
 	if (CiceroOptions.profileBytecode) {
 		/* Output Cicero's profiling */
 		var i = 0;
+		var total = 0;
+		System.puts("\nSTATIC COUNTS:\n");
 		for (op in Opcode.set.all) {
-			System.puts(Strings.format2("%s: %d\n", op.name, Profiling.bytecodeMap[i++]));
+			def count = Profiling.staticCounts[i++];
+			total += count;
+			System.puts(Strings.format2("%s: %d\n", op.name, count));
 		}
+		System.puts(Strings.format1("Total static bytecodes: %d\n", total));
+		System.puts("\nDYNAMIC COUNTS:\n");
+		i = 0;
+		total = 0;
+		for (op in Opcode.set.all) {
+			def count = Profiling.dynamicCounts[i++];
+			total += count;
+			System.puts(Strings.format2("%s: %d\n", op.name, count));
+		}
+		System.puts(Strings.format1("Total dynamic bytecodes: %d\n", total));
 	}
 
+	// experimental results
+	if (LocalAnalysisResults.displayResults) {
+		System.puts("Local analysis results:\n");
+		System.puts(Strings.format1("Locals: %d\n", LocalAnalysisResults.locals));
+		System.puts(Strings.format1("Safe: %d\n", LocalAnalysisResults.localsSafe));
+		System.puts(Strings.format1("Unsafe: %d\n", LocalAnalysisResults.localsUnsafe));
+		System.puts(Strings.format1("Top: %d\n", LocalAnalysisResults.localsTop));
+	}
 
 	return 0;
 }
