@@ -1,37 +1,37 @@
 enum Opcode {
 	NOP,
 	// Loads
-	LOAD_CONST,			// [0] index into the constant pool
-	LOAD_GLOBAL,			// [0] index into the string pool
-	LOAD_GLOBAL_BY_INDEX,		// [0] index into the Globals.values vector
-	LOAD_LOCAL,    			// [0] index into the runtime locals
-	LOAD_FIELD,    			// [1] index into the string pool
-	LOAD_NONLOCAL, 			// [1] index into the nonlocal variables
+	LOAD_CONST,             // [0] index into the constant pool
+	LOAD_GLOBAL,            // [0] index into the string pool
+	LOAD_GLOBAL_BY_INDEX,   // [0] index into the Globals.values vector
+	LOAD_LOCAL,             // [0] index into the runtime locals
+	LOAD_FIELD,             // [1] index into the string pool
+	LOAD_NONLOCAL,          // [1] index into the nonlocal variables
 	// Stores
-	STORE_GLOBAL,  			// [1] index into the string pool
-	STORE_GLOBAL_BY_INDEX,	  	// [1] index into the Globals.values vector
-	STORE_LOCAL,   			// [0] index into the runtime locals
-	STORE_FIELD,   			// [2] index into the string pool
+	STORE_GLOBAL,           // [1] index into the string pool
+	STORE_GLOBAL_BY_INDEX,  // [1] index into the Globals.values vector
+	STORE_LOCAL,            // [0] index into the runtime locals
+	STORE_FIELD,            // [2] index into the string pool
 	// Control flow
-	CALL,          			 // [n] number of arguments (not including function!)
-	JUMP,          			 // [0] offset of pc
-	JUMP_IF_FALSE, 			 // [1] offset of pc
-	JUMP_IF_TRUE_PEEK,  	  	 // [1] offset of pc
-	JUMP_IF_FALSE_PEEK, 	  	 // [1] offset of pc
+	CALL,                   // [n] number of arguments (not including function!)
+	JUMP,                   // [0] offset of pc
+	JUMP_IF_FALSE,          // [1] offset of pc
+	JUMP_IF_TRUE_PEEK,      // [1] offset of pc
+	JUMP_IF_FALSE_PEEK,     // [1] offset of pc
 	// Exceptions
-	RAISE,         			 // [1]
-	TRY,           			 // [0] offset from this bytecode of the catch
-	CATCH,         			 // [0]
-	ASSERT_FUNC    			 // [1]
+	RAISE,                  // [1]
+	TRY,                    // [0] offset from this bytecode of the catch
+	CATCH,                  // [0]
+	ASSERT_FUNC,            // [1]
 	// Object creation
-	CREATE_OBJECT, 			 // [1]
-	CREATE_CLASS,  			 // [1] index into the classhole pool
-	CREATE_LIST,   			 // [1] how many elements to pull
-	CREATE_FUNC,   			 // [n] index into the funchole pool
+	CREATE_OBJECT,          // [1]
+	CREATE_CLASS,           // [1] index into the classhole pool
+	CREATE_LIST,            // [1] how many elements to pull
+	CREATE_FUNC,            // [n] index into the funchole pool
 	// Stack manipulation
-	POP,           			 // [1] how many values to pull
-	DUPE,          			 // index of element to dupe to top of stack (0 = top)
-	SWAP,          			 // index of element to swap top of stack with (0 = top)
+	POP,                    // [1] how many values to pull
+	DUPE,                   // index of element to dupe to top of stack (0 = top)
+	SWAP,                   // index of element to swap top of stack with (0 = top)
 }
 
 /*

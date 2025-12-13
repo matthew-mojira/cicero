@@ -117,7 +117,7 @@ component FrameObjects {
 			frame = ASTFrame.new(null, null, null, null);
 		}
 		for (builtin in Builtin.set.all) {
-			Globals.storeNewGlobal(builtin.id, builtin.val);
+			Globals.storeGlobal(builtin.id, builtin.val);
 		}
 		frame.name = "repl";
 		return frame;

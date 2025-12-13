@@ -5,19 +5,15 @@ component Globals {
 
    // Returns the index of the stored global object in the `Globals.values` vector
    def storeGlobal(id:string, v: Object) -> int{
+      var index: int;
       if (indices.has(id)){
-         def index = indices[id];
+         index = indices[id];
          values[index] = v;
-         return index;
-      } else
-         return storeNewGlobal(id, v);
-   }
-
-   // Returns the index of the stored global object in the `Globals.values` vector
-   def storeNewGlobal(id:string, v: Object) -> int{
-      var index = values.length;
-      indices[id] = index;
-      values.put(v);
+      } else {
+         index = values.length;
+         indices[id] = index;
+         values.put(v);
+      }
       return index;
    }
 
