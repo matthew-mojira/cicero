@@ -4,6 +4,7 @@ component CiceroOptions {
 
 	/* compile-baked optimizations */
 	def useLazyMethods: bool = true;
+	def useOptimizedGlobals: bool = true;
 
 	/* tracing */
 	def traceFunctionCalls = false;

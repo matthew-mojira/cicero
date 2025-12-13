@@ -102,3 +102,88 @@ d
 => 20
 => 20
 --
+; Basic global set + get repeatedly
+; test for bytecode rewriting (repetitive access)
+{
+  (set test_passed true)
+  (set x 100)
+  (while (> x 0) {
+      (if (!= x x) (set test_passed false) 0)
+      (set x (- x 1))
+  })
+  test_passed
+}
+(= x 0)
+--
+=> true
+=> true
+--
+; test for bytecode rewriting and also 
+; test to see if lookup works when more than 2^8 globals
+{
+  (set i 2)
+  (set answer 0)
+  (while (> i 0){
+
+    (set a1 1) (set a2 2) (set a3 3) (set a4 4) (set a5 5)
+    (set a6 6) (set a7 7) (set a8 8) (set a9 9) (set a10 10)
+    (set a11 11) (set a12 12) (set a13 13) (set a14 14) (set a15 15)
+    (set a16 16) (set a17 17) (set a18 18) (set a19 19) (set a20 20)
+    (set a21 21) (set a22 22) (set a23 23) (set a24 24) (set a25 25)
+    (set a26 26) (set a27 27) (set a28 28) (set a29 29) (set a30 30)
+    (set a31 31) (set a32 32) (set a33 33) (set a34 34) (set a35 35)
+    (set a36 36) (set a37 37) (set a38 38) (set a39 39) (set a40 40)
+    (set a41 41) (set a42 42) (set a43 43) (set a44 44) (set a45 45)
+    (set a46 46) (set a47 47) (set a48 48) (set a49 49) (set a50 50)
+    (set a51 51) (set a52 52) (set a53 53) (set a54 54) (set a55 55)
+    (set a56 56) (set a57 57) (set a58 58) (set a59 59) (set a60 60)
+    (set a61 61) (set a62 62) (set a63 63) (set a64 64) (set a65 65)
+    (set a66 66) (set a67 67) (set a68 68) (set a69 69) (set a70 70)
+    (set a71 71) (set a72 72) (set a73 73) (set a74 74) (set a75 75)
+    (set a76 76) (set a77 77) (set a78 78) (set a79 79) (set a80 80)
+    (set a81 81) (set a82 82) (set a83 83) (set a84 84) (set a85 85)
+    (set a86 86) (set a87 87) (set a88 88) (set a89 89) (set a90 90)
+    (set a91 91) (set a92 92) (set a93 93) (set a94 94) (set a95 95)
+    (set a96 96) (set a97 97) (set a98 98) (set a99 99) (set a100 100)
+    (set a101 101) (set a102 102) (set a103 103) (set a104 104) (set a105 105)
+    (set a106 106) (set a107 107) (set a108 108) (set a109 109) (set a110 110)
+    (set a111 111) (set a112 112) (set a113 113) (set a114 114) (set a115 115)
+    (set a116 116) (set a117 117) (set a118 118) (set a119 119) (set a120 120)
+    (set a121 121) (set a122 122) (set a123 123) (set a124 124) (set a125 125)
+    (set a126 126) (set a127 127) (set a128 128) (set a129 129) (set a130 130)
+    (set a131 131) (set a132 132) (set a133 133) (set a134 134) (set a135 135)
+    (set a136 136) (set a137 137) (set a138 138) (set a139 139) (set a140 140)
+    (set a141 141) (set a142 142) (set a143 143) (set a144 144) (set a145 145)
+    (set a146 146) (set a147 147) (set a148 148) (set a149 149) (set a150 150)
+    (set a151 151) (set a152 152) (set a153 153) (set a154 154) (set a155 155)
+    (set a156 156) (set a157 157) (set a158 158) (set a159 159) (set a160 160)
+    (set a161 161) (set a162 162) (set a163 163) (set a164 164) (set a165 165)
+    (set a166 166) (set a167 167) (set a168 168) (set a169 169) (set a170 170)
+    (set a171 171) (set a172 172) (set a173 173) (set a174 174) (set a175 175)
+    (set a176 176) (set a177 177) (set a178 178) (set a179 179) (set a180 180)
+    (set a181 181) (set a182 182) (set a183 183) (set a184 184) (set a185 185)
+    (set a186 186) (set a187 187) (set a188 188) (set a189 189) (set a190 190)
+    (set a191 191) (set a192 192) (set a193 193) (set a194 194) (set a195 195)
+    (set a196 196) (set a197 197) (set a198 198) (set a199 199) (set a200 200)
+    (set a201 201) (set a202 202) (set a203 203) (set a204 204) (set a205 205)
+    (set a206 206) (set a207 207) (set a208 208) (set a209 209) (set a210 210)
+    (set a211 211) (set a212 212) (set a213 213) (set a214 214) (set a215 215)
+    (set a216 216) (set a217 217) (set a218 218) (set a219 219) (set a220 220)
+    (set a221 221) (set a222 222) (set a223 223) (set a224 224) (set a225 225)
+    (set a226 226) (set a227 227) (set a228 228) (set a229 229) (set a230 230)
+    (set a231 231) (set a232 232) (set a233 233) (set a234 234) (set a235 235)
+    (set a236 236) (set a237 237) (set a238 238) (set a239 239) (set a240 240)
+    (set a241 241) (set a242 242) (set a243 243) (set a244 244) (set a245 245)
+    (set a246 246) (set a247 247) (set a248 248) (set a249 249) (set a250 250)
+    (set a251 251) (set a252 252) (set a253 253) (set a254 254) (set a255 255)
+    (set a256 256)
+
+    (set answer (+ answer (+ a1 (+ a2 (+ a3 (+ a4 (+ a5 (+ a6 (+ a7 (+ a8 (+ a9 (+ a10 (+ a11 (+ a12 (+ a13 (+ a14 (+ a15 (+ a16 (+ a17 (+ a18 (+ a19 (+ a20 (+ a21 (+ a22 (+ a23 (+ a24 (+ a25 (+ a26 (+ a27 (+ a28 (+ a29 (+ a30 (+ a31 (+ a32 (+ a33 (+ a34 (+ a35 (+ a36 (+ a37 (+ a38 (+ a39 (+ a40 (+ a41 (+ a42 (+ a43 (+ a44 (+ a45 (+ a46 (+ a47 (+ a48 (+ a49 (+ a50 (+ a51 (+ a52 (+ a53 (+ a54 (+ a55 (+ a56 (+ a57 (+ a58 (+ a59 (+ a60 (+ a61 (+ a62 (+ a63 (+ a64 (+ a65 (+ a66 (+ a67 (+ a68 (+ a69 (+ a70 (+ a71 (+ a72 (+ a73 (+ a74 (+ a75 (+ a76 (+ a77 (+ a78 (+ a79 (+ a80 (+ a81 (+ a82 (+ a83 (+ a84 (+ a85 (+ a86 (+ a87 (+ a88 (+ a89 (+ a90 (+ a91 (+ a92 (+ a93 (+ a94 (+ a95 (+ a96 (+ a97 (+ a98 (+ a99 (+ a100 (+ a101 (+ a102 (+ a103 (+ a104 (+ a105 (+ a106 (+ a107 (+ a108 (+ a109 (+ a110 (+ a111 (+ a112 (+ a113 (+ a114 (+ a115 (+ a116 (+ a117 (+ a118 (+ a119 (+ a120 (+ a121 (+ a122 (+ a123 (+ a124 (+ a125 (+ a126 (+ a127 (+ a128 (+ a129 (+ a130 (+ a131 (+ a132 (+ a133 (+ a134 (+ a135 (+ a136 (+ a137 (+ a138 (+ a139 (+ a140 (+ a141 (+ a142 (+ a143 (+ a144 (+ a145 (+ a146 (+ a147 (+ a148 (+ a149 (+ a150 (+ a151 (+ a152 (+ a153 (+ a154 (+ a155 (+ a156 (+ a157 (+ a158 (+ a159 (+ a160 (+ a161 (+ a162 (+ a163 (+ a164 (+ a165 (+ a166 (+ a167 (+ a168 (+ a169 (+ a170 (+ a171 (+ a172 (+ a173 (+ a174 (+ a175 (+ a176 (+ a177 (+ a178 (+ a179 (+ a180 (+ a181 (+ a182 (+ a183 (+ a184 (+ a185 (+ a186 (+ a187 (+ a188 (+ a189 (+ a190 (+ a191 (+ a192 (+ a193 (+ a194 (+ a195 (+ a196 (+ a197 (+ a198 (+ a199 (+ a200 (+ a201 (+ a202 (+ a203 (+ a204 (+ a205 (+ a206 (+ a207 (+ a208 (+ a209 (+ a210 (+ a211 (+ a212 (+ a213 (+ a214 (+ a215 (+ a216 (+ a217 (+ a218 (+ a219 (+ a220 (+ a221 (+ a222 (+ a223 (+ a224 (+ a225 (+ a226 (+ a227 (+ a228 (+ a229 (+ a230 (+ a231 (+ a232 (+ a233 (+ a234 (+ a235 (+ a236 (+ a237 (+ a238 (+ a239 (+ a240 (+ a241 (+ a242 (+ a243 (+ a244 (+ a245 (+ a246 (+ a247 (+ a248 (+ a249 (+ a250 (+ a251 (+ a252 (+ a253 (+ a254 (+ a255 a256)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))
+
+    (set i (i.- 1))
+  })
+  answer
+}
+--
+=> 65792
+--
