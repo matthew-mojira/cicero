@@ -28,7 +28,7 @@
     (if (= depth 1){
       (set size (+ (% (random.next) 10) 1))
       
-      ; Build empty array of size `size` with `poopcrap` value as elements
+      ; Build empty array of size `size` with `unit` value as elements
       (set arr [])
       (set i 0)
       (while (< i size){
