@@ -17,7 +17,7 @@ enum Builtin(id: string, val: Object) {
  	LIST    ("list",     ClassObjects.classList),
  	MAP     ("map",      ClassObjects.classMap),
  	METHOD  ("method",   ClassObjects.classMethod),
- 	POOPCRAP("poopcrap", ClassObjects.classPoopCrap),
+ 	UNIT    ("unit",     ClassObjects.classUnit),
  	STR     ("str",      ClassObjects.classStr),
  	NEW_MAP ("new-map",  FuncObjects.fromVirgil("new-map", [], newMap)),
 	PUTS    ("puts",     FuncObjects.fromVirgil("puts", ["o"], puts))
@@ -35,6 +35,6 @@ def puts(args: Range<Object>) -> Result {
 		return Result.Exn(ExnObjects.fromVirgil("puts", "type mismatch"));
 	} else {
 		System.puts(StrObject.!(obj).str);
-		return Result.OK(PoopCrapObjects.instance);
+		return Result.OK(UnitObjects.instance);
 	}
 }
