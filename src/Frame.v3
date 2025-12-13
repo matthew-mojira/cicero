@@ -96,7 +96,10 @@ component FrameObjects {
 				if (i < args.length - 1)
 					System.puts(", ");
 			}
-			System.puts(")\n");
+			System.puts(")");
+			if (Code.AST.?(code.code))
+				System.puts(" AST FRAME!");
+			System.ln();
 		}
 
 		var frame: FrameObject;
@@ -104,6 +107,7 @@ component FrameObjects {
 			Virgil   => frame = VirgilFrame.new(prev, code, args);
 			AST      => frame = ASTFrame.new(prev, code, args, nonlocals);
 			Bytecode => frame = BytecodeFrame.new(prev, code, args, nonlocals);
+			Wasm     => frame = WasmFrame.new(prev, code, args, nonlocals);
 		}
 		frame.name = name;
 		return frame;
@@ -111,10 +115,11 @@ component FrameObjects {
 	/* Frame used to evaluate top-level code. */
 	def newTopFrame() -> FrameObject {
 		var frame: FrameObject;
-		if (CLOptions.TIER.get() > 0) {
-			frame = BytecodeFrame.new(null, null, null, null);
-		} else {
-			frame = ASTFrame.new(null, null, null, null);
+		match (CLOptions.TIER.get()) {
+			0 => frame = ASTFrame.new(null, null, null, null);
+			1 => frame = BytecodeFrame.new(null, null, null, null);
+			2 => frame = WasmFrame.new(null, null, null, null);
+			_ => ; // unreachable
 		}
 		for (builtin in Builtin.set.all) {
 			Globals.storeGlobal(builtin.id, builtin.val);

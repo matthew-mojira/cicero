@@ -1,0 +1,6 @@
+(func (f) {
+  (set-global x 13)
+  x
+})
+
+(f)

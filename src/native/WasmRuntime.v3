@@ -1,0 +1,81 @@
+
+component WasmRuntime {
+	var frame: WasmFrame;
+	var strings: Array<string>;
+	var funcholes: Array<ASTData.Func>;
+	var classholes: Array<ClassObject -> ClassObject>;
+	var objects: Vector<Object>;
+	var result: int;
+
+	def isNull(idx: int) -> bool;
+	def isTrue(idx: int)  -> bool;
+	def isFalse(idx: int) -> bool;
+	def isFunc(idx: int)  -> bool;
+	def isClass(idx: int) -> bool;
+	def isString(idx: int)-> bool;
+
+	def getGlobal(idx: int) -> int;
+	def getNonlocal(idx: int) -> int;
+
+	def setGlobal(strIdx: int, objIdx: int) -> int;
+
+	def raiseTypeException(actIdx: int, expIdx: int) -> int;
+	def raiseString(strIdx: int) -> int;
+	def raiseMissingField(objIdx: int, strIdx: int) -> int;
+
+	def pushFrame();
+	def popFrame();
+
+	/* Calls to other functions */
+	/* TODO make compiler inline these functions */
+	def callFunc0(func: int) -> bool;
+	def callFunc1(func: int, o0: int) -> bool;
+	def callFunc2(func: int, o0: int, o1: int) -> bool;
+	def callFunc3(func: int, o0: int, o1: int, o2: int) -> bool;
+	def callFunc4(func: int, o0: int, o1: int, o2: int, o3: int) -> bool;
+	def callFunc5(func: int, o0: int, o1: int, o2: int, o3: int, o4: int) -> bool;
+	def callFunc6(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) -> bool;
+	def callFunc7(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) -> bool;
+	def callFunc8(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) -> bool;
+	def callFunc9(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) -> bool;
+
+	def callFuncN(fvIdx: int, args: Array<int>) -> bool;
+
+	def getResult() -> int;
+	def setResult(i: int) -> void;
+
+	def createFunc0(funchole: int) -> int;
+	def createFunc1(funchole: int, o0: int) -> int;
+	def createFunc2(funchole: int, o0: int, o1: int) -> int;
+	def createFunc3(funchole: int, o0: int, o1: int, o2: int) -> int;
+	def createFunc4(funchole: int, o0: int, o1: int, o2: int, o3: int) -> int;
+	def createFunc5(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int) -> int;
+	def createFunc6(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) -> int;
+	def createFunc7(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) -> int;
+	def createFunc8(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) -> int;
+	def createFunc9(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) -> int;
+
+	def createFuncN(funcholeIdx: int, nonlocalArgs: Array<int>) -> int;
+
+	def getField(objIdx: int, strIdx: int) -> int;
+	def setField(objIdx: int, strIdx: int, valIdx: int) -> int;
+
+	def createClass(superIdx: int, classholeIdx: int) -> bool;
+	def createObject(clsIdx: int) -> bool;
+
+	/* lists */
+	def createList0() -> int;
+	def createList1(o0: int) -> int;
+	def createList2(o0: int, o1: int) -> int;
+	def createList3(o0: int, o1: int, o2: int) -> int;
+	def createList4(o0: int, o1: int, o2: int, o3: int) -> int;
+	def createList5(o0: int, o1: int, o2: int, o3: int, o4: int) -> int;
+	def createList6(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) -> int;
+	def createList7(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) -> int;
+	def createList8(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) -> int;
+	def createList9(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) -> int;
+	def createList10(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int) -> int;
+	def createList16(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int, o10: int, o11: int, o12: int, o13: int, o14: int, o15: int) -> int;
+
+	def alloc(obj: Object) -> int;
+}

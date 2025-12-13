@@ -1,0 +1,13 @@
+Wasm remaining test failures
+
+append07										tier2
+counter03		tier0		tier1		tier2
+fibonacci09					tier1		
+list-sort04									tier2
+local02											tier2
+map01												tier2
+memory00		tier0		tier1		tier2
+nonlocal*										tier2
+richards02	tier0		tier1		tier2
+while02			tier0		tier1		tier2
+while03			tier0		tier1		tier2

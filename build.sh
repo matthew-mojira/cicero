@@ -22,7 +22,7 @@ fi
 
 if [ "$VIRGIL_LIB" = "" ]; then
     if [ "$VIRGIL_LOC" = "" ]; then
-	V3C_LOC=$(dirname $(which v3c))
+        V3C_LOC=$(dirname $V3C)
 	VIRGIL_LOC=$(cd $V3C_LOC/../ && pwd)
     fi
     VIRGIL_LIB=${VIRGIL_LOC}/lib/
@@ -63,7 +63,11 @@ function make_build_file() {
 
 # compute sources
 if [ "$PROGRAM" = "cicero" ]; then
-    SOURCES="$ENGINE"
+    if [ "$TARGET" = "wasm-wave" ]; then
+        SOURCES="$ENGINE src/wasm/*.v3"
+    else
+        SOURCES="$ENGINE src/native/*.v3"
+    fi
 else
     exit_usage
 fi
@@ -113,8 +117,8 @@ elif [ "$TARGET" = "jvm" ]; then
     v3c-jar $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [[ "$TARGET" == wasm-* ]]; then
     # Compile to a wasm target
-    V3C_PATH=$(which v3c)
-    V3C_WASM_TARGET=${V3C_PATH/bin\/v3c/bin\/dev\/v3c-$TARGET}
+    V3C_PATH="$(dirname "$V3C")"
+    V3C_WASM_TARGET="$V3C_PATH/dev/v3c-$TARGET"
     if [ ! -x $V3C_WASM_TARGET ]; then
 	echo Unknown Wasm target \"$TARGET\". Found these:
 	ls -a ${V3C_PATH/bin\/v3c/bin\/dev\/v3c-wasm-*} | cat

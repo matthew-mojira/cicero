@@ -1,0 +1,138 @@
+class WasmFrame extends FrameObject {
+
+	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
+		if (code != null) {
+			wasm = Code.Wasm.!(code.code).wasm;
+			nonlocals = nonlocalArgs;
+			// XXX can do better here
+// 			Array.new(wasm.nonlocals.length);
+// 			for (i < wasm.nonlocals.length) {
+// 				def id = wasm.nonlocals[i];
+// 				// search for id in nonlocal args
+// 				var found: bool;
+// 				for (p in nonlocalArgs) {
+// 					if (Strings.equal(id, p.0)) {
+// 						nonlocals[i] = p;
+// 						found = true;
+// 						break;
+// 					}
+// 				}
+// 				if (!found) {
+// 					// might this ever happen?
+// 					System.error("eval error", "unable to unify nonlocal arguments");
+// 				}
+// 			}
+		}
+	}
+
+	def var wasm: WasmBytecode;
+	def var nonlocals: Array<(string, Object)>;
+
+	def eval() {
+		/* swap runtime components */
+		def oldFrame      = WasmRuntime.frame;
+		def oldStrings    = WasmRuntime.strings;
+		def oldFuncholes  = WasmRuntime.funcholes;
+		def oldClassholes = WasmRuntime.classholes;
+		def oldObjects    = WasmRuntime.objects;
+		def oldResult     = WasmRuntime.result;
+
+		WasmRuntime.frame      = this;
+		WasmRuntime.strings    = wasm.stringPool;
+		WasmRuntime.funcholes  = wasm.funcPool;
+		WasmRuntime.classholes = wasm.classPool;
+		WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
+		WasmRuntime.result     = 0;
+
+		var arg0: int = if(args.length > 0, WasmRuntime.alloc(args[0].1));
+		var arg1: int = if(args.length > 1, WasmRuntime.alloc(args[1].1));
+		var arg2: int = if(args.length > 2, WasmRuntime.alloc(args[2].1));
+		var arg3: int = if(args.length > 3, WasmRuntime.alloc(args[3].1));
+		var arg4: int = if(args.length > 4, WasmRuntime.alloc(args[4].1));
+		var arg5: int = if(args.length > 5, WasmRuntime.alloc(args[5].1));
+		var arg6: int = if(args.length > 6, WasmRuntime.alloc(args[6].1));
+		var arg7: int = if(args.length > 7, WasmRuntime.alloc(args[7].1));
+		var arg8: int = if(args.length > 8, WasmRuntime.alloc(args[8].1));
+		var arg9: int = if(args.length > 9, WasmRuntime.alloc(args[9].1));
+
+		var exn: bool;
+		match (wasm.f) {
+			Func0(f) => exn = f();
+			Func1(f) => exn = f(arg0);
+			Func2(f) => exn = f(arg0, arg1);
+			Func3(f) => exn = f(arg0, arg1, arg2);
+			Func4(f) => exn = f(arg0, arg1, arg2, arg3);
+			Func5(f) => exn = f(arg0, arg1, arg2, arg3, arg4);
+			Func6(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5);
+			Func7(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+			Func8(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+			Func9(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+		}
+		if (exn) {
+			result = Result.Exn(ExnObject.!(WasmRuntime.objects[WasmRuntime.result]));
+		} else {
+			result = Result.OK(WasmRuntime.objects[WasmRuntime.result]);
+		}
+
+		/* unswap runtime components */
+		WasmRuntime.frame      = oldFrame;
+		WasmRuntime.strings    = oldStrings;
+		WasmRuntime.funcholes  = oldFuncholes;
+		WasmRuntime.classholes = oldClassholes;
+		WasmRuntime.objects    = oldObjects;
+		WasmRuntime.result     = oldResult;
+	}
+
+	def evalCode(code: CodeObject) -> Object {
+		WasmRuntime.frame      = this;
+		WasmRuntime.result     = 0;
+		def wasm = Code.Wasm.!(code.code).wasm;
+		WasmRuntime.strings    = wasm.stringPool;
+		WasmRuntime.funcholes  = wasm.funcPool;
+		WasmRuntime.classholes = wasm.classPool;
+		WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
+		match (wasm.f) {
+			Func0(f) => {
+				def exn = f();
+				if (exn) {
+					result = Result.Exn(ExnObject.!(WasmRuntime.objects[WasmRuntime.result]));
+				} else {
+					result = Result.OK(WasmRuntime.objects[WasmRuntime.result]);
+				}
+				match (result) {
+					OK(o) => return o;
+					Exn(e) => return null;
+					Uncomputed => {
+						System.puts("evalCode in WasmFrame returned Uncomputed\n");
+						System.error("internal error", "evalCode in WasmFrame returned Uncomputed\n");
+					}
+				}
+			}
+			_ => {
+				// maybe should not happen?
+				System.puts("unimplemented: WasmFrame.eval: FuncN (N != 0)\n");
+				System.error("unimplemented", "WasmFrame.eval: FuncN (N != 0)");
+			}
+		}
+		return null;
+	}
+
+	def getGlobal(id: string) -> Object {
+		if (globals.has(id))
+			return globals[id];
+		return null;
+	}
+
+	def getNonlocal(id: string) -> Object { // FIXME don't use string
+		for (p in nonlocals) {
+			if (Strings.equal(p.0, id)) return p.1;
+		}
+		System.puts(Strings.format1("cannot find nonlocal %s\n", id));
+		System.error("internal error", "cannot find nonlocal");
+		return null;
+	}
+
+	def setGlobal(id: string, obj: Object) -> Object {
+		return globals[id] = obj;
+	}
+}

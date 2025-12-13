@@ -186,6 +186,9 @@ class ASTFrame extends FrameObject {
 				def vals: Array<(string, Object)> = Array.new(fnonlocals.length);
 				// create the function now, and insert its values as we iterate through fnonlocals
 				def fn = FuncObjects.newFO(id, params, vals, code);
+
+				// XXX never compile due to new tiering structure
+
 				// now work: capturing free variables
 				for (i < fnonlocals.length) {
 					def lid = fnonlocals[i];

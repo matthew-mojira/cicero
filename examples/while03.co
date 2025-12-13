@@ -1,0 +1,15 @@
+(set i 0)
+(while (< i 100) {
+  (set j 0)
+  (while (< j 100) {
+    (set k 0)
+    (while (< k 100) {
+      (set k (k.succ))
+    })
+    (set j (j.succ))
+  })
+  (set i (i.succ))
+})
+i
+j
+k

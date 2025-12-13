@@ -11,5 +11,5 @@ class UnitObject extends Object {
 
 component UnitObjects {
 	/* only one U and one nit */
-	def instance = UnitObject.new();
+	def instance: Object = UnitObject.new();
 }
