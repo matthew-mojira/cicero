@@ -77,11 +77,5 @@ component WasmRuntime {
 	def createList10(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int) -> int;
 	def createList16(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int, o10: int, o11: int, o12: int, o13: int, o14: int, o15: int) -> int;
 
-	def alloc(obj: Object) -> int {
-		if (obj == null) return 0;
-
-		def idx = objects.length;
-		objects.put(obj);
-		return idx;
-	}
+	def alloc(obj: Object) -> int;
 }
