@@ -1,0 +1,21 @@
+class Object {
+
+	private var fields: Array<Object>;
+	private def indices: HashMap<string, int> = Strings.newMap();
+
+	def o_display() -> Result {
+		
+	}
+	def o_istrue() -> Result {
+		return 
+	}
+}
+
+class ClassObject extends Object
+
+def newObject(args: Range<Object>) -> Result {
+	// assert args.length == 1
+	// obj = args[0]
+	// assert obj.class <= class -- violates duck typing?
+	// create the object
+}
