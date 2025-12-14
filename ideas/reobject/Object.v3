@@ -1,19 +1,118 @@
-class Object {
+/* add exception for very bad mismatched internal object */
 
-	private var fields: Array<Object>;
+class Object {
+	private var CLASS: ClassObject;
+	private var fields: Vector<Object>;
 	private def indices: HashMap<string, int> = Strings.newMap();
 
-	def o_display() -> Result {
-		
+	new() {
+		// obligated fields
+		addObligatedField("class");
 	}
+
+	private def addObligatedField(name: string) -> int {
+		def idx = fields.length;
+		fields.put(null);
+		indices.put(name, idx);
+	}
+
+	def getField(name: string) -> Maybe<Object> {
+		if (!indices.has(name)) {
+			def idx = indices[name];
+			def field = fields[idx];
+			return Maybe.Just(field);
+		}
+		return Maybe.Nothing;
+	}
+	def getFieldByIndex(idx: int) {
+		return fields[idx];
+	}
+
+	/* Under the new object model, many methods are migrated to having
+	 * Cicero-level definitions. This helps to clear up code clutter as we
+	 * try to extract anything that's not pure Cicero.
+	 *
+	 * This adds potential for even more dynamicity (and the weirdness
+	 * associated when you allow that). The problem is that it might be
+	 * harder to optimize, but having all the code in Cicero means we
+	 * could apply Cicero-level optimizations, if we implement that.
+	 *
+	 * The parts that require the runtime system, i.e. Virgil-level
+	 * operations are abstracted into a "primitive" version of the method.
+	 */
+
+	/* (method (get-field f) {
+	 *    (set name (f.display))
+	 *    (self.prim-getfield name)
+	 * })
+	 */
+	def o_getfield(name: Object) -> Result {
+		def str = StrObject.!(name);
+		return getField(str.str);
+	}
+	/* (method (display) {
+	 *    (self.prim-display)
+	 * })
+	 */
+	def o_display() -> Result {
+		return StrObjects.fromString(Strings.format1("<obj 0x%x>", 
+					Pointer.atObject(this) - Pointer.NULL));
+	}
+	/* (method (is-true) true) */
 	def o_istrue() -> Result {
-		return 
+		return Result.OK(true);
+	}
+	/* (method (instance-of c) {
+	 *    (set class (self.class))
+	 *    (class.subclass c)
+	 * })
+	 */
+	def o_instanceof(other: Object) -> Result {
+		def cls = getFieldByIndex(CLASS);
+	}
+
+	def o_eq(other: Object) -> Result {
+		return Result.OK(BoolObjects.fromBool(this == other));
 	}
 }
 
-class ClassObject extends Object
+class FuncObject extends Object {
+	def f_apply(args: Range<Object>) -> Result {
+	}
+}
+
+/* Extending objects means that we can still use some Virgil-level space to
+ * hold information related to the value (i.e. the actual string, int, bool).
+ */
+class ClassObject extends Object {
+	new () {}
+
+	/* (method (subclass other) {
+	 *    (set cls self)
+	 *    (while (!= cls ()) {
+	 *       (if (= cls other)
+	 *          (return true))
+	 *       (set cls cls.superclass)
+	 *    })
+	 *    false
+	 * })
+	 */
+
+
+}
+
+/* Classes need to be constructed by three pieces of information
+ * 1. obligatory fields (in `new`)
+ * 2. primitive methods (defined in the class)
+ * 3. Cicero-level methods (defined in an external file, but patched into
+ *    the class definition by a script)
+ */
 
 def newObject(args: Range<Object>) -> Result {
+	if (args.length != 1)
+		raise exception;
+	def obj = args[0];
+	if 
 	// assert args.length == 1
 	// obj = args[0]
 	// assert obj.class <= class -- violates duck typing?
