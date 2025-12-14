@@ -51,4 +51,16 @@ things (that we desparately need to figure out how to optimize!).
 
 # New operations
 
+Yes, you can change the class of an object and make it a different class. For
+most intents and purposes, this will cause some major issue down the line. The
+issue is more critical when it is a built-in class that relies on Virgil-level
+information. We have tried in this refactoring to expose as many internal
+components as fields of the object (which are mutable), but some hold 
+information that is structural to the value, like the value of an int.
+
+What to do if the user changes a value of a non-int class to int? We can't
+switch it internally. Perhaps this should be an exception, but where, and for
+what reason? Or, do we permit this, and simply use a default value for the
+type?
+
 ## bind

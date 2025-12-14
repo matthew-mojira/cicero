@@ -1,7 +1,5 @@
 /* add exception for very bad mismatched internal object */
-
 class Object {
-	private var CLASS: ClassObject;
 	private var fields: Vector<Object>;
 	private def indices: HashMap<string, int> = Strings.newMap();
 
@@ -85,8 +83,14 @@ class FuncObject extends Object {
  * hold information related to the value (i.e. the actual string, int, bool).
  */
 class ClassObject extends Object {
-	new () {}
-
+	new() {
+		// obligated fields
+		addObligatedField("name");
+		addObligatedField("superclass");
+		addObligatedField("init");
+		addObligatedField("fields");
+		addObligatedField("methods");
+	}
 	/* (method (subclass other) {
 	 *    (set cls self)
 	 *    (while (!= cls ()) {
@@ -97,9 +101,26 @@ class ClassObject extends Object {
 	 *    false
 	 * })
 	 */
-
-
+	def c_display() -> Result;
+	def c_subclass(other: Object) -> Result;
 }
+
+/* this could be a possible avenue for showcasing mutable classes, by switching
+ * the class of a codeobject as the program tiers up
+ */
+class CodeObject extends Object {
+	def co_display() -> Result;
+}
+
+class BoolObject extends Object {
+	// no obligated fields
+	// no cicero-defined methods! but does this make things unintuitive?
+	// we have just one instance of true and false, but you are free to
+	// manipulate them to make it terrible, so does it still make sense
+	// for the method to return that?
+}
+
+
 
 /* Classes need to be constructed by three pieces of information
  * 1. obligatory fields (in `new`)
