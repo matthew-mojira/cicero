@@ -64,3 +64,15 @@ what reason? Or, do we permit this, and simply use a default value for the
 type?
 
 ## bind
+
+`bind` is almost like a partial application, and in general it could definitely
+be. But in this case, `bind` refers to creating *bound methods*. 
+
+`(bind o f)` takes an object `o` and binds it to a function `f`, creating a
+bound method. The function `f` requires one parameter (not necessarily named
+`self`) and creates a method where only the remaining arguments need to be
+supplied. 
+
+Like other object-oriented languages, the `self` or `this` object is the first 
+local variable, however, the binding is done separately because in general, we
+need to support first-class functions and (first-class) bound methods.
