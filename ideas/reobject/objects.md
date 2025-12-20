@@ -76,3 +76,18 @@ supplied.
 Like other object-oriented languages, the `self` or `this` object is the first 
 local variable, however, the binding is done separately because in general, we
 need to support first-class functions and (first-class) bound methods.
+
+# Make it an option
+
+We enable an option at the compiler level to compile the language, allowing
+modification of fields that should otherwise be built in.
+
+Regardless of the setting, those special fields are stored in the same fields
+array of each Object, but there is now a check that setting the field is not
+to a disallowed field, which would raise a runtime exception. This allows other
+parts of the runtime to make assumptions about classes (i.e. checking if
+class is really a class object).
+
+And we should also probably do the same thing for a method.
+
+# fixed runtime tiers and lowering call overhead

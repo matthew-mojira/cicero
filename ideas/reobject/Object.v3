@@ -1,26 +1,58 @@
+// class is an immutable field. nothing else is
+
 /* add exception for very bad mismatched internal object */
 class Object {
 	private var fields: Vector<Object>;
 	private def indices: HashMap<string, int> = Strings.newMap();
+	var immutableFields = 0;
+
+	var CLASS: int;
 
 	new() {
 		// obligated fields
-		addObligatedField("class");
+		CLASS = addObligatedField("class");
 	}
 
 	private def addObligatedField(name: string) -> int {
 		def idx = fields.length;
 		fields.put(null);
+		immutableFields++;
 		indices.put(name, idx);
+		return idx;
 	}
 
-	def getField(name: string) -> Maybe<Object> {
+
+	/* (method (get-field f) {
+	 *    (try
+	 *      (get-field-strict self f)
+	 *    ;catch
+	 *      E
+         *      (set class self.class)
+	 *      (while (!= class ()) {
+	 *         ;search for method in class
+         *         (for fn class.methods {
+         *            (if (= fn.name f)
+	 *               (return (bind fn self)))
+	 *         })
+	 *      })
+	 *      
+	 *    )
+	 *    (raise ...)
+	 * })
+	 */
+
+	// but if a field is not found, the behavior moves to class which
+	// is the first field to look up methods
+	def getField(name: string) -> Result {
 		if (!indices.has(name)) {
 			def idx = indices[name];
 			def field = fields[idx];
-			return Maybe.Just(field);
+			// XXX null check? pedantic but required if we allow del
+			return Result.OK(field);
 		}
-		return Maybe.Nothing;
+		// field not found: go to class
+		def cls = fields[CLASS];
+
 	}
 	def getFieldByIndex(idx: int) {
 		return fields[idx];
@@ -79,17 +111,25 @@ class FuncObject extends Object {
 	}
 }
 
+def BASE: ClassObject;
+
 /* Extending objects means that we can still use some Virgil-level space to
  * hold information related to the value (i.e. the actual string, int, bool).
  */
 class ClassObject extends Object {
 	new() {
 		// obligated fields
-		addObligatedField("name");
-		addObligatedField("superclass");
-		addObligatedField("init");
-		addObligatedField("fields");
-		addObligatedField("methods");
+		addObligatedField("name");       // string
+		addObligatedField("superclass"); // class
+		addObligatedField("init");       // code
+		addObligatedField("fields");     // list
+		addObligatedField("methods");    // map
+	}
+	def searchMethod(name: string) -> Result {
+		var cls = this;
+		while (cls != BASE) {
+			
+		}
 	}
 	/* (method (subclass other) {
 	 *    (set cls self)
@@ -127,6 +167,9 @@ class BoolObject extends Object {
  * 2. primitive methods (defined in the class)
  * 3. Cicero-level methods (defined in an external file, but patched into
  *    the class definition by a script)
+ */
+/* NEW!: Obligatory fields are now special and whether or not they can be
+ * written to is based on an compiler option.
  */
 
 def newObject(args: Range<Object>) -> Result {
