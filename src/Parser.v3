@@ -477,19 +477,16 @@ class Parser extends TextReader {
 							fail("Cannot return from top-level code");
 							return null;
     					}
-
 						// `expression` is optional
 						// in that case, evaluate to `()` since `return` is a expression as well
-						var ast_data: ASTData;
+						var value: AST;
 						if (opt1(')') >= 0) {
-							ast_data = ASTData.Lit(UnitObjects.instance);
+							value = AST.new(ASTData.Lit(UnitObjects.instance), null);
 						} else {
-							def value = readExpr();
-							// @TODO: temp value
-							ast_data = ASTData.Lit(IntObjects.fromLong(2049));
+							value = readExpr();
 							req1(')');
 						}
-						return AST.new(ast_data,
+						return AST.new(ASTData.Return(value),
 							FileRange.new(fileName, startLine, startColumn, line, column));
 					}
 				}

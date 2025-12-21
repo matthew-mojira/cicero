@@ -362,6 +362,10 @@ class ASTFrame extends FrameObject {
 
 				value = obj;
 			}
+			Return(expr) => {
+				// TODO: proper handling
+				value = evalAST(expr);
+			}
 		}
 
 		return value;
