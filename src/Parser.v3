@@ -19,7 +19,8 @@ enum Keyword(id: string) {
 	CLASS("class"),
 	NEW("new"),
 	RAISE("raise"),
-	TRY("try")
+	TRY("try"),
+	RETURN("return")
 }
 
 /* Same as Keyword except inside a class definition
@@ -35,6 +36,14 @@ enum ClassKeyword(id: string) {
 	INIT("init"),
 	FIELD("field"),
 	METHOD("method")
+}
+
+/* `CodeLevel` enum 
+	: to know whether or not we are currently parsing inside a function/method body
+ */
+ enum CodeLevel {
+    TopLevel,
+    NonTopLevel,
 }
 
 component ParseOption {
@@ -56,6 +65,7 @@ class Vars {
 class Parser extends TextReader {
 	private def exprs: Vector<CodeObject>          = Vector.new();
 	def errors: Vector<(int, int, string)> = Vector.new();
+	var currentLevel: CodeLevel = CodeLevel.TopLevel;
 
 	new(fileName: string, data: string) super(fileName, data) {
 		skipWs = skipWhitespaceAndComments;
@@ -231,6 +241,10 @@ class Parser extends TextReader {
 							FileRange.new(fileName, startLine, startColumn, line, column));
 					}
 					FUNC => {
+						// change scope-level
+						def previousLevel = currentLevel;
+						currentLevel = CodeLevel.NonTopLevel;
+
 						req1('(');
 						// name of function
 						def name = readIdentifier();
@@ -265,6 +279,8 @@ class Parser extends TextReader {
 							vars.possibleNonlocals.put((func, prev));
 						}
 						
+						// restore code-level
+						currentLevel = previousLevel;
 						return AST.new(ASTData.VarSet(name, b, AST.new(func, range)), 
 										range);
 					}
@@ -384,6 +400,10 @@ class Parser extends TextReader {
 									fields.put(fieldName, CodeObjects.fromAST(fieldInit));
 								}
 								METHOD => {
+									// change scope-level
+									def previousLevel = currentLevel;
+									currentLevel = CodeLevel.NonTopLevel;
+
 									req1('(');
 									def methodName = readIdentifier();
 									def methodParams = Vector<string>.new();
@@ -406,6 +426,9 @@ class Parser extends TextReader {
 									methods.put(ASTData.Func(methodName, 
 												Ranges.dup(methodParams.copy()[1 ...]), 
 												CodeObjects.fromAST(methodBody), Vector.new()));
+
+									// restore scope-level
+									currentLevel = previousLevel;
 								}
 							}
 							req1(')');
@@ -447,6 +470,26 @@ class Parser extends TextReader {
 						def b = bindLocal(exn);
 
 						return AST.new(ASTData.Catch(try, exn, b, catch),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					RETURN => {
+						if (currentLevel == CodeLevel.TopLevel){
+							fail("Cannot return from top-level code");
+							return null;
+    					}
+
+						// `expression` is optional
+						// in that case, evaluate to `()` since `return` is a expression as well
+						var ast_data: ASTData;
+						if (opt1(')') >= 0) {
+							ast_data = ASTData.Lit(UnitObjects.instance);
+						} else {
+							def value = readExpr();
+							// @TODO: temp value
+							ast_data = ASTData.Lit(IntObjects.fromLong(2049));
+							req1(')');
+						}
+						return AST.new(ast_data,
 							FileRange.new(fileName, startLine, startColumn, line, column));
 					}
 				}
