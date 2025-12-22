@@ -216,8 +216,8 @@ class BytecodeCompiler {
 				writeInstrWithOperand(loc, Opcode.CREATE_LIST, elems.length);
 			}
 			Return(expr) => {
-				// @TODO: proper handling
 				compileAST(expr);
+				writeInstr(loc, Opcode.RETURN);
 			}
 //			_ => System.error("compile error", "unsupported AST node");
 		}
