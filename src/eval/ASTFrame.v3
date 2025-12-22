@@ -17,13 +17,13 @@ class ASTFrame extends FrameObject {
 	
 	def eval() {
 		def v = evalAST(Code.AST.!(code.code).ast);
-		if (!isExn())
+		if (!isAborting())
 			result = Result.OK(v);			
 	}
 
 	def evalCode(code: CodeObject) -> Object {
 		def v = evalAST(Code.AST.!(code.code).ast);
-		if (!isExn())
+		if (!isAborting())
 			result = Result.OK(v);			
 		return v;
 	}
@@ -63,7 +63,7 @@ class ASTFrame extends FrameObject {
 			}
 			VarSet(id, mode, expr) => {
 				def v = evalAST(expr);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 				match (mode.data) {
 					Local  => locals[id] = v;
 					Global => Globals.storeGlobal(id, v);
@@ -73,11 +73,11 @@ class ASTFrame extends FrameObject {
 			}
 			And(left, right) => {
 				def lval = evalAST(left);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 
 				if (lval.isTrue()) {
 					def rval = evalAST(right);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 					value = rval;
 				} else {
 					value = lval;
@@ -85,19 +85,19 @@ class ASTFrame extends FrameObject {
 			}
 			Or(left, right) => {
 				def lval = evalAST(left);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 
 				if (lval.isTrue()) {
 					value = lval;
 				} else {
 					def rval = evalAST(right);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 					value = rval;
 				}
 			}
 			Apply(tgt, args) => {
 				def tgtVal = evalAST(tgt);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 				assertType(ClassObjects.classFunc, tgtVal);
 				if (isExn()) return value;
 
@@ -112,7 +112,7 @@ class ASTFrame extends FrameObject {
 					argv = Array.new(args.length + 1);
 					for (i < args.length) {
 						def arg = evalAST(args[i]);
-						if (isExn()) return value;
+						if (isAborting()) return value;
 						if (i < params.length) // avoid out of bounds but don't raise exception
 							argv[i + 1] = (params[i], arg);
 					}
@@ -121,7 +121,7 @@ class ASTFrame extends FrameObject {
 					argv = Array.new(args.length);
 					for (i < args.length) {
 						def arg = evalAST(args[i]);
-						if (isExn()) return value;
+						if (isAborting()) return value;
 						if (i < params.length) // avoid out of bounds but don't raise exception
 							argv[i] = (params[i], arg);
 					}
@@ -142,21 +142,21 @@ class ASTFrame extends FrameObject {
 			}
 			If(exprC, exprT, exprF) => {
 				def cond = evalAST(exprC);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 
 				if (cond.isTrue()) {
 					def v = evalAST(exprT);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 					value = v;
 				} else {
 					def v = evalAST(exprF);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 					value = v;
 				}
 			}
 			Raise(expr) => {
 				def v = evalAST(expr);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 
 				// Raise a string for the message
 				assertType(ClassObjects.classStr, v);
@@ -167,7 +167,7 @@ class ASTFrame extends FrameObject {
 			Catch(try, exnvar, b, catch) => {
 				def v = evalAST(try);
 				if (!isExn()) {
-					value = v;
+					if (!isReturning()) value = v;
 				} else {
 					// catch exception
 					def val = getExn();
@@ -178,7 +178,7 @@ class ASTFrame extends FrameObject {
 						Nonlocal => System.error("interp error", "trying to bind to a nonlocal variable");
 					}
 					def e = evalAST(catch);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 					value = e;
 				}
 			}
@@ -214,7 +214,7 @@ class ASTFrame extends FrameObject {
 				match (superclass) {
 					Just(e) => {
 						var v = evalAST(e);
-						if (isExn()) return value;
+						if (isAborting()) return value;
 						
 						assertType(ClassObjects.classClass, v);
 						if (isExn()) return value;
@@ -235,10 +235,10 @@ class ASTFrame extends FrameObject {
 
 					// check cond
 					def t = evalAST(cond);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 					if (t.isTrue()) {
 						def v = evalAST(expr);
-						if (isExn()) return value;
+						if (isAborting()) return value;
 						value = v;
 
 						sat = true;
@@ -253,7 +253,7 @@ class ASTFrame extends FrameObject {
 			While(cond, body) => {
 				while (true) {
 					def v = evalAST(cond);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 
 					if (!v.isTrue()) {
 						value = v;
@@ -261,14 +261,14 @@ class ASTFrame extends FrameObject {
 					}
 
 					evalAST(body);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 				}
 			}
 			Begin(exprs) => {
 				var last: Object;
 				for (expr in exprs) {
 					def v = evalAST(expr);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 
 					last = v;
 				}
@@ -276,7 +276,7 @@ class ASTFrame extends FrameObject {
 			}
 			GetField(field, expr) => {
 				var obj = evalAST(expr);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 
 				def v = obj.getField(field);
 				if (v == null) {
@@ -288,10 +288,10 @@ class ASTFrame extends FrameObject {
 			}
 			SetField(field, expr, newCode) => {
 				var obj = evalAST(expr);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 
 				var val = evalAST(newCode);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 
 				if (obj.setField(field, val)) {
 					value = val;
@@ -302,7 +302,7 @@ class ASTFrame extends FrameObject {
 			}
 			New(expr) => {
 				var cls = evalAST(expr);
-				if (isExn()) return value;
+				if (isAborting()) return value;
 
 				assertType(ClassObjects.classClass, cls);
 				if (isExn()) return value;
@@ -352,7 +352,7 @@ class ASTFrame extends FrameObject {
 				def vals: Vector<Object> = Vector.new();
 				for (expr in exprs) {
 					def v = evalAST(expr);
-					if (isExn()) return value;
+					if (isAborting()) return value;
 
 					vals.put(v);
 				}
@@ -363,8 +363,10 @@ class ASTFrame extends FrameObject {
 				value = obj;
 			}
 			Return(expr) => {
-				// TODO: proper handling
-				value = evalAST(expr);
+				def val = evalAST(expr);
+				// there could be `(return (return 10))` which is valid
+				if (isAborting()) return value;
+				result = Result.Return(val);
 			}
 		}
 

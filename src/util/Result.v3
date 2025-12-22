@@ -1,5 +1,7 @@
 type Result #unboxed {
 	case Uncomputed;
 	case OK(value: Object);
+	// necessary to have a new `Result` type to support propagation logic
+	case Return(value: Object);
 	case Exn(exn: ExnObject);
 }
