@@ -1,0 +1,96 @@
+(func (factorial n){
+  (if (<= n 1) (return 1) ())
+  (return (* n (factorial (- n 1))))
+})
+(func (fib n){
+  (cond 
+    ((<= n 0) (return 0))
+    ((= n 1) (return 1))
+    (true (return (+ (fib (- n 1)) (fib (- n 2)))))
+  )
+  (raise "Should never be reached")
+})
+(func (early_return x) {
+  (if (< x 0) (return "negative") ())
+  (return "non-negative")
+  (return "unreachable")
+})
+(func (maybe_return x){
+  (if (= x 0) (return "zero") ())
+  ; no return here
+})
+(func (find_first_even nums){
+  (set i 0)
+  (while (< i (nums.length)){
+    (set n (nums.get i))
+    (if (= (n.% 2) 0) (return n) ())
+    (set i (i.succ))
+  })
+  (return ())
+})
+(func (inner x) (return (* x 2)))
+(func (outer x) {
+  (set y (inner x))
+  (return (y.+ 1))
+})
+(func (classify nums){
+  (set i 0)
+  (while (< i (nums.length)){
+    (set n (nums.get i))
+    (if (< n 0) (return "has negative") ())
+    (if (= n 0) (return "has zero") ())
+
+    (set i (i.succ))
+  })
+  (return "all positive")
+})
+--
+=> <func 'factorial'>
+=> <func 'fib'>
+=> <func 'early_return'>
+=> <func 'maybe_return'>
+=> <func 'find_first_even'>
+=> <func 'inner'>
+=> <func 'outer'>
+=> <func 'classify'>
+==
+(factorial 5)
+--
+=> 120
+--
+(fib 10)
+(fib 6)
+--
+=> 55
+=> 8
+--
+(early_return -10)
+(early_return 3)
+--
+=> "negative"
+=> "non-negative"
+--
+(maybe_return 0)
+(maybe_return 3)
+--
+=> "zero"
+=> ()
+--
+(find_first_even [1 3 5 6 7 8 ])
+(find_first_even [1 3 5 9 7 ])
+--
+=> 6
+=> ()
+--
+(outer 10)
+--
+=> 21
+--
+(classify [ 3 5 0 2 ])
+(classify [ 3 -5 0 2 ])
+(classify [ 3 5 1 2 ])
+--
+=> "has zero"
+=> "has negative"
+=> "all positive"
+--

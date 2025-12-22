@@ -204,3 +204,39 @@ Each expression `ei` is evaluated then a new list is created. Every time this
 expression is evaluated the subexpressions are evaluated and thus a new list
 is created every time.
 
+## return
+
+```
+(return)
+(return e)
+```
+
+`return`, like in other languages, does two things:
+* it <b>*immediately*</b> exits the function/method.
+* it sends a value back to where the function/method was called.
+
+However, in most other languages, `return` is a statement. In cicero, `return` is an expression. So, it evaluates to `e` if provided, otherwise the unit type `()`. Moreover, it can be only be used at a non-top level code i.e. inside a function/method body.
+
+Because, `return` is an expression, this can lead to some weird stuff in cicero. Some fun ones are:
+
+```
+(func (x) (return (return 10)))
+```
+The outermost `return` will never be executed. `(x)` will return 10.
+
+```
+(func (x) (raise (return "cicero")))
+```
+The exception will not be raised. `(x)` will return `"cicero"`.
+```
+(func (x) (return (raise "exception caused")))
+```
+Calling the function will raise an exception.
+```
+(set-global glo_y 1)
+(func (x) {
+  (set-global glo_y (return 10))
+  "this won't be returned"
+})
+```
+`glo_y` variable is never set to `10`. `(x)` returns `10`.
