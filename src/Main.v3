@@ -51,6 +51,7 @@ def main(args: Array<string>) -> int {
 						if (!CLOptions.SUPPRESS_OUTPUT.get()) 
 							System.puts(Strings.format1("=> %s\n", val.display()));
 					}
+					// Top-level cannot have return value, so that case is never possible
 					_ => {
 						System.error("eval error", "frame did not give result");
 						return 1;

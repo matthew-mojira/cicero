@@ -1,0 +1,185 @@
+--
+==
+{
+  (set-global x 100)
+  (func (t1){
+    (set-global x (return 10))
+    (return 20)
+  })
+  (t1)
+}
+x ; should be unchanged
+--
+=> 10
+=> 100
+--
+{
+  (func (t2) (return (+ 1 (return 10)))) ; outermost return is never reached
+  (t2)
+}
+--
+=> 10
+--
+{
+  (func (t3) (raise (return "cicero"))) ; exception never raised since return happens first
+  (t3)
+}
+--
+=> "cicero"
+--
+{
+  (func (t4) (return (raise "exn"))) ; should raise exception
+  (try { (t4) "fail" } else "pass")
+}
+--
+=> "pass"
+--
+{
+  (func (f a) (return (+ a 10)))
+  (func (t5) (return (f (return 5)))) ; inner return should exit the function
+  (t5)
+}
+--
+=> 5
+--
+(func (t6 x){
+  (set y (if x 1 (return -5))) ; conditional return evaluation
+  (return y)
+})
+(t6 true)
+(t6 false)
+--
+=> <func 't6'>
+=> 1
+=> -5
+--
+(func (t7 val){
+  (or val (return 99)) ; short-ciruit return check
+})
+(t7 true)
+(t7 false)
+--
+=> <func 't7'>
+=> true
+=> 99
+--
+(func (t8 val){
+  (and val (return 99)) ; short-ciruit return check
+})
+(t8 false)
+(t8 true)
+--
+=> <func 't8'>
+=> false
+=> 99
+--
+(func (t9){
+  (set i 0)
+  (while (return) ())
+})
+(t9)
+--
+=> <func 't9'>
+=> ()
+--
+(func (t10){
+  (set i 10)
+  (while true {
+    (set i (i.succ))
+    (return i)
+  })
+})
+(t10)
+--
+=> <func 't10'>
+=> 11
+--
+(func (t11){
+  (set x (set y (return 3)))
+})
+(t11)
+--
+=> <func 't11'>
+=> 3
+--
+(func (t12 x){
+  (return (if x (return 1) 2))
+})
+(t12 true)
+(t12 false)
+--
+=> <func 't12'>
+=> 1
+=> 2
+--
+(func (t13){
+  (set lst [1 (return 2) 3])
+  (return lst)
+})
+(t13)
+--
+=> <func 't13'>
+=> 2
+--
+(func (t14) {
+  (func (tmp a){
+    (set x (* a 10))
+    (return x)
+  })
+  (return (+ (tmp 5) 5))
+})
+(t14)
+--
+=> <func 't14'>
+=> 55
+--
+{
+  (set-global x 10)
+  (func (t15){
+    (and (return true) (set-global x 100)) ; short-ciruit return check
+  })
+  (t15)
+}
+x
+--
+=> true
+=> 10
+--
+(func (t16){
+  (((((return 10)))) 5 6) ; cicero is tricked and it thinks it is a function call
+})
+(t16)
+--
+=> <func 't16'>
+=> 10
+--
+{
+  (func (t17) (raise (return "no exn"))) ; shouldnt raise exception
+  (try { (t17) "pass" } else "fail")
+}
+--
+=> "pass"
+--
+{
+  (func (t18){
+    (try (raise "exn") catch { (return 100) 10 })
+  })
+  (t18)
+}
+--
+=> 100
+--
+(class A
+  (field name "A")
+  (method (get-name){
+    (get-field self (return self.name))
+  })
+)
+{
+  (set x (new A))
+  (x.get-name)
+}
+--
+=> <class 'A'>
+=> "A"
+--
