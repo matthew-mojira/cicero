@@ -5,7 +5,6 @@
       
     (method (inner_benchmark_loop inner_iterations){
         (self._verify_result (self._mandelbrot (inner_iterations.as double)) inner_iterations)
-
     })
 
     (method (benchmark)
@@ -17,25 +16,16 @@
     )
 
     (method (_verify_result result inner_iterations){
-        (if (= inner_iterations 500){
-            (= result 191)
-        }{
-        ;else
-            (if (= inner_iterations 750) {
-                (= result 50)
-            }{
-            ;else
-                (if (= inner_iterations 1) {
-                    (= result 128)
-                }{
-                    (set err "No verification result for ") 
-                    (set err (+ err (inner_iterations.as str)))
-                    (println (+ err " found"))
-                    (println (+ "Result is: " (result.as str)))
-                    false
-                })
-            })
-        })
+        (if (= inner_iterations 500) (return (= result 191)) ())
+        (if (= inner_iterations 750) (return (= result 50)) ())
+        (if (= inner_iterations 1) (return (= result 128)) ())
+        
+        ; else
+        (set err "No verification result for ") 
+        (set err (+ err (inner_iterations.as str)))
+        (println (+ err " found"))
+        (println (+ "Result is: " (result.as str)))
+        false
     })
 
     (method (_mandelbrot size){

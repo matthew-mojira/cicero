@@ -12,16 +12,19 @@
     (set GOOD_VOXEL_SIZE (* PROXIMITY_RADIUS 2.0))
 
     (func (_compare_numbers a b){
-        (if (= a b) 0 {
-        ;else
-            (if (< a b) -1 {
-            ;else
-                (if (> a b) 1 {
-                ;else
-                    (if (= a a) 1 -1)
-                })
-            })
-        })
+        (if (= a b)
+            (return 0)())
+
+        (if (< a b)
+            (return -1)())
+
+        (if (> a b)
+            (return 1)())
+
+        (if (= a a)
+            (return 1)())
+
+        -1 ; return
     })
 }
 
@@ -36,20 +39,21 @@
     (method (plus other){
         (set vec (new _Vector2D))
         (vec.init-values (+ self.x other.x) (+ self.y other.y))
-        vec
+        vec ; return
     })
 
     (method (minus other){
         (set vec (new _Vector2D))
         (vec.init-values (- self.x other.x) (- self.y other.y))
-        vec
+        vec ; return
     })
 
     (method (compare_to other){
         (set result (_compare_numbers self.x other.x))
-        (if (!= result 0) result
-            (_compare_numbers self.y other.y)
-        )
+        (if (!= result 0)
+            (return result)())
+
+        (_compare_numbers self.y other.y) ; return
     })
 )
 
@@ -67,32 +71,32 @@
     (method (plus other){
         (set vec (new _Vector3D))
         (vec.init-values (+ self.x other.x) (+ self.y other.y) (+ self.z other.z))
-        vec
+        vec ; return
     })
 
     (method (minus other){
         (set vec (new _Vector3D))
         (vec.init-values (- self.x other.x) (- self.y other.y) (- self.z other.z))
-        vec
+        vec ; return
     })
 
     (method (dot other)
-        (+ (+ (* self.x other.x) (* self.y other.y)) (* self.z other.z))
+        (+ (+ (* self.x other.x) (* self.y other.y)) (* self.z other.z)) ; return
     )
     
     (method (squared_magnitude)
-        (self.dot self)
+        (self.dot self) ; return
     )
 
     (method (magnitude){
         (set x (self.squared_magnitude))
-        (x.sqrt)
+        (x.sqrt) ; return
     })
 
     (method (times amount){
         (set vec (new _Vector3D))
         (vec.init-values (* self.x amount) (* self.y amount) (* self.z amount))
-        vec
+        vec ; return
     })
 )
 
@@ -111,7 +115,7 @@
         (while (!= current.left ())
             (set current current.left)
         )
-        current
+        current ; return
     })
 }
 
@@ -130,15 +134,15 @@
 
     (method (successor){
         (set x self)
-        (if (!= x.right ()) (_tree_minimum x.right){
-        ;else
-            (set y x.parent)
-            (while (and (!= y ()) (= x y.right)){
-                (set x y)
-                (set y y.parent)
-            })
-            y
+        (if (!= x.right ())
+            (return (_tree_minimum x.right))())
+
+        (set y x.parent)
+        (while (and (!= y ()) (= x y.right)){
+            (set x y)
+            (set y y.parent)
         })
+        y ; return
     })
 
 )
@@ -169,112 +173,113 @@
 
     (method (put key value){
         (set insertion_result (self._tree_insert key value))
-        (if (not insertion_result.is_new_entry) insertion_result.old_value {
-            (set x insertion_result.new_node)
+        (if (not insertion_result.is_new_entry)
+            (return insertion_result.old_value)())
 
-            (while (and (!= x self._root) (= x.parent.color RED)){
-                (if (= x.parent x.parent.parent.left){
-                    (set y x.parent.parent.right)
-                    (if (and (!= y ()) (= y.color RED)){
-                        (set-field color x.parent BLACK)
-                        (set-field color y BLACK)
-                        (set-field color x.parent.parent RED)
-                        (set x x.parent.parent)
-                    }{
-                    ;else
-                        (if (= x x.parent.right){
-                            (set x x.parent)
-                            (self._left_rotate x)
-                        }())
+        (set x insertion_result.new_node)
 
-                        (set-field color x.parent BLACK)
-                        (set-field color x.parent.parent RED)
-                        (self._right_rotate x.parent.parent)
-                    })
+        (while (and (!= x self._root) (= x.parent.color RED)){
+            (if (= x.parent x.parent.parent.left){
+                (set y x.parent.parent.right)
+                (if (and (!= y ()) (= y.color RED)){
+                    (set-field color x.parent BLACK)
+                    (set-field color y BLACK)
+                    (set-field color x.parent.parent RED)
+                    (set x x.parent.parent)
                 }{
                 ;else
-                    (set y x.parent.parent.left)
-                    (if (and (!= y ()) (= y.color RED)){
-                        (set-field color x.parent BLACK)
-                        (set-field color y BLACK)
-                        (set-field color x.parent.parent RED)
-                        (set x x.parent.parent)
-                    }{
-                    ;else
-                        (if (= x x.parent.left){
-                            (set x x.parent)
-                            (self._right_rotate x)
-                        }())
+                    (if (= x x.parent.right){
+                        (set x x.parent)
+                        (self._left_rotate x)
+                    }())
 
-                        (set-field color x.parent BLACK)
-                        (set-field color x.parent.parent RED)
-                        (self._left_rotate x.parent.parent)
-                    })
+                    (set-field color x.parent BLACK)
+                    (set-field color x.parent.parent RED)
+                    (self._right_rotate x.parent.parent)
+                })
+            }{
+            ;else
+                (set y x.parent.parent.left)
+                (if (and (!= y ()) (= y.color RED)){
+                    (set-field color x.parent BLACK)
+                    (set-field color y BLACK)
+                    (set-field color x.parent.parent RED)
+                    (set x x.parent.parent)
+                }{
+                ;else
+                    (if (= x x.parent.left){
+                        (set x x.parent)
+                        (self._right_rotate x)
+                    }())
+
+                    (set-field color x.parent BLACK)
+                    (set-field color x.parent.parent RED)
+                    (self._left_rotate x.parent.parent)
                 })
             })
-
-            (set-field color self._root BLACK)
-            ()
         })
+
+        (set-field color self._root BLACK)
+        (return)
     })
 
 
     (method (remove key){
         (set z (self._find_node key))
-        (if (= z ()) (){
-        ;else
-            (if (or (= z.left ()) (= z.right ())) (set y z) (set y (z.successor)))
+        (if (= z ())
+            (return)())
 
-            (if (= y.left ()) (set x y.right) (set x y.left))
+        (if (or (= z.left ()) (= z.right ())) (set y z) (set y (z.successor)))
 
-            (if (!= x ()) {
-                (set-field parent x y.parent)
-                (set x_parent x.parent)
-            }{
-                (set x_parent y.parent)
-            })
+        (if (= y.left ()) (set x y.right) (set x y.left))
 
-            (if (= y.parent ()) (set-field _root self x){
-            ;else
-                (if (= y y.parent.left)
-                    (set-field left y.parent x)
-                ;else
-                    (set-field right y.parent x)
-                )
-            })
-
-            (if (!= y z){
-                (if (= y.color BLACK)
-                    (self._remove_fixup x x_parent)
-                ())
-
-                (set-field parent y z.parent)
-                (set-field color y z.color)
-                (set-field left y z.left)
-                (set-field right y z.right)
-
-                (if (!= z.left ()) (set-field parent z.left y) ())
-                (if (!= z.right ()) (set-field parent z.right y) ())
-
-                (if (!= z.parent ()) {
-                    (if (= z.parent.left z)
-                        (set-field left z.parent y)
-                    ;else
-                        (set-field right z.parent y)
-                    )
-                }{
-                ;else
-                    (set-field _root self y)
-                })
-            }{
-            ;else
-                (if (= y.color BLACK)
-                    (self._remove_fixup x x_parent)
-                ())
-            })
-
-            z.value
+        (if (!= x ()) {
+            (set-field parent x y.parent)
+            (set x_parent x.parent)
+        }{
+            (set x_parent y.parent)
         })
+
+        (if (= y.parent ()) (set-field _root self x){
+        ;else
+            (if (= y y.parent.left)
+                (set-field left y.parent x)
+            ;else
+                (set-field right y.parent x)
+            )
+        })
+
+        (if (!= y z){
+            (if (= y.color BLACK)
+                (self._remove_fixup x x_parent)
+            ())
+
+            (set-field parent y z.parent)
+            (set-field color y z.color)
+            (set-field left y z.left)
+            (set-field right y z.right)
+
+            (if (!= z.left ()) (set-field parent z.left y) ())
+            (if (!= z.right ()) (set-field parent z.right y) ())
+
+            (if (!= z.parent ()) {
+                (if (= z.parent.left z)
+                    (set-field left z.parent y)
+                ;else
+                    (set-field right z.parent y)
+                )
+            }{
+            ;else
+                (set-field _root self y)
+            })
+        }{
+        ;else
+            (if (= y.color BLACK)
+                (self._remove_fixup x x_parent)
+            ())
+        })
+
+        z.value ; return
     })
 
     (method (get key){
@@ -283,28 +288,25 @@
     })
 
     (method (for_each fn){
-        (if (= self._root ()) () {
+        (if (= self._root ())
+            (return) ())
 
-            (set current (_tree_minimum self._root))
-            (while (!= current ()){
-                (set entry (new _Entry))
-                (entry.init-values current.key current.value)
-                (fn entry)
-                (set current (current.successor))
-            })
+        (set current (_tree_minimum self._root))
+        (while (!= current ()){
+            (set entry (new _Entry))
+            (entry.init-values current.key current.value)
+            (fn entry)
+            (set current (current.successor))
         })
     })
 
     (method (_find_node key){
         (set current self._root)
-        (set ret ())
-        (set done false)
 
-        (while (and (not done) (!= current ())) {
+        (while (!= current ()) {
             (set comparison_result (key.compare_to current.key))
             (if (= comparison_result 0){
-                (set ret current)
-                (set done true)
+                (return current)
             }{
                 (if (< comparison_result 0)
                     (set current current.left)
@@ -313,15 +315,14 @@
                 )
             })
         })
-        ret
+        (return)
     })
 
     (method (_tree_insert key value){
         (set y ())
         (set x self._root)
-        (set done false)
 
-        (while (and (not done) (!= x ())) {
+        (while (!= x ()) {
             (set y x)
             (set comparison_result (key.compare_to x.key))
             (if (< comparison_result 0) (set x x.left){
@@ -330,30 +331,27 @@
                 ;else
                     (set old_value x.value)
                     (set-field value x value)
-                    (set done true)
                     (set result (new _InsertResult))
                     (result.init-values false () old_value)
+                    (return result)
                 })
             })
         })
 
-        (if done result {
+        (set z (new _Node))
+        (z.init-values key value)
+        (set-field parent z y)
+        (if (= y ()) (set-field _root self z){
         ;else
-            (set z (new _Node))
-            (z.init-values key value)
-            (set-field parent z y)
-            (if (= y ()) (set-field _root self z){
+            (if (< (key.compare_to y.key) 0)
+                (set-field left y z)
             ;else
-                (if (< (key.compare_to y.key) 0)
-                    (set-field left y z)
-                ;else
-                    (set-field right y z)
-                )
-            })
-            (set result (new _InsertResult))
-            (result.init-values true z ())
-            result
+                (set-field right y z)
+            )
         })
+        (set result (new _InsertResult))
+        (result.init-values true z ())
+        result ; return
     })
 
     (method (_left_rotate x){
@@ -377,7 +375,7 @@
 
         (set-field left y x)
         (set-field parent x y)
-        y
+        y ; return
     })
 
     (method (_right_rotate y){
@@ -401,7 +399,7 @@
 
         (set-field right x y)
         (set-field parent y x)
-        x
+        x ; return
     })
 
     (method (_remove_fixup x x_parent){
@@ -496,9 +494,13 @@
     (method (init-values value) (set-field _value self value))
 
     (method (compare_to other){
-        (if (= self._value other._value) 0 {
-            (if (< self._value other._value) -1 1)
-        })
+        (if (= self._value other._value)
+            (return 0)())
+
+        (if (< self._value other._value)
+            (return -1)())
+
+        1 ; return
     })
 )
 
@@ -571,7 +573,7 @@
         })
 
         (all_reduced.for_each find_collisions)
-        collisions
+        collisions ; return
     })
 )
 
@@ -579,74 +581,74 @@
 (set _inf_negative -1.7976931348623157e3081)
 
 (func (_is_in_voxel voxel motion){
-    (if (or (> voxel.x MAX_X) (or (< voxel.x MIN_X) (or (> voxel.y MAX_Y) (< voxel.y MIN_Y)))) false {
-    ;else
-        (set init motion.pos_one)
-        (set fin motion.pos_two)
+    (if (or (> voxel.x MAX_X) (or (< voxel.x MIN_X) (or (> voxel.y MAX_Y) (< voxel.y MIN_Y))))
+        (return false) ())
 
-        (set v_s GOOD_VOXEL_SIZE)
-        (set r (/ PROXIMITY_RADIUS 2.0))
+    (set init motion.pos_one)
+    (set fin motion.pos_two)
 
-        (set v_x voxel.x)
-        (set x0 init.x)
-        (set xv (- fin.x init.x))
+    (set v_s GOOD_VOXEL_SIZE)
+    (set r (/ PROXIMITY_RADIUS 2.0))
 
-        (set v_y voxel.y)
-        (set y0 init.y)
-        (set yv (- fin.y init.y))
+    (set v_x voxel.x)
+    (set x0 init.x)
+    (set xv (- fin.x init.x))
 
-        (if (= xv 0.0) {
-            (set low_x (if (<  (- v_x (+ r x0)) 0.0) _inf_negative _inf_positive))
-            (set high_x (if (< (- (+ (+ v_x v_s) r) x0) 0.0) _inf_negative _inf_positive))
-        }{
-            (set low_x (/ (- v_x (+ r x0)) xv))
-            (set high_x (/ (- (+ (+ v_x v_s) r) x0) xv))
-        })
+    (set v_y voxel.y)
+    (set y0 init.y)
+    (set yv (- fin.y init.y))
 
-        (if (< xv 0.0) {
-            (set tmp high_x)
-            (set high_x low_x)
-            (set low_x tmp)
-        }())
+    (if (= xv 0.0) {
+        (set low_x (if (<  (- v_x (+ r x0)) 0.0) _inf_negative _inf_positive))
+        (set high_x (if (< (- (+ (+ v_x v_s) r) x0) 0.0) _inf_negative _inf_positive))
+    }{
+        (set low_x (/ (- v_x (+ r x0)) xv))
+        (set high_x (/ (- (+ (+ v_x v_s) r) x0) xv))
+    })
 
-        (if (= yv 0.0) {
-            (set low_y (if (<  (- v_y (+ r y0)) 0.0) _inf_negative _inf_positive))
-            (set high_y (if (< (- (+ (+ v_y v_s) r) y0) 0.0) _inf_negative _inf_positive))
-        }{
-            (set low_y (/ (- v_y (+ r y0)) yv))
-            (set high_y (/ (- (+ (+ v_y v_s) r) y0) yv))
-        })
+    (if (< xv 0.0) {
+        (set tmp high_x)
+        (set high_x low_x)
+        (set low_x tmp)
+    }())
 
-        (if (< yv 0.0) {
-            (set tmp high_y)
-            (set high_y low_y)
-            (set low_y tmp)
-        }())
+    (if (= yv 0.0) {
+        (set low_y (if (<  (- v_y (+ r y0)) 0.0) _inf_negative _inf_positive))
+        (set high_y (if (< (- (+ (+ v_y v_s) r) y0) 0.0) _inf_negative _inf_positive))
+    }{
+        (set low_y (/ (- v_y (+ r y0)) yv))
+        (set high_y (/ (- (+ (+ v_y v_s) r) y0) yv))
+    })
 
+    (if (< yv 0.0) {
+        (set tmp high_y)
+        (set high_y low_y)
+        (set low_y tmp)
+    }())
+
+
+    (and
+        (or (and (= xv 0.0) (and (<= v_x (+ x0 r)) (<= (- x0 r) (+ v_x v_s))))
+        (or (and (<= low_x 1.0) (<= 1.0 high_x))
+        (or (and (<= low_x 0.0) (<= 0.0 high_x))
+            (and (<= 0.0 low_x) (<= high_x 1.0))
+        )))
 
         (and
-            (or (and (= xv 0.0) (and (<= v_x (+ x0 r)) (<= (- x0 r) (+ v_x v_s))))
-            (or (and (<= low_x 1.0) (<= 1.0 high_x))
-            (or (and (<= low_x 0.0) (<= 0.0 high_x))
-                (and (<= 0.0 low_x) (<= high_x 1.0))
+            (or (and (= yv 0.0) (and (<= v_y (+ y0 r)) (<= (- y0 r) (+ v_y v_s))))
+            (or (and (<= low_y 1.0) (<= 1.0 high_y))
+            (or (and (<= low_y 0.0) (<= 0.0 high_y))
+                (and (<= 0.0 low_y) (<= high_y 1.0))
             )))
 
-            (and
-                (or (and (= yv 0.0) (and (<= v_y (+ y0 r)) (<= (- y0 r) (+ v_y v_s))))
-                (or (and (<= low_y 1.0) (<= 1.0 high_y))
-                (or (and (<= low_y 0.0) (<= 0.0 high_y))
-                    (and (<= 0.0 low_y) (<= high_y 1.0))
-                )))
-
-                (or (= xv 0.0)
-                (or (= yv 0.0)
-                (or (and (<= low_y high_x) (<= high_x high_y))
-                (or (and (<= low_y low_x) (<= low_x high_y))
-                    (and (<= low_x low_y) (<= high_y high_x))
-                ))))
-            )
+            (or (= xv 0.0)
+            (or (= yv 0.0)
+            (or (and (<= low_y high_x) (<= high_x high_y))
+            (or (and (<= low_y low_x) (<= low_x high_y))
+                (and (<= low_x low_y) (<= high_y high_x))
+            ))))
         )
-    })
+    )
 })
 
 
@@ -660,23 +662,24 @@
 })
 
 (func (_recurse voxel_map seen next_voxel motion){
-    (if (_is_in_voxel next_voxel motion){
-        (if (seen.put next_voxel true) (){
+    (if (not (_is_in_voxel next_voxel motion))
+        (return) ())
 
-            (_put_into_map voxel_map next_voxel motion)
-            (set nv_mi_ho (next_voxel.minus _horizontal))
-            (set nv_pl_ho (next_voxel.plus _horizontal))
+    (if (seen.put next_voxel true)
+        (return) ())
 
-            (_recurse voxel_map seen nv_mi_ho motion)
-            (_recurse voxel_map seen nv_pl_ho motion)
-            (_recurse voxel_map seen (next_voxel.minus _vertical) motion)
-            (_recurse voxel_map seen (next_voxel.plus _vertical) motion)
-            (_recurse voxel_map seen (nv_mi_ho.minus _vertical) motion)
-            (_recurse voxel_map seen (nv_mi_ho.plus _vertical) motion)
-            (_recurse voxel_map seen (nv_pl_ho.minus _vertical) motion)
-            (_recurse voxel_map seen (nv_pl_ho.plus _vertical) motion)
-        })
-    }())
+    (_put_into_map voxel_map next_voxel motion)
+    (set nv_mi_ho (next_voxel.minus _horizontal))
+    (set nv_pl_ho (next_voxel.plus _horizontal))
+
+    (_recurse voxel_map seen nv_mi_ho motion)
+    (_recurse voxel_map seen nv_pl_ho motion)
+    (_recurse voxel_map seen (next_voxel.minus _vertical) motion)
+    (_recurse voxel_map seen (next_voxel.plus _vertical) motion)
+    (_recurse voxel_map seen (nv_mi_ho.minus _vertical) motion)
+    (_recurse voxel_map seen (nv_mi_ho.plus _vertical) motion)
+    (_recurse voxel_map seen (nv_pl_ho.minus _vertical) motion)
+    (_recurse voxel_map seen (nv_pl_ho.plus _vertical) motion)
 })
 
 (func (_reduce_collision_set motions){
@@ -691,7 +694,7 @@
     })
 
     (voxel_map.for_each each)
-    result
+    result ; return
 })
 
 (func (_voxel_hash position){
@@ -710,7 +713,7 @@
 
     (set vec (new _Vector2D))
     (vec.init-values x y)
-    vec
+    vec ; return
 })
 
 (func (_draw_motion_on_voxel_map voxel_map motion){
@@ -749,44 +752,45 @@
             (set c (+ (* (- 0.0 radius) radius) (initmp.squared_magnitude)))
 
             (set discr (- (* b b) (* 4.0 (* a c))))
-            (if (< discr 0.0) (){
-            ;else
-                (set v1 (/ (- 0.0 (+ b (discr.sqrt))) (* 2.0 a)))
-                (set v2 (/ (- (discr.sqrt) b) (* 2.0 a)))
+            (if (< discr 0.0)
+                (return) ())
 
-                (if (and (<= v1 v2)
-                    (or (and (<= v1 1.0) (<= 1.0 v2))
-                        (or (and (<= v1 0.0) (<= 0.0 v2))
-                            (and (<= 0.0 v1) (<= v2 1.0))
-                    ))){
-                        (if (<= v1 0.0) (set v 0.0) (set v v1))
+            (set v1 (/ (- 0.0 (+ b (discr.sqrt))) (* 2.0 a)))
+            (set v2 (/ (- (discr.sqrt) b) (* 2.0 a)))
 
-                        (set result1 (init1.plus (vec1.times v)))
-                        (set result2 (init2.plus (vec2.times v)))
+            (if (and (<= v1 v2)
+                (or (and (<= v1 1.0) (<= 1.0 v2))
+                    (or (and (<= v1 0.0) (<= 0.0 v2))
+                        (and (<= 0.0 v1) (<= v2 1.0))
+                ))){
+                    (if (<= v1 0.0) (set v 0.0) (set v v1))
 
-                        (set result (result1.plus result2))
-                        (set result (result.times 0.5))
+                    (set result1 (init1.plus (vec1.times v)))
+                    (set result2 (init2.plus (vec2.times v)))
 
-                        (if (and (>= result.x MIN_X)
-                            (and (<= result.x MAX_X)
-                            (and (>= result.y MIN_Y)
-                            (and (<= result.y MAX_Y)
-                            (and (>= result.z MIN_Z)
-                            (<= result.z MAX_Z)
-                        )))))
-                            result
-                        ())
-                } ())
-            })
-        }{
-        ;else
-            (set distmp (init2.minus init1))
-            (set dist (distmp.magnitude))
-            (if (<= dist radius){
-                (set inimp (init1.plus init2))
-                (inimp.times 0.5)
+                    (set result (result1.plus result2))
+                    (set result (result.times 0.5))
+
+                    (if (and (>= result.x MIN_X)
+                        (and (<= result.x MAX_X)
+                        (and (>= result.y MIN_Y)
+                        (and (<= result.y MAX_Y)
+                        (and (>= result.z MIN_Z)
+                        (<= result.z MAX_Z)
+                    )))))
+                        (return result)())
             } ())
-        })
+
+            (return)
+        }())
+
+        (set distmp (init2.minus init1))
+        (set dist (distmp.magnitude))
+        (if (<= dist radius){
+            (set inimp (init1.plus init2))
+            (return (inimp.times 0.5))
+        } ())
+        (return)
     })
 )
 
@@ -834,7 +838,7 @@
 
             (set i (+ i 2))
         })
-        frame
+        frame ; return
     })
 )
 
@@ -856,36 +860,29 @@
 
             (set i (i.+ 1.0))
         })
-        actual_collisions
+        actual_collisions ; return
     })
 
     (method (inner_benchmark_loop inner_iterations){
-        (self._verify_result (self._benchmark inner_iterations) inner_iterations)
+        (self._verify_result (self._benchmark inner_iterations) inner_iterations) ; return
     })
 
     (method (_verify_result actual_collisions num_aircraft){
-        (if (= num_aircraft 1000) (= actual_collisions 14484){
-        ;else
-            (if (= num_aircraft 500) (= actual_collisions 14484){
-            ;else
-                (if (= num_aircraft 250) (= actual_collisions 10830){
-                ;else
-                    (if (= num_aircraft 200) (= actual_collisions 8655){
-                    ;else
-                        (if (= num_aircraft 100) (= actual_collisions 4305){
-                        ;else
-                            (if (= num_aircraft 10) (= actual_collisions 390){
-                            ;else
-                                (if (= num_aircraft 2) (= actual_collisions 42){
-                                ;else
-                                    false
-                                })
-                            })
-                        })
-                    })
-                })
-            })
-        })
+        (if (= num_aircraft 1000)
+            (return (= actual_collisions 14484)) ())
+        (if (= num_aircraft 500)
+            (return (= actual_collisions 14484)) ())
+        (if (= num_aircraft 250)
+            (return (= actual_collisions 10830)) ())
+        (if (= num_aircraft 200)
+            (return (= actual_collisions 8655)) ())
+        (if (= num_aircraft 100)
+            (return (= actual_collisions 4305)) ())
+        (if (= num_aircraft 10)
+            (return (= actual_collisions 390)) ())
+        (if (= num_aircraft 2)
+            (return (= actual_collisions 42)) ())
+        (return false)
     })
 
     (method (benchmark) (raise "Should never be reached"))

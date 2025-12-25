@@ -8,30 +8,16 @@
     (self._verify_result (looptester.main inner_iterations 50 10 10 5) inner_iterations)
   }) 
 
-  (method (_verify_result result inner_iterations){
-    (if (= inner_iterations 15_000)
-      (and (= (result.get 0) 46_602) (= (result.get 1) 5213)){
-      ;else
-      (if (= inner_iterations 1_500)
-        (and (= (result.get 0) 6_102) (= (result.get 1) 5213)){
-          ;else
-          (if (= inner_iterations 150)
-            (and (= (result.get 0) 2_052) (= (result.get 1) 5213)){
-              ;else
-              (if (= inner_iterations 15)
-                (and (= (result.get 0) 1_647) (= (result.get 1) 5213)){
-                  ;else
-                  (if (= inner_iterations 1)
-                    (and (= (result.get 0) 1_605) (= (result.get 1) 5213)){
-                      ;else
-                      ; no verification result
-                      false
-                    })
-                })
-            })
-        })
-      })
-   })
+  (method (_verify_result result inner_iterations)
+    (cond
+      ((= inner_iterations 15_000) (return (and (= (result.get 0) 46_602) (= (result.get 1) 5213))))
+      ((= inner_iterations 1_500)  (return (and (= (result.get 0) 6_102) (= (result.get 1) 5213))))
+      ((= inner_iterations 150)    (return (and (= (result.get 0) 2_052) (= (result.get 1) 5213))))
+      ((= inner_iterations 15)     (return (and (= (result.get 0) 1_647) (= (result.get 1) 5213))))
+      ((= inner_iterations 1)      (return (and (= (result.get 0) 1_605) (= (result.get 1) 5213))))
+      (true (return false))
+    )
+  )
 
   (method (benchmark) (raise "should not be reached"))
   (method (verify_result result) (raise "should not be reached"))
@@ -86,7 +72,7 @@
     })
 
     (if (= (self.num_nodes) 1)(set-field start_basic_block self node)())
-    node
+    node ; return
   })
 
   (method (add_edge edge) (self._edge_list.append edge))
@@ -114,7 +100,7 @@
     (set-field counter loop self._loop_counter)
     (set-field _loop_counter self (self._loop_counter.succ))
     (self._loops.append loop)
-    loop
+    loop ; return
   })
   
   (method (calculate_nesting_level){
@@ -201,7 +187,7 @@
 
     (func (lambda i) (i.union self.parent))
     (node_list.for_each lambda)
-    node
+    node ; return
   })
 
   (method (union basic_block) (set-field parent self basic_block))
@@ -223,7 +209,7 @@
     (c.init-values self._cfg (bb0.succ) (+ bb0 3))
     (set d (new _BasicBlockEdge))
     (d.init-values self._cfg (+ bb0 2) (+ bb0 3))
-    (+ bb0 3)
+    (+ bb0 3) ; return
   })
   
   (method (_build_connect start end_){
@@ -237,7 +223,7 @@
       (self._build_connect (+ start i) (+ (+ start i) 1))
       (set i (i.succ))
     })
-    (+ start n)
+    (+ start n) ; return
   })
 
   (method (_build_base_loop from_){
@@ -251,7 +237,7 @@
 
     (self._build_connect footer from_)
     (set footer (self._build_straight footer 1))
-    footer
+    footer ; return
   })
 
   (method (main num_dummy_loops find_loop_iterations par_loops ppar_loops pppar_loops){
@@ -267,7 +253,7 @@
     })
 
     (self._lsg.calculate_nesting_level)
-    [(self._lsg.num_loops) (self._cfg.num_nodes)]
+    [(self._lsg.num_loops) (self._cfg.num_nodes)] ; return
   })
 
   (method (_construct_cfg par_loops ppar_loops pppar_loops){
@@ -380,7 +366,7 @@
 
     (outer_blocks.for_each each)
     (self._last.set current state.last_id)
-    state.last_id
+    state.last_id ; return
   })
 
   (method (_init_all_nodes){
@@ -432,70 +418,68 @@
   })
 
   (method (find_loops){
-    (set returnNow false)
-    (if (= self._cfg.start_basic_block ()) (){
-      ;else
-      (set size (self._cfg.num_nodes))
-      (self._non_back_preds.remove_all)
-      (self._back_preds.remove_all)
-      (self._number.remove_all)
+    (if (= self._cfg.start_basic_block ())
+      (return)
+    ())
 
-      (if (> size self._max_size){
-        (set-field _header self (empty_vec size 0))
-        (set-field _type self (empty_vec size ()))
-        (set-field _last self (empty_vec size 0))
-        (set-field _nodes self (empty_vec size ()))
-        (set-field _max_size self size)
+    (set size (self._cfg.num_nodes))
+    (self._non_back_preds.remove_all)
+    (self._back_preds.remove_all)
+    (self._number.remove_all)
+
+    (if (> size self._max_size){
+      (set-field _header self (empty_vec size 0))
+      (set-field _type self (empty_vec size ()))
+      (set-field _last self (empty_vec size 0))
+      (set-field _nodes self (empty_vec size ()))
+      (set-field _max_size self size)
+    }())
+
+    (set i 0)
+    (while (< i size){
+      (self._non_back_preds.append (new Set))
+      (self._back_preds.append (new Vector))
+      (self._nodes.set i (new _UnionFindNode))
+
+      (set i (i.succ))
+    })
+
+    (self._init_all_nodes)
+    (self._identify_edges size)
+    (self._header.set 0 0)
+
+    (set w (size.pred))
+    (while (>= w 0) {
+      (set node_pool (new Vector))
+      (set node (self._nodes.get w))
+      (set node_w node.bb)
+      (if (!= node_w ()){
+        (self._step_d w node_pool)
+
+        (set work_list (new Vector))
+        (node_pool.for_each work_list.append)
+
+        (if (!= (node_pool.size) 0)(self._type.set w BB_IRREDUCIBLE)())
+
+        (while (not (work_list.is_empty)){
+          (set x (work_list.remove_first))
+
+          (set non_back (self._non_back_preds.at x.dfs_number))
+          (set non_back_size (non_back.size))
+          (if (> non_back_size _MAXNONBACKPREDS)
+            (return) ())
+
+          (self._step_e_process_non_back_preds w node_pool work_list x)
+        })
       }())
 
-      (set i 0)
-      (while (< i size){
-        (self._non_back_preds.append (new Set))
-        (self._back_preds.append (new Vector))
-        (self._nodes.set i (new _UnionFindNode))
+      (if (or (> (node_pool.size) 0) (= (self._type.get w) BB_SELF)){
+        (set loop
+          (self._lsg.create_new_loop node_w (!= (self._type.get w) BB_IRREDUCIBLE)))
+        (self._set_loop_attributes w node_pool loop)
+      }())
 
-        (set i (i.succ))
-      })
-
-      (self._init_all_nodes)
-      (self._identify_edges size)
-      (self._header.set 0 0)
-
-      (set w (size.pred))
-      (while (and (>= w 0) (returnNow.not)){
-        (set node_pool (new Vector))
-        (set node (self._nodes.get w))
-        (set node_w node.bb)
-        (if (!= node_w ()){
-          (self._step_d w node_pool)
-
-          (set work_list (new Vector))
-          (node_pool.for_each work_list.append)
-
-          (if (!= (node_pool.size) 0)(self._type.set w BB_IRREDUCIBLE)())
-
-          (while (not (work_list.is_empty)){
-            (set x (work_list.remove_first))
-
-            (set non_back (self._non_back_preds.at x.dfs_number))
-            (set non_back_size (non_back.size))
-            (if (> non_back_size _MAXNONBACKPREDS) (set returnNow true) {
-              ;else
-              (self._step_e_process_non_back_preds w node_pool work_list x)
-            })
-          })
-        }())
-
-        (if returnNow (){
-          (if (or (> (node_pool.size) 0) (= (self._type.get w) BB_SELF)){
-            (set loop
-              (self._lsg.create_new_loop node_w (!= (self._type.get w) BB_IRREDUCIBLE)))
-            (self._set_loop_attributes w node_pool loop)
-          }())
-        })
-
-        (set w (w.pred))
-      })
+      (set w (w.pred))
     })
   })
 

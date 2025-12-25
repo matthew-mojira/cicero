@@ -32,27 +32,22 @@
 
   (method (place_queen c){
     (set r 0)
-    (set ret false)
-    (while (and (< r 8) (ret.not)){
+    (while (< r 8){
 
       (if (self.get_row_column r c) {
         (self._queen_rows.set r c)
         (self.set_row_column r c false)
 
-        (if (= c 7) (set ret true) {
-          ;else
-          (if (self.place_queen (c.succ)) (set ret true) {
-            ;else
+        (if (= c 7) (return true) ())
+        (if (self.place_queen (c.succ)) (return true) ())
 
-            (self.set_row_column r c true)
-           })
-         })
-        }())
+        (self.set_row_column r c true)
+      } ())
 
-        (set r (r.succ))
-     })
+      (set r (r.succ))
+    })
 
-    ret
+    false
    })
 
   (method (get_row_column r c)

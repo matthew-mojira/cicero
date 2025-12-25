@@ -33,12 +33,10 @@
   (method (is_shorter_than x y){
     (set x_tail x)
     (set y_tail y)
-    (set return_value false)
 
     (while (!= y_tail ()) {
       (if (= x_tail ()) {
-        (set return_value true)
-        (set y_tail ())
+        (return true)
        }
        ; else
        {
@@ -46,7 +44,7 @@
         (set y_tail y_tail.next)
        })
      })
-    return_value
+    false
    })
 
   (method (tail x y z){

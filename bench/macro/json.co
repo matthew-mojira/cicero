@@ -8,22 +8,24 @@
 	(method (benchmark){
 		(set parser (new _Parser))
 		(parser.init-values _RAP_BENCHMARK_MINIFIED)
-		(parser.parse)
+		(parser.parse) ; return
 	})
 
 	(method (verify_result result){
-		(if (result.is_object){
+		(if (not (result.is_object))
+			(return false) ())
 
-			(set obj (result.as_object))
-			(set x (obj.get "head"))
-			(if (x.is_object){
-				(set x (obj.get "operations"))
-				(if (x.is_array){
-					(set arr (x.as_array))
-					(= 156 (arr.size))
-				} false)
-			} false)
-		} false)
+		(set obj (result.as_object))
+		(set x (obj.get "head"))
+		(if (not (x.is_object))
+			(return false) ())
+
+		(set x (obj.get "operations"))
+		(if (not (x.is_array))
+			(return false) ())
+
+		(set arr (x.as_array))
+		(= 156 (arr.size)) ; return
 	})
 )
 }
@@ -92,36 +94,31 @@
 	})
 
 	(method (_read_value){
-		(if (= self._current 'n') (self._read_null){
-			;else
-			(if (= self._current 't') (self._read_true){
-				;else
-				(if (= self._current 'f') (self._read_false){
-					;else
-					(if (= self._current '\"') (self._read_string){
-						;else
-						(if (= self._current '[') (self._read_array){
-							;else
-							(if (= self._current '{') (self._read_object){
-								;else
-								(if (or (= self._current '-')
-									(or (= self._current '0')
-									(or (= self._current '1')
-									(or (= self._current '2')
-									(or (= self._current '3')
-									(or (= self._current '4')
-									(or (= self._current '5')
-									(or (= self._current '6')
-									(or (= self._current '7')
-									(or (= self._current '8')
-									(= self._current '9')
-									)))))))))) (self._read_number) (raise (self._expected "value")))
-							})
-						})
-					})
-				})
-			})
-		})
+		(if (= self._current 'n')
+			(return (self._read_null)) ())
+		(if (= self._current 't')
+			(return (self._read_true)) ())
+		(if (= self._current 'f')
+			(return (self._read_false)) ())
+		(if (= self._current '\"') 
+			(return (self._read_string)) ())
+		(if (= self._current '[')
+			(return (self._read_array)) ())
+		(if (= self._current '{')
+			(return (self._read_object)) ())
+		(if (or (= self._current '-')
+			(or (= self._current '0')
+			(or (= self._current '1')
+			(or (= self._current '2')
+			(or (= self._current '3')
+			(or (= self._current '4')
+			(or (= self._current '5')
+			(or (= self._current '6')
+			(or (= self._current '7')
+			(or (= self._current '8')
+			(= self._current '9')
+			)))))))))) (return (self._read_number)) ())
+		(raise (self._expected "value"))
 	})
 
 	(method (_read_array_element array){
@@ -134,14 +131,13 @@
 		(self._read)
 		(set array (new _JsonArray))
 		(self._skip_white_space)
-		(if (self._read_char ']') array {
+		(if (self._read_char ']')
+			(return array) ())
 
-			;else
-        	(self._read_array_element array)
-			(while (self._read_char ',') (self._read_array_element array))
+		(self._read_array_element array)
+		(while (self._read_char ',') (self._read_array_element array))
 
-			(if (not (self._read_char ']')) (self._expected "',' or ']'") array)
-		})
+		(if (not (self._read_char ']')) (raise (self._expected "',' or ']'")) array)
 	})
 
 	(method (_read_object_key_value_pair obj){
@@ -162,19 +158,19 @@
 		(set obj (new _JsonObject))
 		(self._skip_white_space)
 
-		(if (self._read_char '}') obj {
-			;else
-        	(self._read_object_key_value_pair obj)
-			(while (self._read_char ',') (self._read_object_key_value_pair obj))
+		(if (self._read_char '}')
+			(return obj)())
 
-			(if (not (self._read_char '}')) (raise (self._expected "',' or '}'")) obj)
-		})
+		(self._read_object_key_value_pair obj)
+		(while (self._read_char ',') (self._read_object_key_value_pair obj))
+
+		(if (not (self._read_char '}')) (raise (self._expected "',' or '}'")) obj)
 	})
 
 	(method (_read_name){
 		(if (!= self._current '\"') (raise (self._expected "name"))
 			;else
-			(self._read_string_internal))
+			(self._read_string_internal)) ; return
 	})
 
 	(method (_read_null){
@@ -182,7 +178,7 @@
         (self._read_required_char 'u')
         (self._read_required_char 'l')
         (self._read_required_char 'l')
-		_LITERAL_NULL
+		_LITERAL_NULL ; return
 	})
 
 	(method (_read_true){
@@ -190,7 +186,7 @@
         (self._read_required_char 'r')
         (self._read_required_char 'u')
         (self._read_required_char 'e')
-		_LITERAL_TRUE
+		_LITERAL_TRUE ; return
 	})
 
 	(method (_read_false){
@@ -199,7 +195,7 @@
         (self._read_required_char 'l')
         (self._read_required_char 's')
         (self._read_required_char 'e')
-		_LITERAL_FALSE
+		_LITERAL_FALSE ; return
 	})
 
 	(method (_read_required_char ch){
@@ -209,7 +205,7 @@
 	(method (_read_string){
 		(set json_string (new _JsonString))
 		(json_string.init-values (self._read_string_internal))
-		json_string
+		json_string ; return
 	})
 
 	(method (_read_string_internal){
@@ -227,30 +223,24 @@
 		})
 		(set s (self._end_capture))
 		(self._read)
-		s
+		s ; return
 	})
 
 	(method (_read_escape_char){
-		(if (= self._current '\"') '\"'{
-			;else
-			(if (= self._current '/') '/'{
-				;else
-				(if (= self._current '\\') '\\'{
-					;else
-					; no support in virgil for parsing '\b' and '\f'
-					(if (= self._current 'n') '\n'{
-						;else
-						(if (= self._current 't') '\t'{
-							;else
-							(if (= self._current 'r') '\r'{
-								;else
-								(raise (self._expected "valid escape character"))
-							})
-						})
-					})
-				})
-			})
-		})
+		; no support in virgil for parsing '\b' and '\f'
+		(if (= self._current '\"')
+			(return '\"') ())
+		(if (= self._current '/')
+			(return '/') ())
+		(if (= self._current '\\')
+			(return '\\') ())
+		(if (= self._current 'n')
+			(return '\n') ())
+		(if (= self._current 't')
+			(return '\t') ())
+		(if (= self._current 'r')
+			(return '\r') ())
+		(raise (self._expected "valid escape character"))
 	})
 
 	(method (_read_escape){
@@ -263,56 +253,60 @@
 		(self._start_capture)
 		(self._read_char '-')
 		(set first_digit self._current)
-		(if (not (self._read_digit)) (raise (self._expected "digit")){
+		(if (not (self._read_digit))
+			(raise (self._expected "digit")) ())
 
-			;else
-			(if (!= first_digit '0') (while (self._read_digit) ()) ())
+		(if (!= first_digit '0')
+			(while (self._read_digit)
+				() ; pass
+			)
+		())
 
-			(self._read_fraction)
-			(self._read_exponent)
-			(set json_number (new _JsonNumber))
-			(json_number.init-values (self._end_capture))
-			json_number
-		})
+		(self._read_fraction)
+		(self._read_exponent)
+		(set json_number (new _JsonNumber))
+		(json_number.init-values (self._end_capture))
+		json_number ; return
 	})
 
 	(method (_read_fraction){
-		(if (not (self._read_char '.')) false {
-			;else
-			(if (not (self._read_digit)) (raise (self._expected "digit")) {
-				;else
-				(while (self._read_digit) ())
-				true
-			})
-		})
+		(if (not (self._read_char '.'))
+			(return false) ())
+
+		(if (not (self._read_digit))
+			(raise (self._expected "digit")) ())
+
+		(while (self._read_digit) ())
+		true ; return
 	})
 
 	(method (_read_exponent){
-		(if (and (not (self._read_char 'e')) (not (self._read_char 'E'))) false {
-			;else
-			(if (not (self._read_char '+')) (self._read_char '-'){
-				;else
-				(if (self._read_digit) (raise (self._expected "digit")){
-					;else
-					(while (self._read_digit) ())
-					true
-				})
-			})
-		})
+		(if (and (not (self._read_char 'e')) (not (self._read_char 'E')))
+			(return false) ())
+
+		(if (not (self._read_char '+'))
+			(return (self._read_char '-')) ())
+
+		(if (self._read_digit) (raise (self._expected "digit")) ())
+
+		(while (self._read_digit) ())
+		true ; return
 	})
 
 	(method (_read_char ch){
-		(if (!= self._current ch) false {
-			(self._read)
-			true
-		})
+		(if (!= self._current ch)
+			(return false) ())
+
+		(self._read)
+		true ; return
 	})
 
 	(method (_read_digit){
-		(if (not (self._is_digit)) false {
-			(self._read)
-			true
-		})
+		(if (not (self._is_digit))
+			(return false) ())
+
+		(self._read)
+		true ; return
 	})
 
 	(method (_skip_white_space){
@@ -357,7 +351,7 @@
 			(set-field _capture_buffer self "")
 		})
 		(set-field _capture_start self (self._capture_start.pred))
-		captured
+		captured ; return
 	})
 
 	(method (_expected expected){
@@ -370,19 +364,19 @@
 		(x.+ (+ "\nline: " (self._line.as str)))
 		(set col (self._column.pred))
 		(x.+ (+ "\ncol: " (col.as str)))
-		x
+		x ; return
 	})
 
 	(method (_is_white_space){
-		(if (or (= ' ' self._current)
+		(or (= ' ' self._current)
 			(or (= '\t' self._current)
 			(or (= '\n' self._current)
 			(= '\r' self._current)
-		))) true false)
+		))) ; return
 	})
 	
 	(method (_is_digit){
-		(if (or (= self._current '0')
+		(or (= self._current '0')
 		(or (= self._current '1')
 		(or (= self._current '2')
 		(or (= self._current '3')
@@ -392,7 +386,7 @@
 		(or (= self._current '7')
 		(or (= self._current '8')
 		(= self._current '9')
-		))))))))) true false)
+		))))))))) ; return
 	})
 
 	(method (_is_end_of_text) (= self._current ()))
@@ -412,7 +406,7 @@
 
 	(method (get name){
 		(set slot (self._hash_slot_for name))
-        (- (& (self._hash_table.get slot) 0xFF) 1)
+        (- (& (self._hash_table.get slot) 0xFF) 1) ; return
 	})
 
 	(method (_string_hash s) (* (s.length) 1_402_589))
@@ -428,7 +422,7 @@
 	(method (add value){
 		(if (= value ()) (raise "value is null" ) ())
 		(self._values.append value)
-		self
+		self ; return
 	})
 
 	(method (size) (self._values.size))
@@ -456,23 +450,22 @@
 	(field _table (new _HashIndexTable))
 
 	(method (add name value){
-		(if (= name ()) (raise "name is null"){
-			;else
-			(if (= value ()) (raise "value is null"){
-				;else
-				(self._table.add name (self._names.size))
-				(self._names.append name)
-				(self._values.append value)
-				self
-			})
-		})
+		(if (= name ())
+			(raise "name is null") ())
+		(if (= value ())
+			(raise "value is null") ())
+
+		(self._table.add name (self._names.size))
+		(self._names.append name)
+		(self._values.append value)
+		self ; return
 	})
 
 	(method (get name){
 		(if (= name ()) (raise "name is null")())
 
 		(set index (self.index_of name))
-		(if (= index -1) () (self._values.at index))
+		(if (= index -1) () (self._values.at index)) ; return
 	})
 
 	(method (size) (self._names.size))
@@ -482,10 +475,9 @@
 
 	(method (index_of name) {
 		(set index (self._table.get name))
-		(if (and (!= index -1) (= name (self._names.at index))) index
-			;else
-        	(raise "NotImplemented")  ; Not needed for benchmark
-		)
+		(if (and (!= index -1) (= name (self._names.at index)))
+			(return index) ())
+        (raise "NotImplemented")  ; Not needed for benchmark
 	})
 )
 
