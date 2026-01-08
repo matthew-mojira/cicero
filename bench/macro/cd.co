@@ -220,14 +220,14 @@
         })
 
         (set-field color self._root BLACK)
-        (return)
+        (return ())
     })
 
 
     (method (remove key){
         (set z (self._find_node key))
         (if (= z ())
-            (return)())
+            (return ())())
 
         (if (or (= z.left ()) (= z.right ())) (set y z) (set y (z.successor)))
 
@@ -289,7 +289,7 @@
 
     (method (for_each fn){
         (if (= self._root ())
-            (return) ())
+            (return ()) ())
 
         (set current (_tree_minimum self._root))
         (while (!= current ()){
@@ -315,7 +315,7 @@
                 )
             })
         })
-        (return)
+        (return ())
     })
 
     (method (_tree_insert key value){
@@ -663,10 +663,10 @@
 
 (func (_recurse voxel_map seen next_voxel motion){
     (if (not (_is_in_voxel next_voxel motion))
-        (return) ())
+        (return ()) ())
 
     (if (seen.put next_voxel true)
-        (return) ())
+        (return ()) ())
 
     (_put_into_map voxel_map next_voxel motion)
     (set nv_mi_ho (next_voxel.minus _horizontal))
@@ -753,7 +753,7 @@
 
             (set discr (- (* b b) (* 4.0 (* a c))))
             (if (< discr 0.0)
-                (return) ())
+                (return ()) ())
 
             (set v1 (/ (- 0.0 (+ b (discr.sqrt))) (* 2.0 a)))
             (set v2 (/ (- (discr.sqrt) b) (* 2.0 a)))
@@ -781,7 +781,7 @@
                         (return result)())
             } ())
 
-            (return)
+            (return ())
         }())
 
         (set distmp (init2.minus init1))
@@ -790,7 +790,7 @@
             (set inimp (init1.plus init2))
             (return (inimp.times 0.5))
         } ())
-        (return)
+        (return ())
     })
 )
 

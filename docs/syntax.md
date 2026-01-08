@@ -207,15 +207,23 @@ is created every time.
 ## return
 
 ```
-(return)
 (return e)
 ```
 
-`return`, like in other languages, does two things:
+#### Top level return
+If a `return` is used at top-level code (i.e., outside a function or method body), it will <b>*abort*</b> the program entirely. This will prevent subsequent files from executing if an earlier file returns at top level, and will also stop the REPL from starting, even when `-repl=true` is provided.
+
+When a top-level return expression is evaluated, the program exits with the following status code:
+* Integer values are converted using `value % 256`
+* The unit value `()` results in exit code 0
+* All other values result in exit code 255
+
+#### Non-Top level return
+If not used at the top-level, `return`, like in other languages, does two things:
 * it <b>*immediately*</b> exits the function/method.
 * it sends a value back to where the function/method was called.
 
-However, in most other languages, `return` is a statement. In cicero, `return` is an expression. So, it evaluates to `e` if provided, otherwise the unit type `()`. Moreover, it can be only be used at a non-top level code i.e. inside a function/method body.
+However, in most other languages, `return` is a statement. In cicero, `return` is an expression. So, it evaluates to `e`.
 
 Because, `return` is an expression, this can lead to some weird stuff in cicero. Some fun ones are:
 

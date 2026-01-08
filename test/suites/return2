@@ -75,7 +75,7 @@ x ; should be unchanged
 --
 (func (t9){
   (set i 0)
-  (while (return) ())
+  (while (return ()) ())
 })
 (t9)
 --

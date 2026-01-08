@@ -419,7 +419,7 @@
 
   (method (find_loops){
     (if (= self._cfg.start_basic_block ())
-      (return)
+      (return ())
     ())
 
     (set size (self._cfg.num_nodes))
@@ -467,7 +467,7 @@
           (set non_back (self._non_back_preds.at x.dfs_number))
           (set non_back_size (non_back.size))
           (if (> non_back_size _MAXNONBACKPREDS)
-            (return) ())
+            (return ()) ())
 
           (self._step_e_process_non_back_preds w node_pool work_list x)
         })

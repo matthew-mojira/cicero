@@ -51,7 +51,8 @@ def main(args: Array<string>) -> int {
 						if (!CLOptions.SUPPRESS_OUTPUT.get()) 
 							System.puts(Strings.format1("=> %s\n", val.display()));
 					}
-					// Top-level cannot have return value, so that case is never possible
+					// `return` at a top-level is the equivalent of aborting cicero completely.
+					Return(val) => return abortCicero(val);
 					_ => {
 						System.error("eval error", "frame did not give result");
 						return 1;
@@ -97,8 +98,9 @@ def main(args: Array<string>) -> int {
 							exn.print();
 							frame.resetExn();
 						}
-						OK(val) => System.puts(Strings.format1("=> %s\n", val.display()));
-						_       => System.error("eval error", "frame did not give result");
+						OK(val)     => System.puts(Strings.format1("=> %s\n", val.display()));
+						Return(val) => return abortCicero(val);
+						_           => System.error("eval error", "frame did not give result");
 					}
 				}
 			} else {
@@ -145,4 +147,21 @@ def printHelp() {
 	System.puts("Usage: cicero [options] <.co files>\n");
 	System.ln();
 	CLOptions.print();
+}
+
+/* `return` expr at a top-level aborts cicero completely.
+	For the exit code:
+		* integers are converted using % 256
+		* unit () -> returns 0
+		* everything else -> returns 255.
+*/
+def abortCicero(obj: Object) -> int{
+	if (obj.instanceOf(ClassObjects.classUnit)){
+		return 0;
+	} else if (obj.instanceOf(ClassObjects.classInt)){
+		// bash exit codes are in the range 0-255
+		return int.!(IntObject.!(obj).val.longValue() % 256);
+	} else{
+		return 255;
+	}
 }
