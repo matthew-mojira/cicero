@@ -18,7 +18,10 @@ class FrameObject extends Object {
 
 	// retrieving results, but check first!
 	def getValue() -> Object {
-		return Result.OK.!(result).value;
+		if (Result.OK.?(result))
+			return Result.OK.!(result).value;
+		else
+			return Result.Return.!(result).value;
 	}
 
 	def getExn() -> ExnObject {
@@ -56,6 +59,14 @@ class FrameObject extends Object {
 
 	def isExn() -> bool {
 		return Result.Exn.?(result);
+	}
+
+	def isReturning() -> bool {
+		return Result.Return.?(result);
+	}
+
+	def isAborting() -> bool {
+		return isExn() || isReturning();
 	}
 
 	def resetExn() {

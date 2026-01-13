@@ -204,3 +204,47 @@ Each expression `ei` is evaluated then a new list is created. Every time this
 expression is evaluated the subexpressions are evaluated and thus a new list
 is created every time.
 
+## return
+
+```
+(return e)
+```
+
+#### Top level return
+If a `return` is used at top-level code (i.e., outside a function or method body), it will <b>*abort*</b> the program entirely. This will prevent subsequent files from executing if an earlier file returns at top level, and will also stop the REPL from starting, even when `-repl=true` is provided.
+
+When a top-level return expression is evaluated, the program exits with the following status code:
+* Integer values are converted using `value % 256`
+* The unit value `()` results in exit code 0
+* All other values result in exit code 255
+
+#### Non-Top level return
+If not used at the top-level, `return`, like in other languages, does two things:
+* it <b>*immediately*</b> exits the function/method.
+* it sends a value back to where the function/method was called.
+
+However, in most other languages, `return` is a statement. In cicero, `return` is an expression. So, it evaluates to `e`.
+
+Because, `return` is an expression, this can lead to some weird stuff in cicero. Some fun ones are:
+
+```
+(func (x) (return (return 10)))
+```
+The outermost `return` will never be executed. `(x)` will return 10.
+
+```
+(func (x) (raise (return "cicero")))
+```
+The exception will not be raised. `(x)` will return `"cicero"`.
+```
+(func (x) (return (raise "exception caused")))
+```
+Calling the function will raise an exception.
+```
+(set-global glo_y 1)
+(func (x) {
+  (set-global glo_y (return 10))
+  "this won't be returned"
+})
+```
+`glo_y` variable is never set to `10`. `(x)` returns `10`.

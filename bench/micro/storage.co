@@ -35,7 +35,7 @@
         (arr.put ())
         (set i (i.succ))
        })
-      arr
+      arr ; return arr
      }
      ; else
      {
@@ -45,7 +45,7 @@
         (arr.set i (self._build_tree_depth (- depth 1) random))
         (set i (i.succ))
       })
-      arr
+      arr ; return arr
      })
    })
   

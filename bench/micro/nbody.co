@@ -203,19 +203,12 @@
 	})
 
 	(method (_verify_result result inner_iterations){
-        (if (= inner_iterations 250000){
-            (= result -0.1690859889909308)
-		}{
-		;else
-			(if (= inner_iterations 1){
-            	(= result -0.16907495402506745)
-			}{
-			;else
-				(println (+ (+ "No verification result for " (inner_iterations.as str)) " found"))
-        		(println (+ "Result is: " (result.as str)))
-				false
-			})
-		})
+		(if (= inner_iterations 250000) (return (= result -0.1690859889909308)) ())
+		(if (= inner_iterations 1) (return (= result -0.16907495402506745)) ())
+
+		(println (+ (+ "No verification result for " (inner_iterations.as str)) " found"))
+		(println (+ "Result is: " (result.try str)))
+		false
 	})
 
 

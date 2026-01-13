@@ -5,7 +5,7 @@
   (method (inner_benchmark_loop inner_iterations){
     (_Planner_chain_test inner_iterations)
     (_Planner_projection_test inner_iterations)
-    true
+    true ; return
   })
 
   (method (benchmark) (raise "Should never be reached"))
@@ -52,7 +52,7 @@
     })
 
     (constraints.for_each each)
-    (self._make_plan sources)
+    (self._make_plan sources) ; return
   })
 
   (method (_make_plan sources){
@@ -71,7 +71,7 @@
         (self._add_constraints_consuming_to (c.get_output) todo)
       }())
     })
-    plan
+    plan ; return
   })
 
   (method (propagate_from v){
@@ -100,21 +100,20 @@
   (method (add_propagate c mark){
     (set todo (vector_with c))
 
-    (set ret true)
-    (while (and ret (not (todo.is_empty))){
+    (while (not (todo.is_empty)){
       (set d (todo.remove_first))
 
       (set output (d.get_output))
       (if (= output.mark mark) {
         (self.incremental_remove c)
-        (set ret false)
+        (return false)
       }{
       ;else
         (d.recalculate)
         (self._add_constraints_consuming_to (d.get_output) todo)
       })
     })
-    ret
+    true ; return
   })
 
   (method (change var new_value){
@@ -148,7 +147,7 @@
 
   (method (_new_mark){
     (set-field _current_mark self (self._current_mark.succ))
-    self._current_mark
+    self._current_mark ; return
   })
 
   (method (_remove_propagate_from out){
@@ -184,7 +183,7 @@
     )
 
     (unsatisfied.sort comp)
-    unsatisfied
+    unsatisfied ; return
   })
 
 )
@@ -366,7 +365,7 @@
   (strength_table.at_put _DEFAULT 0)
   (strength_table.at_put _WEAK_DEFAULT 500)
   (strength_table.at_put _ABSOLUTE_WEAKEST 10000)
-  strength_table
+  strength_table ; return
 })
 
 (func (_create_strength_constants){
@@ -381,7 +380,7 @@
   (set keys (_strength_table.get_keys))
   (keys.for_each lambda)
 
-  strength_constant
+  strength_constant ; return
 })
 
 {
@@ -425,7 +424,7 @@
       )
     })
 
-    (not (self.inputs_has_one lambda))
+    (not (self.inputs_has_one lambda)) ; return
   })
 
   (method (satisfy mark planner){
@@ -450,7 +449,7 @@
       (if (self.strength.same_as _required) (raise "Could not satisfy a required constraint") ())
     })
 
-    overridden
+    overridden ; return
   })
 
   ; Abstract methods
@@ -496,47 +495,46 @@
     (if (= self._v1.mark mark) {
       (if (and (!= self._v2.mark mark) (self.strength.stronger self._v2.walk_strength)){
         (set-field _direction self FORWARD)
-      }{
-      ;else
-        (set-field _direction self ())
-      })
-      self._direction
+        (return self._direction)
+      }())
+      
+      (set-field _direction self ())
+      (return self._direction)
+    }())
 
-    }{
-    ;else
-      (if (= self._v2.mark mark){
-        (if (and (!= self._v1.mark mark) (self.strength.stronger self._v1.walk_strength)){
-          (set-field _direction self BACKWARD)
-        }{
-        ;else
-          (set-field _direction self ())
-        })
-        self._direction
-      }{
-      ;else
-        (if (self._v1.walk_strength.weaker self._v2.walk_strength){
-          (if (self.strength.stronger self._v1.walk_strength){
-            (set-field _direction self BACKWARD)
-          } ;else
-            (set-field _direction self ())
-          )
-          self._direction
-        }{
-        ;else
-          (if (self.strength.stronger self._v2.walk_strength){
-            (set-field _direction self FORWARD)
-          } ;else
-            (set-field _direction self ())
-          )
-          self._direction
-        })
-      })
-    })
+    (if (= self._v2.mark mark){
+      (if (and (!= self._v1.mark mark) (self.strength.stronger self._v1.walk_strength)){
+        (set-field _direction self BACKWARD)
+        (return self._direction)
+      }())
+
+      (set-field _direction self ())
+      (return self._direction)
+    }())
+
+    (if (self._v1.walk_strength.weaker self._v2.walk_strength){
+      (if (self.strength.stronger self._v1.walk_strength){
+        (set-field _direction self BACKWARD)
+        (return self._direction)
+      }())
+      
+      (set-field _direction self ())
+      (return self._direction)
+    }())
+
+    (if (self.strength.stronger self._v2.walk_strength){
+      (set-field _direction self FORWARD)
+      (return self._direction)
+    }())
+    
+    (set-field _direction self ())
+    self._direction ; return
   })
 
   (method (inputs_do fn){
-    (if (= self._direction FORWARD) (fn self._v1) (fn self._v2))
-    ()
+    (if (= self._direction FORWARD) 
+      (return (fn self._v1)) ())
+    (fn self._v2) ; return
   })
 
   (method (inputs_has_one fn)

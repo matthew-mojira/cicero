@@ -32,6 +32,8 @@ enum Opcode {
 	POP,                    // [1] how many values to pull
 	DUPE,                   // index of element to dupe to top of stack (0 = top)
 	SWAP,                   // index of element to swap top of stack with (0 = top)
+	// end frame evaluation
+	RETURN,
 }
 
 /*
@@ -62,10 +64,11 @@ enum Opcode {
  * 18 POP
  * 19 DUPE
  * 1A SWAP
+ * 1B RETURN
  */
 
 component Opcodes {
-	def numOpcodes: int = 27;
+	def numOpcodes: int = 28;
 	def map: Array<Opcode> = Array.new(numOpcodes); // XXX update this with the number of opcodes
 }
 

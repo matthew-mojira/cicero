@@ -94,10 +94,22 @@ csv_file_name(){
 }
 
 run_hyperfine(){
-    # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file
+    # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file, $6: target
     cd $BENCH_DIR
-    $HYPERFINE --style none --warmup 5 --runs "$1" "$2 -suppress-output=true -tier=$3 $4" --export-csv "$5" 2>&1
+
+    echo "Running: $4 (tier=$3) for $6"
+    if ! $HYPERFINE --style none --warmup 3 --runs "$1" \
+        "$2 -suppress-output=true -tier=$3 $4" \
+        --export-csv "$5" 2>&1
+    then
+        echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3), skipping"
+        return 0
+    else
+        echo "Done: $4 (tier=$3) for $6"
+        return 0
+    fi
 }
+
 # Export the function so background subshells can see it
 export -f run_hyperfine
 
@@ -119,7 +131,7 @@ run_benchmarks(){
             while IFS=',' read -r benchmark files runs; do
                 CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
                 # run async
-                run_with_lock run_hyperfine $runs "$BINARY" "$tier" "$files" "$CSV_FILE" "$BENCH_DIR"
+                run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target"
             done < <(tail -n +2 "$BENCH_DIR/run_bench.config.csv")
         done
     done

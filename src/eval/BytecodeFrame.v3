@@ -44,14 +44,14 @@ class BytecodeFrame extends FrameObject {
 
 	def eval() {
 		def v = evalBytecode(Code.Bytecode.!(code.code).bytecode);
-		if (!isExn())
+		if (!isAborting())
 			result = Result.OK(v);
 	}
 
 	def evalCode(code: CodeObject) -> Object {
 		stack.clear();
 		def v = evalBytecode(Code.Bytecode.!(code.code).bytecode);
-		if (!isExn())
+		if (!isAborting())
 			result = Result.OK(v);
 		return v;
 	}
@@ -428,6 +428,11 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					stack.push(fn);
+				}
+				RETURN => {
+					// return value will be on top of the stack
+					result = Result.Return(stack.pop());
+					return null;
 				}
 				//_ => System.error("eval error", "unsupported opcode");
 			}

@@ -19,7 +19,8 @@ enum Keyword(id: string) {
 	CLASS("class"),
 	NEW("new"),
 	RAISE("raise"),
-	TRY("try")
+	TRY("try"),
+	RETURN("return")
 }
 
 /* Same as Keyword except inside a class definition
@@ -39,6 +40,7 @@ enum ClassKeyword(id: string) {
 
 component ParseOption {
 	def allowMissingElse: bool = false;
+	def allowOptionalReturnExpr: bool = false;
 	//def allowEmptyBegin: bool  = false;
 }
 
@@ -265,6 +267,7 @@ class Parser extends TextReader {
 							vars.possibleNonlocals.put((func, prev));
 						}
 						
+						// restore code-level
 						return AST.new(ASTData.VarSet(name, b, AST.new(func, range)), 
 										range);
 					}
@@ -447,6 +450,19 @@ class Parser extends TextReader {
 						def b = bindLocal(exn);
 
 						return AST.new(ASTData.Catch(try, exn, b, catch),
+							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					RETURN => {
+						// `expression` might be optional based on `ParseOption.allowOptionalReturnExpr`
+						// in that case, evaluate to `()`
+						var value: AST;
+						if (ParseOption.allowOptionalReturnExpr && opt1(')') >= 0) {
+							value = AST.new(ASTData.Lit(UnitObjects.instance), null);
+						} else {
+							value = readExpr();
+							req1(')');
+						}
+						return AST.new(ASTData.Return(value),
 							FileRange.new(fileName, startLine, startColumn, line, column));
 					}
 				}

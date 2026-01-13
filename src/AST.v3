@@ -29,6 +29,7 @@ type ASTData {
 	case Class(id: string, superclass: Maybe<AST>, init: Maybe<CodeObject>, fields: Array<(string, CodeObject)>, methods: Array<ASTData.Func>);
 	case New(expr: AST);
 	case List(elems: Array<AST>);
+	case Return(value: AST);
 }
 
 /* Access mode for variable accesses.
