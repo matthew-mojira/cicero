@@ -9,8 +9,8 @@ list        | pass* | pass  | pass  |
 mandelbrot  | FAIL! | FAIL! | FAIL! |
 nbody       | FAIL! | FAIL! | FAIL! |
 permute     | pass* | pass  | pass  |
-queens      | pass* | pass  | FAIL! |
-richards    | pass* | pass  | FAIL? |
+queens      | pass* | pass  | pass. |
+richards    | pass* | pass  | pass. |
 sieve       | pass  | pass  | pass  |
 storage     | pass* | pass  | pass  |
 towers      | pass* | pass  | pass  |

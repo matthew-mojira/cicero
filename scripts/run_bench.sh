@@ -58,7 +58,7 @@ csv_file_name(){
 run_benchmarks(){
     for target in ${TARGETS[@]}; do
         if [ "$target" = "wasm-wave" ]; then
-            BINARY=$BIN_DIR/cicero.wasm
+            BINARY="wizeng --mode=lazy --stack-size=10M $BIN_DIR/cicero.wasm"
         else
             BINARY=$BIN_DIR/cicero.$target
         fi
@@ -74,20 +74,18 @@ run_benchmarks(){
             tail -n +2 "$BENCH_DIR/run_bench.config.csv" | while read -r benchmark files runs; do
                 cd $BENCH_DIR
                 CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
-                $HYPERFINE --warmup 5 --runs $runs "$BINARY -suppress-output=true -tier=$tier $files" --export-csv $CSV_FILE
+                $HYPERFINE --runs $runs "$BINARY -suppress-output=true -tier=$tier $files" --export-csv $CSV_FILE
             done
         done
     done
 }
 
-for o_level in {0..2}
-do
-    export V3C_OPTS="-O$o_level"
-    # Build birectory
-    cd $BIN_DIR/..
-    # Build cicero for the new optimization level
-    make -B
-    echo "Virgil Opitmization Level: $V3C_OPTS"
-    run_benchmarks
-done
+export V3C_OPTS=-O2
+# Build birectory
+cd $BIN_DIR/..
+# Build cicero for the new optimization level
+make -B
+echo "Virgil Opitmization Level: $V3C_OPTS"
+run_benchmarks
+
 $PYTHON3 $SCRIPT_LOC/create_markdown.py $T $BENCH_DIR/results
