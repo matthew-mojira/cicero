@@ -368,6 +368,16 @@ class ASTFrame extends FrameObject {
 				if (isAborting()) return value;
 				result = Result.Return(val);
 			}
+			Halt => {
+				def buf = StringBuilder.new();
+				buf.ln();
+				def loc = ast.loc;
+				buf.put3("halt encountered at %s:%d:%d\n", loc.fileName, loc.beginLine, loc.beginColumn);
+				buf.puts("locals:\n");
+				Lists.apply(Maps.keyList(locals), fun(key: string) => void(buf.put2("  %s: %s\n", key, locals[key].display())));
+				System.puts(buf.extract());
+				System.error("halt", "halt encountered in AST evaluation");
+			}
 		}
 
 		return value;

@@ -113,9 +113,9 @@ class BytecodeFrame extends FrameObject {
   				System.puts("    locals:\n");
   				for (i < locals.length) {
   					if (locals[i] == null) {
-  						System.puts(Strings.format1("    %d: NULL\n", i));
+  						System.puts(Strings.format2("    %d (%s): NULL\n", b.locals[i], i));
   					} else {
-  						System.puts(Strings.format2("    %d: %s\n", i, locals[i].display()));
+  						System.puts(Strings.format3("    %d (%s): %s\n", i, b.locals[i], locals[i].display()));
   					}
   				}
   				System.puts("    stack:\n");
@@ -432,6 +432,36 @@ class BytecodeFrame extends FrameObject {
 				RETURN => {
 					// return value will be on top of the stack
 					result = Result.Return(stack.pop());
+					return null;
+				}
+				HALT => {
+					def buf = StringBuilder.new();
+					buf.put3("halt encountered at %s:%d:%d", loc.fileName, loc.beginLine, loc.beginColumn);
+					buf.put1(" (pc=%d)", pc).ln();
+					buf.puts("locals:\n");
+					for (i < locals.length) {
+						if (locals[i] == null) {
+							buf.put2("  %d (%s): NULL", b.locals[i], i);
+						} else {
+							buf.put3("  %d (%s): %s", i, b.locals[i], locals[i].display());
+						}
+						buf.ln();
+					}
+					buf.puts("stack:").ln();
+					for (i < stack.top) {
+						buf.puts("  ");
+						buf.puts(stack.elems[i].display());
+						buf.ln();
+					}
+					buf.puts("exn loc stack:\n");
+					for (i < handlers.top) {
+						buf.put2("=> %d (%d)", handlers.elems[i].0, handlers.elems[i].1);
+						buf.ln();
+					}
+					System.puts(buf.extract());
+
+					System.error("halt", "halt encountered in bytecode evaluation");
+
 					return null;
 				}
 				//_ => System.error("eval error", "unsupported opcode");
