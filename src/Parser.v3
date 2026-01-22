@@ -61,7 +61,6 @@ class Parser extends TextReader {
 
 	new(fileName: string, data: string) super(fileName, data) {
 		skipWs = skipWhitespaceAndComments;
-	   onError = fun (x: TextReader, a: int, b: int, c: string) => Parser.!(x).addError(a, b, c);
 
 		skipWs(this);
 		while (pos < limit) {
@@ -712,18 +711,6 @@ class Parser extends TextReader {
 			map.referencedVars[name] = b;
 		}
 		return b;
-	}
-
-	def addError(eline: int, ecol: int, msg: string) {
-		// use previous callback anyway
-		setFirstError(eline, ecol, msg);
-
-		//def sb = StringBuilder.new();
- 		//sb.puts(fileName);
- 		//sb.put3(":%d:%d: parse error: %s\n", eline, ecol, msg);
-		//renderCurrentLineWithCaret(sb, ecol);
-		//sb.ln();
-		//System.puts(sb.extract());
 	}
 
 	def getExprs() -> Array<CodeObject> {
