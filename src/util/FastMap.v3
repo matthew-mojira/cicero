@@ -33,14 +33,22 @@ class FastMap<K, V>(hash: K -> int, equals: (K, K) -> bool) {
 		return values[idx];
 	}
 
+	def hasKey(key: K) -> bool {
+		return indices.has(key);
+	}
+
 	def getIndex(key: K) -> Maybe<int> {
-		if (indices.has(key)){
+		if (indices.has(key)) {
 			def idx = indices[key];
 			def val = values[idx];
 			return Maybe.Just(idx);
 		} else {
 			return Maybe.Nothing;
 		}
+	}
+
+	def keyList() -> List<K> {
+		return Maps.keyList(indices);
 	}
 
 	def each(f: (int, V) -> void) {
