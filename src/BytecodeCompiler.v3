@@ -219,6 +219,9 @@ class BytecodeCompiler {
 				compileAST(expr);
 				writeInstr(loc, Opcode.RETURN);
 			}
+			Halt => {
+				writeInstr(loc, Opcode.HALT);
+			}
 //			_ => System.error("compile error", "unsupported AST node");
 		}
 		

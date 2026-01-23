@@ -20,7 +20,8 @@ enum Keyword(id: string) {
 	NEW("new"),
 	RAISE("raise"),
 	TRY("try"),
-	RETURN("return")
+	RETURN("return"),
+	HALT("halt")
 }
 
 /* Same as Keyword except inside a class definition
@@ -463,6 +464,12 @@ class Parser extends TextReader {
 						}
 						return AST.new(ASTData.Return(value),
 							FileRange.new(fileName, startLine, startColumn, line, column));
+					}
+					HALT => {
+						req1(')');
+						return AST.new(ASTData.Halt,
+							FileRange.new(fileName, startLine, startColumn, line, column));
+						
 					}
 				}
 			}

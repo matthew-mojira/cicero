@@ -30,6 +30,7 @@ type ASTData {
 	case New(expr: AST);
 	case List(elems: Array<AST>);
 	case Return(value: AST);
+	case Halt;
 }
 
 /* Access mode for variable accesses.
