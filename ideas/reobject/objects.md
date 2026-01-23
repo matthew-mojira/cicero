@@ -47,8 +47,6 @@ things (that we desparately need to figure out how to optimize!).
 * field `name`
 * field `superclass`
 
-
-
 # New operations
 
 Yes, you can change the class of an object and make it a different class. For

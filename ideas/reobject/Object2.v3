@@ -1,0 +1,94 @@
+/* Let's simplify how we are going to change the object model. One thing at
+ * a time. In this case, we'll change the method/field lookup to be more like
+ * the object model of a typical object-oriented language. Clearly, treating
+ * everything as a field made it seem like more of a prototype-based object
+ * model like SELF, except that we wanted a class-based object model with
+ * inheritance, like Java.
+ */
+class Object {
+	private def CLASS: ClassObject;
+	/* This is hidden from being a cicero-level field, for now. Should we add it
+	 * we could decide to make it mutable, but that would invalidate (or at least
+	 * require a very significant rethinking) the PIC optimizations that we could
+	 * do on the class. It's also possible we could add immutable fields.
+	 */
+
+	private def fields: FastMap<string, Object>;
+
+	private def methods: FastMap<string, MethodObject>;
+	/* this is the cache of bound methods */
+
+	private def setFieldName;
+	private def setFieldIndex;
+	private def getMethodName;
+	private def getMethodIndex; /* TODO what exactly is the index? */
+	private def getPropIndex;   /* TODO what exactly does this mean? */
+}
+/* We need to be a little more careful about defining what the dot (.) operator
+ * means. It is syntactic sugar for `get-field`, except that it has also
+ * previously meant a method, which was stored flattened in the object's fields
+ * representation.
+ *
+ * Now, it has to be something like `get-prop`, where `get-prop` does two
+ * lookups:
+ * 1. it tries to find the field of that name, returning it if successful
+ * 2. if it fails, tries to find a method of that name, returning it if successful
+ * 3. throws exception if all attempts to find the property fails
+ *
+ * Method lookup is special because we have to go to the object's class and
+ * find the method there, potentially going up the list of superclasses. (This
+ * also gives us a chance to inject logic for multiple inheritance, which was
+ * definitely not possible meaningfully before.)
+ *
+ * Once a method lookup is succesful, we need to bind it to the current object.
+ * Binding a method every time that it is found is probably a bad idea, so we
+ * can cache the bound methods as they're found, but this could potentially
+ * waste memory. (But if an object dies, its methods should die as well, so
+ * maybe it's okay. Should we assume a long-living object is not going to have
+ * so many methods around too, or if it does, will it use it?)
+ *
+ * We'll have separate intrinsics for `get-field` and `get-method`, as well as
+ * `set-field`. The `set-prop` intrinsic is more tricky, since we should not
+ * allow you to add methods to a class indirectly through an instance of that
+ * class. But perhaps modifying the class directly in the future is fine,
+ * especially if we turn the methods of a class into a Cicero-level field.
+ *
+ * Also on the table: a `bind` primitive that binds an object to a function,
+ * creating a method, but I don't think this is really neded yet.
+
+ * Flattening methods and fields
+ * - the hierarchy of fields can be flattened into one level
+ * - the hierarchy of methods can also be flattened into one level
+ * - but they aren't flattened on top of each other
+ * - and how are they ingrained with one another (i.e. what if a field and a
+ *   method have the same name, and what happens if they are on different levels
+ *   in the inheritance hierarchy?)
+ * 
+ * What's *actually* different about this from before?
+ *
+ * The more I think about it, the more that this really doesn't seem that much
+ * different, except that the flattening of methods and fields together might
+ * be unintuitive. The lookup on method is done because the lookup on the
+ * fields is NULL, which indicates that it can only be an uninitialized method,
+ * and then we do the lookup and save the result.
+ *
+ * This will make problems if we ever allow the methods of a class to be
+ * changed, in which previously initialized lazy methods must be invalidated
+ * and redone. But for now, it really is the same.
+ * 
+ */ 
+
+class ClassObject extends Object {
+	private def name: string; 
+	private def superclass: ClassObject;  
+	private def init: CodeObject;
+	private def classFields: Array<(string, CodeObject)>;
+	private def classMethods: Array<FuncObject>;
+}
+
+/* Inline caches and optimization
+ *
+ * The polymorphic inline cache (PIC) is a very good optimization to have, and
+ * so we'll have to think about how to incorporate this with the various kinds
+ * of lookups, and in the presence of the cached bound methods.
+ */
