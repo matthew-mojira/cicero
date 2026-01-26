@@ -1,0 +1,65 @@
+// A HashMap that allows for indexed access based on insertion order.
+// NOTE: the map does *not* allow for removing entries
+class FastMap<K, V>(hash: K -> int, equals: (K, K) -> bool) {
+	private def values: Vector<V> = Vector.new();
+	private def indices: HashMap<K, int> = HashMap.new(hash, equals);
+
+	def storeKey(key: K, val: V) -> int {
+		var idx: int;
+		if (indices.has(key)){
+			idx = indices[key];
+			values[idx] = val;
+		} else {
+			idx = values.length;
+			indices[key] = idx;
+			values.put(val);
+		}
+		return idx;
+	}
+	def storeIndex(idx: int, val: V) {
+		values[idx] = val;
+	}
+
+	def loadKey(key: K) -> Maybe<V> {
+		if (indices.has(key)){
+			def idx = indices[key];
+			def val = values[idx];
+			return Maybe.Just(val);
+		} else {
+			return Maybe.Nothing;
+		}
+	}
+	def loadIndex(idx: int) -> V { // XXX, assume you have a value index
+		return values[idx];
+	}
+
+	def hasKey(key: K) -> bool {
+		return indices.has(key);
+	}
+
+	def getIndex(key: K) -> Maybe<int> {
+		if (indices.has(key)) {
+			def idx = indices[key];
+			def val = values[idx];
+			return Maybe.Just(idx);
+		} else {
+			return Maybe.Nothing;
+		}
+	}
+
+	def keyList() -> List<K> {
+		return Maps.keyList(indices);
+	}
+
+	def each(f: (int, V) -> void) {
+		for (i < values.length) {
+			f(i, values[i]);
+		}
+	}
+}
+
+component FastMaps {
+	def newStringMap<V>() -> FastMap<string, V> {
+		return FastMap.new(Strings.hash, Strings.equal);
+	}
+}

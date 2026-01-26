@@ -16,8 +16,12 @@ The benchmarks take a while. So, recommended to use `nohup` like this:
 nohup bash path/to/run_bench.sh &
 ```
 
+### Configuration
+You can config/add/edit benchmarks, number of runs by editing the `/path/to/cicero-repo/bench/run_bench.config.csv` file.
+
 ### Optional env vars
 By default, the benchmarks only run for the `x86-64-linux` target across tiers `0` and `1`, but you can change it with the following environment variables:
 * `TARGETS`: which targets to test (e.g `export TARGETS="x86-linux"`)
 * `TIERS`: which tiers to test (e.g `export TIERS="0 1"`)
+* `MAX_TASKS`: max number of hyperfine processes to run in parallel, default is 5. (e.g `export MAX_TASKS=30`)
 
