@@ -1,0 +1,50 @@
+def traceAnalysis = false;
+
+class ForwardFlowAnalysis<S> extends DataflowAnalysis<S> {
+	def bottomState(cfg: CFGraph) -> S;
+	def joinStates(state1: S, state2: S) -> S;
+
+	def forwardFlow(bb: BasicBlock, inputState: S) -> S;
+
+	/* Kildall's algorithm */
+	def runAnalysis(cfg: CFGraph) -> HashMap<BasicBlock, S> {
+		def worklist: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+		def inputStates: HashMap<BasicBlock, S> = HashMap.new(BasicBlock.hash, BasicBlock.==);
+
+		for (i < cfg.basicBlocks.length) {
+			def bb = cfg.basicBlocks[i];
+			inputStates[bb] = bottomState(cfg);
+			worklist.add(bb);
+		}
+
+		for (bb in cfg.entryNodes()) {
+			inputStates[bb] = initialState(cfg);
+		}
+
+		if (traceAnalysis) System.puts("START ANALYSIS!!\n");
+
+		while (worklist.size() > 0) {
+			def bb = worklist.pop();
+
+			if (traceAnalysis) System.puts(Strings.format1("Working on: %d\n", bb.startPc));
+
+			// TODO consider edge type
+			for (bb2 in bb.successors.toArray()) {
+				if (traceAnalysis) System.puts(Strings.format1("  successor: %d", bb2.startPc));
+
+				def edgeOutput = forwardFlow(bb, inputStates[bb]);
+				def newInput = joinStates(inputStates[bb2], edgeOutput);
+
+				if (!stateEquals(inputStates[bb2], edgeOutput)) {
+					if (traceAnalysis) System.puts("...UPDATE!");
+					inputStates[bb2] = newInput;
+					worklist.add(bb2);
+				}
+				if (traceAnalysis) System.ln();
+			}
+		}
+		return inputStates;
+	}
+
+	def stateEquals(state1: S, state2: S) -> bool;
+}

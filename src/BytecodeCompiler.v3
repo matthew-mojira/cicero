@@ -3,6 +3,7 @@
 class BytecodeCompiler {
 	def writer:     DataWriter     = DataWriter.new();
 
+	def params:     Array<string>; // XXX used by analysis only
 	def strings:    Vector<string> = Vector.new();
 	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
 	def funcholes:  Vector<ASTData.Func> = Vector.new();
@@ -19,7 +20,7 @@ class BytecodeCompiler {
 	 * parameters, which will become the first locals of the Bytecode
 	 * object.
 	 */
-	new(ast: AST, params: Array<string>) {
+	new(ast: AST, params) {
 		locals.puta(params);
 		if (CiceroOptions.traceBytecodeCompilation) {
 			System.puts("== Beginning Bytecode compilation ==\n");
@@ -34,9 +35,11 @@ class BytecodeCompiler {
 	 * this object.
 	 */
 	def extract() -> Bytecode {
-		def b = Bytecode.new(writer.extract(), 
+		def bytecode = writer.extract();
+		def b = Bytecode.new(bytecode, 
 				locals.extract(), 
 				nonlocals.extract(),
+				params,
 				strings.extract(), 
 				constants.extract(), 
 				classholes.extract(), 
@@ -235,6 +238,9 @@ class BytecodeCompiler {
 		writer.putbbb(operand, operand >> 8, operand >> 16);
 
 		source.put(loc);
+		if (CiceroOptions.profileBytecode) {
+			Profiling.staticCounts[op.tag]++;
+		}
 	}
 
 	def writeInstrDeferOperand(loc: FileRange, op: Opcode) -> int {
