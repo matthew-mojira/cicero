@@ -79,22 +79,12 @@ class BytecodeCompiler {
 				fillHole(hole, writer.pos - hole - 4);
 			}
 			Apply(tgt, args) => {
-				if (CiceroOptions.replaceGlobals && args.length == 2 && ASTData.VarGet.?(tgt.data)) {
-					def get = ASTData.VarGet.!(tgt.data);
-					if (Strings.equal(get.id, "+") && get.mode.data == AccessMode.Global) {
-						for (arg in args) {
-							compileAST(arg);
-						}
-						writeInstrWithOperand(loc, Opcode.ADD, 0);
-					}
-				} else {
-					compileAST(tgt);
-					writeInstr(loc, Opcode.ASSERT_FUNC);
-					for (arg in args) {
-						compileAST(arg);
-					}
-					writeInstrWithOperand(loc, Opcode.CALL, args.length);
+				compileAST(tgt);
+				writeInstr(loc, Opcode.ASSERT_FUNC);
+				for (arg in args) {
+					compileAST(arg);
 				}
+				writeInstrWithOperand(loc, Opcode.CALL, args.length);
 			}
 			If(cond, tru, fals) => {
 				compileAST(cond);
@@ -227,6 +217,10 @@ class BytecodeCompiler {
 				for (elem in elems)
 					compileAST(elem);
 				writeInstrWithOperand(loc, Opcode.CREATE_LIST, elems.length);
+			}
+			Return(expr) => {
+				compileAST(expr);
+				writeInstr(loc, Opcode.RETURN);
 			}
 //			_ => System.error("compile error", "unsupported AST node");
 		}

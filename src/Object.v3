@@ -42,12 +42,11 @@
  * them eagerly means allocating its methods, creating an infinite loop). These
  * are represented by `null` values. These are the only null values allowed
  * in the array, as the language requires that all fields be initialized (they
- * may be initialized with the language-level poopcrap).
+ * may be initialized with the language-level unit).
  */
 class Object {
 	private var cls: ClassObject;
-	private def fieldMap: HashMap<string, int> = Strings.newMap();
-	private var fields:   Array<Object>;
+	private def fields: FastMap<string, Object> = FastMaps.newStringMap();
 
 	new() {}
 
@@ -82,7 +81,7 @@ class Object {
  	 		x: IntObject    => cls = ClassObjects.classInt;
  	 		x: ListObject   => cls = ClassObjects.classList;
  	 		x: MapObject    => cls = ClassObjects.classMap;
- 	 		x: PoopCrapObject => cls = ClassObjects.classPoopCrap;
+ 	 		x: UnitObject   => cls = ClassObjects.classUnit;
  	 		x: StrObject    => cls = ClassObjects.classStr;
 		}
 
@@ -96,19 +95,15 @@ class Object {
 			classes.put(clazz);
 		}
 		/* Figure out how much space needs to be allocated for fields. */
-		var i = 0;
 		for (clazz in classes.reverse().copy()) {
 			for (field in clazz.classFields) {
-				if (!fieldMap.has(field.0))
-					fieldMap[field.0] = i++;
+				fields.storeKey(field.0, null);
 			}
 			// methods are not initialized but a slot is allocated
 			for (method in clazz.classMethods) {
-				if (!fieldMap.has(method.id))
-					fieldMap[method.id] = i++;
+				fields.storeKey(method.id, null);
 			}
 		}
-		fields = Array.new(i);
 		/* Initialization sets classes, allocates space for fields, and
 		 * initializes methods. Setting the fields are done later. 
 		 * Non-method fields
@@ -123,7 +118,7 @@ class Object {
 			for (clazz in classes.copy()) {
 				for (func in clazz.classMethods) {
 					def m = MethodObject.new(this, func.id, func.params, func.code);
-					fields[fieldMap[func.id]] = m;
+					fields.storeKey(func.id, m);
 				}
 			}
 		}
@@ -134,37 +129,25 @@ class Object {
 	def setField(name: string, obj: Object) -> bool {
 		if (cls == null) initClass();
 
-		if (!fieldMap.has(name)) return false;
-		fields[fieldMap[name]] = obj;
+		if (!fields.hasKey(name)) return false;
+		fields.storeKey(name, obj);
 		return true;
 	}
 
  	def setFieldByIndex(idx: int, obj: Object) {
- 		fields[idx] = obj;
+		fields.storeIndex(idx, obj);
  	}
  
  	def getFieldByIndex(idx: int) -> Object {
 		if (CiceroOptions.sanityChecks) {
 			if (cls == null)
 				System.error("field error", "class not initialized");
-			if (idx < 0 || idx >= fields.length) {
-				System.error("field error", Strings.format3("field index %d is out of bounds for class %s (length %d)",
-							idx, cls.name, fields.length));
-			}
-			if (fields[idx] == null) {
-				System.error("field error", Strings.format2("access of field index %d for class %s is null",
-							idx, cls.name));
-			}
 		}
- 		return fields[idx];
+ 		return Assert.assertNonNull(fields.loadIndex(idx));
  	}
 
  	def getIndex(field: string) -> int {
-		if (fieldMap.has(field)) {
-			return fieldMap[field];
-		}
-		System.error("object error", Strings.format1("getting index of field not present: %s", field));
-		return -999;
+		return fields.getIndex(field).fromJust();
  	}
 
 	// returns null on failure
@@ -172,9 +155,9 @@ class Object {
 		if (cls == null) initClass();
 
 		// not a field of this class
-		if (!fieldMap.has(name)) return null;
+		if (!fields.hasKey(name)) return null;
 
-		def obj = fields[fieldMap[name]];
+		def obj = fields.loadKey(name).fromJust();
 		if (obj != null) return obj; // allocated
 	
 		if (CiceroOptions.useLazyMethods) {
@@ -183,7 +166,7 @@ class Object {
 				for (func in clazz.classMethods) {
 					if (Strings.equal(func.id, name)) {
 						def m = MethodObject.new(this, func.id, func.params, func.code);
-						fields[fieldMap[name]] = m;
+						fields.storeKey(name, m);
 						return m;
 					}
 				}
@@ -222,7 +205,7 @@ class Object {
 	}
 	def o_fields() -> Result {
 		def list = ListObject.new();
-		def fList = Maps.keyList(fieldMap);
+		def fList = fields.keyList();
 		Lists.apply(fList, putList(list, _));
 		return Result.OK(list);
 	}

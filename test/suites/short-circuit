@@ -6,7 +6,7 @@
 --
 (and () false)
 --
-=> <poopcrap>
+=> ()
 --
 (and true false)
 --
@@ -14,7 +14,7 @@
 --
 (and true ())
 --
-=> <poopcrap>
+=> ()
 --
 (and false true)
 --
@@ -38,7 +38,7 @@
 --
 (or false ())
 --
-=> <poopcrap>
+=> ()
 --
 (or true false)
 --

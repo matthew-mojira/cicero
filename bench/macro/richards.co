@@ -36,23 +36,23 @@
 
     (method (append packet queue_head){
         (set-field link packet _NO_WORK)
-        (if (= _NO_WORK queue_head) packet {
+        (if (= _NO_WORK queue_head)
+            (return packet) ())
 
-            (set mouse queue_head)
+        (set mouse queue_head)
 
-            (set loop true)
-            (while loop {
-                (set link mouse.link)
-                (if (= link _NO_WORK)
-                    (set loop false)
-                ;else
-                    (set mouse link)
-                )
-            })
-
-            (set-field link mouse packet)
-            queue_head
+        (set loop true)
+        (while loop {
+            (set link mouse.link)
+            (if (= link _NO_WORK)
+                (set loop false)
+            ;else
+                (set mouse link)
+            )
         })
+
+        (set-field link mouse packet)
+        queue_head ; return
     })
 )
 
@@ -78,16 +78,17 @@
         (func (fn function_work data_record){
             (if (= _NO_WORK function_work){
                 (set function_work data_record.pending)
-                (if (= _NO_WORK function_work) (self.mark_waiting){
-                    (set-field pending data_record _NO_WORK)
-                    (self.queue_packet function_work)
-                })
-            }{
-            ;else
-                (set-field pending data_record function_work)
-                (if _TRACING (self._trace function_work.datum)())
-                (self._hold_self)
-            })
+                (if (= _NO_WORK function_work)
+                    (return (self.mark_waiting)) ())
+
+                (set-field pending data_record _NO_WORK)
+                (return (self.queue_packet function_work))
+            }())
+
+            (set-field pending data_record function_work)
+            (if _TRACING 
+                (self._trace function_work.datum)())
+            (self._hold_self) ; return
         })
         
         (self.create_task identity priority work state data fn)
@@ -106,24 +107,23 @@
             }())
 
             (set work_packet data_record.work_in)
-            (if (= _NO_WORK work_packet) (self.mark_waiting) {
-            ;else
-                (set count work_packet.datum)
-                (if (>= count _DATA_SIZE){
-                    (set-field work_in data_record work_packet.link)
-                    (self.queue_packet work_packet)
-                }{
-                ;else
-                (set device_packet data_record.device_in)
-                (if (= _NO_WORK device_packet) (self.mark_waiting){
-                ;else
-                    (set-field device_in data_record device_packet.link)
-                    (set-field datum device_packet (work_packet.data.get count))
-                    (set-field datum work_packet (count.succ))
-                    (self.queue_packet device_packet)
-                })
-                })
-            })
+            (if (= _NO_WORK work_packet)
+                (return (self.mark_waiting)) ())
+
+            (set count work_packet.datum)
+            (if (>= count _DATA_SIZE){
+                (set-field work_in data_record work_packet.link)
+                (return (self.queue_packet work_packet))
+            }())
+
+            (set device_packet data_record.device_in)
+            (if (= _NO_WORK device_packet)
+                (return (self.mark_waiting)) ())
+
+            (set-field device_in data_record device_packet.link)
+            (set-field datum device_packet (work_packet.data.get count))
+            (set-field datum work_packet (count.succ))
+            (self.queue_packet device_packet) ; return
         })
 
         (self.create_task identity priority work state data fn)
@@ -134,18 +134,16 @@
 
         (func (fn _work data_record){
             (set-field count data_record (data_record.count.pred))
-            (if (= 0 data_record.count) (self._hold_self){
-            ;else
+            (if (= 0 data_record.count)
+                (return (self._hold_self)) ())
 
-                (if (= 0 (& data_record.control 1)){
-                    (set-field control data_record (/ data_record.control 2))
-                    (self.release _DEVICE_A)
-                }{
-                ;else
-                    (set-field control data_record (^ (/ data_record.control 2) 53256))
-                    (self.release _DEVICE_B)
-                })
-            })
+            (if (= 0 (& data_record.control 1)){
+                (set-field control data_record (/ data_record.control 2))
+                (return (self.release _DEVICE_A))
+            }())
+
+            (set-field control data_record (^ (/ data_record.control 2) 53256))
+            (self.release _DEVICE_B) ; return
         })
         
         (self.create_task identity priority work state data fn)
@@ -169,25 +167,25 @@
         (set data (new _WorkerTaskDataRecord))
 
         (func (fn work data_record){
-            (if (= _NO_WORK work) (self.mark_waiting){
-            ;else
-                (set-field destination data_record (if (= _HANDLER_A data_record.destination) _HANDLER_B _HANDLER_A))
+            (if (= _NO_WORK work)
+                (return (self.mark_waiting)) ())
 
-                (set-field identity work data_record.destination)
-                (set-field datum work 0)
+            (set-field destination data_record (if (= _HANDLER_A data_record.destination) _HANDLER_B _HANDLER_A))
 
-                (set i 0)
-                (while (< i _DATA_SIZE){
-                    (set-field count data_record (data_record.count.succ))
-                    (if (> data_record.count 26) (set-field count data_record 1) ())
+            (set-field identity work data_record.destination)
+            (set-field datum work 0)
 
-                    (work.data.set i (+ 65 (- data_record.count 1)))
+            (set i 0)
+            (while (< i _DATA_SIZE){
+                (set-field count data_record (data_record.count.succ))
+                (if (> data_record.count 26) (set-field count data_record 1) ())
 
-                    (set i (i.succ))
-                })
+                (work.data.set i (+ 65 (- data_record.count 1)))
 
-                (self.queue_packet work)
+                (set i (i.succ))
             })
+
+            (self.queue_packet work) ; return
         })
 
         (self.create_task identity priority work state data fn)
@@ -230,22 +228,26 @@
 
     (method (queue_packet packet){
         (set task (self.find_task packet.identity))
-        (if (= _NO_TASK task) _NO_TASK {
-        ;else
-            (set-field _queue_count self (self._queue_count.succ))
-            (set-field link packet _NO_WORK)
-            (set-field identity packet self._current_task_identity)
-            (task.add_input_and_check_priority packet self._current_task)
-        })
+        (if (= _NO_TASK task)
+            (return _NO_TASK) ())
+
+        (set-field _queue_count self (self._queue_count.succ))
+
+        (set-field link packet _NO_WORK)
+        (set-field identity packet self._current_task_identity)
+        (task.add_input_and_check_priority packet self._current_task) ; return
     })
 
     (method (release identity){
         (set task (self.find_task identity))
-        (if (= _NO_TASK task) _NO_TASK {
-        ;else
-            (task.set_task_holding false)
-            (if (> task.priority self._current_task.priority) task self._current_task)
-        })
+        (if (= _NO_TASK task)
+            (return _NO_TASK) ())
+
+        (task.set_task_holding false)
+
+        (if (> task.priority self._current_task.priority)
+            (return task) ())
+        self._current_task ; return
     })
 
     (method (_trace msg){
@@ -416,11 +418,13 @@
         (if (= _NO_WORK self._input){
             (set-field _input self packet)
             (set-field _packet_pending self true)
-            (if (> self.priority old_task.priority) self old_task)
+            (if (> self.priority old_task.priority)
+                (return self) ())
         }{
+        ;else
             (set-field _input self (self.append packet self._input))
-            old_task
         })
+        old_task ; return
     })
 
     (method (run_task){

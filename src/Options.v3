@@ -4,8 +4,8 @@ component CiceroOptions {
 
 	/* compile-baked optimizations */
 	def useLazyMethods: bool = true;
-	def optimizeBytecode: bool = false;
-	def replaceGlobals = false;
+	def optimizeBytecode: bool = true;
+	def useOptimizedGlobals: bool = true;
 
 	/* tracing */
 	def traceFunctionCalls = false;
@@ -13,7 +13,7 @@ component CiceroOptions {
 	def traceBytecodeEvaluation = false;
 
 	/* profiling */
-	def profileBytecode = true;
+	def profileBytecode = false;
 }
 
 // for parsing

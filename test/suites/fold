@@ -19,10 +19,10 @@
 (println (cons 1 2))
 --
 (1 2)
-=> <poopcrap>
+=> ()
 --
 (println (cons 1 ()))
 --
-(1 <poopcrap>)
-=> <poopcrap>
+(1 ())
+=> ()
 --

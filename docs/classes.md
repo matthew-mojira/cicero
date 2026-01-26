@@ -187,9 +187,9 @@ Methods:
   possible values, so that this form of equality is sufficient.
 * `(o1.!= o2`): opposite of `o.=`
 
-## poopcrap
+## unit
 
-Class of the unit value, PoopCrap.
+Class of the unit value.
 
 Methods:
 * `(u.display)`: returns a string representation for this object.

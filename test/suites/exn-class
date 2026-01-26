@@ -88,7 +88,7 @@
 --
 => "pass"
 --
-(try-new poopcrap)
+(try-new unit)
 --
 => "pass"
 --

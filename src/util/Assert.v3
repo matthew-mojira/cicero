@@ -2,6 +2,14 @@ component Assert {
 	def assert(b: bool) {
 		if (!b) System.error("assertion error", "failed assertion");
 	}
+	def assertNonNull(v: Object) -> Object {
+		if (CiceroOptions.sanityChecks) {
+			if (v == null) {
+				System.error("assertion error", "null value");
+			}
+		}
+		return v;
+	}
 	def assertArity(argv: Array<Object>, argc: int) {
 		assert(argv.length == argc);
 	}

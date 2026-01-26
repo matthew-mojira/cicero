@@ -1,0 +1,26 @@
+component Globals {
+	def globals: FastMap<string, Object> = FastMaps.newStringMap();
+
+	def storeGlobal(id: string, v: Object) -> int {
+		return globals.storeKey(id, v);
+	}
+
+	def loadGlobal(id: string) -> Maybe<(Object, int)> {
+		match (globals.loadKey(id)) {
+			Just(obj) => return Maybe.Just((obj, globals.getIndex(id).fromJust()));
+			Nothing => return Maybe.Nothing;
+		}
+	}
+
+	/* 
+	 * Optimized functions that bypass the map lookup for globals
+	 * Used by `LOAD_GLOBAL_BY_INDEX` and `STORE_GLOBAL_BY_INDEX` opcodes
+	*/
+	def storeGlobalByIndex(index: int, v: Object) {
+		globals.storeIndex(index, v);
+	}
+
+	def loadGlobalByIndex(index: int) -> Object {
+		return globals.loadIndex(index);
+	}
+}
