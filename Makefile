@@ -15,7 +15,7 @@ wasm-wave: bin/cicero.wasm
 
 v3i: bin/cicero.v3i
 
-ENGINE=src/*.v3 src/eval/*.v3 src/util/*.v3 src/analyze/*.v3
+ENGINE=src/*.v3 src/eval/*.v3 src/util/*.v3 src/ast/*.v3 src/bytecode/*.v3 src/bytecode/analyze/*.v3
 CORE=lib/*.co
 CICERO=$(ENGINE) $(LIB)
 
