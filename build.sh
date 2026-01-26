@@ -36,7 +36,7 @@ if [ ! -e "$VIRGIL_LIB/util/Vector.v3" ]; then
     exit 1
 fi
     
-ENGINE="src/*.v3 src/util/*.v3 src/eval/*.v3 src/ast/*.v3 src/bytecode/*.v3 src/bytecode/analyze/*.v3 $VIRGIL_LIB/util/*.v3"
+ENGINE="src/*.v3 src/object/*.v3 src/util/*.v3 src/eval/*.v3 src/ast/*.v3 src/bytecode/*.v3 src/bytecode/analyze/*.v3 $VIRGIL_LIB/util/*.v3"
 
 PROGRAM=$1
 TARGET=$2
