@@ -102,6 +102,7 @@ class WasmFrame extends FrameObject {
 				match (result) {
 					OK(o) => return o;
 					Exn(e) => return null;
+					Return(r) => return r; // TODO should this be possible?
 					Uncomputed => {
 						System.puts("evalCode in WasmFrame returned Uncomputed\n");
 						System.error("internal error", "evalCode in WasmFrame returned Uncomputed\n");
@@ -118,9 +119,7 @@ class WasmFrame extends FrameObject {
 	}
 
 	def getGlobal(id: string) -> Object {
-		if (globals.has(id))
-			return globals[id];
-		return null;
+		return Globals.loadGlobal(id).maybe(null, fun(p: (Object, int)) => p.0);
 	}
 
 	def getNonlocal(id: string) -> Object { // FIXME don't use string
@@ -133,6 +132,7 @@ class WasmFrame extends FrameObject {
 	}
 
 	def setGlobal(id: string, obj: Object) -> Object {
-		return globals[id] = obj;
+		Globals.storeGlobal(id, obj);
+		return obj;
 	}
 }

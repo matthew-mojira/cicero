@@ -36,15 +36,18 @@ class BytecodeCompiler {
 	 */
 	def extract() -> Bytecode {
 		def bytecode = writer.extract();
-		def b = Bytecode.new(bytecode, 
-				locals.extract(), 
+		def b = Bytecode.new(bytecode,
+				locals.extract(),
 				nonlocals.extract(),
 				params,
-				strings.extract(), 
-				constants.extract(), 
-				classholes.extract(), 
-				funcholes.extract(), 
+				strings.extract(),
+				constants.extract(),
+				classholes.extract(),
+				funcholes.extract(),
 				source.extract());
+		if (CiceroOptions.optimizeBytecode) {
+			b.optimize();
+		}
 		return b;
 	}
 

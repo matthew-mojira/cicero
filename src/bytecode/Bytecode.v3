@@ -49,13 +49,23 @@ class Bytecode(instrs:     Array<byte>,
 	}
 
 	def optimize() {
+		/* Create CFG regardless of locals */
+		def cfg = CFGraph.new(this);
+
 		/* local variable optimization */
 		if (locals.length > 0) {
-			def cfg = CFGraph.new(this);
-
 			def analysis = UninitializedLocalAnalysis.new();
 			def result = analysis.runAnalysis(cfg);
 			analysis.processResults(cfg, result);
+		}
+
+		/* Beyond Relooper test */
+		if (CLOptions.DUMP_RELOOP.get()) {
+			System.puts("\n=== Beyond Relooper Output ===\n");
+			def relooper = BeyondRelooper.new(cfg);
+			def region = relooper.reloop();
+			relooper.displayRegion(region, 0);
+			System.puts("=== End Relooper Output ===\n\n");
 		}
 	}
 

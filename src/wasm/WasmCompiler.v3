@@ -742,6 +742,10 @@ class WasmCompiler {
 					}
 				}
 			}
+			Return(expr) => {
+				compileAST(expr);
+				wasm.putb(WasmOp.RETURN.opcode);
+			}
 		}
 	}
 
