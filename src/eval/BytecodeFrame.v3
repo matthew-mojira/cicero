@@ -105,7 +105,7 @@ class BytecodeFrame extends FrameObject {
 			def operand  = bytecode.operand;
 
  			if (CiceroOptions.profileBytecode) {
- 				Profiling.bytecodeMap[opcode.tag] += 1;
+ 				Profiling.dynamicCounts[opcode.tag] += 1;
  			}
 
   			if (CiceroOptions.traceBytecodeEvaluation) {
@@ -168,6 +168,9 @@ class BytecodeFrame extends FrameObject {
 						throw(Exceptions.unboundLocal(b.locals[operand]));
 					else
 						stack.push(local);
+				}
+				LOAD_LOCAL_SAFE => {
+					stack.push(locals[operand]);
 				}
 				LOAD_NONLOCAL => {
 					def nonlocal = nonlocals[operand];

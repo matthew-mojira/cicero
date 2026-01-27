@@ -1,0 +1,7 @@
+(func (main) (try {
+    (set x (two.params))
+    (x.get 0)
+    (x.get 1)
+    (x.get 2)
+  }
+  e e))
