@@ -744,6 +744,10 @@ class WasmCompiler {
 			}
 			Return(expr) => {
 				compileAST(expr);
+				wasm.putb(WasmOp.CALL.opcode);
+				wasm.put_uleb32(SET_RESULT);
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.putb(0); // OK
 				wasm.putb(WasmOp.RETURN.opcode);
 			}
 		}
