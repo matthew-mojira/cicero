@@ -20,20 +20,24 @@ if [ ! -x "$PYTHON3" ]; then
     exit 1
 fi
 
-if [ "$TARGETS" = "" ]; then
-    declare -a TARGETS=("x86-64-linux")
-else
-    IFS=' ' read -r -a TARGETS <<< "$TARGETS"
+if [ "$BENCH_TARGETS" = "" ]; then
+    BENCH_TARGETS="x86-64-linux"
 fi
 
-if [ "$TIERS" = "" ]; then
-    declare -a TIERS=("0" "1") 
-else
-    IFS=' ' read -r -a TIERS <<< "$TIERS"
+if [ "$BENCH_TIERS" = "" ]; then
+    BENCH_TIERS="0 1"
+fi
+
+if [ "$WARMUP_RUNS" = "" ]; then
+    WARMUP_RUNS=1
+fi
+
+if [ "$BENCH_OPT_LEVELS" = "" ]; then
+    BENCH_OPT_LEVELS="2"
 fi
 
 if [ "$MAX_TASKS" = "" ]; then
-    MAX_TASKS=5
+    MAX_TASKS=10
 fi
 
 abort_run_bench() {
@@ -47,11 +51,20 @@ abort_run_bench() {
 trap 'abort_run_bench' ERR SIGINT SIGTERM
 
 SCRIPT_LOC=$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)
-BENCH_DIR=$(cd $SCRIPT_LOC/../bench/ && pwd)
+BENCH_DIR=$SCRIPT_LOC
 SOM_DIR=$(cd $BENCH_DIR/som && pwd)
 MICRO_DIR=$(cd $BENCH_DIR/micro && pwd)
 MACRO_DIR=$(cd $BENCH_DIR/macro && pwd)
-BIN_DIR=$(cd $SCRIPT_LOC/../bin && pwd)
+BIN_DIR=$(cd $BENCH_DIR/../bin && pwd)
+
+if [ "$BENCH_CONFIG" = "" ]; then
+    BENCH_CONFIG="$BENCH_DIR/run_bench.config.csv"
+else
+    # Convert to absolute path if relative
+    if [[ "$BENCH_CONFIG" != /* ]]; then
+        BENCH_CONFIG="$(cd $(dirname "$BENCH_CONFIG") && pwd)/$(basename "$BENCH_CONFIG")"
+    fi
+fi
 
 # Create empty .co file for also calculating built in base time
 if [ -d "/tmp/$USER/cicero-benchmarks/" ]; then
@@ -98,7 +111,7 @@ run_hyperfine(){
     cd $BENCH_DIR
 
     echo "Running: $4 (tier=$3) for $6"
-    if ! $HYPERFINE --style none --warmup 3 --runs "$1" \
+    if ! $HYPERFINE --style none --warmup $WARMUP_RUNS --runs "$1" \
         "$2 -suppress-output=true -tier=$3 $4" \
         --export-csv "$5" 2>&1
     then
@@ -115,38 +128,38 @@ export -f run_hyperfine
 
 # Runs all benchmarks(across all targets and tiers) for a given virgil compiler optimization level
 run_benchmarks(){
-    for target in ${TARGETS[@]}; do
+    for target in $BENCH_TARGETS; do
         if [ "$target" = "wasm-wave" ]; then
             BINARY="wizeng --mode=lazy --stack-size=10M $BIN_DIR/cicero.wasm"
         else
             BINARY=$BIN_DIR/cicero.$target
         fi
-    
-        for tier in "${TIERS[@]}"; do
+
+        for tier in $BENCH_TIERS; do
             # base time builtin with empty file
             CSV_FILE=$(csv_file_name "empty" $tier $o_level $target)
-            $HYPERFINE --style none --warmup 5 --runs 50 "$BINARY -suppress-output=true -tier=$tier $T/empty.co" --export-csv $CSV_FILE 2>&1
+            $HYPERFINE --style none --warmup $WARMUP_RUNS --runs 50 "$BINARY -suppress-output=true -tier=$tier $T/empty.co" --export-csv $CSV_FILE 2>&1
 
             # run the benchmarks
             while IFS=',' read -r benchmark files runs; do
                 CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
                 # run async
                 run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target"
-            done < <(tail -n +2 "$BENCH_DIR/run_bench.config.csv")
+            done < <(tail -n +2 "$BENCH_CONFIG")
         done
     done
 }
 
-for o_level in {0..2}
+for o_level in $BENCH_OPT_LEVELS
 do
     export V3C_OPTS="-O$o_level"
     # Build birectory
     cd $BIN_DIR/..
     # Build cicero for the new optimization level
     make -B
-    echo "Virgil Opitmization Level: $V3C_OPTS"
+    echo "Virgil Optimization Level: $V3C_OPTS"
     run_benchmarks
     wait
     echo "Completed running all benchmarks for $V3C_OPTS"
 done
-$PYTHON3 $SCRIPT_LOC/create_markdown.py $T $BENCH_DIR/results
+$PYTHON3 $BENCH_DIR/../scripts/create_markdown.py $T $BENCH_DIR/results $BENCH_CONFIG
