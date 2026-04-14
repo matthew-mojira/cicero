@@ -1,4 +1,4 @@
-def main(args: Array<string>) -> int {
+export "main" def main(args: Array<string>) -> int {
 	def files = CLOptions.parse(args);
 
 	if (CLOptions.VERSION.get()) {
