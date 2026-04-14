@@ -14,47 +14,47 @@ component WasmRuntime {
 
 	/* assume null object = 0 in objects */
 
-	export "fast:is_null" def isNull(idx: int) -> bool {
+	def isNull(idx: int) -> bool {
 		return objects[idx] == null; /* XXX should also be idx == 0 */
 	}
-	export "fast:is_true"   def isTrue(idx: int)  -> bool => objects[idx].isTrue();
-	export "fast:is_false"  def isFalse(idx: int) -> bool => !objects[idx].isTrue();
-	export "fast:is_func"   def isFunc(idx: int)  -> bool => objects[idx].instanceOf(ClassObjects.classFunc);
-	export "fast:is_class"  def isClass(idx: int) -> bool => objects[idx].instanceOf(ClassObjects.classClass);
-	export "fast:is_string" def isString(idx: int)-> bool => objects[idx].instanceOf(ClassObjects.classStr);
+	def isTrue(idx: int)  -> bool => objects[idx].isTrue();
+	def isFalse(idx: int) -> bool => !objects[idx].isTrue();
+	def isFunc(idx: int)  -> bool => objects[idx].instanceOf(ClassObjects.classFunc);
+	def isClass(idx: int) -> bool => objects[idx].instanceOf(ClassObjects.classClass);
+	def isString(idx: int)-> bool => objects[idx].instanceOf(ClassObjects.classStr);
 
-	export "fast:get_global" def getGlobal(idx: int) -> int {
+	def getGlobal(idx: int) -> int {
 		def id = strings[idx];
 		def obj = frame.getGlobal(id);
 		return alloc(obj);
 	}
 
-	export "fast:get_nonlocal" def getNonlocal(idx: int) -> int {
+	def getNonlocal(idx: int) -> int {
 		def id = strings[idx];
 		def obj = frame.getNonlocal(id);
 		return alloc(obj);
 	}
 
-	export "fast:set_global" def setGlobal(strIdx: int, objIdx: int) -> int {
+	def setGlobal(strIdx: int, objIdx: int) -> int {
 		def obj = objects[objIdx];
 		def id = strings[strIdx];
 		frame.setGlobal(id, obj);
 		return objIdx;
 	}
 
-	export "fast:raise_type" def raiseTypeException(actIdx: int, expIdx: int) -> int {
+	def raiseTypeException(actIdx: int, expIdx: int) -> int {
 		def act = objects[actIdx];
 		def exp = objects[expIdx];
 		def msg = Exceptions.typeMismatch(ClassObject.!(exp), act);
 		def exn = ExnObjects.fromWasm(msg);
 		return alloc(exn);
 	}
-	export "fast:raise_string" def raiseString(strIdx: int) -> int {
+	def raiseString(strIdx: int) -> int {
 		def str = objects[strIdx];
 		def exn = ExnObjects.fromWasm(StrObject.!(str).str);
-		return alloc(exn);		
+		return alloc(exn);
 	}
-	export "fast:raise_field" def raiseMissingField(objIdx: int, strIdx: int) -> int {
+	def raiseMissingField(objIdx: int, strIdx: int) -> int {
 		def obj = objects[objIdx];
 		def str = strings[strIdx];
 		def msg = Exceptions.missingField(obj, str);
@@ -67,16 +67,16 @@ component WasmRuntime {
 
 	/* Calls to other functions */
 	/* TODO make compiler inline these functions */
-	export "fast:call_func0" def callFunc0(func: int) => callFuncN(func, []);
-	export "fast:call_func1" def callFunc1(func: int, o0: int) => callFuncN(func, [o0]);
-	export "fast:call_func2" def callFunc2(func: int, o0: int, o1: int) => callFuncN(func, [o0, o1]);
-	export "fast:call_func3" def callFunc3(func: int, o0: int, o1: int, o2: int) => callFuncN(func, [o0, o1, o2]);
-	export "fast:call_func4" def callFunc4(func: int, o0: int, o1: int, o2: int, o3: int) => callFuncN(func, [o0, o1, o2, o3]);
-	export "fast:call_func5" def callFunc5(func: int, o0: int, o1: int, o2: int, o3: int, o4: int) => callFuncN(func, [o0, o1, o2, o3, o4]);
-	export "fast:call_func6" def callFunc6(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5]);
-	export "fast:call_func7" def callFunc7(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6]);
-	export "fast:call_func8" def callFunc8(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7]);
-	export "fast:call_func9" def callFunc9(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+	def callFunc0(func: int) => callFuncN(func, []);
+	def callFunc1(func: int, o0: int) => callFuncN(func, [o0]);
+	def callFunc2(func: int, o0: int, o1: int) => callFuncN(func, [o0, o1]);
+	def callFunc3(func: int, o0: int, o1: int, o2: int) => callFuncN(func, [o0, o1, o2]);
+	def callFunc4(func: int, o0: int, o1: int, o2: int, o3: int) => callFuncN(func, [o0, o1, o2, o3]);
+	def callFunc5(func: int, o0: int, o1: int, o2: int, o3: int, o4: int) => callFuncN(func, [o0, o1, o2, o3, o4]);
+	def callFunc6(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5]);
+	def callFunc7(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6]);
+	def callFunc8(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7]);
+	def callFunc9(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
 
 	def callFuncN(fvIdx: int, args: Array<int>) -> bool { /* returns if exception */
 		def fv = FuncObject.!(objects[fvIdx]);
@@ -127,19 +127,19 @@ component WasmRuntime {
 		}
 	}
 
-	export "fast:get_result" def getResult() -> int => result;
-	export "fast:set_result" def setResult(i: int) -> void => void(result = i);
+	def getResult() -> int => result;
+	def setResult(i: int) -> void => void(result = i);
 
-	export "fast:create_func0" def createFunc0(funchole: int) => createFuncN(funchole, []);
-	export "fast:create_func1" def createFunc1(funchole: int, o0: int) => createFuncN(funchole, [o0]);
-	export "fast:create_func2" def createFunc2(funchole: int, o0: int, o1: int) => createFuncN(funchole, [o0, o1]);
-	export "fast:create_func3" def createFunc3(funchole: int, o0: int, o1: int, o2: int) => createFuncN(funchole, [o0, o1, o2]);
-	export "fast:create_func4" def createFunc4(funchole: int, o0: int, o1: int, o2: int, o3: int) => createFuncN(funchole, [o0, o1, o2, o3]);
-	export "fast:create_func5" def createFunc5(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int) => createFuncN(funchole, [o0, o1, o2, o3, o4]);
-	export "fast:create_func6" def createFunc6(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5]);
-	export "fast:create_func7" def createFunc7(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6]);
-	export "fast:create_func8" def createFunc8(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6, o7]);
-	export "fast:create_func9" def createFunc9(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+	def createFunc0(funchole: int) => createFuncN(funchole, []);
+	def createFunc1(funchole: int, o0: int) => createFuncN(funchole, [o0]);
+	def createFunc2(funchole: int, o0: int, o1: int) => createFuncN(funchole, [o0, o1]);
+	def createFunc3(funchole: int, o0: int, o1: int, o2: int) => createFuncN(funchole, [o0, o1, o2]);
+	def createFunc4(funchole: int, o0: int, o1: int, o2: int, o3: int) => createFuncN(funchole, [o0, o1, o2, o3]);
+	def createFunc5(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int) => createFuncN(funchole, [o0, o1, o2, o3, o4]);
+	def createFunc6(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5]);
+	def createFunc7(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6]);
+	def createFunc8(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6, o7]);
+	def createFunc9(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
 
 	def createFuncN(funcholeIdx: int, nonlocalArgs: Array<int>) -> int {
 		def funchole = funcholes[funcholeIdx];
@@ -159,19 +159,19 @@ component WasmRuntime {
 		return alloc(fn);
 	}
 
-	export "fast:get_field" def getField(objIdx: int, strIdx: int) -> int {
+	def getField(objIdx: int, strIdx: int) -> int {
 		def obj = objects[objIdx];
 		def str = strings[strIdx];
 		def field = obj.getField(str);
 		return alloc(field);
 	}
-	export "fast:set_field" def setField(objIdx: int, strIdx: int, valIdx: int) -> int {
+	def setField(objIdx: int, strIdx: int, valIdx: int) -> int {
 		def obj = objects[objIdx];
 		def str = strings[strIdx];
 		def val = objects[valIdx];
 		return if(obj.setField(str, val), valIdx, alloc(null));
 	}
-	export "fast:create_class" def createClass(superIdx: int, classholeIdx: int) -> bool { /* returns if exception */
+	def createClass(superIdx: int, classholeIdx: int) -> bool { /* returns if exception */
 		def o = objects[superIdx];
 		def classhole = classholes[classholeIdx];
 
@@ -185,7 +185,7 @@ component WasmRuntime {
 		result = alloc(classhole(superclass));
 		return false;
 	}
-	export "fast:create_object" def createObject(clsIdx: int) -> bool { /* returns if exception */
+	def createObject(clsIdx: int) -> bool { /* returns if exception */
 		def clsObj = ClassObject.!(objects[clsIdx]); // already asserted previously
 		def parentFr = WasmRuntime.frame;
 		def obj = Objects.newObject(clsObj);
@@ -224,25 +224,25 @@ component WasmRuntime {
 					result = alloc(frame.getExn());
 					return true;
 				}
-			} 
+			}
 		}
 		result = alloc(obj);
 		return false;
 	}
 
 	/* lists */
-	export "fast:create_list0"  def createList0() => alloc(ListObjects.fromArray([]));
-	export "fast:create_list1"  def createList1(o0: int) => alloc(ListObjects.fromArray(Arrays.map([o0], objects.[])));
-	export "fast:create_list2"  def createList2(o0: int, o1: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1], objects.[])));
-	export "fast:create_list3"  def createList3(o0: int, o1: int, o2: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2], objects.[])));
-	export "fast:create_list4"  def createList4(o0: int, o1: int, o2: int, o3: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3], objects.[])));
-	export "fast:create_list5"  def createList5(o0: int, o1: int, o2: int, o3: int, o4: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4], objects.[])));
-	export "fast:create_list6"  def createList6(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5], objects.[])));
-	export "fast:create_list7"  def createList7(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6], objects.[])));
-	export "fast:create_list8"  def createList8(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7], objects.[])));
-	export "fast:create_list9"  def createList9(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8], objects.[])));
-	export "fast:create_list10" def createList10(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8, o9], objects.[])));
-	export "fast:create_list16" def createList16(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int, o10: int, o11: int, o12: int, o13: int, o14: int, o15: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15], objects.[])));
+	def createList0()  => alloc(ListObjects.fromArray([]));
+	def createList1(o0: int) => alloc(ListObjects.fromArray(Arrays.map([o0], objects.[])));
+	def createList2(o0: int, o1: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1], objects.[])));
+	def createList3(o0: int, o1: int, o2: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2], objects.[])));
+	def createList4(o0: int, o1: int, o2: int, o3: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3], objects.[])));
+	def createList5(o0: int, o1: int, o2: int, o3: int, o4: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4], objects.[])));
+	def createList6(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5], objects.[])));
+	def createList7(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6], objects.[])));
+	def createList8(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7], objects.[])));
+	def createList9(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8], objects.[])));
+	def createList10(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8, o9], objects.[])));
+	def createList16(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, o9: int, o10: int, o11: int, o12: int, o13: int, o14: int, o15: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15], objects.[])));
 
 	def alloc(obj: Object) -> int {
 		if (obj == null) return 0;
@@ -252,3 +252,54 @@ component WasmRuntime {
 		return idx;
 	}
 }
+
+export "fast:is_null"       = WasmRuntime.isNull;
+export "fast:is_true"       = WasmRuntime.isTrue;
+export "fast:is_false"      = WasmRuntime.isFalse;
+export "fast:is_func"       = WasmRuntime.isFunc;
+export "fast:is_class"      = WasmRuntime.isClass;
+export "fast:is_string"     = WasmRuntime.isString;
+export "fast:get_global"    = WasmRuntime.getGlobal;
+export "fast:get_nonlocal"  = WasmRuntime.getNonlocal;
+export "fast:set_global"    = WasmRuntime.setGlobal;
+export "fast:raise_type"    = WasmRuntime.raiseTypeException;
+export "fast:raise_string"  = WasmRuntime.raiseString;
+export "fast:raise_field"   = WasmRuntime.raiseMissingField;
+export "fast:call_func0"    = WasmRuntime.callFunc0;
+export "fast:call_func1"    = WasmRuntime.callFunc1;
+export "fast:call_func2"    = WasmRuntime.callFunc2;
+export "fast:call_func3"    = WasmRuntime.callFunc3;
+export "fast:call_func4"    = WasmRuntime.callFunc4;
+export "fast:call_func5"    = WasmRuntime.callFunc5;
+export "fast:call_func6"    = WasmRuntime.callFunc6;
+export "fast:call_func7"    = WasmRuntime.callFunc7;
+export "fast:call_func8"    = WasmRuntime.callFunc8;
+export "fast:call_func9"    = WasmRuntime.callFunc9;
+export "fast:get_result"    = WasmRuntime.getResult;
+export "fast:set_result"    = WasmRuntime.setResult;
+export "fast:create_func0"  = WasmRuntime.createFunc0;
+export "fast:create_func1"  = WasmRuntime.createFunc1;
+export "fast:create_func2"  = WasmRuntime.createFunc2;
+export "fast:create_func3"  = WasmRuntime.createFunc3;
+export "fast:create_func4"  = WasmRuntime.createFunc4;
+export "fast:create_func5"  = WasmRuntime.createFunc5;
+export "fast:create_func6"  = WasmRuntime.createFunc6;
+export "fast:create_func7"  = WasmRuntime.createFunc7;
+export "fast:create_func8"  = WasmRuntime.createFunc8;
+export "fast:create_func9"  = WasmRuntime.createFunc9;
+export "fast:get_field"     = WasmRuntime.getField;
+export "fast:set_field"     = WasmRuntime.setField;
+export "fast:create_class"  = WasmRuntime.createClass;
+export "fast:create_object" = WasmRuntime.createObject;
+export "fast:create_list0"  = WasmRuntime.createList0;
+export "fast:create_list1"  = WasmRuntime.createList1;
+export "fast:create_list2"  = WasmRuntime.createList2;
+export "fast:create_list3"  = WasmRuntime.createList3;
+export "fast:create_list4"  = WasmRuntime.createList4;
+export "fast:create_list5"  = WasmRuntime.createList5;
+export "fast:create_list6"  = WasmRuntime.createList6;
+export "fast:create_list7"  = WasmRuntime.createList7;
+export "fast:create_list8"  = WasmRuntime.createList8;
+export "fast:create_list9"  = WasmRuntime.createList9;
+export "fast:create_list10" = WasmRuntime.createList10;
+export "fast:create_list16" = WasmRuntime.createList16;
