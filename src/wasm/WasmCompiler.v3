@@ -218,48 +218,6 @@ class WasmCompiler {
 		wasm.put_uleb32(scratch1);
 	}
 
-	def withIf<I, O>(emit: void -> void) {
-		def blockSig = CiWasmTarget.functionTypeId<I, O>();
-		wasm.putb(WasmOp.IF.opcode);
-		wasm.put_sleb32(blockSig);
-		blockDepth++;
-			emit();
-		wasm.putb(WasmOp.END.opcode);
-		blockDepth--;
-	}
-	def withIfElse<I, O>(emitTrue: void -> void, emitFalse: void -> void) {
-		def blockSig = CiWasmTarget.functionTypeId<I, O>();
-		wasm.putb(WasmOp.IF.opcode);
-		wasm.put_sleb32(blockSig);
-		blockDepth++;
-			emitTrue();
-		wasm.putb(WasmOp.ELSE.opcode);
-			emitFalse();
-		wasm.putb(WasmOp.END.opcode);
-		blockDepth--;
-	}
-	def withIfFalse<I, O>(emitFalse: void -> void) {
-		withIfElse<I, O>(fun {}, emitFalse);
-	}
-	def withBlock<I, O>(emit: void -> void) {
-		def blockSig = CiWasmTarget.functionTypeId<I, O>();
-		wasm.putb(WasmOp.BLOCK.opcode);
-		wasm.put_sleb32(blockSig);
-		blockDepth++;
-			emit();
-		wasm.putb(WasmOp.END.opcode);
-		blockDepth--;
-	}
-	def withLoop<I, O>(emit: void -> void) {
-		def blockSig = CiWasmTarget.functionTypeId<I, O>();
-		wasm.putb(WasmOp.LOOP.opcode);
-		wasm.put_sleb32(blockSig);
-		blockDepth++;
-			emit();
-		wasm.putb(WasmOp.END.opcode);
-		blockDepth--;
-	}
-	// TODO refactor everything to go through here
 	def withControl<I, O>(emit: void -> void, opcode: WasmOp) {
 		def blockSig = CiWasmTarget.functionTypeId<I, O>();
 		wasm.putb(opcode.opcode);
@@ -268,6 +226,25 @@ class WasmCompiler {
 			emit();
 		wasm.putb(WasmOp.END.opcode);
 		blockDepth--;
+	}
+	def withIf<I, O>(emit: void -> void) {
+		withControl<I, O>(emit, WasmOp.IF);
+	}
+	def withIfElse<I, O>(emitTrue: void -> void, emitFalse: void -> void) {
+		withControl<I, O>(fun {
+			emitTrue();
+			wasm.putb(WasmOp.ELSE.opcode);
+			emitFalse();
+		});
+	}
+	def withIfFalse<I, O>(emitFalse: void -> void) {
+		withIfElse<I, O>(fun {}, emitFalse);
+	}
+	def withBlock<I, O>(emit: void -> void) {
+		withControl<I, O>(emit, WasmOp.BLOCK);
+	}
+	def withLoop<I, O>(emit: void -> void) {
+		withControl<I, O>(emit, WasmOp.LOOP);
 	}
 	
 	def compileAST(expr: AST) {
