@@ -75,6 +75,7 @@ class WasmCompiler {
 	new(ast: AST, params) {
 		// Initialize some deferred elements
 		if (BLOCK_SIG < 0) {
+			// XXX should be int (same effect)
 			BLOCK_SIG = CiWasmTarget.functionTypeId<Object, Object>();
 			COPY_SIG  = CiWasmTarget.functionTypeId<Object, (Object, Object)>();
 			SWAP_SIG  = CiWasmTarget.functionTypeId<(Object, Object), (Object, Object)>();
@@ -219,6 +220,30 @@ class WasmCompiler {
 		wasm.putb(WasmOp.GET_LOCAL.opcode);
 		wasm.put_uleb32(scratch1);
 	}
+
+	def withIf<I, O>(emit: void -> void) {
+		def blockSig = CiWasmTarget.functionTypeId<I, O>();
+		wasm.putb(WasmOp.IF.opcode);
+		wasm.put_sleb32(blockSig);
+		blockDepth++;
+			emit();
+		wasm.putb(WasmOp.END.opcode);
+		blockDepth--;
+	}
+	def withIfElse<I, O>(emitTrue: void -> void, emitFalse: void -> void) {
+		def blockSig = CiWasmTarget.functionTypeId<I, O>();
+		wasm.putb(WasmOp.IF.opcode);
+		wasm.put_sleb32(blockSig);
+		blockDepth++;
+			emitTrue();
+		wasm.putb(WasmOp.ELSE.opcode);
+			emitFalse();
+		wasm.putb(WasmOp.END.opcode);
+		blockDepth--;
+	}
+	def withIfFalse<I, O>(emitFalse: void -> void) {
+		withIfElse<I, O>(fun {}, emitFalse);
+	}
 	
 	def compileAST(expr: AST) {
 		match (expr.data) {
@@ -237,16 +262,12 @@ class WasmCompiler {
 					wasm.put_uleb32(IS_NULL); /* call to RTS */
 
 					// throw exception if null
-					wasm.putb(WasmOp.IF.opcode);
-					wasm.put_sleb32(BLOCK_SIG);
-					blockDepth++;
+					withIf<int, int>(fun {
 						wasm.putb(WasmOp.I32_CONST.opcode);
 						wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.unboundLocal(id))));
 						wasm.putb(WasmOp.BR.opcode);
 						wasm.put_sleb32(blockDepth - handlerStack.peek());
-					wasm.putb(WasmOp.END.opcode);
-					blockDepth--;
-
+					});
  				}
   				Global => {
 					wasm.putb(WasmOp.I32_CONST.opcode);
@@ -260,15 +281,12 @@ class WasmCompiler {
 					wasm.put_uleb32(IS_NULL); /* call to RTS */
 
 					// throw exception if null
-					wasm.putb(WasmOp.IF.opcode);
-					wasm.put_sleb32(BLOCK_SIG);
-					blockDepth++;
+					withIf<int, int>(fun {
 						wasm.putb(WasmOp.I32_CONST.opcode);
 						wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.unboundGlobal(id))));
 						wasm.putb(WasmOp.BR.opcode);
 						wasm.put_sleb32(blockDepth - handlerStack.peek());
-					wasm.putb(WasmOp.END.opcode);
-					blockDepth--;
+					});
 				}
   				Nonlocal => {
 					wasm.putb(WasmOp.I32_CONST.opcode);
@@ -299,13 +317,10 @@ class WasmCompiler {
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(IS_TRUE); /* call to RTS */
 
-				wasm.putb(WasmOp.IF.opcode);
-				wasm.put_sleb32(BLOCK_SIG);
-				blockDepth++;
+				withIf<int, int>(fun {
 					wasm.putb(WasmOp.DROP.opcode);
 					compileAST(right);
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
  			}
  			Or(left, right) => {
 				compileAST(left);
@@ -314,13 +329,10 @@ class WasmCompiler {
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(IS_FALSE); /* call to RTS */
 
- 				wasm.putb(WasmOp.IF.opcode);
- 				wasm.put_sleb32(BLOCK_SIG);
-				blockDepth++;
+				withIf<int, int>(fun {
 					wasm.putb(WasmOp.DROP.opcode);
 					compileAST(right);
- 				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
  			}
  			Apply(tgt, args) => {
 				compileAST(tgt);
@@ -331,11 +343,7 @@ class WasmCompiler {
 				wasm.put_uleb32(IS_FUNC); /* call to RTS */
 
 				// throw exception if not func
-				wasm.putb(WasmOp.IF.opcode);
-				wasm.put_sleb32(BLOCK_SIG);
-				blockDepth++;
-					// skip
-				wasm.putb(WasmOp.ELSE.opcode);
+				withIfFalse<int, int>(fun {
 					// top of stack is problematic object
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(addConst(ClassObjects.classFunc));
@@ -344,8 +352,7 @@ class WasmCompiler {
 					wasm.put_uleb32(RAISE_TYPE); /* call to RTS */
 					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_sleb32(blockDepth - handlerStack.peek());
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
 
 				for (arg in args)
 					compileAST(arg);
@@ -370,33 +377,26 @@ class WasmCompiler {
 				// XXX should return two values above
 
 				// if exception, find handler
-				wasm.putb(WasmOp.IF.opcode);
- 				wasm.putb(0x7F); // result i32
-				blockDepth++;
+				withIfElse<void, int>(fun {
 					wasm.putb(WasmOp.CALL.opcode);
 					wasm.put_uleb32(GET_RESULT);  /* call to RTS */
 					
 					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_sleb32(blockDepth - handlerStack.peek());
-				wasm.putb(WasmOp.ELSE.opcode);
+				}, /* else */ fun {
 					wasm.putb(WasmOp.CALL.opcode);
 					wasm.put_uleb32(GET_RESULT);  /* call to RTS */
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
-
+				});
 			}
  			If(cond, left, right) => {
 				compileAST(cond);
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(IS_TRUE);  /* call to RTS */
- 				wasm.putb(WasmOp.IF.opcode);
- 				wasm.putb(0x7F); // result i32
-				blockDepth++;
+				withIfElse<void, int>(fun {
 					compileAST(left);
-				wasm.putb(WasmOp.ELSE.opcode);
+				}, /* else */ fun {
 					compileAST(right);
- 				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
 			}
 			Cond(cases) => {
 				wasm.putb(WasmOp.BLOCK.opcode);
@@ -441,11 +441,7 @@ class WasmCompiler {
 				wasm.put_uleb32(IS_STRING); /* call to RTS */
 
 				// throw exception if not func
-				wasm.putb(WasmOp.IF.opcode);
-				wasm.put_sleb32(BLOCK_SIG);
-				blockDepth++;
-					// skip
-				wasm.putb(WasmOp.ELSE.opcode);
+				withIfFalse<int, int>(fun { /* FIXME this first int should be bool, do it everywhere */
 					// top of stack is problematic object
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(addConst(ClassObjects.classStr)); // TODO don't realloc const slot
@@ -454,8 +450,7 @@ class WasmCompiler {
 					wasm.put_uleb32(RAISE_TYPE); /* call to RTS */
 					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_sleb32(blockDepth - handlerStack.peek());
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
 
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(RAISE_STRING);
@@ -585,9 +580,7 @@ class WasmCompiler {
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(IS_NULL);  /* call to RTS */
 				// check failure condition
-				wasm.putb(WasmOp.IF.opcode);
-				wasm.put_sleb32(BLOCK_SIG);
-				blockDepth++;
+				withIf<int, int>(fun {
 					wasm.putb(WasmOp.DROP.opcode);
 
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
@@ -599,8 +592,7 @@ class WasmCompiler {
 					
 					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_sleb32(blockDepth - handlerStack.peek());
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
 			}
  			SetField(field, obj, val) => {
 				compileAST(obj);
@@ -617,9 +609,7 @@ class WasmCompiler {
 				wasm.putb(WasmOp.CALL.opcode);
 				wasm.put_uleb32(IS_NULL); /* call to RTS */
 				// check failure condition
-				wasm.putb(WasmOp.IF.opcode);
-				wasm.put_sleb32(BLOCK_SIG);
-				blockDepth++;
+				withIf<int, int>(fun {
 					wasm.putb(WasmOp.DROP.opcode);
 
 					wasm.putb(WasmOp.GET_LOCAL.opcode); // unstash
@@ -631,8 +621,7 @@ class WasmCompiler {
 					
 					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_sleb32(blockDepth - handlerStack.peek());
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
 			}
  			Class(id, superclass, init, fields, methods) => {
 				// there are subcodes which are getting compiled here
@@ -661,19 +650,16 @@ class WasmCompiler {
 				wasm.put_uleb32(CREATE_CLASS); /* call to RTS */
 
 				// if exception, find handler
-				wasm.putb(WasmOp.IF.opcode);
- 				wasm.putb(0x7F); // result i32
-				blockDepth++;
+				withIfElse<void, int>(fun {
 					wasm.putb(WasmOp.CALL.opcode);
 					wasm.put_uleb32(GET_RESULT);  /* call to RTS */
 					
 					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_sleb32(blockDepth - handlerStack.peek());
-				wasm.putb(WasmOp.ELSE.opcode);
+				}, /* else */ fun {
 					wasm.putb(WasmOp.CALL.opcode);
 					wasm.put_uleb32(GET_RESULT);  /* call to RTS */
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
 			}
  			New(expr) => {
  				compileAST(expr);
@@ -684,11 +670,7 @@ class WasmCompiler {
 				wasm.put_uleb32(IS_CLASS);  /* call to RTS */
 
 				// throw exception if not class
-				wasm.putb(WasmOp.IF.opcode);
-				wasm.put_sleb32(BLOCK_SIG);
-				blockDepth++;
-					// skip
-				wasm.putb(WasmOp.ELSE.opcode);
+				withIfFalse<int, int>(fun {
 					// top of stack is problematic object
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(addConst(ClassObjects.classClass));
@@ -697,26 +679,22 @@ class WasmCompiler {
 					wasm.put_uleb32(RAISE_TYPE); /* call to RTS */
 					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_sleb32(blockDepth - handlerStack.peek());
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
 
  				wasm.putb(WasmOp.CALL.opcode);
  				wasm.put_uleb32(CREATE_OBJECT);
 
 				// if exception, find handler
-				wasm.putb(WasmOp.IF.opcode);
- 				wasm.putb(0x7F); // result i32
-				blockDepth++;
+				withIfElse<void, int>(fun {
 					wasm.putb(WasmOp.CALL.opcode);
 					wasm.put_uleb32(GET_RESULT);  /* call to RTS */
 					
 					wasm.putb(WasmOp.BR.opcode);
 					wasm.put_sleb32(blockDepth - handlerStack.peek());
-				wasm.putb(WasmOp.ELSE.opcode);
+				}, /* else */ fun {
 					wasm.putb(WasmOp.CALL.opcode);
 					wasm.put_uleb32(GET_RESULT);  /* call to RTS */
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+				});
 			}
  			List(elems) => {
 				for (elem in elems)
