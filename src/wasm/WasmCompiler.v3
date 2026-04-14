@@ -93,9 +93,7 @@ class WasmCompiler {
 		wasm.putb(0x7F);    // i32
 
 		// FUNCTION BODY
-		wasm.putb(WasmOp.BLOCK.opcode);
-		wasm.putb(0x7F);    // (result i32)
-		blockDepth++;
+		withBlock<void, int>(fun {
 			handlerStack.push(blockDepth);
 
 			compileAST(ast);
@@ -109,8 +107,7 @@ class WasmCompiler {
 			wasm.putb(WasmOp.UNREACHABLE.opcode); 
 
 			handlerStack.pop(); // XXX unnecessary
-		wasm.putb(WasmOp.END.opcode);
-		blockDepth--;
+		});
 
 		wasm.putb(WasmOp.CALL.opcode);
 		wasm.put_uleb32(SET_RESULT);  /* call to RTS */
@@ -243,6 +240,34 @@ class WasmCompiler {
 	}
 	def withIfFalse<I, O>(emitFalse: void -> void) {
 		withIfElse<I, O>(fun {}, emitFalse);
+	}
+	def withBlock<I, O>(emit: void -> void) {
+		def blockSig = CiWasmTarget.functionTypeId<I, O>();
+		wasm.putb(WasmOp.BLOCK.opcode);
+		wasm.put_sleb32(blockSig);
+		blockDepth++;
+			emit();
+		wasm.putb(WasmOp.END.opcode);
+		blockDepth--;
+	}
+	def withLoop<I, O>(emit: void -> void) {
+		def blockSig = CiWasmTarget.functionTypeId<I, O>();
+		wasm.putb(WasmOp.LOOP.opcode);
+		wasm.put_sleb32(blockSig);
+		blockDepth++;
+			emit();
+		wasm.putb(WasmOp.END.opcode);
+		blockDepth--;
+	}
+	// TODO refactor everything to go through here
+	def withControl<I, O>(emit: void -> void, opcode: WasmOp) {
+		def blockSig = CiWasmTarget.functionTypeId<I, O>();
+		wasm.putb(opcode.opcode);
+		wasm.put_sleb32(blockSig);
+		blockDepth++;
+			emit();
+		wasm.putb(WasmOp.END.opcode);
+		blockDepth--;
 	}
 	
 	def compileAST(expr: AST) {
@@ -399,38 +424,31 @@ class WasmCompiler {
 				});
 			}
 			Cond(cases) => {
-				wasm.putb(WasmOp.BLOCK.opcode);
-				wasm.putb(0x7F);
-				blockDepth++;
-				for (c in cases) {
-					def cond = c.0;
-					def body = c.1;
-					wasm.putb(WasmOp.BLOCK.opcode);
-					wasm.putb(0x7F);
-					blockDepth++;
-					compileAST(cond);
-					
-					wasmDup();
-					wasm.putb(WasmOp.CALL.opcode);
-					wasm.put_uleb32(IS_FALSE);  /* call to RTS */
+				withBlock<void, int>(fun {
+					for (c in cases) {
+						def cond = c.0;
+						def body = c.1;
+						withBlock<void, int>(fun {
+							compileAST(cond);
+							
+							wasmDup();
+							wasm.putb(WasmOp.CALL.opcode);
+							wasm.put_uleb32(IS_FALSE);  /* call to RTS */
 
-					wasm.putb(WasmOp.BR_IF.opcode);
-					wasm.put_uleb32(0); // next case
-					compileAST(body);
+							wasm.putb(WasmOp.BR_IF.opcode);
+							wasm.put_uleb32(0); // next case
+							compileAST(body);
+							wasm.putb(WasmOp.BR.opcode);
+							wasm.put_uleb32(1); // done
+						});
+					}
+
+					// throw exception
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.noTrueBranch)));
 					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_uleb32(1); // done
-					wasm.putb(WasmOp.END.opcode);
-					blockDepth--;
-				}
-
-				// throw exception
-				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.noTrueBranch)));
-				wasm.putb(WasmOp.BR.opcode);
-				wasm.put_sleb32(blockDepth - handlerStack.peek());
-
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+					wasm.put_sleb32(blockDepth - handlerStack.peek());
+				});
 			}
 			Raise(exn) => {
 				compileAST(exn);
@@ -458,12 +476,8 @@ class WasmCompiler {
 				wasm.put_sleb32(blockDepth - handlerStack.peek());
 			}
  			Catch(try, id, mode, catch) => {
-					wasm.putb(WasmOp.BLOCK.opcode);
-					wasm.putb(0x7F);
-					blockDepth++;
-						wasm.putb(WasmOp.BLOCK.opcode);
-						wasm.putb(0x7F);
-						blockDepth++;
+				withBlock<void, int>(fun {
+					withBlock<void, int>(fun {
 
 						handlerStack.push(blockDepth);
 
@@ -472,9 +486,7 @@ class WasmCompiler {
 						wasm.put_uleb32(1); // ok
 
 						handlerStack.pop();
-
-						wasm.putb(WasmOp.END.opcode);
-						blockDepth--;
+					});
 
 					match (mode.data) {
 						Local => {
@@ -495,9 +507,7 @@ class WasmCompiler {
 						Nonlocal => System.error("compile error", "illegal case on catch: Nonlocal");
 					}
 					compileAST(catch);
-
-					wasm.putb(WasmOp.END.opcode);
-					blockDepth--;
+				});
 			}
 			Func(id, params, body, nonlocals) => {
  				body.compile(params);
@@ -536,12 +546,8 @@ class WasmCompiler {
 				}
  			}
  			While(cond, body) => {
-				wasm.putb(WasmOp.BLOCK.opcode);
-				wasm.putb(0x7F);
-				blockDepth++;
-					wasm.putb(WasmOp.LOOP.opcode);
-					wasm.putb(0x7F); // is this needed?
-					blockDepth++;
+				withBlock<void, int>(fun {
+					withLoop<void, int>(fun {
 						compileAST(cond);
 						wasmDup();
 						wasm.putb(WasmOp.CALL.opcode);
@@ -552,11 +558,8 @@ class WasmCompiler {
 						compileAST(body);
 						wasm.putb(WasmOp.BR.opcode);
 						wasm.put_uleb32(0); // back to top of loop
-
-					wasm.putb(WasmOp.END.opcode);
-					blockDepth--;
-				wasm.putb(WasmOp.END.opcode);
-				blockDepth--;
+					});
+				});
 			}
  			Begin(exprs) => {
 				for (i < exprs.length - 1) {
