@@ -198,6 +198,16 @@ class WasmCompiler {
 				);
 	}
 
+	def emitPushConst(val: Object) {
+		wasm.putb(WasmOp.I32_CONST.opcode);
+		wasm.put_sleb32(addConst(val));
+	}
+
+	def emitPushString(str: string) {
+		wasm.putb(WasmOp.I32_CONST.opcode);
+		wasm.put_sleb32(addString(str));
+	}
+
 	def emitInterpretResult() {
 		withIfElse<void, int>(fun {
 			emitCall(GET_RESULT);
@@ -267,8 +277,7 @@ class WasmCompiler {
 	def compileAST(expr: AST) {
 		match (expr.data) {
 			Lit(lit) => {
-				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_sleb32(addConst(lit));
+				emitPushConst(lit);
 			}
   			VarGet(id, mode) => match (mode.data) {
   				Local    => {
@@ -281,14 +290,12 @@ class WasmCompiler {
 
 					// throw exception if null
 					withIf<int, int>(fun {
-						wasm.putb(WasmOp.I32_CONST.opcode);
-						wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.unboundLocal(id))));
+						emitPushConst(ExnObjects.fromWasm(Exceptions.unboundLocal(id)));
 						emitJumpToExnHandler();
 					});
  				}
   				Global => {
-					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(addString(id));
+					emitPushString(id);
  					emitCall(GET_GLOBAL);
 
 					wasmDup();
@@ -297,14 +304,12 @@ class WasmCompiler {
 
 					// throw exception if null
 					withIf<int, int>(fun {
-						wasm.putb(WasmOp.I32_CONST.opcode);
-						wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.unboundGlobal(id))));
+						emitPushConst(ExnObjects.fromWasm(Exceptions.unboundGlobal(id)));
 						emitJumpToExnHandler();
 					});
 				}
   				Nonlocal => {
-					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(addString(id));
+					emitPushString(id);
  					emitCall(GET_NONLOCAL);
 				}
 			}
@@ -315,8 +320,7 @@ class WasmCompiler {
  					wasm.put_uleb32(addLocal(id));
  				}
  				Global => {
-					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(addString(id));
+					emitPushString(id);
 					compileAST(val);
  					emitCall(SET_GLOBAL);
 				}
@@ -354,9 +358,7 @@ class WasmCompiler {
 				// throw exception if not func
 				withIfFalse<int, int>(fun {
 					// top of stack is problematic object
-					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(addConst(ClassObjects.classFunc));
-
+					emitPushConst(ClassObjects.classFunc);
 					emitCall(RAISE_TYPE);
 					emitJumpToExnHandler();
 				});
@@ -415,8 +417,7 @@ class WasmCompiler {
 					}
 
 					// throw exception
-					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.noTrueBranch)));
+					emitPushConst(ExnObjects.fromWasm(Exceptions.noTrueBranch));
 					emitJumpToExnHandler();
 				});
 			}
@@ -430,9 +431,7 @@ class WasmCompiler {
 				// throw exception if not func
 				withIfFalse<int, int>(fun { /* FIXME this first int should be bool, do it everywhere */
 					// top of stack is problematic object
-					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(addConst(ClassObjects.classStr)); // TODO don't realloc const slot
-
+					emitPushConst(ClassObjects.classStr); // TODO don't realloc const slot
 					emitCall(RAISE_TYPE);
 					emitJumpToExnHandler();
 				});
@@ -461,8 +460,7 @@ class WasmCompiler {
 						Global => {
 							wasm.putb(WasmOp.SET_LOCAL.opcode);
 							wasm.put_uleb32(scratch0);
-							wasm.putb(WasmOp.I32_CONST.opcode);
-							wasm.put_sleb32(addString(id));
+							emitPushString(id);
 							wasm.putb(WasmOp.GET_LOCAL.opcode);
 							wasm.put_uleb32(scratch0);
 							emitCall(SET_GLOBAL);
@@ -537,8 +535,7 @@ class WasmCompiler {
 				
 				wasm.putb(WasmOp.TEE_LOCAL.opcode);
 				wasm.put_uleb32(scratch1); // stash object
-				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_sleb32(addString(field));
+				emitPushString(field);
 				emitCall(GET_FIELD);
 				wasmDup();
 
@@ -549,8 +546,7 @@ class WasmCompiler {
 
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.put_uleb32(scratch1); // unstash object
-					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(addString(field));
+					emitPushString(field);
 					emitCall(RAISE_FIELD);
 					emitJumpToExnHandler();
 				});
@@ -560,8 +556,7 @@ class WasmCompiler {
 				wasm.putb(WasmOp.TEE_LOCAL.opcode);
 				wasm.put_uleb32(scratch1); // stash object
 
-				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.put_sleb32(addString(field));
+				emitPushString(field);
 				compileAST(val);
 				emitCall(SET_FIELD);
 				wasmDup();
@@ -573,8 +568,7 @@ class WasmCompiler {
 
 					wasm.putb(WasmOp.GET_LOCAL.opcode); // unstash
 					wasm.put_uleb32(scratch1);
-					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(addString(field));
+					emitPushString(field);
 					emitCall(RAISE_FIELD);
 					emitJumpToExnHandler();
 				});
@@ -583,8 +577,7 @@ class WasmCompiler {
 				// there are subcodes which are getting compiled here
 				match (superclass) {
 					Nothing => {
-						wasm.putb(WasmOp.I32_CONST.opcode);
-						wasm.put_sleb32(addConst(ClassObjects.classBase));
+						emitPushConst(ClassObjects.classBase);
 					}
 					Just(expr) => compileAST(expr);
 				}
@@ -617,9 +610,7 @@ class WasmCompiler {
 				// throw exception if not class
 				withIfFalse<int, int>(fun {
 					// top of stack is problematic object
-					wasm.putb(WasmOp.I32_CONST.opcode);
-					wasm.put_sleb32(addConst(ClassObjects.classClass));
-
+					emitPushConst(ClassObjects.classClass);
 					emitCall(RAISE_TYPE);
 					emitJumpToExnHandler();
 				});
