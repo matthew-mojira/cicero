@@ -198,6 +198,15 @@ class WasmCompiler {
 				);
 	}
 
+	def emitInterpretResult() {
+		withIfElse<void, int>(fun {
+			emitCall(GET_RESULT);
+			emitJumpToExnHandler();
+		}, /* else */ fun {
+			emitCall(GET_RESULT);
+		});
+	}
+
 	def emitJumpToExnHandler() {
 		wasm.putb(WasmOp.BR.opcode);
 		wasm.put_sleb32(blockDepth - handlerStack.peek());
@@ -375,12 +384,7 @@ class WasmCompiler {
 				// XXX should return two values above
 
 				// if exception, find handler
-				withIfElse<void, int>(fun {
-					emitCall(GET_RESULT);
-					emitJumpToExnHandler();
-				}, /* else */ fun {
-					emitCall(GET_RESULT);
-				});
+				emitInterpretResult();
 			}
  			If(cond, left, right) => {
 				compileAST(cond);
@@ -601,12 +605,7 @@ class WasmCompiler {
 				emitCall(CREATE_CLASS);
 
 				// if exception, find handler
-				withIfElse<void, int>(fun {
-					emitCall(GET_RESULT);
-					emitJumpToExnHandler();
-				}, /* else */ fun {
-					emitCall(GET_RESULT);
-				});
+				emitInterpretResult();
 			}
  			New(expr) => {
  				compileAST(expr);
@@ -628,12 +627,7 @@ class WasmCompiler {
  				emitCall(CREATE_OBJECT);
 
 				// if exception, find handler
-				withIfElse<void, int>(fun {
-					emitCall(GET_RESULT);
-					emitJumpToExnHandler();
-				}, /* else */ fun {
-					emitCall(GET_RESULT);
-				});
+				emitInterpretResult();
 			}
  			List(elems) => {
 				for (elem in elems)
