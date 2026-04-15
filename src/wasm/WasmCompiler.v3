@@ -590,7 +590,6 @@ class WasmCompiler {
 			}
  			New(expr) => {
  				compileAST(expr);
-				wasmDup();
 				
 				emitAssertType(IS_CLASS, ClassObjects.classClass);
 
