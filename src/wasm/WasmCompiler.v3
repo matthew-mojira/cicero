@@ -208,6 +208,15 @@ class WasmCompiler {
 		wasm.put_sleb32(addString(str));
 	}
 
+	def emitRaiseIfNull(exn: string) {
+		wasmDup();
+		emitCall(IS_NULL);
+		withIf<int, int>(fun {
+			emitPushConst(ExnObjects.fromWasm(exn));
+			emitJumpToExnHandler();
+		});
+	}
+
 	def emitAssertType(isFunc: u32, expectedClass: Object) {
 		wasmDup();
 		emitCall(isFunc);
@@ -294,29 +303,13 @@ class WasmCompiler {
  					wasm.putb(WasmOp.GET_LOCAL.opcode);
  					wasm.put_uleb32(addLocal(id));
 
-					// null check
-					wasmDup();
-					emitCall(IS_NULL);
-
-					// throw exception if null
-					withIf<int, int>(fun {
-						emitPushConst(ExnObjects.fromWasm(Exceptions.unboundLocal(id)));
-						emitJumpToExnHandler();
-					});
+					emitRaiseIfNull(Exceptions.unboundLocal(id));
  				}
   				Global => {
 					emitPushString(id);
  					emitCall(GET_GLOBAL);
 
-					wasmDup();
-
-					emitCall(IS_NULL);
-
-					// throw exception if null
-					withIf<int, int>(fun {
-						emitPushConst(ExnObjects.fromWasm(Exceptions.unboundGlobal(id)));
-						emitJumpToExnHandler();
-					});
+					emitRaiseIfNull(Exceptions.unboundGlobal(id));
 				}
   				Nonlocal => {
 					emitPushString(id);
