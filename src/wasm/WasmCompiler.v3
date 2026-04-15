@@ -208,6 +208,19 @@ class WasmCompiler {
 		wasm.put_sleb32(addString(str));
 	}
 
+	// assert field present in object
+	def emitAssertField(field: string) {
+		emitCall(IS_NULL);
+		withIf<int, int>(fun {
+			wasm.putb(WasmOp.DROP.opcode);
+			wasm.putb(WasmOp.GET_LOCAL.opcode);
+			wasm.put_uleb32(scratch1);
+			emitPushString(field);
+			emitCall(RAISE_FIELD);
+			emitJumpToExnHandler();
+		});
+	}
+
 	def emitRaiseIfNull(exn: string) {
 		wasmDup();
 		emitCall(IS_NULL);
@@ -520,17 +533,7 @@ class WasmCompiler {
 				emitCall(GET_FIELD);
 				wasmDup();
 
-				emitCall(IS_NULL);
-				// check failure condition
-				withIf<int, int>(fun {
-					wasm.putb(WasmOp.DROP.opcode);
-
-					wasm.putb(WasmOp.GET_LOCAL.opcode);
-					wasm.put_uleb32(scratch1); // unstash object
-					emitPushString(field);
-					emitCall(RAISE_FIELD);
-					emitJumpToExnHandler();
-				});
+				emitAssertField(field);
 			}
  			SetField(field, obj, val) => {
 				compileAST(obj);
@@ -542,17 +545,7 @@ class WasmCompiler {
 				emitCall(SET_FIELD);
 				wasmDup();
 				
-				emitCall(IS_NULL);
-				// check failure condition
-				withIf<int, int>(fun {
-					wasm.putb(WasmOp.DROP.opcode);
-
-					wasm.putb(WasmOp.GET_LOCAL.opcode); // unstash
-					wasm.put_uleb32(scratch1);
-					emitPushString(field);
-					emitCall(RAISE_FIELD);
-					emitJumpToExnHandler();
-				});
+				emitAssertField(field);
 			}
  			Class(id, superclass, init, fields, methods) => {
 				// there are subcodes which are getting compiled here
