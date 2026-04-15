@@ -198,6 +198,11 @@ class WasmCompiler {
 				);
 	}
 
+	def emitJumpToExnHandler() {
+		wasm.putb(WasmOp.BR.opcode);
+		wasm.put_sleb32(blockDepth - handlerStack.peek());
+	}
+
 	def emitCall(funcId: u32) {
 		wasm.putb(WasmOp.CALL.opcode);
 		wasm.put_uleb32(funcId);
@@ -269,8 +274,7 @@ class WasmCompiler {
 					withIf<int, int>(fun {
 						wasm.putb(WasmOp.I32_CONST.opcode);
 						wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.unboundLocal(id))));
-						wasm.putb(WasmOp.BR.opcode);
-						wasm.put_sleb32(blockDepth - handlerStack.peek());
+						emitJumpToExnHandler();
 					});
  				}
   				Global => {
@@ -286,8 +290,7 @@ class WasmCompiler {
 					withIf<int, int>(fun {
 						wasm.putb(WasmOp.I32_CONST.opcode);
 						wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.unboundGlobal(id))));
-						wasm.putb(WasmOp.BR.opcode);
-						wasm.put_sleb32(blockDepth - handlerStack.peek());
+						emitJumpToExnHandler();
 					});
 				}
   				Nonlocal => {
@@ -346,8 +349,7 @@ class WasmCompiler {
 					wasm.put_sleb32(addConst(ClassObjects.classFunc));
 
 					emitCall(RAISE_TYPE);
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_sleb32(blockDepth - handlerStack.peek());
+					emitJumpToExnHandler();
 				});
 
 				for (arg in args)
@@ -375,9 +377,7 @@ class WasmCompiler {
 				// if exception, find handler
 				withIfElse<void, int>(fun {
 					emitCall(GET_RESULT);
-
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_sleb32(blockDepth - handlerStack.peek());
+					emitJumpToExnHandler();
 				}, /* else */ fun {
 					emitCall(GET_RESULT);
 				});
@@ -413,8 +413,7 @@ class WasmCompiler {
 					// throw exception
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(addConst(ExnObjects.fromWasm(Exceptions.noTrueBranch)));
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_sleb32(blockDepth - handlerStack.peek());
+					emitJumpToExnHandler();
 				});
 			}
 			Raise(exn) => {
@@ -431,13 +430,11 @@ class WasmCompiler {
 					wasm.put_sleb32(addConst(ClassObjects.classStr)); // TODO don't realloc const slot
 
 					emitCall(RAISE_TYPE);
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_sleb32(blockDepth - handlerStack.peek());
+					emitJumpToExnHandler();
 				});
 
 				emitCall(RAISE_STRING);
-				wasm.putb(WasmOp.BR.opcode);
-				wasm.put_sleb32(blockDepth - handlerStack.peek());
+				emitJumpToExnHandler();
 			}
  			Catch(try, id, mode, catch) => {
 				withBlock<void, int>(fun {
@@ -551,9 +548,7 @@ class WasmCompiler {
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(addString(field));
 					emitCall(RAISE_FIELD);
-					
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_sleb32(blockDepth - handlerStack.peek());
+					emitJumpToExnHandler();
 				});
 			}
  			SetField(field, obj, val) => {
@@ -577,9 +572,7 @@ class WasmCompiler {
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(addString(field));
 					emitCall(RAISE_FIELD);
-					
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_sleb32(blockDepth - handlerStack.peek());
+					emitJumpToExnHandler();
 				});
 			}
  			Class(id, superclass, init, fields, methods) => {
@@ -610,9 +603,7 @@ class WasmCompiler {
 				// if exception, find handler
 				withIfElse<void, int>(fun {
 					emitCall(GET_RESULT);
-
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_sleb32(blockDepth - handlerStack.peek());
+					emitJumpToExnHandler();
 				}, /* else */ fun {
 					emitCall(GET_RESULT);
 				});
@@ -631,8 +622,7 @@ class WasmCompiler {
 					wasm.put_sleb32(addConst(ClassObjects.classClass));
 
 					emitCall(RAISE_TYPE);
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_sleb32(blockDepth - handlerStack.peek());
+					emitJumpToExnHandler();
 				});
 
  				emitCall(CREATE_OBJECT);
@@ -640,9 +630,7 @@ class WasmCompiler {
 				// if exception, find handler
 				withIfElse<void, int>(fun {
 					emitCall(GET_RESULT);
-
-					wasm.putb(WasmOp.BR.opcode);
-					wasm.put_sleb32(blockDepth - handlerStack.peek());
+					emitJumpToExnHandler();
 				}, /* else */ fun {
 					emitCall(GET_RESULT);
 				});
