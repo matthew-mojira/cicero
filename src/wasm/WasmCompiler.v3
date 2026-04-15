@@ -208,6 +208,16 @@ class WasmCompiler {
 		wasm.put_sleb32(addString(str));
 	}
 
+	def emitAssertType(isFunc: u32, expectedClass: Object) {
+		wasmDup();
+		emitCall(isFunc);
+		withIfFalse<int, int>(fun {
+			emitPushConst(expectedClass);
+			emitCall(RAISE_TYPE);
+			emitJumpToExnHandler();
+		});
+	}
+
 	def emitInterpretResult() {
 		withIfElse<void, int>(fun {
 			emitCall(GET_RESULT);
@@ -350,18 +360,7 @@ class WasmCompiler {
  			}
  			Apply(tgt, args) => {
 				compileAST(tgt);
-				wasmDup();
-
-				// assert func
-				emitCall(IS_FUNC);
-
-				// throw exception if not func
-				withIfFalse<int, int>(fun {
-					// top of stack is problematic object
-					emitPushConst(ClassObjects.classFunc);
-					emitCall(RAISE_TYPE);
-					emitJumpToExnHandler();
-				});
+				emitAssertType(IS_FUNC, ClassObjects.classFunc);
 
 				for (arg in args)
 					compileAST(arg);
@@ -423,18 +422,7 @@ class WasmCompiler {
 			}
 			Raise(exn) => {
 				compileAST(exn);
-				wasmDup();
-
-				// assert func
-				emitCall(IS_STRING);
-
-				// throw exception if not func
-				withIfFalse<int, int>(fun { /* FIXME this first int should be bool, do it everywhere */
-					// top of stack is problematic object
-					emitPushConst(ClassObjects.classStr); // TODO don't realloc const slot
-					emitCall(RAISE_TYPE);
-					emitJumpToExnHandler();
-				});
+				emitAssertType(IS_STRING, ClassObjects.classStr); // TODO don't realloc const slot
 
 				emitCall(RAISE_STRING);
 				emitJumpToExnHandler();
@@ -604,16 +592,7 @@ class WasmCompiler {
  				compileAST(expr);
 				wasmDup();
 				
-				// assert class
-				emitCall(IS_CLASS);
-
-				// throw exception if not class
-				withIfFalse<int, int>(fun {
-					// top of stack is problematic object
-					emitPushConst(ClassObjects.classClass);
-					emitCall(RAISE_TYPE);
-					emitJumpToExnHandler();
-				});
+				emitAssertType(IS_CLASS, ClassObjects.classClass);
 
  				emitCall(CREATE_OBJECT);
 
