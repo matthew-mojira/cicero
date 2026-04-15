@@ -258,7 +258,7 @@ class WasmCompiler {
 		withControl<I, O>(emit, WasmOp.IF);
 	}
 	def withIfElse<I, O>(emitTrue: void -> void, emitFalse: void -> void) {
-		withControl<I, O>(fun {
+		withIf<I, O>(fun {
 			emitTrue();
 			wasm.putb(WasmOp.ELSE.opcode);
 			emitFalse();
