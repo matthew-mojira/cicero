@@ -11,6 +11,12 @@ if [ "$TEST_MODE" != "" ]; then
    DEFAULT_MODES=0
 fi
 
+WIZENG=${WIZENG:=$(which wizeng)}
+if [ ! -x "$WIZENG" ]; then
+    echo "Wizard engine (wizeng) not found in \$PATH, and \$WIZENG not set"
+    exit 1
+fi
+
 # Progress arguments. By default the inline (i) mode is used, while the CI sets
 # it to character (c) mode
 PROGRESS_ARGS=${PROGRESS_ARGS:="tti"}
@@ -62,7 +68,7 @@ function run_tests() {
 
         # run test
 	if [ "$TEST_TARGET" = "wasm-wave" ]; then
-		wizeng $WIZENG_OPTIONS $BINARY -tier=$TEST_TIER $DEPS $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
+		$WIZENG $WIZENG_OPTIONS $BINARY -tier=$TEST_TIER $DEPS $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
 	else
         $BINARY -tier=$TEST_TIER $DEPS $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
 	fi
