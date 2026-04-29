@@ -143,14 +143,7 @@ class WasmCompiler {
 		 *
 		 * Those bona-fide locals will be emitted as part of the code's locals declaration.
 		 */
-		// System.puts("Extracting the bytecode that was created!\n");
 		def wasm = wasm.extract();
-		// dump bytes
-		// System.putc('\n');
-		// for (b in wasm) {
-		// 	System.puts(Strings.format1("%x", b));
-		// }
-		// System.putc('\n');
 
 		var sig: int;
 		match (params.length) {
