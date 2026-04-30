@@ -26,7 +26,7 @@ class MapObject extends Object {
 		if (res) {
 			return Result.OK(this);
 		} else {
-			return Result.Exn(ExnObjects.fromVirgil("map.get", unknownKey(key.str)));
+			return Result.Exn(ExnObjects.fromVirgil("map.delete", unknownKey(key.str)));
 		}
 	}
 
