@@ -218,16 +218,19 @@ component ClassObjects {
 	def classhole(name: string, init: CodeObject, classFields: Array<(string, CodeObject)>, classMethods: Array<FuncObject>) -> (ClassObject -> ClassObject) {
 		return ClassObject.new(name, _, init, classFields, classMethods);
 	}
+
+	new() {
+		o[0]  = ClassObjects.classBase;
+		b[0]  = ClassObjects.classBool;
+		i[0]  = ClassObjects.classInt;
+		io[0] = ClassObjects.classInt;
+		io[1] = ClassObjects.classBase;
+		so[0] = ClassObjects.classStr;
+		so[1] = ClassObjects.classBase;
+		s[0]  = ClassObjects.classStr;
+		ii[0] = ClassObjects.classInt;
+		ii[1] = ClassObjects.classInt;
+		d[0]  = ClassObjects.classDouble;
+	}
 }
 
-def stuff1 = o[0]  = ClassObjects.classBase;
-def stuff2 = b[0]  = ClassObjects.classBool;
-def stuff3 = i[0]  = ClassObjects.classInt;
-def stuff4 = io[0] = ClassObjects.classInt;
-def stuff5 = io[1] = ClassObjects.classBase;
-def stuff6 = so[0] = ClassObjects.classStr;
-def stuff7 = so[1] = ClassObjects.classBase;
-def stuff8 = s[0] = ClassObjects.classStr;
-def stuff9 = ii[0] = ClassObjects.classInt;
-def stuff10 = ii[1] = ClassObjects.classInt;
-def stuff11 = d[0]  = ClassObjects.classDouble;
