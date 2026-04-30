@@ -443,7 +443,7 @@ class BytecodeFrame extends FrameObject {
 
 		}
 
-		if (stack.empty()) System.error("eval error", "stack is empty");
+		if (CiceroOptions.sanityChecks && stack.empty()) System.error("eval error", "stack is empty");
 		if (CiceroOptions.traceBytecodeEvaluation) System.puts("RETURN\n");
 		return stack.peek();
 	}
