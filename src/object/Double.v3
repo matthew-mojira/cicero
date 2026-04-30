@@ -27,7 +27,7 @@ class DoubleObject(val: double) extends Object {
 
 	def trunc() -> DoubleObject{
 		// Edge cases
-		if (val == double.infinity || val == -double.infinity){
+		if (val == double.infinity || val == -double.infinity) {
 			return this;
 		}
 		// Using https://en.wikipedia.org/wiki/Double-precision_floating-point_format for the IEEE 754 format
@@ -68,8 +68,7 @@ class DoubleObject(val: double) extends Object {
 	def do_sin() -> Result{
 		var x = normalize_angle(this.val);
 		if (CiceroOptions.sanityChecks && x == 1.0)
-			// should never happen
-			return Result.Exn(ExnObjects.fromVirgil("sin", "Unable to compute `sin`"));
+			System.error("internal error", "DoubleObject.do_sin: unable to compute sin");
 
 		var result = 0.0;
 		var sign = 1.0;
@@ -78,7 +77,7 @@ class DoubleObject(val: double) extends Object {
 
 		def terms = 10;
 
-		for (n=0; n < terms; n++){
+		for (n=0; n < terms; n++) {
 			result = result + (sign * power / factorial);
 			sign = sign * -1;
 			power = power * x * x;
@@ -90,8 +89,7 @@ class DoubleObject(val: double) extends Object {
 	def do_cos() -> Result{
 		var x = normalize_angle(this.val);
 		if (CiceroOptions.sanityChecks && x == -1.0)
-			// should never happen
-			return Result.Exn(ExnObjects.fromVirgil("cos", "Unable to compute `cos`"));
+			System.error("internal error", "DoubleObject.do_sin: unable to compute cos");
 
 		var result = 0.0;
 		var sign = 1.0;
@@ -147,20 +145,19 @@ def divideByZero = "division by zero";
 /* Helper functions */
 
 def fmod(x: double, y: double) -> double{
-	if (y == 0){
-		return -1.0;
-	}
+	if (y == 0) System.error("internal error", "Double.fmod: y=0 encountered");
+
 	def quotient = int.truncd(x / y);
 	def remainder = x - quotient * y;
 	return remainder;
 }
 
 def normalize_angle(x: double) -> double{
-	var x = fmod(x, 2* PI);
-	if (x > PI){
-		x = x - 2*PI;
-	} else if (x < -PI){
-		x = x + 2*PI;
+	var x = fmod(x, 2 * PI);
+	if (x > PI) {
+		x = x - 2 * PI;
+	} else if (x < -PI) {
+		x = x + 2 * PI;
 	}
 	return x;
 }
