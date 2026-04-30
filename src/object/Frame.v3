@@ -18,14 +18,20 @@ class FrameObject extends Object {
 
 	// retrieving results, but check first!
 	def getValue() -> Object {
-		if (Result.OK.?(result))
-			return Result.OK.!(result).value;
-		else
-			return Result.Return.!(result).value;
+		match (result) {
+			v: Result.OK     => return v.value;
+			v: Result.Return => return v.value;
+			_ => System.error("internal error", "FrameObject.getValue: received non-value result");
+		}
+		return null;
 	}
 
 	def getExn() -> ExnObject {
-		return Result.Exn.!(result).exn;
+		match (result) {
+			e: Result.Exn    => return e.exn;
+			_ => System.error("internal error", "FrameObject.getExn: received non-exn result");
+		}
+		return null;
 	}
 
 	/* Current location of the evaluation. This doesn't need to be exact, but it
