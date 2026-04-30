@@ -426,9 +426,6 @@ class BytecodeFrame extends FrameObject {
 						} else {
 							nonlocals[i] = (funchole.nonlocals[i], stack.pop());
 						}
-						// this if prevents certain NullPointerException
-  						//if (nonlocals[i] == (null, null))
-  						//	System.error("null check", "null");
 					}
 
 					stack.push(fn);

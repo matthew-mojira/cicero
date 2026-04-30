@@ -10,7 +10,4 @@ component Assert {
 		}
 		return v;
 	}
-	def assertArity(argv: Array<Object>, argc: int) {
-		assert(argv.length == argc);
-	}
 }

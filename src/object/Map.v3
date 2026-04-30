@@ -45,6 +45,3 @@ class MapObject extends Object {
 }
 
 def unknownKey(key: string) => Strings.format1("no value with key %s", key);
-
-component MapObjects {
-}

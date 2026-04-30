@@ -49,8 +49,6 @@ component LocalAnalysisResults {
 	var localsTop = 0;
 }
 
-def displayResults = false;
-
 class UninitializedLocalAnalysis extends ForwardFlowAnalysis<LocalAnalysisState> {
 	def initialState(cfg: CFGraph) -> LocalAnalysisState {
 		/* rules for initial state:

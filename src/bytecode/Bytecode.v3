@@ -76,15 +76,10 @@ class Bytecode(instrs:     Array<byte>,
 			def loc = sourceMap[pc >> 2];
 
 			str.put3("+%d: %s %d", pc, opcode.name, operand);
-			if (loc != null)
-				str.put2(" (%d:%d)", loc.beginLine, loc.beginColumn);
+			if (loc != null) str.put2(" (%d:%d)", loc.beginLine, loc.beginColumn);
 			str.ln();
 			
 			pc += 4;
-			// dispatch on bytecode
-			match (opcode) {
-				_ => ;
-			}
 		}
 
 		return str.extract();

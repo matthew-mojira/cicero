@@ -62,12 +62,11 @@ def so: Array<ClassObject> = Array.new(2);
 
 /* The built-in classes.
  *
- * The order of these is alphabetical, which works out find. Any ordering of
+ * The order of these is alphabetical, which works out fine. Any ordering of
  * the built-in classes must satisfy a topological ordering of the tree 
  * structure of the class hierarchy.
  *
  * Two notes:
- *
  *
  * Besides base, no other object of a built-in class can be instantiated using
  * `new`. This is accomplished by an `init` CodeObject that will always raise 
