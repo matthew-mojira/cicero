@@ -100,7 +100,7 @@ class UninitializedLocalAnalysis extends ForwardFlowAnalysis<LocalAnalysisState>
 			}
 
 			// debug display stuff
-			if (displayResults) {
+			if (LocalAnalysisResults.displayResults) {
 				def locals = cfg.bytecode.locals;
 				block.display();
 				for (i < locals.length) {
