@@ -99,7 +99,6 @@ class BytecodeFrame extends FrameObject {
 
 			/* Inline caches */
 			var cache: Pair<ClassObject, int>;
-  			if (CLOptions.CACHE.get()) cache = b.cache[pc >> 2];
  
  			def opcode = bytecode.opcode;
 			def operand  = bytecode.operand;
@@ -361,6 +360,8 @@ class BytecodeFrame extends FrameObject {
 					def field = strings[operand];
 
 					if (CLOptions.CACHE.get()) {
+  						cache = b.cache[pc >> 2];
+						
 						def cls = obj.getClass();
 						/* Inline cache */
 						if (cache.fst == cls) {
