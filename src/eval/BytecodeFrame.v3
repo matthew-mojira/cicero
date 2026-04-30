@@ -268,7 +268,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					// arity check
-					assertArity(params.length, args.extract()); // XXX extract
+					assertArity(params.length, args.length);
 					if (isExn()) continue;
 
 					// create new frame (and evaluate)

@@ -78,9 +78,9 @@ class FrameObject extends Object {
 			throw(Exceptions.typeMismatch(exp, val));
 	}
 
-	def assertArity<T>(argc: int, vals: Range<T>) {
-		if (vals.length != argc)
-			throw(Exceptions.arityMismatch(argc, vals.length));
+	def assertArity(argc: int, vals: int) {
+		if (vals != argc)
+			throw(Exceptions.arityMismatch(argc, vals));
 	}
 
 	/* METHODS */
