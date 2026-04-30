@@ -137,7 +137,6 @@ class BytecodeCompiler {
 				writeInstr(loc, Opcode.RAISE);
 			}
 			Catch(try, id, b, catch) => {
-				source.put(loc);
 				def hole1 = writeInstrDeferOperand(loc, Opcode.TRY);
 
 				compileAST(try);
@@ -148,7 +147,6 @@ class BytecodeCompiler {
 
 				fillHole(hole1, writer.pos - hole1 - 4);
 					
-				source.put(loc);
 				match (b.data) {
 					Local  => writeInstrWithOperand(loc, Opcode.STORE_LOCAL, addLocal(id));
 					Global => writeInstrWithOperand(loc, Opcode.STORE_GLOBAL, addString(id));
@@ -222,7 +220,6 @@ class BytecodeCompiler {
 				compileAST(expr);
 				writeInstr(loc, Opcode.RETURN);
 			}
-//			_ => System.error("compile error", "unsupported AST node");
 		}
 		
 	}
@@ -247,7 +244,6 @@ class BytecodeCompiler {
 		def pos = writer.pos;
 
 		writeInstrWithOperand(loc, op, -1);
-		source.put(loc);
 
 		return pos;
 	}

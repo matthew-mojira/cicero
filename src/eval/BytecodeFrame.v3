@@ -99,7 +99,6 @@ class BytecodeFrame extends FrameObject {
 
 			/* Inline caches */
 			var cache: Pair<ClassObject, int>;
-  			if (CLOptions.CACHE.get()) cache = b.cache[pc >> 2];
  
  			def opcode = bytecode.opcode;
 			def operand  = bytecode.operand;
@@ -268,7 +267,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					// arity check
-					assertArity(params.length, args.extract()); // XXX extract
+					assertArity(params.length, args.length);
 					if (isExn()) continue;
 
 					// create new frame (and evaluate)
@@ -361,6 +360,8 @@ class BytecodeFrame extends FrameObject {
 					def field = strings[operand];
 
 					if (CLOptions.CACHE.get()) {
+  						cache = b.cache[pc >> 2];
+						
 						def cls = obj.getClass();
 						/* Inline cache */
 						if (cache.fst == cls) {
@@ -425,9 +426,6 @@ class BytecodeFrame extends FrameObject {
 						} else {
 							nonlocals[i] = (funchole.nonlocals[i], stack.pop());
 						}
-						// this if prevents certain NullPointerException
-  						//if (nonlocals[i] == (null, null))
-  						//	System.error("null check", "null");
 					}
 
 					stack.push(fn);
@@ -442,7 +440,7 @@ class BytecodeFrame extends FrameObject {
 
 		}
 
-		if (stack.empty()) System.error("eval error", "stack is empty");
+		if (CiceroOptions.sanityChecks && stack.empty()) System.error("eval error", "stack is empty");
 		if (CiceroOptions.traceBytecodeEvaluation) System.puts("RETURN\n");
 		return stack.peek();
 	}

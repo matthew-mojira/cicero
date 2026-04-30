@@ -41,7 +41,7 @@ enum ClassKeyword(id: string) {
 component ParseOption {
 	def allowMissingElse: bool = false;
 	def allowOptionalReturnExpr: bool = false;
-	//def allowEmptyBegin: bool  = false;
+	// TODO add allowEmptyBegin
 }
 
 def missingCloseParentheses: string = "expected closing parentheses but reached end of file";
@@ -57,7 +57,6 @@ class Vars {
 
 class Parser extends TextReader {
 	private def exprs: Vector<CodeObject>          = Vector.new();
-	def errors: Vector<(int, int, string)> = Vector.new();
 
 	new(fileName: string, data: string) super(fileName, data) {
 		skipWs = skipWhitespaceAndComments;
@@ -92,18 +91,12 @@ class Parser extends TextReader {
 			def p = top.possibleNonlocals[i];
 			def fn = p.0, poss = p.1;
 
-			//System.puts(Strings.format1("Determining nonlocals for enclosed '%s':\n", fn.id));
-
 			for (i < poss.length) {
 				def p = poss[i];
 				def id = p.0, acc = p.1;
-				//System.puts(Strings.format1("  testing '%s': ", id));
 				if (top.referencedVars.has(id) && top.referencedVars[id].data == AccessMode.Local) {
-					//System.puts("NONLOCAL\n");
 					acc.data = AccessMode.Nonlocal;
 					fn.nonlocals.put(id); // XXX is this unique?
-				} else {
-					//System.puts("NO\n");
 				}
 			}
 		}
@@ -250,7 +243,7 @@ class Parser extends TextReader {
 							}
 						}
 						
-						// body expresssion
+						// body expression
 						def ret = readCode(params.copy());
 						def body = ret.0, prev = ret.1;
 						req1(')');
@@ -286,7 +279,7 @@ class Parser extends TextReader {
 							}
 						}
 						
-						// body expresssion
+						// body expression
 						def ret = readCode(params.copy());
 						def body = ret.0, prev = ret.1;
 						req1(')');

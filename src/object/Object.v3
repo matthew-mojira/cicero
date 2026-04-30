@@ -230,9 +230,6 @@ class Object {
 
 
 component Objects {
-	def display = 2;
-	def eq = 3;
-	
 	def newObject(cls: ClassObject) -> Object {
 		def obj = Object.new();
 		obj.cls = cls;

@@ -1,11 +1,17 @@
 class Scanner {
+	def STDIN = 0;
 	def buffer: Vector<byte> = Vector<byte>.new();
 
 	def nextLine() -> string {
-		var char: byte;
-		while ((char = byte.!(System.fileRead(0))) != '\n') {
-			buffer.put(char);
+		while (true) {
+			def char = System.fileRead(STDIN);
+			if (char == -1) {
+				System.puts("EOF encountered\n");
+				System.error("cicero", "EOF encountered\n");
+			}
+			if (char == '\n') return buffer.extract();
+			buffer.put(byte.!(char));
 		}
-		return buffer.extract();
+		return null;
 	}
 }
