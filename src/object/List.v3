@@ -66,4 +66,4 @@ component ListObjects {
 	}
 }
 
-def outOfBounds(len: long, idx: long) => Strings.format2("access at index %d is out of bounds for list of length %d", idx, len);
+def outOfBounds(idx: long, len: long) => Strings.format2("access at index %d is out of bounds for list of length %d", idx, len);
