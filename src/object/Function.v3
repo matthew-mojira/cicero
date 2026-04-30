@@ -7,7 +7,7 @@
  *   Range<Object> -> Result
  * The FuncObject contains the `params` field, which is used by the runtime
  * to perform function arity. So the Virgil-defined code can assume that the
- * arity is correct. Type-checking is the responsilibity of the implementation
+ * arity is correct. Type-checking is the responsibility of the implementation
  * of that function, still.
  */
 class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject) extends Object {

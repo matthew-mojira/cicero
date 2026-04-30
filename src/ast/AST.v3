@@ -1,4 +1,4 @@
-/* An AST node is a underlying ASTData tagged with the source code location.
+/* An AST node is an underlying ASTData tagged with the source code location.
  */
 class AST(data: ASTData, loc: FileRange) {}
 

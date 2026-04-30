@@ -128,7 +128,7 @@ class ASTFrame extends FrameObject {
 				}
 
 				// arity check
-				assertArity(params.length, args);
+				assertArity(params.length, args.length);
 				if (isExn()) return value;
 
 				// create new frame (and evaluate)

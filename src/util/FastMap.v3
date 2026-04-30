@@ -21,7 +21,7 @@ class FastMap<K, V>(hash: K -> int, equals: (K, K) -> bool) {
 	}
 
 	def loadKey(key: K) -> Maybe<V> {
-		if (indices.has(key)){
+		if (indices.has(key)) {
 			def idx = indices[key];
 			def val = values[idx];
 			return Maybe.Just(val);
@@ -40,7 +40,6 @@ class FastMap<K, V>(hash: K -> int, equals: (K, K) -> bool) {
 	def getIndex(key: K) -> Maybe<int> {
 		if (indices.has(key)) {
 			def idx = indices[key];
-			def val = values[idx];
 			return Maybe.Just(idx);
 		} else {
 			return Maybe.Nothing;
