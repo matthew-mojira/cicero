@@ -1,6 +1,6 @@
 /* Compile-time specific options */
 component CiceroOptions {
-	def sanityChecks = false;
+	def sanityChecks = true;
 	
 	/* tiering/evaluation options */
 	def enableIC: bool = false; // XXX always disabled

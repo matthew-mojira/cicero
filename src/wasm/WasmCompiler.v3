@@ -29,6 +29,9 @@ def CALL_FUNC6: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc6));
 def CALL_FUNC7: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc7));
 def CALL_FUNC8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc8));
 def CALL_FUNC9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc9));
+def PUSH_ARG:   u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.pushArg));
+def POP_ARG:    u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.popArg));
+def CALL_FUNC_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRest));
 
 def GET_RESULT: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getResult));
 def SET_RESULT: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.setResult));
@@ -60,8 +63,7 @@ def CREATE_LIST6: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList6
 def CREATE_LIST7: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList7));
 def CREATE_LIST8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8));
 def CREATE_LIST9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9));
-def CREATE_LIST10:u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList10));
-def LIST_PUT:     u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.listPut));
+def CREATE_LIST_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRest));
 
 
 class WasmCompiler {
@@ -95,6 +97,17 @@ class WasmCompiler {
 		// FUNCTION BODY
 		withBlock<void, int>(fun {
 			handlerStack.push(blockDepth);
+
+			// initialize extra parameters (beyond 9) from WasmRuntime.xargs.
+			// xargs were pushed left-to-right, so pop in reverse to fill
+			// the tail of the parameter locals first.
+			if (params.length > 9) {
+				for (i = params.length - 1; i >= 9; i--) {
+					emitCall(POP_ARG);
+					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					wasm.put_uleb32(u32.view(1 + i)); // skip <receiver> at slot 0
+				}
+			}
 
 			compileAST(ast);
 			
@@ -157,10 +170,7 @@ class WasmCompiler {
 			7 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int), bool>();
 			8 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int, int), bool>();
 			9 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int, int, int), bool>();
-			_ => {
-				System.puts("params unknown\n");
-				System.error("compile error", "params unknown");
-			}
+			_ => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int, int, int), bool>();
 		}
 		def fid  = wave.new_func(sig, Pointer.atContents(wasm), wasm.length);
 		if (fid < 0) {
@@ -179,6 +189,7 @@ class WasmCompiler {
 			7 => func = WasmFunction.Func7(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
 			8 => func = WasmFunction.Func8(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
 			9 => func = WasmFunction.Func9(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			_ => func = WasmFunction.FuncN(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
 		}
 		return WasmBytecode.new(
 				func,
@@ -361,27 +372,35 @@ class WasmCompiler {
 				compileAST(tgt);
 				emitAssertType(IS_FUNC, ClassObjects.classFunc);
 
-				for (arg in args)
-					compileAST(arg);
-				// dispatch on number of args to variadic function
-				wasm.putb(WasmOp.CALL.opcode);
-				match (args.length) {
-					0 => wasm.put_uleb32(CALL_FUNC0);  /* call to RTS */
-					1 => wasm.put_uleb32(CALL_FUNC1);  /* call to RTS */
-					2 => wasm.put_uleb32(CALL_FUNC2);  /* call to RTS */
-					3 => wasm.put_uleb32(CALL_FUNC3);  /* call to RTS */
-					4 => wasm.put_uleb32(CALL_FUNC4);  /* call to RTS */
-					5 => wasm.put_uleb32(CALL_FUNC5);  /* call to RTS */
-					6 => wasm.put_uleb32(CALL_FUNC6);  /* call to RTS */
-					7 => wasm.put_uleb32(CALL_FUNC7);  /* call to RTS */
-					8 => wasm.put_uleb32(CALL_FUNC8);  /* call to RTS */
-					9 => wasm.put_uleb32(CALL_FUNC9);  /* call to RTS */
-					_ => {
-						System.puts(Strings.format1("Translating too many arguments: %d\n", args.length));
-						System.error("compile error", "translating too many arguments");
+				if (args.length <= 9) {
+					for (arg in args)
+						compileAST(arg);
+					// dispatch on number of args to variadic function
+					wasm.putb(WasmOp.CALL.opcode);
+					match (args.length) {
+						0 => wasm.put_uleb32(CALL_FUNC0);  /* call to RTS */
+						1 => wasm.put_uleb32(CALL_FUNC1);  /* call to RTS */
+						2 => wasm.put_uleb32(CALL_FUNC2);  /* call to RTS */
+						3 => wasm.put_uleb32(CALL_FUNC3);  /* call to RTS */
+						4 => wasm.put_uleb32(CALL_FUNC4);  /* call to RTS */
+						5 => wasm.put_uleb32(CALL_FUNC5);  /* call to RTS */
+						6 => wasm.put_uleb32(CALL_FUNC6);  /* call to RTS */
+						7 => wasm.put_uleb32(CALL_FUNC7);  /* call to RTS */
+						8 => wasm.put_uleb32(CALL_FUNC8);  /* call to RTS */
+						9 => wasm.put_uleb32(CALL_FUNC9);  /* call to RTS */
 					}
+				} else {
+					// top 9 are on Wasm's stack, rest are in a virtual stack holding the rest
+					for (i < 9)
+						compileAST(args[i]);
+					for (i = 9; i < args.length; i++) {
+						compileAST(args[i]);
+						emitCall(PUSH_ARG);
+					}
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(args.length - 9); // number of extra args
+					emitCall(CALL_FUNC_REST);
 				}
-				// XXX should return two values above
 
 				// if exception, find handler
 				emitInterpretResult();
@@ -578,7 +597,7 @@ class WasmCompiler {
 				emitInterpretResult();
 			}
  			List(elems) => {
-				if (elems.length <= 10) {
+				if (elems.length <= 9) {
 					for (elem in elems)
 						compileAST(elem);
 					wasm.putb(WasmOp.CALL.opcode);
@@ -593,16 +612,15 @@ class WasmCompiler {
 						7 => wasm.put_uleb32(CREATE_LIST7);
 						8 => wasm.put_uleb32(CREATE_LIST8);
 						9 => wasm.put_uleb32(CREATE_LIST9);
-						10=> wasm.put_uleb32(CREATE_LIST10);
 					}
 				} else {
-					for (i < 10)
+					for (i = 0; i < elems.length; i++) {
 						compileAST(elems[i]);
-					emitCall(CREATE_LIST10);
-					for (i = 10; i < elems.length; i++) {
-						compileAST(elems[i]);
-						emitCall(LIST_PUT);
+						if (i >= 9) emitCall(PUSH_ARG); // extra args in runtime
 					}
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(elems.length - 9); // number of extra args
+					emitCall(CREATE_LIST_REST);
 				}
 			}
 			Return(expr) => {

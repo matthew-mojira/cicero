@@ -20,4 +20,5 @@ type WasmFunction {
 	case Func7(fn: (int, int, int, int, int, int, int) -> bool);
 	case Func8(fn: (int, int, int, int, int, int, int, int) -> bool);
 	case Func9(fn: (int, int, int, int, int, int, int, int, int) -> bool);
+	case FuncN(fn: (int, int, int, int, int, int, int, int, int) -> bool);
 }

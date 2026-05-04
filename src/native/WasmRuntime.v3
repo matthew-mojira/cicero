@@ -6,6 +6,7 @@ component WasmRuntime {
 	var classholes: Array<ClassObject -> ClassObject>;
 	var objects: Vector<Object>;
 	var result: int;
+	var xargs: Stack<int>;
 
 	def isNull(idx: int) -> bool;
 	def isTrue(idx: int)  -> bool;
