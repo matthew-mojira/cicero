@@ -61,7 +61,7 @@ def CREATE_LIST7: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList7
 def CREATE_LIST8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8));
 def CREATE_LIST9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9));
 def CREATE_LIST10:u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList10));
-def CREATE_LIST16:u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList16));
+def LIST_PUT:     u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.listPut));
 
 
 class WasmCompiler {
@@ -578,26 +578,30 @@ class WasmCompiler {
 				emitInterpretResult();
 			}
  			List(elems) => {
-				for (elem in elems)
-					compileAST(elem);
-				// dispatch on size of list to variadic function
-				wasm.putb(WasmOp.CALL.opcode);
-				match (elems.length) {
-					0 => wasm.put_uleb32(CREATE_LIST0);
-					1 => wasm.put_uleb32(CREATE_LIST1);
-					2 => wasm.put_uleb32(CREATE_LIST2);
-					3 => wasm.put_uleb32(CREATE_LIST3);
-					4 => wasm.put_uleb32(CREATE_LIST4);
-					5 => wasm.put_uleb32(CREATE_LIST5);
-					6 => wasm.put_uleb32(CREATE_LIST6);
-					7 => wasm.put_uleb32(CREATE_LIST7);
-					8 => wasm.put_uleb32(CREATE_LIST8);
-					9 => wasm.put_uleb32(CREATE_LIST9);
-					10=> wasm.put_uleb32(CREATE_LIST10);
-					16=> wasm.put_uleb32(CREATE_LIST16);
-					_ => {
-						System.puts(Strings.format1("Translating too long of a list literal: %d\n", elems.length));
-						System.error("compile error", "translating too long of a list literal");
+				if (elems.length <= 10) {
+					for (elem in elems)
+						compileAST(elem);
+					wasm.putb(WasmOp.CALL.opcode);
+					match (elems.length) {
+						0 => wasm.put_uleb32(CREATE_LIST0);
+						1 => wasm.put_uleb32(CREATE_LIST1);
+						2 => wasm.put_uleb32(CREATE_LIST2);
+						3 => wasm.put_uleb32(CREATE_LIST3);
+						4 => wasm.put_uleb32(CREATE_LIST4);
+						5 => wasm.put_uleb32(CREATE_LIST5);
+						6 => wasm.put_uleb32(CREATE_LIST6);
+						7 => wasm.put_uleb32(CREATE_LIST7);
+						8 => wasm.put_uleb32(CREATE_LIST8);
+						9 => wasm.put_uleb32(CREATE_LIST9);
+						10=> wasm.put_uleb32(CREATE_LIST10);
+					}
+				} else {
+					for (i < 10)
+						compileAST(elems[i]);
+					emitCall(CREATE_LIST10);
+					for (i = 10; i < elems.length; i++) {
+						compileAST(elems[i]);
+						emitCall(LIST_PUT);
 					}
 				}
 			}
