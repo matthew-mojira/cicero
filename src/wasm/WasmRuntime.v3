@@ -169,6 +169,31 @@ component WasmRuntime {
 	def createFunc7(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6]);
 	def createFunc8(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6, o7]);
 	def createFunc9(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+	def createFuncRest(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
+		def args = Array<int>.new(9 + numRest);
+		args[0] = o0;
+		args[1] = o1;
+		args[2] = o2;
+		args[3] = o3;
+		args[4] = o4;
+		args[5] = o5;
+		args[6] = o6;
+		args[7] = o7;
+		args[8] = o8;
+		// xargs were pushed in left-to-right order; pop in reverse to fill the tail
+		for (i = numRest - 1; i >= 0; i--) {
+			if (CiceroOptions.sanityChecks && WasmRuntime.xargs.empty()) {
+				System.puts("internal error: WasmRuntime.xargs.length = 0");
+				System.error("internal error", "WasmRuntime.xargs.length = 0");
+			}
+			args[9 + i] = xargs.pop();
+		}
+		if (CiceroOptions.sanityChecks && !WasmRuntime.xargs.empty()) {
+			System.puts("internal error: WasmRuntime.xargs.length > 0");
+			System.error("internal error", "WasmRuntime.xargs.length > 0");
+		}
+		return createFuncN(funchole, args);
+	}
 
 	def createFuncN(funcholeIdx: int, nonlocalArgs: Array<int>) -> int {
 		def funchole = funcholes[funcholeIdx];

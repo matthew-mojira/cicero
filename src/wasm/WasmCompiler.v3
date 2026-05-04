@@ -46,6 +46,7 @@ def CREATE_FUNC6: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc6
 def CREATE_FUNC7: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc7));
 def CREATE_FUNC8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc8));
 def CREATE_FUNC9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc9));
+def CREATE_FUNC_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFuncRest));
 
 def GET_FIELD: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.getField));
 def SET_FIELD: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.setField));
@@ -491,25 +492,27 @@ class WasmCompiler {
  						continue;
  					// this variable will be captured!
  					wasm.putb(WasmOp.GET_LOCAL.opcode);
- 					wasm.put_uleb32(addLocal(nonlocal)); // FIXME this can be null? (unbound local)
+ 					wasm.put_uleb32(addLocal(nonlocal));
+					emitRaiseIfNull(Exceptions.unboundLocal(nonlocal));
 					nonlocalCount++;
+					if (nonlocalCount > 9) emitCall(PUSH_ARG);
  				}
 
- 				wasm.putb(WasmOp.CALL.opcode);
 				match (nonlocalCount) {
-					0 => wasm.put_uleb32(CREATE_FUNC0);  /* call to RTS */
-					1 => wasm.put_uleb32(CREATE_FUNC1);  /* call to RTS */
-					2 => wasm.put_uleb32(CREATE_FUNC2);  /* call to RTS */
-					3 => wasm.put_uleb32(CREATE_FUNC3);  /* call to RTS */
-					4 => wasm.put_uleb32(CREATE_FUNC4);  /* call to RTS */
-					5 => wasm.put_uleb32(CREATE_FUNC5);  /* call to RTS */
-					6 => wasm.put_uleb32(CREATE_FUNC6);  /* call to RTS */
-					7 => wasm.put_uleb32(CREATE_FUNC7);  /* call to RTS */
-					8 => wasm.put_uleb32(CREATE_FUNC8);  /* call to RTS */
-					9 => wasm.put_uleb32(CREATE_FUNC9);  /* call to RTS */
+					0 => emitCall(CREATE_FUNC0);  /* call to RTS */
+					1 => emitCall(CREATE_FUNC1);  /* call to RTS */
+					2 => emitCall(CREATE_FUNC2);  /* call to RTS */
+					3 => emitCall(CREATE_FUNC3);  /* call to RTS */
+					4 => emitCall(CREATE_FUNC4);  /* call to RTS */
+					5 => emitCall(CREATE_FUNC5);  /* call to RTS */
+					6 => emitCall(CREATE_FUNC6);  /* call to RTS */
+					7 => emitCall(CREATE_FUNC7);  /* call to RTS */
+					8 => emitCall(CREATE_FUNC8);  /* call to RTS */
+					9 => emitCall(CREATE_FUNC9);  /* call to RTS */
 					_ => {
-						System.puts(Strings.format1("Translating too many nonlocals: %d\n", nonlocalCount));
-						System.error("compile error", "translating too many nonlocals");
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(nonlocalCount - 9); // number of extra args
+						emitCall(CREATE_FUNC_REST);
 					}
 				}
  			}
