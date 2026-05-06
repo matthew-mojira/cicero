@@ -1,0 +1,5 @@
+(func (main) {
+   (func (foo x) (if (= x 0) x (foo 0)))
+   (foo 1)
+})
+(main)

@@ -1,0 +1,3 @@
+component WasmOptions {
+	def isWasmTarget = false;
+}

@@ -1,0 +1,485 @@
+/* Beyond Relooper algorithm for converting unstructured control flow to structured control flow.
+ *
+ * This implementation is based on the paper "Beyond Relooper: Recursive Translation of
+ * Unstructured Control Flow to Structured Control Flow" by Norman Ramsey (ICFP 2022).
+ *
+ * The algorithm is implemented following the Haskell code from the paper's artifact,
+ * specifically the monomorphic version in Monomorphic.hs.
+ */
+
+// Structured control flow regions - matches WasmControl from the paper
+type Region {
+	case Action(block: BasicBlock, next: Region);
+	case Block(body: Region, next: Region);
+	case Loop(body: Region);
+	case If(thenPart: Region, elsePart: Region);  // Condition computed by preceding Action
+	case Try(body: Region, handler: Region);  // Exception handling (WASM exception proposal)
+	case Br(depth: int);  // Multi-level break/continue
+	case Return;
+	case Seq(first: Region, second: Region);  // Sequence combinator
+	case Empty;
+}
+
+// Evaluation context - tracks the nesting of control flow constructs
+type ContainingSyntax {
+	case BlockFollowedBy(label: BasicBlock);
+	case LoopHeadedBy(label: BasicBlock);
+	case IfThenElse;
+}
+
+// Dominator tree node
+class DomTreeNode(block: BasicBlock, children: Array<DomTreeNode>) {
+}
+
+class BeyondRelooper {
+	def cfg: CFGraph;
+
+	// Computed analyses
+	def rpnums: HashMap<BasicBlock, int> = HashMap.new(BasicBlock.hash, BasicBlock.==);
+	def mergeNodes: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+	def loopHeaders: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+	def subtrees: HashMap<BasicBlock, DomTreeNode> = HashMap.new(BasicBlock.hash, BasicBlock.==);
+	var domTree: DomTreeNode;
+
+	new(cfg) {
+		cfg.computeDominators();
+		cfg.computeImmediateDominator();
+		computeReversePostorder();
+		identifyMergeNodes();
+		identifyLoopHeaders();
+		buildDominatorTree();
+	}
+
+	/* Main entry point: convert CFG to structured regions */
+	def reloop() -> Region {
+		return doTree(domTree, []);
+	}
+
+	/* Main recursive function - processes dominator tree nodes */
+	def doTree(tree: DomTreeNode, context: Array<ContainingSyntax>) -> Region {
+		def x = tree.block;
+		def immediateDominatees = tree.children;
+
+		// Filter to only merge nodes (nodes with multiple forward predecessors)
+		def dominatees = filterMergeNodes(immediateDominatees);
+
+		if (isHeader(x)) {
+			// This is a loop header - wrap in loop
+			def loopContext = Arrays.prepend(ContainingSyntax.LoopHeadedBy(x), context);
+			def body = nodeWithin(x, dominatees, loopContext);
+			return Region.Loop(body);
+		} else {
+			return nodeWithin(x, dominatees, context);
+		}
+	}
+
+	/* Handle a node and its merge nodes - corresponds to `nodeWithin` */
+	def nodeWithin(x: BasicBlock, dominatees: Array<DomTreeNode>, context: Array<ContainingSyntax>) -> Region {
+		if (dominatees.length > 0) {
+			// There are merge nodes - wrap in blocks
+			def y_n = dominatees[0];
+			def ys = Arrays.range(dominatees, 1, dominatees.length);
+			def ylabel = y_n.block;
+
+			def newContext = Arrays.prepend(ContainingSyntax.BlockFollowedBy(ylabel), context);
+			def innerCode = nodeWithin(x, ys, newContext);
+			def outerCode = doTree(y_n, context);
+
+			return Region.Block(innerCode, outerCode);
+		} else {
+			// No more merge nodes - emit the block's code and handle control flow
+			return emitBlockAndFlow(x, context);
+		}
+	}
+
+	/* Emit a block's code and handle its control flow */
+	def emitBlockAndFlow(x: BasicBlock, context: Array<ContainingSyntax>) -> Region {
+		def successors = x.successors.toArray();
+
+		// Check if this block contains a TRY instruction
+		def tryPc = findTryInstruction(x);
+		if (tryPc >= 0) {
+			// TRY establishes a protected region
+			// Split the block: instructions before TRY, then try/catch region
+			// Note: TRY instruction itself is metadata, omit it from output
+			// successors[0] = fallthrough (protected code)
+			// successors[1] = exception handler
+
+			// Emit instructions before TRY (if any)
+			var result: Region = Region.Empty;
+			if (tryPc > 0) {
+				// There are instructions before the TRY
+				def beforeTry = createSubBlock(x, 0, tryPc);
+				result = Region.Action(beforeTry, Region.Empty);
+			}
+
+			// Emit instructions after TRY (inside the try block)
+			def afterTry = createSubBlock(x, tryPc + 4, x.bytes.length);
+			var beforeTryRegion: Region;
+			if (afterTry.bytes != null && afterTry.bytes.length > 0) {
+				beforeTryRegion = Region.Action(afterTry, Region.Empty);
+			} else {
+				beforeTryRegion = Region.Empty;
+			}
+
+			def body = Region.Seq(beforeTryRegion, doBranch(x, successors[0], context));
+			def handler = doBranch(x, successors[1], context);
+
+			def tryRegion = Region.Try(body, handler);
+
+			if (tryPc > 0) {
+				return Region.Seq(result, tryRegion);
+			} else {
+				return tryRegion;
+			}
+		}
+
+		def action = Region.Action(x, Region.Empty);
+
+		// Get the last instruction's opcode to determine control flow type
+		def lastOpcode = getLastOpcode(x);
+
+		match (successors.length) {
+			0 => {
+				// Terminal flow - return
+				return Region.Seq(action, Region.Return);
+			}
+			1 => {
+				// Unconditional branch or simple fallthrough
+				def target = successors[0];
+				return Region.Seq(action, doBranch(x, target, context));
+			}
+			2 => {
+				// Two cases: conditional branch OR exception path
+				if (lastOpcode.jump) {
+					// Conditional branch - fallthrough + jump target
+					// The action computes the condition and leaves it on the stack
+					// The If structure consumes it and branches accordingly
+					def trueBranch = successors[0];  // fallthrough path
+					def falseBranch = successors[1]; // jump target
+					def ifContext = Arrays.prepend(ContainingSyntax.IfThenElse, context);
+
+					def thenPart = doBranch(x, trueBranch, ifContext);
+					def elsePart = doBranch(x, falseBranch, ifContext);
+
+					return Region.Seq(action, Region.If(thenPart, elsePart));
+				} else if (lastOpcode.exception) {
+					// Exception-capable instruction within a try block
+					// Just follow the normal path; exceptions are handled by enclosing Try
+					def normalPath = successors[0];   // fallthrough (no exception)
+					return Region.Seq(action, doBranch(x, normalPath, context));
+				} else {
+					// Neither jump nor exception? Could be an empty block (fallthrough only)
+					// Just follow the first successor (fallthrough path)
+					def target = successors[0];
+					return Region.Seq(action, doBranch(x, target, context));
+				}
+			}
+			_ => {
+				// Multiple successors - for now, treat as error or switch
+				System.error("relooper error", "more than 2 successors not yet supported");
+				return Region.Empty;
+			}
+		}
+	}
+
+	/* Find TRY instruction in a block, return PC offset or -1 if not found */
+	def findTryInstruction(block: BasicBlock) -> int {
+		def bytes = block.bytes;
+		if (bytes == null) return -1;
+
+		var pc = 0;
+		while (pc < bytes.length) {
+			def opcode = Opcodes.map[bytes[pc]];
+			if (opcode == Opcode.TRY) {
+				return pc;
+			}
+			pc += 4;
+		}
+		return -1;
+	}
+
+	/* Create a sub-block with a slice of instructions from an existing block */
+	def createSubBlock(original: BasicBlock, startOffset: int, endOffset: int) -> BasicBlock {
+		if (startOffset >= endOffset) {
+			// Empty block
+			return BasicBlock.new(null, original.startPc + startOffset);
+		}
+		def slicedBytes = original.bytes[startOffset ... endOffset];
+		return BasicBlock.new(slicedBytes, original.startPc + startOffset);
+	}
+
+	/* Get the opcode of the last instruction in a block */
+	def getLastOpcode(block: BasicBlock) -> Opcode {
+		def bytes = block.bytes;
+		if (bytes == null || bytes.length < 4) {
+			// Empty block (e.g., synthetic exit block) - treat as NOP
+			return Opcode.NOP;
+		}
+		def lastInstructionPc = bytes.length - 4;
+		return Opcodes.map[bytes[lastInstructionPc]];
+	}
+
+	/* Handle a branch - corresponds to `doBranch` in the Haskell code */
+	def doBranch(from: BasicBlock, to: BasicBlock, context: Array<ContainingSyntax>) -> Region {
+		if (isBackward(from, to)) {
+			// Backward edge - emit br to loop
+			return Region.Br(index(to, context));
+		} else if (isMergeNode(to)) {
+			// Forward edge to merge node - emit br to block
+			return Region.Br(index(to, context));
+		} else {
+			// Otherwise, inline the target code
+			def tree = subtrees[to];
+			return doTree(tree, context);
+		}
+	}
+
+	/* Compute the nesting depth to reach a label */
+	def index(target: BasicBlock, context: Array<ContainingSyntax>) -> int {
+		for (i < context.length) {
+			def frame = context[i];
+			if (matchesFrame(target, frame)) {
+				return i;
+			}
+		}
+		System.error("relooper error", "target label not in context");
+		return 0;
+	}
+
+	/* Check if a label matches a context frame */
+	def matchesFrame(label: BasicBlock, frame: ContainingSyntax) -> bool {
+		match (frame) {
+			BlockFollowedBy(l) => return label == l;
+			LoopHeadedBy(l) => return label == l;
+			IfThenElse => return false;
+		}
+	}
+
+	/* Filter dominator tree nodes to only merge nodes */
+	def filterMergeNodes(nodes: Array<DomTreeNode>) -> Array<DomTreeNode> {
+		def result = Vector<DomTreeNode>.new();
+		for (node in nodes) {
+			if (isMergeNode(node.block)) {
+				result.put(node);
+			}
+		}
+		return result.extract();
+	}
+
+	/* Compute reverse postorder numbering */
+	def computeReversePostorder() {
+		def visited: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+		def order = Vector<BasicBlock>.new();
+
+		// Do post-order DFS
+		postorderVisit(cfg.head, visited, order);
+
+		// Reverse to get reverse postorder, and assign numbers
+		def blocks = order.extract();
+		for (i < blocks.length) {
+			def rpnum = blocks.length - 1 - i;
+			rpnums[blocks[i]] = rpnum;
+		}
+	}
+
+	def postorderVisit(block: BasicBlock, visited: HashSet<BasicBlock>, order: Vector<BasicBlock>) {
+		if (visited.contains(block)) return;
+		visited.add(block);
+
+		for (succ in block.successors.toArray()) {
+			postorderVisit(succ, visited, order);
+		}
+		order.put(block);
+	}
+
+	/* Identify merge nodes - nodes with multiple forward predecessors */
+	def identifyMergeNodes() {
+		// Count forward predecessors for each node
+		def forwardPreds: HashMap<BasicBlock, int> = HashMap.new(BasicBlock.hash, BasicBlock.==);
+
+		for (block in cfg.basicBlocks.copy()) {
+			for (succ in block.successors.toArray()) {
+				if (!isBackward(block, succ)) {
+					def count = forwardPreds[succ];
+					forwardPreds[succ] = count + 1;
+				}
+			}
+		}
+
+		// Merge nodes have 2+ forward predecessors
+		for (block in cfg.basicBlocks.copy()) {
+			def count = forwardPreds[block];
+			if (count >= 2) {
+				mergeNodes.add(block);
+			}
+		}
+	}
+
+	/* Identify loop headers - nodes dominated by their successors */
+	def identifyLoopHeaders() {
+		for (block in cfg.basicBlocks.copy()) {
+			for (succ in block.successors.toArray()) {
+				// If successor dominates this block, successor is a loop header
+				if (succ.dominators.contains(block)) {
+					loopHeaders.add(succ);
+				}
+			}
+		}
+	}
+
+	/* Build dominator tree sorted by reverse postorder (highest first) */
+	def buildDominatorTree() {
+		// Build tree from immediate dominator relationships
+		domTree = buildTreeNode(cfg.head);
+	}
+
+	def buildTreeNode(block: BasicBlock) -> DomTreeNode {
+		// Find all blocks immediately dominated by this block
+		def children = Vector<DomTreeNode>.new();
+
+		for (candidate in cfg.basicBlocks.copy()) {
+			if (candidate.immDom == block) {
+				children.put(buildTreeNode(candidate));
+			}
+		}
+
+		// Sort children by reverse postorder number (highest first)
+		def childArray = children.extract();
+		def sorted = sortByRPNum(childArray);
+
+		def node = DomTreeNode.new(block, sorted);
+		subtrees[block] = node;
+		return node;
+	}
+
+	/* Sort dominator tree nodes by reverse postorder number (highest first) */
+	def sortByRPNum(nodes: Array<DomTreeNode>) -> Array<DomTreeNode> {
+		// Simple bubble sort - good enough for compiler work
+		def arr = Arrays.dup(nodes);
+		for (i < arr.length) {
+			for (j = i + 1; j < arr.length; j++) {
+				def rpnum_i = rpnums[arr[i].block];
+				def rpnum_j = rpnums[arr[j].block];
+				if (rpnum_i < rpnum_j) {
+					// Swap - we want highest first
+					def temp = arr[i];
+					arr[i] = arr[j];
+					arr[j] = temp;
+				}
+			}
+		}
+		return arr;
+	}
+
+	/* Check if an edge is a backward edge (back edge in a loop) */
+	def isBackward(from: BasicBlock, to: BasicBlock) -> bool {
+		def rpnum_from = rpnums[from];
+		def rpnum_to = rpnums[to];
+		// Backward if target has lower or equal rpnum
+		return rpnum_to <= rpnum_from;
+	}
+
+	/* Check if a block is a loop header */
+	def isHeader(block: BasicBlock) -> bool {
+		return loopHeaders.contains(block);
+	}
+
+	/* Check if a block is a merge node */
+	def isMergeNode(block: BasicBlock) -> bool {
+		return mergeNodes.contains(block);
+	}
+
+	/* Display the structured region tree (for debugging) */
+	def displayRegion(region: Region, indent: int) {
+		def buf = StringBuilder.new();
+		displayRegionWithDepth(region, indent, 0, buf);
+		System.puts(buf.extract());
+	}
+
+	def displayRegionWithDepth(region: Region, indent: int, depth: int, buf: StringBuilder) {
+		// Compute prefix once for this depth/indent level
+		def prefixBuf = StringBuilder.new();
+		prefixBuf.putd(depth).putc(' ');
+		for (i < indent * 2) prefixBuf.putc(' ');
+		def prefix = prefixBuf.extract();
+
+		match (region) {
+			Empty => {
+				// Don't print anything for empty regions
+			}
+			Action(block, next) => {
+				// Display the bytecode instructions in this block
+				displayBlockInstructions(block, indent, depth, buf, prefix);
+				displayRegionWithDepth(next, indent, depth, buf);
+			}
+			Block(body, next) => {
+				buf.puts(prefix).puts("block\n");
+				displayRegionWithDepth(body, indent + 1, depth + 1, buf);
+				buf.puts(prefix).puts("end ;; block\n");
+				displayRegionWithDepth(next, indent, depth, buf);
+			}
+			Loop(body) => {
+				buf.puts(prefix).puts("loop\n");
+				displayRegionWithDepth(body, indent + 1, depth + 1, buf);
+				buf.puts(prefix).puts("end ;; loop\n");
+			}
+			If(thenPart, elsePart) => {
+				// The condition was already computed by the preceding Action.
+				// It left a value on the stack, which the 'if' consumes.
+				buf.puts(prefix).puts("if\n");
+				displayRegionWithDepth(thenPart, indent + 1, depth + 1, buf);
+				if (!isEmpty(elsePart)) {
+					buf.puts(prefix).puts("else\n");
+					displayRegionWithDepth(elsePart, indent + 1, depth + 1, buf);
+				}
+				buf.puts(prefix).puts("end ;; if\n");
+			}
+			Try(body, handler) => {
+				// WASM exception handling proposal
+				buf.puts(prefix).puts("try\n");
+				displayRegionWithDepth(body, indent + 1, depth + 1, buf);
+				buf.puts(prefix).puts("catch\n");
+				displayRegionWithDepth(handler, indent + 1, depth + 1, buf);
+				buf.puts(prefix).puts("end ;; try\n");
+			}
+			Br(d) => {
+				buf.puts(prefix).puts("br ").putd(d).ln();
+			}
+			Return => {
+				buf.puts(prefix).puts("return\n");
+			}
+			Seq(first, second) => {
+				displayRegionWithDepth(first, indent, depth, buf);
+				displayRegionWithDepth(second, indent, depth, buf);
+			}
+		}
+	}
+
+	/* Display bytecode instructions for a basic block */
+	def displayBlockInstructions(block: BasicBlock, indent: int, depth: int, buf: StringBuilder, prefix: string) {
+		// Display block header
+		buf.puts(prefix).puts(";; block at pc=").putd(block.startPc).ln();
+
+		// Display each instruction in the block
+		def bc = Ranges.dup(block.bytes);
+		var pc = 0;
+		while (pc < bc.length) {
+			def ins = Ref<Instruction>.at(bc, pc);
+			def opcode = ins.opcode;
+			def operand = ins.operand;
+
+			buf.puts(prefix).putc('+').putd(block.startPc + pc).puts(": ");
+			buf.puts(opcode.name).putc(' ').putd(operand).ln();
+			pc += 4;
+		}
+	}
+
+	/* Helper to check if a region is empty */
+	def isEmpty(region: Region) -> bool {
+		match (region) {
+			Empty => return true;
+			_ => return false;
+		}
+	}
+}

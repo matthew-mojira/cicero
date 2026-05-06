@@ -75,3 +75,140 @@
 => <func 'main'>
 => 0
 --
+; many-nonlocal capture: 10 distinct vars, returned via the captured 10th
+(func (cap10)
+  {
+    (set a 1) (set b 2) (set c 3) (set d 4) (set e 5)
+    (set f 6) (set g 7) (set h 8) (set i 9) (set j 10)
+    (lambda () (+ a (+ b (+ c (+ d (+ e (+ f (+ g (+ h (+ i j))))))))))
+  })
+((cap10))
+--
+=> <func 'cap10'>
+=> 55
+--
+; many-nonlocal capture: position matters — return each captured var individually
+(func (cap10-each)
+  {
+    (set v01 101) (set v02 102) (set v03 103) (set v04 104) (set v05 105)
+    (set v06 106) (set v07 107) (set v08 108) (set v09 109) (set v10 110)
+    [(lambda () v01) (lambda () v02) (lambda () v03) (lambda () v04) (lambda () v05)
+     (lambda () v06) (lambda () v07) (lambda () v08) (lambda () v09) (lambda () v10)]
+  })
+(set fs (cap10-each))
+((fs.get 0))
+((fs.get 1))
+((fs.get 2))
+((fs.get 3))
+((fs.get 4))
+((fs.get 5))
+((fs.get 6))
+((fs.get 7))
+((fs.get 8))
+((fs.get 9))
+--
+=> <func 'cap10-each'>
+=> [<lambda>, <lambda>, <lambda>, <lambda>, <lambda>, <lambda>, <lambda>, <lambda>, <lambda>, <lambda>]
+=> 101
+=> 102
+=> 103
+=> 104
+=> 105
+=> 106
+=> 107
+=> 108
+=> 109
+=> 110
+--
+; capture of >10 variables (20) — single lambda referencing all in declared order
+(func (cap20)
+  {
+    (set v01 1) (set v02 2) (set v03 3) (set v04 4) (set v05 5)
+    (set v06 6) (set v07 7) (set v08 8) (set v09 9) (set v10 10)
+    (set v11 11) (set v12 12) (set v13 13) (set v14 14) (set v15 15)
+    (set v16 16) (set v17 17) (set v18 18) (set v19 19) (set v20 20)
+    (lambda ()
+      (+ v01 (+ v02 (+ v03 (+ v04 (+ v05 (+ v06 (+ v07 (+ v08 (+ v09 (+ v10
+      (+ v11 (+ v12 (+ v13 (+ v14 (+ v15 (+ v16 (+ v17 (+ v18 (+ v19 v20))))))))))))))))))))
+  })
+((cap20))
+--
+=> <func 'cap20'>
+=> 210
+--
+; reverse-order reference: lambda body references nonlocals in reverse of declaration
+(func (cap10-rev)
+  {
+    (set v01 1) (set v02 2) (set v03 3) (set v04 4) (set v05 5)
+    (set v06 6) (set v07 7) (set v08 8) (set v09 9) (set v10 10)
+    (lambda ()
+      [v10 v09 v08 v07 v06 v05 v04 v03 v02 v01])
+  })
+((cap10-rev))
+--
+=> <func 'cap10-rev'>
+=> [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+--
+; mixed-type capture: int, string, list, lambda, null — order preserved
+(func (cap-mixed)
+  {
+    (set i 42)
+    (set s "hello")
+    (set xs [1 2 3])
+    (set fn (lambda (x) (+ x 1)))
+    (set z ())
+    (set b1 true)
+    (set b2 false)
+    (set i2 -7)
+    (set s2 "world")
+    (set xs2 [10 20])
+    (lambda () [i s xs (fn 9) z b1 b2 i2 s2 xs2])
+  })
+((cap-mixed))
+--
+=> <func 'cap-mixed'>
+=> [42, "hello", [1, 2, 3], 10, (), true, false, -7, "world", [10, 20]]
+--
+; capture sees value at function-creation time (not later mutation of outer var)
+(func (snapshot)
+  {
+    (set a 1) (set b 2) (set c 3) (set d 4) (set e 5)
+    (set f 6) (set g 7) (set h 8) (set i 9) (set j 10)
+    (set fn (lambda () [a b c d e f g h i j]))
+    (set a 999) (set j 999)
+    fn
+  })
+((snapshot))
+--
+=> <func 'snapshot'>
+=> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+--
+; many distinct lambdas in same scope each capture the full set of nonlocals;
+; check that captures are independent / don't get cross-wired
+(func (multi)
+  {
+    (set v01 1) (set v02 2) (set v03 3) (set v04 4) (set v05 5)
+    (set v06 6) (set v07 7) (set v08 8) (set v09 9) (set v10 10)
+    (set f1 (lambda () [v01 v02 v03 v04 v05 v06 v07 v08 v09 v10]))
+    (set f2 (lambda () [v10 v09 v08 v07 v06 v05 v04 v03 v02 v01]))
+    [(f1) (f2)]
+  })
+(multi)
+--
+=> <func 'multi'>
+=> [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]]
+--
+; only-referenced vars are captured: unreferenced outer vars don't shift the
+; order of the ones that are
+(func (subset)
+  {
+    (set a 1) (set b 2) (set c 3) (set d 4) (set e 5)
+    (set f 6) (set g 7) (set h 8) (set i 9) (set j 10)
+    (set k 11) (set l 12)
+    (lambda () [a c e g i k])
+  })
+((subset))
+--
+=> <func 'subset'>
+=> [1, 3, 5, 7, 9, 11]
+--

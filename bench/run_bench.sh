@@ -130,7 +130,7 @@ export -f run_hyperfine
 run_benchmarks(){
     for target in $BENCH_TARGETS; do
         if [ "$target" = "wasm-wave" ]; then
-            BINARY=$BIN_DIR/cicero.wasm
+            BINARY="wizeng --mode=lazy --stack-size=10M $BIN_DIR/cicero.wasm"
         else
             BINARY=$BIN_DIR/cicero.$target
         fi

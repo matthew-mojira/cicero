@@ -1,0 +1,5 @@
+(func (g x) x)
+
+(func (f) (g 9))
+
+(f)

@@ -1,0 +1,8 @@
+class WasmCompiler {
+	new(ast: AST, params: Array<string>) {}
+
+	def compile() -> WasmBytecode {
+		System.error("WasmCompiler", "compiling to wasm not supported on this target");
+		return null;
+	}
+}

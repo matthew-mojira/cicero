@@ -1,0 +1,8 @@
+(func (f) {
+  (set x 0)
+  (while (< x 12)
+    (set x (+ x 1)))
+  x
+})
+
+(f)

@@ -1,0 +1,16 @@
+benchmark,files,runs
+cd,som/constants.co som/vector.co macro/cd.co,3
+mandelbrot,micro/mandelbrot.co,3
+nbody,micro/nbody.co,3
+globals,micro/globals.co,3
+deltablue,som/constants.co som/vector.co som/dictionary.co som/identity_dictionary.co macro/deltablue.co,3
+richards,macro/richards.co,30
+globalLongName,micro/globalLongName.co,30
+json,som/constants.co som/vector.co macro/json.co,30
+list,micro/list.co,100
+permute,micro/permute.co,100
+queens,micro/queens.co,100
+bounce,micro/bounce.co,100
+towers,micro/towers.co,100
+sieve,micro/sieve.co,100
+storage,micro/storage.co,100

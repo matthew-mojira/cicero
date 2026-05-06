@@ -1,0 +1,3 @@
+(set c 'c')
+(set s "test_string")
+(try (s.char-at 100) else "pass")

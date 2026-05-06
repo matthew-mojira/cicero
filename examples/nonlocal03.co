@@ -1,0 +1,2 @@
+(func (f x) (lambda (x) (+ x 1)))
+((f 10) 1)
