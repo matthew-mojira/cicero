@@ -1,9 +1,3 @@
-// TODO: we can probably get rid of these since we are abusing the receiver as 
-// scratch local0
-var COPY_SIG: i32 = -1;
-var SWAP_SIG: i32 = -1;
-var BLOCK_SIG: i32 = -1;
-
 /* RUNTIME DEFINITIONS */
 def IS_NULL: u32       = u32.view(CiWasmTarget.functionId(WasmRuntime.isNull));
 def GET_GLOBAL: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobal));
@@ -76,15 +70,7 @@ class WasmCompiler {
 	def var scratch1: u32;
 
 	new(ast: AST, params) {
-		// Initialize some deferred elements
-		if (BLOCK_SIG < 0) {
-			// XXX should be int (same effect)
-			BLOCK_SIG = CiWasmTarget.functionTypeId<Object, Object>();
-			COPY_SIG  = CiWasmTarget.functionTypeId<Object, (Object, Object)>();
-			SWAP_SIG  = CiWasmTarget.functionTypeId<(Object, Object), (Object, Object)>();
-		}
-
-		addConst(null);
+		addConst(null); // XXX what is this?
 
 		scratch0 = addLocal("<receiver>"); /* also used as scratch */
 		// XXX I don't know what this receiver local (parameter) is or why virgil compiler adds it.
