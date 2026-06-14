@@ -131,6 +131,10 @@ def main(args: Array<string>) -> int {
 		System.puts(Strings.format1("Total dynamic bytecodes: %d\n", total));
 	}
 
+	if (CiceroOptions.profileInlineCaching) {
+		/* SUPREME:TODO */
+	}
+
 	// experimental results
 	if (LocalAnalysisResults.displayResults) {
 		System.puts("Local analysis results:\n");

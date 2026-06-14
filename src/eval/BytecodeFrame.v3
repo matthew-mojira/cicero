@@ -369,10 +369,20 @@ class BytecodeFrame extends FrameObject {
 							if (CiceroOptions.useLazyMethods && res == null) {
 								// if not yet initialized, must treat as cache miss
 								stack.push(obj.getField(field));
+
+								if (CiceroOptions.profileInlineCaching) {
+									ProfileInlineCache.profileCacheMiss(b, pc-4);
+								}
 							} else {
+								// cache hit
 								stack.push(res);
+
+								if (CiceroOptions.profileInlineCaching) {
+									ProfileInlineCache.profileCacheHit(b, pc-4);
+								}
 							}
 						} else {
+							// cache miss
 							def v = obj.getField(field);
 							if (v == null) {
 								throw(Exceptions.missingField(obj, field));
@@ -380,6 +390,10 @@ class BytecodeFrame extends FrameObject {
 								cache.fst = cls;
 								cache.snd = obj.getIndex(field);
 								stack.push(v);
+							}
+
+							if (CiceroOptions.profileInlineCaching) {
+								ProfileInlineCache.profileCacheMiss(b, pc-4);
 							}
 						}
 					} else {

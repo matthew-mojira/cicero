@@ -1,0 +1,24 @@
+def constructInlineCacheKey(b: Bytecode, instr_index: int) -> long{
+    return long.!(b.id) << 32 | long.!(instr_index);
+}
+
+component ProfileInlineCache{
+
+    def profileCacheHit(b: Bytecode, instr_index: int){
+        def key: long = constructInlineCacheKey(b, instr_index);
+        // The key will always exist because a new Pair gets created on initial LOAD_FIELD execution which will be a miss
+        var pair : Pair<long, long> = Profiling.inlineCacheHitMissCounts[key];
+        pair.fst = pair.fst + 1; // increase hits
+    }
+
+    def profileCacheMiss(b: Bytecode, instr_index: int){
+        def key: long = constructInlineCacheKey(b, instr_index);
+        if (Profiling.inlineCacheHitMissCounts.has(key)){
+            var pair : Pair<long, long> = Profiling.inlineCacheHitMissCounts[key];
+            pair.snd = pair.snd + 1; // increase misses
+        } else {
+            Profiling.inlineCacheHitMissCounts[key] = Pair.new(0L, 1L);
+        }
+    }
+
+}
