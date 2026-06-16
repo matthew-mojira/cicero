@@ -369,9 +369,10 @@ class BytecodeFrame extends FrameObject {
 							if (CiceroOptions.useLazyMethods && res == null) {
 								// if not yet initialized, must treat as cache miss
 								stack.push(obj.getField(field));
+								// no need to update cache either
 
 								if (CiceroOptions.profileInlineCaching) {
-									ProfileInlineCache.profileCacheMiss(b, pc-4);
+									ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name);
 								}
 							} else {
 								// cache hit
@@ -393,7 +394,7 @@ class BytecodeFrame extends FrameObject {
 							}
 
 							if (CiceroOptions.profileInlineCaching) {
-								ProfileInlineCache.profileCacheMiss(b, pc-4);
+								ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name);
 							}
 						}
 					} else {

@@ -132,7 +132,7 @@ def main(args: Array<string>) -> int {
 	}
 
 	if (CiceroOptions.profileInlineCaching) {
-		/* SUPREME:TODO */
+		ProfileInlineCache.printCacheStats();
 	}
 
 	// experimental results

@@ -1,0 +1,7 @@
+class Triplet<A, B, C> #unboxed {
+	var fst: A;
+	var snd: B;
+	var thd: C;
+
+	new(fst, snd, thd) {}
+}

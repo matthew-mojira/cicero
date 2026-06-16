@@ -1,24 +1,38 @@
-def constructInlineCacheKey(b: Bytecode, instr_index: int) -> long{
-    return long.!(b.id) << 32 | long.!(instr_index);
+def constructInlineCacheKey(b: Bytecode, instrIndex: int) -> string{
+    return Strings.format2("%d-%d", b.id, instrIndex);
 }
 
 component ProfileInlineCache{
 
-    def profileCacheHit(b: Bytecode, instr_index: int){
-        def key: long = constructInlineCacheKey(b, instr_index);
-        // The key will always exist because a new Pair gets created on initial LOAD_FIELD execution which will be a miss
-        var pair : Pair<long, long> = Profiling.inlineCacheHitMissCounts[key];
-        pair.fst = pair.fst + 1; // increase hits
+    def profileCacheHit(b: Bytecode, instrIndex: int){
+        def key: string = constructInlineCacheKey(b, instrIndex);
+        // The key will always exist because a new Triplet gets created on initial bytecode execution which will be a miss
+        var triplet = Profiling.inlineCacheHitMissCounts[key];
+        triplet.fst = triplet.fst + 1; // increase hits
     }
 
-    def profileCacheMiss(b: Bytecode, instr_index: int){
-        def key: long = constructInlineCacheKey(b, instr_index);
+    def profileCacheMiss(b: Bytecode, instrIndex: int, op_name: string){
+        def key: string = constructInlineCacheKey(b, instrIndex);
         if (Profiling.inlineCacheHitMissCounts.has(key)){
-            var pair : Pair<long, long> = Profiling.inlineCacheHitMissCounts[key];
-            pair.snd = pair.snd + 1; // increase misses
+            var triplet = Profiling.inlineCacheHitMissCounts[key];
+            triplet.snd = triplet.snd + 1; // increase misses
         } else {
-            Profiling.inlineCacheHitMissCounts[key] = Pair.new(0L, 1L);
+            Profiling.inlineCacheHitMissCounts[key] = Triplet.new(0, 1, op_name);
         }
     }
 
+    def printCacheStats(){
+        System.puts("Bytecode ID, Instruction Index, Instruction, Hits, Misses\n");
+        for (list = Maps.keyList(Profiling.inlineCacheHitMissCounts); list != null; list = list.tail) {
+            // Key -> list.head -> "${bytecodeObjectId}-${instrIndex}"
+            def key_split : Array<string> = Strings.split(list.head, "-", 2);
+            def bytecodeObjectId : string = key_split[0];
+            def instrIndex : string = key_split[1];
+            
+            def triplet: Triplet<int, int, string> = Profiling.inlineCacheHitMissCounts[list.head];
+
+            System.puts(Strings.format3("%s, %s, %s, ", bytecodeObjectId, instrIndex, triplet.thd));
+			System.puts(Strings.format2("%d, %d\n", triplet.fst, triplet.snd));
+		}
+    }
 }
