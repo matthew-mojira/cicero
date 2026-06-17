@@ -182,10 +182,10 @@ class ASTFrame extends FrameObject {
 					value = e;
 				}
 			}
-			Func(id, params, code, fnonlocals) => {
+			Func(id, params, code, fnonlocals, identifier, label) => {
 				def vals: Array<(string, Object)> = Array.new(fnonlocals.length);
 				// create the function now, and insert its values as we iterate through fnonlocals
-				def fn = FuncObjects.newFO(id, params, vals, code);
+				def fn = FuncObjects.newFO(id, params, vals, code, identifier, label);
 				// now work: capturing free variables
 				for (i < fnonlocals.length) {
 					def lid = fnonlocals[i];
@@ -376,5 +376,5 @@ class ASTFrame extends FrameObject {
 
 def funcToFunc(f: ASTData.Func) -> FuncObject {
 	// XXX list for method
-	return FuncObjects.newFO(f.id, f.params, [], f.body);
+	return FuncObjects.newFO(f.id, f.params, [], f.body, f.identifier, f.label);
 }

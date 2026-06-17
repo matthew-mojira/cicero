@@ -244,6 +244,7 @@ class BytecodeFrame extends FrameObject {
 					def top = stack.pop();
 					// function code
 					def fv = FuncObject.!(top); // this cast succeeds because of ASSERT_FUNC
+					System.puts(Strings.format2("Calling %d: %s\n", fv.identifier, fv.label));
 					def params = fv.params, code = fv.code;
 
 					// evaluate argument values
@@ -369,7 +370,7 @@ class BytecodeFrame extends FrameObject {
 							if (CiceroOptions.useLazyMethods && res == null) {
 								// if not yet initialized, must treat as cache miss
 								stack.push(obj.getField(field));
-								// no need to update cache either
+								cache.snd = obj.getIndex(field);
 
 								if (CiceroOptions.profileInlineCaching) {
 									ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name);
@@ -432,7 +433,7 @@ class BytecodeFrame extends FrameObject {
 
 					def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
 
-					def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body);
+					def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body, funchole.identifier, funchole.label);
 					for (i = funchole.nonlocals.length - 1; i >= 0; i--) {
 						// if the nonlocal is the function itself (for recursion) then do not
 						// get it from the stack. you already have it!

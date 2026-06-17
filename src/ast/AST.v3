@@ -21,7 +21,7 @@ type ASTData {
 	case Cond(cases: Array<(AST, AST)>);
 	case Raise(exn: AST);
 	case Catch(try: AST, exn: string, mode: Box<AccessMode>, catch: AST); // XXX mode required
-	case Func(id: string, params: Array<string>, body: CodeObject, nonlocals: Vector<string>);
+	case Func(id: string, params: Array<string>, body: CodeObject, nonlocals: Vector<string>, identifier: int, label: string);
 	case While(cond: AST, body: AST);
 	case Begin(exprs: Array<AST>);
 	case GetField(field: string, obj: AST);

@@ -132,7 +132,9 @@ def main(args: Array<string>) -> int {
 	}
 
 	if (CiceroOptions.profileInlineCaching) {
-		ProfileInlineCache.printCacheStats();
+		if (CLOptions.CACHE.get()) {
+			ProfileInlineCache.printCacheStats();
+		}
 	}
 
 	// experimental results

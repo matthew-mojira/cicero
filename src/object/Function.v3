@@ -10,7 +10,7 @@
  * arity is correct. Type-checking is the responsibility of the implementation
  * of that function, still.
  */
-class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject) extends Object {
+class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject, identifier: int, label: string) extends Object {
 	def display() => if(id.length == 0, "<lambda>", Strings.format1("<func '%s'>", id));
 	def isTrue()  -> bool   { return true; }
 
@@ -31,19 +31,27 @@ class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Ob
 }
 
 component FuncObjects {
+
+	// Each func/method AST during **parsing** as well as
+	// built-in functions/methods are assigned a unique identifier id
+	// Note that different `FuncObject`s can share the same identifier id
+	// For example, evaluating an function expression twice will two create two seperate `FuncObject`. However, those two `FuncObject` will have the same identifier(int) since it belongs to the same func expression.
+	var identifier_id: int = 0;
+
 	// XXX hackfix: use this function so that we can have MethodObject as a
 	// subclass of FuncObject in Virgil
-	def newFO(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject) -> FuncObject {
-		return FuncObject.new(id, params, nonlocals, code);
+	def newFO(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject, identifier: int, label: string) -> FuncObject {
+		return FuncObject.new(id, params, nonlocals, code, identifier, label);
 	}
 	/* Create a function defined with Virgil code */
-	def fromVirgil(id: string, params: Array<string>, fn: Range<Object> -> Result) -> FuncObject {
-		return newFO(id, params, [], CodeObjects.fromVirgil(fn));
+	def fromVirgil(id: string, label: string, params: Array<string>, fn: Range<Object> -> Result) -> FuncObject {
+		// Each function object created from virgil is given its own unique `identifier_id`
+		return newFO(id, params, [], CodeObjects.fromVirgil(fn), FuncObjects.identifier_id++, label);
 	}
 
 	/* Create a FuncObject from a Virgil method with 0 parameters */
-	def fromVirgilMethod0<T>(name: string, method: T -> Result) -> FuncObject {
-		return fromVirgil(name, [], callMethod0(_, method));
+	def fromVirgilMethod0<T>(name: string, label: string, method: T -> Result) -> FuncObject {
+		return fromVirgil(name, label, [], callMethod0(_, method));
 	}
 	/* Create a FuncObject from a Virgil method with 1 parameter.
 	 *
@@ -55,16 +63,16 @@ component FuncObjects {
 	 * real method definitions can assume the type is correct so we don't
 	 * have to write code to check the types everywhere every time.
 	 */
-	def fromVirgilMethod1<T, A1>(name: string, cst: Array<ClassObject>, method: (T, A1) -> Result) -> FuncObject {
-		return fromVirgil(name, ["arg1"], callMethod1(name, _, cst, method));
+	def fromVirgilMethod1<T, A1>(name: string, label: string, cst: Array<ClassObject>, method: (T, A1) -> Result) -> FuncObject {
+		return fromVirgil(name, label, ["arg1"], callMethod1(name, _, cst, method));
 	}
 	/* Create a FuncObject from a Virgil method with 2 parameters. */
-	def fromVirgilMethod2<T, A1, A2>(name: string, cst: Array<ClassObject>, method: (T, A1, A2) -> Result) -> FuncObject {
-		return fromVirgil(name, ["arg1", "arg2"], callMethod2(name, _, cst, method));
+	def fromVirgilMethod2<T, A1, A2>(name: string, label: string, cst: Array<ClassObject>, method: (T, A1, A2) -> Result) -> FuncObject {
+		return fromVirgil(name, label, ["arg1", "arg2"], callMethod2(name, _, cst, method));
 	}
 	/* Create a FuncObject from a Virgil method with 3 parameters. */
-	def fromVirgilMethod3<T, A1, A2, A3>(name: string, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> Result) -> FuncObject {
-		return fromVirgil(name, ["arg1", "arg2", "arg3"], callMethod3(name, _, cst, method));
+	def fromVirgilMethod3<T, A1, A2, A3>(name: string, label: string, cst: Array<ClassObject>, method: (T, A1, A2, A3) -> Result) -> FuncObject {
+		return fromVirgil(name, label, ["arg1", "arg2", "arg3"], callMethod3(name, _, cst, method));
 	}
 	/* Create a FuncObject from a Cicero-defined method. */
 	def fromCiceroMethod(id: string, cicero: string) -> FuncObject {
@@ -75,7 +83,7 @@ component FuncObjects {
 			def fn = ASTData.Func.!(Code.AST.!(code.code).ast.data);
 
 			if (CLOptions.TIER.get() > 0) fn.body.compile(Arrays.prepend("self", fn.params));
-			return newFO(id, Arrays.deleteAt(fn.params, 0), [], fn.body);
+			return newFO(id, Arrays.deleteAt(fn.params, 0), [], fn.body, fn.identifier, fn.label);
 		} else {
 			System.error("init error", "failed to parse built-in cicero method");
 			return null;
@@ -85,8 +93,8 @@ component FuncObjects {
 	/* Returns a function which takes in captured variables and constructs
 	 * a FuncObject.
 	 */
-	def funchole(id: string, params: Array<string>, code: CodeObject) -> (Array<(string, Object)> -> FuncObject) {
-		return newFO(id, params, _, code);
+	def funchole(id: string, params: Array<string>, code: CodeObject, identifier: int, label: string) -> (Array<(string, Object)> -> FuncObject) {
+		return newFO(id, params, _, code, identifier, label);
 	}
 }
 
