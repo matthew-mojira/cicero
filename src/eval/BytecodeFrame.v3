@@ -244,7 +244,6 @@ class BytecodeFrame extends FrameObject {
 					def top = stack.pop();
 					// function code
 					def fv = FuncObject.!(top); // this cast succeeds because of ASSERT_FUNC
-					System.puts(Strings.format2("Calling %d: %s\n", fv.identifier, fv.label));
 					def params = fv.params, code = fv.code;
 
 					// evaluate argument values
@@ -271,9 +270,22 @@ class BytecodeFrame extends FrameObject {
 					assertArity(params.length, args.length);
 					if (isExn()) continue;
 
-					// create new frame (and evaluate)
+					// create new frame
 					def frame = newFrame(fv.id, code, argv, fv.nonlocals);
+
+					var startTime: int;
+					if (CiceroOptions.profileFunctionCalls) {
+						startTime = System.ticksUs();
+					}
+
+					// evaluate the frame (execute the function)
 					frame.eval();
+					
+					if (CiceroOptions.profileFunctionCalls) {
+						def executionTime: int = System.ticksUs() - startTime; // in microseconds
+						ProfileFunctionCalls.profileFunctionCall(fv.identifier, fv.label, executionTime);
+					}
+
 					if (frame.isExn()) {
 						rethrow(frame.getExn());
 						continue;

@@ -1,0 +1,24 @@
+component ProfileFunctionCalls{
+
+    def profileFunctionCall(identifier: int, label: string, executionTime: int){
+        if (Profiling.funcCallCounts.has(identifier)){
+            def triplet: Triplet<int, int, string> = Profiling.funcCallCounts[identifier];
+            triplet.fst += 1; // increment calls
+            triplet.snd += executionTime;
+        } else {
+            Profiling.funcCallCounts[identifier] = Triplet.new(1, executionTime, label);
+        }
+    }
+
+    def printFuncCallsStats(){
+        System.puts("Function identifier, Function label, calls, execution time(μs)\n");
+        for (list = Maps.keyList(Profiling.funcCallCounts); list != null; list = list.tail) {
+            def funcIdentifier: int = list.head;
+		    // Triplet<# of calls, execution time(ms), label>
+            def triplet: Triplet<int, int, string> = Profiling.funcCallCounts[list.head];
+
+            System.puts(Strings.format3("%d, %s, %d, ", funcIdentifier, triplet.thd, triplet.fst));
+            System.puts(Strings.format1("%d\n", triplet.snd));
+        }
+    }
+}

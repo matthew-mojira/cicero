@@ -1,6 +1,10 @@
 component Profiling {
 	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
 	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+	/*
+		Mapping from func object's `identifier_id` -> Triplet<# of calls, execution time(ms), label>
+	*/
+	def funcCallCounts: HashMap<int, Triplet<int, int, string>> = HashMap.new(int.!<int>, int.==);
 	/* 
 	 	Note: Each bytecode object has its own set of bytecode instrs. So, we need to keep track for all bytecode objects.
 		The key is a combination of the bytecode object id (int : 32 bit) 

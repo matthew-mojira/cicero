@@ -137,6 +137,10 @@ def main(args: Array<string>) -> int {
 		}
 	}
 
+	if (CiceroOptions.profileFunctionCalls) {
+		ProfileFunctionCalls.printFuncCallsStats();
+	}
+
 	// experimental results
 	if (LocalAnalysisResults.displayResults) {
 		System.puts("Local analysis results:\n");
