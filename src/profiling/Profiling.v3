@@ -1,6 +1,12 @@
 component Profiling {
 	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
 	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+    /* 
+        Matrix array is used to keep track of (row, col) op pair counts
+        For e.g. staticOpcodePairCounts[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
+            would track counts of LOAD_LOCAL followed by LOAD_CONST
+    */
+	def staticOpcodePairCounts: Array<Array<int>> = ProfileOpcodePairCounts.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 	/*
 		Mapping from func object's `identifier_id` -> Triplet<# of calls, execution time(ms), label>
 	*/

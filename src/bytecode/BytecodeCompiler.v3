@@ -11,6 +11,8 @@ class BytecodeCompiler {
 	def locals:     Vector<string> = Vector.new();
 	def nonlocals:  Vector<string> = Vector.new();
 
+	/* most recently compiled (written) instruction */
+	var recentInstr: Maybe<Opcode> = Maybe.Nothing;
 	/* Source mappings */
 	def source: Vector<FileRange>  = Vector.new();
 
@@ -238,6 +240,10 @@ class BytecodeCompiler {
 		if (CiceroOptions.profileBytecode) {
 			Profiling.staticCounts[op.tag]++;
 		}
+		if (CiceroOptions.profileStaticOpcodePairCounts) {
+			ProfileOpcodePairCounts.profileStatic(recentInstr, op);
+		}
+		recentInstr = Maybe.Just(op);
 	}
 
 	def writeInstrDeferOperand(loc: FileRange, op: Opcode) -> int {

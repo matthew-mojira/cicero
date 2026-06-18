@@ -131,6 +131,10 @@ def main(args: Array<string>) -> int {
 		System.puts(Strings.format1("Total dynamic bytecodes: %d\n", total));
 	}
 
+	if (CiceroOptions.profileStaticOpcodePairCounts) {
+		ProfileOpcodePairCounts.printStaticStats();
+	}
+
 	if (CiceroOptions.profileInlineCaching) {
 		if (CLOptions.CACHE.get()) {
 			ProfileInlineCache.printCacheStats();
