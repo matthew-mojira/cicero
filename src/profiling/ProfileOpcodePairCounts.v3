@@ -1,20 +1,27 @@
 component ProfileOpcodePairCounts{
 
-    def profileStatic(maybeOpOne: Maybe<Opcode>, opTwo: Opcode){
+    private def profile(matrix: Array<Array<int>>, maybeOpOne: Maybe<Opcode>, opTwo: Opcode){
         match (maybeOpOne) {
             Nothing => {}
             Just(opOne) => {
-                Profiling.staticOpcodePairCounts[opOne.tag][opTwo.tag]++;
+                matrix[opOne.tag][opTwo.tag]++;
             }
         }
     }
 
-    def printStaticStats(){
-        System.puts("# Omitting opcode pairs seen zero times\n");
+    def profileStatic(maybeOpOne: Maybe<Opcode>, opTwo: Opcode){
+        profile(Profiling.staticOpcodePairCounts, maybeOpOne, opTwo);
+    }
+
+    def profileDynamic(maybeOpOne: Maybe<Opcode>, opTwo: Opcode){
+        profile(Profiling.dynamicOpcodePairCounts, maybeOpOne, opTwo);
+    }
+
+    private def printStats(matrix: Array<Array<int>>){
         System.puts("opcode, next opcode, counts\n");
         for (row=0; row < Opcodes.numOpcodes; row++){
             for (col=0; col < Opcodes.numOpcodes; col++){
-                def counts = Profiling.staticOpcodePairCounts[row][col];
+                def counts = matrix[row][col];
                 if (counts != 0){
                     System.puts(
                         Strings.format3("%s, %s, %d\n",
@@ -27,6 +34,17 @@ component ProfileOpcodePairCounts{
         }
     }
 
+    def printStaticStats(){
+        System.puts("# Omitting opcode pairs seen zero times during compilation\n");
+        printStats(Profiling.staticOpcodePairCounts);
+    }
+
+    def printDynamicStats(){
+        System.puts("# Omitting opcode pairs executed zero times\n");
+        System.puts("# Opcode pairs are only tracked if they are in the same bytecode frame\n");
+        printStats(Profiling.dynamicOpcodePairCounts);
+    }
+    
     def createMatrix(rows: int, cols: int) -> Array<Array<int>>{
         var matrix = Array<Array<int>>.new(rows);
         for (i=0; i < rows; i++) {
@@ -34,5 +52,4 @@ component ProfileOpcodePairCounts{
         }
         return matrix;
     }
-
 }

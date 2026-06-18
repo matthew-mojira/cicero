@@ -1,4 +1,6 @@
 class BytecodeFrame extends FrameObject {
+	var currentInstr: Maybe<Opcode> = Maybe.Nothing;
+
 	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
 		if (code != null) {
 			def bytecode = Code.Bytecode.!(code.code).bytecode;
@@ -103,6 +105,10 @@ class BytecodeFrame extends FrameObject {
  			def opcode = bytecode.opcode;
 			def operand  = bytecode.operand;
 
+ 			if (CiceroOptions.profileDynamicOpcodePairCounts) {
+				ProfileOpcodePairCounts.profileDynamic(currentInstr, opcode);
+ 			}
+
  			if (CiceroOptions.profileBytecode) {
  				Profiling.dynamicCounts[opcode.tag] += 1;
  			}
@@ -133,6 +139,7 @@ class BytecodeFrame extends FrameObject {
   			}
  
 
+			currentInstr = Maybe.Just(opcode);
 			pc += 4;
 			match (opcode) {
 				NOP => ;

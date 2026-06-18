@@ -15,6 +15,7 @@ component CiceroOptions {
 	/* profiling */
 	def profileBytecode = false;
 	def profileStaticOpcodePairCounts = false;
+	def profileDynamicOpcodePairCounts = false;
 	def profileInlineCaching = false;
 	/*
         Profiles calls based on the **static** definition of the function/method.

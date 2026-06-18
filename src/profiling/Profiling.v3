@@ -7,6 +7,7 @@ component Profiling {
             would track counts of LOAD_LOCAL followed by LOAD_CONST
     */
 	def staticOpcodePairCounts: Array<Array<int>> = ProfileOpcodePairCounts.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
+	def dynamicOpcodePairCounts: Array<Array<int>>= ProfileOpcodePairCounts.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 	/*
 		Mapping from func object's `identifier_id` -> Triplet<# of calls, execution time(ms), label>
 	*/
