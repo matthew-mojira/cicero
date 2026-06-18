@@ -10,7 +10,11 @@
  * arity is correct. Type-checking is the responsibility of the implementation
  * of that function, still.
  */
+var FuncObjectId : int = 0;
 class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject, identifier: int, label: string) extends Object {
+	// FuncObject unique id
+	def uid: int = FuncObjectId++;
+
 	def display() => if(id.length == 0, "<lambda>", Strings.format1("<func '%s'>", id));
 	def isTrue()  -> bool   { return true; }
 

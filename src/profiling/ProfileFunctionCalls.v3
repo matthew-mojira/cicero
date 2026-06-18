@@ -1,24 +1,41 @@
 component ProfileFunctionCalls{
 
-    def profileFunctionCall(identifier: int, label: string, executionTime: int){
-        if (Profiling.funcCallCounts.has(identifier)){
-            def triplet: Triplet<int, int, string> = Profiling.funcCallCounts[identifier];
+    private def profile(dict: HashMap<int, Triplet<int, int, string>>, key: int, name: string, executionTime: int){
+        if (dict.has(key)){
+            def triplet: Triplet<int, int, string> = dict[key];
             triplet.fst += 1; // increment calls
             triplet.snd += executionTime;
         } else {
-            Profiling.funcCallCounts[identifier] = Triplet.new(1, executionTime, label);
+            dict[key] = Triplet.new(1, executionTime, name);
+        }
+    }
+
+    def profileFunctionCall(identifier: int, label: string, executionTime: int){
+        profile(Profiling.funcCallCounts, identifier, label, executionTime);
+    }
+
+    def profileFunctionObjectCall(uid: int, label: string, executionTime: int){
+        profile(Profiling.funcObjectCallCounts, uid, label, executionTime);
+    }
+
+    private def printStats(dict: HashMap<int, Triplet<int, int, string>>){
+        for (list = Maps.keyList(dict); list != null; list = list.tail) {
+            def key: int = list.head;
+		    // Triplet<# of calls, execution time(ms), name>
+            def triplet: Triplet<int, int, string> = dict[key];
+
+            System.puts(Strings.format3("%d, %s, %d, ", key, triplet.thd, triplet.fst));
+            System.puts(Strings.format1("%d\n", triplet.snd));
         }
     }
 
     def printFuncCallsStats(){
         System.puts("Function identifier, Function label, calls, execution time(μs)\n");
-        for (list = Maps.keyList(Profiling.funcCallCounts); list != null; list = list.tail) {
-            def funcIdentifier: int = list.head;
-		    // Triplet<# of calls, execution time(ms), label>
-            def triplet: Triplet<int, int, string> = Profiling.funcCallCounts[list.head];
+        printStats(Profiling.funcCallCounts);
+    }
 
-            System.puts(Strings.format3("%d, %s, %d, ", funcIdentifier, triplet.thd, triplet.fst));
-            System.puts(Strings.format1("%d\n", triplet.snd));
-        }
+    def printFuncObjectCallsStats(){
+        System.puts("Function object uid, Function label, calls, execution time(μs)\n");
+        printStats(Profiling.funcObjectCallCounts);
     }
 }

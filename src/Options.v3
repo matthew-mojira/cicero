@@ -15,7 +15,23 @@ component CiceroOptions {
 	/* profiling */
 	def profileBytecode = false;
 	def profileInlineCaching = false;
+	/*
+        Profiles calls based on the **static** definition of the function/method.
+		
+        Logic: All instances of a closure created from the same function definition share the same identifier id.
+                Likewise, method calls are aggregated by the underlying method definition,
+                so x.show() and y.show() contribute to the same identifier if they resolve to the same method implementation.
+	*/
 	def profileFunctionCalls = false;
+	/*
+        Profiles calls by function object identity.
+		
+        Logic: Each function object receives a unique id (uid) when created.
+                So, closures originating from the same function declaration will have seperate uids.
+                Similarly, each method-object binding (e.g. x.show() vs y.show()) is assigned a unique identifier at runtime 
+                even though they are instances of the same class (underlying method definition is the same).
+	*/
+	def profileFunctObjectCalls = false;
 }
 
 // for parsing

@@ -274,7 +274,7 @@ class BytecodeFrame extends FrameObject {
 					def frame = newFrame(fv.id, code, argv, fv.nonlocals);
 
 					var startTime: int;
-					if (CiceroOptions.profileFunctionCalls) {
+					if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFunctObjectCalls) {
 						startTime = System.ticksUs();
 					}
 
@@ -284,6 +284,10 @@ class BytecodeFrame extends FrameObject {
 					if (CiceroOptions.profileFunctionCalls) {
 						def executionTime: int = System.ticksUs() - startTime; // in microseconds
 						ProfileFunctionCalls.profileFunctionCall(fv.identifier, fv.label, executionTime);
+					}
+					if (CiceroOptions.profileFunctObjectCalls) {
+						def executionTime: int = System.ticksUs() - startTime; // in microseconds
+						ProfileFunctionCalls.profileFunctionObjectCall(fv.uid, fv.label, executionTime);
 					}
 
 					if (frame.isExn()) {
