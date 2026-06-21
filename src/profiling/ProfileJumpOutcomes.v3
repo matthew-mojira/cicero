@@ -1,0 +1,26 @@
+component ProfileJumpOutcomes{
+
+    def profileJump(b: Bytecode, instrIndex: int, op_name: string, jump_taken: bool){
+        def key: long = ProfilingHelpers.constructKey(b, instrIndex);
+        if (Profiling.jumpOpcodeOutcomes.has(key)){
+            var triplet : Triplet<string, int, int> = Profiling.jumpOpcodeOutcomes[key];
+            if (jump_taken){
+                triplet.snd = triplet.snd + 1; // increase jump taken
+            } else {
+                triplet.thd = triplet.thd + 1; // increase jump not taken
+            }
+        } else {
+            if (jump_taken){
+                Profiling.jumpOpcodeOutcomes[key] = Triplet.new(op_name, 1, 0);
+            } else {
+                Profiling.jumpOpcodeOutcomes[key] = Triplet.new(op_name, 0, 1);
+            }
+        }
+    }
+
+    def printJumpStats(){
+        System.puts("Bytecode ID, Instruction Index, Instruction, Jumps taken, Jumps not taken\n");
+        ProfilingHelpers.printHashMap(Profiling.jumpOpcodeOutcomes);
+    }
+
+}

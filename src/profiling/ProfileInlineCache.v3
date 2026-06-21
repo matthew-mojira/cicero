@@ -1,38 +1,24 @@
-def constructInlineCacheKey(b: Bytecode, instrIndex: int) -> string{
-    return Strings.format2("%d-%d", b.id, instrIndex);
-}
-
 component ProfileInlineCache{
 
     def profileCacheHit(b: Bytecode, instrIndex: int){
-        def key: string = constructInlineCacheKey(b, instrIndex);
+        def key: long = ProfilingHelpers.constructKey(b, instrIndex);
         // The key will always exist because a new Triplet gets created on initial bytecode execution which will be a miss
         var triplet = Profiling.inlineCacheHitMissCounts[key];
-        triplet.fst = triplet.fst + 1; // increase hits
+        triplet.snd = triplet.snd + 1; // increase hits
     }
 
     def profileCacheMiss(b: Bytecode, instrIndex: int, op_name: string){
-        def key: string = constructInlineCacheKey(b, instrIndex);
+        def key: long = ProfilingHelpers.constructKey(b, instrIndex);
         if (Profiling.inlineCacheHitMissCounts.has(key)){
             var triplet = Profiling.inlineCacheHitMissCounts[key];
-            triplet.snd = triplet.snd + 1; // increase misses
+            triplet.thd = triplet.thd + 1; // increase misses
         } else {
-            Profiling.inlineCacheHitMissCounts[key] = Triplet.new(0, 1, op_name);
+            Profiling.inlineCacheHitMissCounts[key] = Triplet.new(op_name, 0, 1);
         }
     }
 
     def printCacheStats(){
         System.puts("Bytecode ID, Instruction Index, Instruction, Hits, Misses\n");
-        for (list = Maps.keyList(Profiling.inlineCacheHitMissCounts); list != null; list = list.tail) {
-            // Key -> list.head -> "${bytecodeObjectId}-${instrIndex}"
-            def key_split : Array<string> = Strings.split(list.head, "-", 2);
-            def bytecodeObjectId : string = key_split[0];
-            def instrIndex : string = key_split[1];
-            
-            def triplet: Triplet<int, int, string> = Profiling.inlineCacheHitMissCounts[list.head];
-
-            System.puts(Strings.format3("%s, %s, %s, ", bytecodeObjectId, instrIndex, triplet.thd));
-			System.puts(Strings.format2("%d, %d\n", triplet.fst, triplet.snd));
-		}
+        ProfilingHelpers.printHashMap(Profiling.inlineCacheHitMissCounts);
     }
 }

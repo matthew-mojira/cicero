@@ -139,6 +139,10 @@ def main(args: Array<string>) -> int {
 		ProfileOpcodePairCounts.printDynamicStats();
 	}
 
+	if (CiceroOptions.profileJumpOutcomes) {
+		ProfileJumpOutcomes.printJumpStats();
+	}
+
 	if (CiceroOptions.profileInlineCaching) {
 		if (CLOptions.CACHE.get()) {
 			ProfileInlineCache.printCacheStats();

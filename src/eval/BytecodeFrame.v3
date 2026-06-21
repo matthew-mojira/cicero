@@ -103,6 +103,7 @@ class BytecodeFrame extends FrameObject {
 			var cache: Pair<ClassObject, int>;
  
  			def opcode = bytecode.opcode;
+ 			def opcode_pc = pc;
 			def operand  = bytecode.operand;
 
  			if (CiceroOptions.profileDynamicOpcodePairCounts) {
@@ -384,7 +385,7 @@ class BytecodeFrame extends FrameObject {
 					def field = strings[operand];
 
 					if (CLOptions.CACHE.get()) {
-  						cache = b.cache[pc >> 2];
+  						cache = b.cache[(pc - 4) >> 2];
 						
 						def cls = obj.getClass();
 						/* Inline cache */
@@ -477,6 +478,15 @@ class BytecodeFrame extends FrameObject {
 				//_ => System.error("eval error", "unsupported opcode");
 			}
 
+			if (CiceroOptions.profileJumpOutcomes) {
+				match (opcode) {
+				    JUMP, JUMP_IF_FALSE, JUMP_IF_TRUE_PEEK, JUMP_IF_FALSE_PEEK => {
+					    def jump_taken = opcode_pc != (pc - 4);
+					    ProfileJumpOutcomes.profileJump(b, opcode_pc, opcode.name, jump_taken);
+					}
+					_ => {}
+				}
+			}
 		}
 
 		if (CiceroOptions.sanityChecks && stack.empty()) System.error("eval error", "stack is empty");
