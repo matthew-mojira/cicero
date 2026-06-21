@@ -436,8 +436,39 @@ class BytecodeFrame extends FrameObject {
 					def obj = stack.pop();
 					def field = strings[operand];
 
-					if (!obj.setField(field, val)) {
-						throw(Exceptions.missingField(obj, field));
+					if (CLOptions.CACHE.get()) {
+  						cache = b.cache[(pc - 4) >> 2];
+
+						def cls = obj.getClass();
+						// obj.initClass() is guaranteed to have executed
+						// So, an index is guaranteed to exist for the field, given that the field exists.
+
+						/* Inline Cache */
+						if (cache.fst == cls){
+							/* cache hit */
+							// field exists since exception would have occured on initial cache miss otherwise
+							obj.setFieldByIndex(cache.snd, val);
+
+							if (CiceroOptions.profileInlineCaching) {
+								ProfileInlineCache.profileCacheHit(b, pc-4);
+							}
+						} else {
+							/* cache miss */
+							if (!obj.setField(field, val)) {
+								throw(Exceptions.missingField(obj, field));
+							} else {
+								cache.fst = cls;
+								cache.snd = obj.getIndex(field);
+
+								if (CiceroOptions.profileInlineCaching) {
+									ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name);
+								}
+							}
+						}
+					} else {
+						if (!obj.setField(field, val)) {
+							throw(Exceptions.missingField(obj, field));
+						}
 					}
 				}
 				CREATE_LIST => {
