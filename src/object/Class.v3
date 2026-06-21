@@ -92,127 +92,129 @@ component ClassObjects {
 			// cannot initialize Func (or underlying Code) because the class doesn't exist yet
 			// we can refactor to reduce the need for the FuncObject, but not the CodeObject
 
-			[FuncObjects.fromVirgilMethod0("class",     "base[class]",          Object.o_getclass), // 0
-			 FuncObjects.fromVirgilMethod0("fields",    "base[fields]",         Object.o_fields),   // 1
-			 FuncObjects.fromVirgilMethod0("display",   "base[display]",        Object.o_display),  // 2
-			 FuncObjects.fromVirgilMethod1("get-field", "base[get-field]", s,   Object.o_getfield), // 3
-			 FuncObjects.fromVirgilMethod1("=",         "base[=]",         o,   Object.o_eq)        // 4
+			[FuncObjects.fromVirgilMethod0("class",     "base",     Object.o_getclass), // 0
+			 FuncObjects.fromVirgilMethod0("fields",    "base",     Object.o_fields),   // 1
+			 FuncObjects.fromVirgilMethod0("display",   "base",     Object.o_display),  // 2
+			 FuncObjects.fromVirgilMethod1("get-field", "base", s,  Object.o_getfield), // 3
+			 FuncObjects.fromVirgilMethod1("=",         "base", o,  Object.o_eq)        // 4
 			]);
 	def classBool =	ClassObject.new("bool", classBase, 
 			CodeObjects.virgilFail, 
 			[], 
-			[FuncObjects.fromVirgilMethod0("display","bool[display]", BoolObject.b_display),
-			 FuncObjects.fromVirgilMethod0("not",    "bool[not]",     BoolObject.b_not),
-			 FuncObjects.fromVirgilMethod1("and",    "bool[and]", b,  BoolObject.b_and),
-			 FuncObjects.fromVirgilMethod1("or",     "bool[or]",  b,  BoolObject.b_or)
+			[FuncObjects.fromVirgilMethod0("display","bool",     BoolObject.b_display),
+			 FuncObjects.fromVirgilMethod0("not",    "bool",     BoolObject.b_not),
+			 FuncObjects.fromVirgilMethod1("and",    "bool", b,  BoolObject.b_and),
+			 FuncObjects.fromVirgilMethod1("or",     "bool", b,  BoolObject.b_or)
 			]);
 	def classChar  = ClassObject.new("char",  classBase, CodeObjects.virgilFail, [],
-			[FuncObjects.fromVirgilMethod0("display", "char[display]", CharObject.ch_display),
-			 FuncObjects.fromVirgilMethod0("ascii",   "char[ascii]",   CharObject.ch_ascii_value),
-			 FuncObjects.fromVirgilMethod1("+",       "char[+]", 	o, CharObject.ch_concat)
+			[FuncObjects.fromVirgilMethod0("display", "char",    CharObject.ch_display),
+			 FuncObjects.fromVirgilMethod0("ascii",   "char",    CharObject.ch_ascii_value),
+			 FuncObjects.fromVirgilMethod1("+",       "char", o, CharObject.ch_concat)
 			]);
 	def classClass = ClassObject.new("class", classBase,
 			CodeObjects.virgilFail, 
  			[], 
- 			[FuncObjects.fromVirgilMethod0("display",   "class[display]",    ClassObject.c_display),
- 			 FuncObjects.fromVirgilMethod0("superclass","class[superclass]", ClassObject.c_superclass),
- 			 FuncObjects.fromVirgilMethod0("name",      "class[name]",       ClassObject.c_name)
+ 			[FuncObjects.fromVirgilMethod0("display",    "class",   ClassObject.c_display),
+ 			 FuncObjects.fromVirgilMethod0("superclass", "class",   ClassObject.c_superclass),
+ 			 FuncObjects.fromVirgilMethod0("name",       "class",   ClassObject.c_name)
  			]);
 	def classCode  = ClassObject.new("code",  classBase, CodeObjects.virgilFail, [],
-			[FuncObjects.fromVirgilMethod0("display",    "code[display]",     CodeObject.co_display),
-			 FuncObjects.fromVirgilMethod0("disassemble","code[disassemble]", CodeObject.co_disassemble)
+			[FuncObjects.fromVirgilMethod0("display",     "code", CodeObject.co_display),
+			 FuncObjects.fromVirgilMethod0("disassemble", "code", CodeObject.co_disassemble)
 			]);
 	def classDouble  = ClassObject.new("double",  classBase, CodeObjects.virgilFail, [],
-			[FuncObjects.fromVirgilMethod0("display","double[display]",     DoubleObject.do_display),
-			 FuncObjects.fromVirgilMethod0("neg",    "double[neg]",      DoubleObject.do_neg),
-			 FuncObjects.fromVirgilMethod0("trunc",  "double[trunc]",    DoubleObject.do_trunc),
-			 FuncObjects.fromVirgilMethod0("sin",    "double[sin]",      DoubleObject.do_sin),
-			 FuncObjects.fromVirgilMethod0("cos",    "double[cos]",      DoubleObject.do_cos),
-			 FuncObjects.fromVirgilMethod0("sqrt",   "double[sqrt]",     DoubleObject.do_sqrt),
-			 FuncObjects.fromVirgilMethod1("try",    "double[try]", o,   DoubleObject.do_try),
-			 FuncObjects.fromVirgilMethod1("+",      "double[+]",   d,   DoubleObject.do_add),
-			 FuncObjects.fromVirgilMethod1("-",      "double[-]",   d,   DoubleObject.do_sub),
-			 FuncObjects.fromVirgilMethod1("*",      "double[*]",   d,   DoubleObject.do_mul),
-			 FuncObjects.fromVirgilMethod1("/",      "double[/]",   d,   DoubleObject.do_div),
-			 FuncObjects.fromVirgilMethod1("=",      "double[=]",   o,   DoubleObject.do_eq),
-			 FuncObjects.fromVirgilMethod1("<",      "double[<]",   d,   DoubleObject.do_lt),
-			 FuncObjects.fromVirgilMethod1(">",      "double[>]",   d,   DoubleObject.do_gt),
-			 FuncObjects.fromVirgilMethod1("<=",     "double[<=]",  d,   DoubleObject.do_leq),
-			 FuncObjects.fromVirgilMethod1(">=",     "double[>=]",  d,   DoubleObject.do_geq)
+			[FuncObjects.fromVirgilMethod0("display","double",        DoubleObject.do_display),
+			 FuncObjects.fromVirgilMethod0("neg",    "double",        DoubleObject.do_neg),
+			 FuncObjects.fromVirgilMethod0("trunc",  "double",        DoubleObject.do_trunc),
+			 FuncObjects.fromVirgilMethod0("sin",    "double",        DoubleObject.do_sin),
+			 FuncObjects.fromVirgilMethod0("cos",    "double",        DoubleObject.do_cos),
+			 FuncObjects.fromVirgilMethod0("sqrt",   "double",        DoubleObject.do_sqrt),
+			 FuncObjects.fromVirgilMethod1("try",    "double",   o,   DoubleObject.do_try),
+			 FuncObjects.fromVirgilMethod1("+",      "double",   d,   DoubleObject.do_add),
+			 FuncObjects.fromVirgilMethod1("-",      "double",   d,   DoubleObject.do_sub),
+			 FuncObjects.fromVirgilMethod1("*",      "double",   d,   DoubleObject.do_mul),
+			 FuncObjects.fromVirgilMethod1("/",      "double",   d,   DoubleObject.do_div),
+			 FuncObjects.fromVirgilMethod1("=",      "double",   o,   DoubleObject.do_eq),
+			 FuncObjects.fromVirgilMethod1("<",      "double",   d,   DoubleObject.do_lt),
+			 FuncObjects.fromVirgilMethod1(">",      "double",   d,   DoubleObject.do_gt),
+			 FuncObjects.fromVirgilMethod1("<=",     "double",   d,   DoubleObject.do_leq),
+			 FuncObjects.fromVirgilMethod1(">=",     "double",   d,   DoubleObject.do_geq)
 			]);
 	def classExn   = ClassObject.new("exn",   classBase, CodeObjects.virgilFail, [], 
-			[FuncObjects.fromVirgilMethod0("display",    "exn[display]",    ExnObject.e_display),
-			 FuncObjects.fromVirgilMethod0("stacktrace", "exn[stacktrace]", ExnObject.e_stacktrace)
+			[FuncObjects.fromVirgilMethod0("display",    "exn",   ExnObject.e_display),
+			 FuncObjects.fromVirgilMethod0("stacktrace", "exn",   ExnObject.e_stacktrace)
 			]);
 	def classFrame = ClassObject.new("frame", classBase, CodeObjects.virgilFail, [],
-			[FuncObjects.fromVirgilMethod0("display", "frame[display]", FrameObject.fr_display)
+			[FuncObjects.fromVirgilMethod0("display", "frame", FrameObject.fr_display)
 			]);
 	def classFunc = ClassObject.new("func", classBase, 
 			CodeObjects.virgilFail,
 			[],
-			[FuncObjects.fromVirgilMethod0("display", "func[display]", FuncObject.f_display),
-			 FuncObjects.fromVirgilMethod0("name",    "func[name]",    FuncObject.f_name),
-			 FuncObjects.fromVirgilMethod0("params",  "func[params]",  FuncObject.f_params),
-			 FuncObjects.fromVirgilMethod0("code",    "func[code]",    FuncObject.f_code)
+			[FuncObjects.fromVirgilMethod0("display", "func",  FuncObject.f_display),
+			 FuncObjects.fromVirgilMethod0("name",    "func",  FuncObject.f_name),
+			 FuncObjects.fromVirgilMethod0("params",  "func",  FuncObject.f_params),
+			 FuncObjects.fromVirgilMethod0("code",    "func",  FuncObject.f_code)
 			]);
 	def classInt = ClassObject.new("int", classBase, 
 			CodeObjects.virgilFail, 
 			[], 
-			[FuncObjects.fromVirgilMethod0("display", "int[display]", IntObject.i_display),
+			[FuncObjects.fromVirgilMethod0("display", "int", IntObject.i_display),
 			/* built-in classes can have methods defined in Cicero! */
 			 FuncObjects.fromCiceroMethod ("succ",    CiceroTexts.i_succ),
 			 FuncObjects.fromCiceroMethod ("pred",    CiceroTexts.i_pred),
-			 FuncObjects.fromVirgilMethod0("neg", "int[neg]",      IntObject.i_neg),
-			 FuncObjects.fromVirgilMethod1("as",  "int[as]",  o,   IntObject.i_as),
-			 FuncObjects.fromVirgilMethod1("try", "int[try]", o,   IntObject.i_try),
-			 FuncObjects.fromVirgilMethod1("+",   "int[+]",   i,   IntObject.i_add),
-			 FuncObjects.fromVirgilMethod1("-",   "int[-]",   i,   IntObject.i_sub),
-			 FuncObjects.fromVirgilMethod1("*",   "int[*]",   i,   IntObject.i_mul),
-			 FuncObjects.fromVirgilMethod1("/",   "int[/]",   i,   IntObject.i_div),
-			 FuncObjects.fromVirgilMethod1("%",   "int[%]",   i,   IntObject.i_mod),
-			 FuncObjects.fromVirgilMethod1("=",   "int[=]",   o,   IntObject.i_eq),
-			 FuncObjects.fromVirgilMethod1("<",   "int[<]",   i,   IntObject.i_lt),
-			 FuncObjects.fromVirgilMethod1("<=",  "int[<=]",  i,   IntObject.i_leq),
-			 FuncObjects.fromVirgilMethod1(">",   "int[>]",   i,   IntObject.i_gt),
-			 FuncObjects.fromVirgilMethod1(">=",  "int[>=]",  i,   IntObject.i_geq),
-			 FuncObjects.fromVirgilMethod1("&",   "int[&]",   i,   IntObject.i_and),
-			 FuncObjects.fromVirgilMethod1("|",   "int[|]",   i,   IntObject.i_ora),
-			 FuncObjects.fromVirgilMethod1("^",   "int[^]",   i,   IntObject.i_eor),
-			 FuncObjects.fromVirgilMethod1(">>",  "int[>>]",  i,   IntObject.i_shr),
-			 FuncObjects.fromVirgilMethod1("<<",  "int[<<]",  i,   IntObject.i_shl)
+			 FuncObjects.fromVirgilMethod0("neg", "int",        IntObject.i_neg),
+			 FuncObjects.fromVirgilMethod1("as",  "int",   o,   IntObject.i_as),
+			 FuncObjects.fromVirgilMethod1("try", "int",   o,   IntObject.i_try),
+			 FuncObjects.fromVirgilMethod1("+",   "int",   i,   IntObject.i_add),
+			 FuncObjects.fromVirgilMethod1("-",   "int",   i,   IntObject.i_sub),
+			 FuncObjects.fromVirgilMethod1("*",   "int",   i,   IntObject.i_mul),
+			 FuncObjects.fromVirgilMethod1("/",   "int",   i,   IntObject.i_div),
+			 FuncObjects.fromVirgilMethod1("%",   "int",   i,   IntObject.i_mod),
+			 FuncObjects.fromVirgilMethod1("=",   "int",   o,   IntObject.i_eq),
+			 FuncObjects.fromVirgilMethod1("<",   "int",   i,   IntObject.i_lt),
+			 FuncObjects.fromVirgilMethod1("<=",  "int",   i,   IntObject.i_leq),
+			 FuncObjects.fromVirgilMethod1(">",   "int",   i,   IntObject.i_gt),
+			 FuncObjects.fromVirgilMethod1(">=",  "int",   i,   IntObject.i_geq),
+			 FuncObjects.fromVirgilMethod1("&",   "int",   i,   IntObject.i_and),
+			 FuncObjects.fromVirgilMethod1("|",   "int",   i,   IntObject.i_ora),
+			 FuncObjects.fromVirgilMethod1("^",   "int",   i,   IntObject.i_eor),
+			 FuncObjects.fromVirgilMethod1(">>",  "int",   i,   IntObject.i_shr),
+			 FuncObjects.fromVirgilMethod1("<<",  "int",   i,   IntObject.i_shl)
 			]);
 	def classList = ClassObject.new("list", classBase, 
 			CodeObjects.virgilFail, 
 			[], 
-			[FuncObjects.fromVirgilMethod0("display", "list[display]",  ListObject.l_display),
+			[FuncObjects.fromVirgilMethod0("display", "list",      ListObject.l_display),
 			 FuncObjects.fromCiceroMethod ("=",       CiceroTexts.l_eq),
-			 FuncObjects.fromVirgilMethod1("get",     "list[get]",  i,  ListObject.l_get),
-			 FuncObjects.fromVirgilMethod2("set",     "list[set]",  io, ListObject.l_set),
-			 FuncObjects.fromVirgilMethod1("put",     "list[put]",  o,  ListObject.l_put),
-			 FuncObjects.fromVirgilMethod0("length",  "list[length]",   ListObject.l_length),
-			 FuncObjects.fromVirgilMethod0("reverse", "list[reverse]",  ListObject.l_reverse)
+			 FuncObjects.fromVirgilMethod1("get",     "list",  i,  ListObject.l_get),
+			 FuncObjects.fromVirgilMethod2("set",     "list",  io, ListObject.l_set),
+			 FuncObjects.fromVirgilMethod1("put",     "list",  o,  ListObject.l_put),
+			 FuncObjects.fromVirgilMethod0("length",  "list",      ListObject.l_length),
+			 FuncObjects.fromVirgilMethod0("reverse", "list",      ListObject.l_reverse)
 			]);
 	def classMap = ClassObject.new("map", classBase, CodeObjects.virgilFail, [],
-			[FuncObjects.fromVirgilMethod2("set",    "map[set]",     so, MapObject.p_set),
-			 FuncObjects.fromVirgilMethod1("get",    "map[get]",     s,  MapObject.p_get),
-			 FuncObjects.fromVirgilMethod1("delete", "map[delete]",  s,  MapObject.p_delete),
-			 FuncObjects.fromVirgilMethod0("keys",   "map[keys]",        MapObject.p_keys),
-			 FuncObjects.fromVirgilMethod0("values", "map[values]",      MapObject.p_values),
-			 FuncObjects.fromVirgilMethod0("display","map[display]",  MapObject.p_display)]);
+			[FuncObjects.fromVirgilMethod2("set",     "map",  so, MapObject.p_set),
+			 FuncObjects.fromVirgilMethod1("get",     "map",  s,  MapObject.p_get),
+			 FuncObjects.fromVirgilMethod1("delete",  "map",  s,  MapObject.p_delete),
+			 FuncObjects.fromVirgilMethod0("keys",    "map",      MapObject.p_keys),
+			 FuncObjects.fromVirgilMethod0("values",  "map",      MapObject.p_values),
+			 FuncObjects.fromVirgilMethod0("display", "map",      MapObject.p_display)]);
 	def classMethod = ClassObject.new("method", classFunc, 
 			CodeObjects.virgilFail,
 			[], 
-			[FuncObjects.fromVirgilMethod0("display", "method[display]",  MethodObject.m_display),
-			 FuncObjects.fromVirgilMethod0("object",  "method[object]",   MethodObject.m_object)]);
+			[FuncObjects.fromVirgilMethod0("display", "method",  MethodObject.m_display),
+			 FuncObjects.fromVirgilMethod0("object",  "method",  MethodObject.m_object)
+			]);
 	def classUnit = ClassObject.new("unit", classBase, CodeObjects.virgilFail, [], 
-			[FuncObjects.fromVirgilMethod0("display", "unit[display]",  UnitObject.u_display)]);
+			[FuncObjects.fromVirgilMethod0("display", "unit",  UnitObject.u_display)
+			]);
 	def classStr = ClassObject.new("str", classBase, CodeObjects.virgilFail, [],
-			[FuncObjects.fromVirgilMethod0("display",   "str[display]",     	StrObject.s_display),
-			 FuncObjects.fromVirgilMethod0("length",    "str[length]",      	StrObject.s_length),
-			 FuncObjects.fromVirgilMethod0("chars",     "str[chars]",       	StrObject.s_chars),
-			 FuncObjects.fromVirgilMethod1("+",         "str[+]",  o,       	StrObject.s_concat),
-			 FuncObjects.fromVirgilMethod1("char-at",   "str[char-at]",  i, 	StrObject.s_charAt),
-			 FuncObjects.fromVirgilMethod2("substring", "str[substring]",  ii,  StrObject.s_substring)]);
+			[FuncObjects.fromVirgilMethod0("display",   "str",     	StrObject.s_display),
+			 FuncObjects.fromVirgilMethod0("length",    "str",      StrObject.s_length),
+			 FuncObjects.fromVirgilMethod0("chars",     "str",      StrObject.s_chars),
+			 FuncObjects.fromVirgilMethod1("+",         "str",  o,  StrObject.s_concat),
+			 FuncObjects.fromVirgilMethod1("char-at",   "str",  i, 	StrObject.s_charAt),
+			 FuncObjects.fromVirgilMethod2("substring", "str",  ii, StrObject.s_substring)]);
 
 
 	/* Returns the function which creates class objects when given the

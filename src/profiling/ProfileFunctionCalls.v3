@@ -1,3 +1,9 @@
+class FunctionProfileMetadata {
+    def identifier: int;
+    def label: string;
+    new(identifier, label) {}
+}
+
 component ProfileFunctionCalls{
 
     private def profile(dict: HashMap<int, Triplet<int, int, string>>, key: int, name: string, executionTime: int){
@@ -10,8 +16,8 @@ component ProfileFunctionCalls{
         }
     }
 
-    def profileFunctionCall(identifier: int, label: string, executionTime: int){
-        profile(Profiling.funcCallCounts, identifier, label, executionTime);
+    def profileFunctionCall(metadata: FunctionProfileMetadata, executionTime: int){
+        profile(Profiling.funcCallCounts, metadata.identifier, metadata.label, executionTime);
     }
 
     def profileFunctionObjectCall(uid: int, label: string, executionTime: int){

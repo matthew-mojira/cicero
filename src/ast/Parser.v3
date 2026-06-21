@@ -253,9 +253,10 @@ class Parser extends TextReader {
 
 						// get func to the set of possible nonlocals
 						// XXX creating CodeObject here
+						def metadata = FunctionProfileMetadata.new(FuncObjects.identifier_id++, name);
 						def func = ASTData.Func(name, params.extract(),
 							CodeObjects.fromAST(body), Vector.new(),
-							FuncObjects.identifier_id++, name);
+							metadata);
 
 						def vars = varStack.peek();
 						if (vars != null) {
@@ -292,9 +293,13 @@ class Parser extends TextReader {
 						// get func to the set of possible nonlocals
 						// XXX creating CodeObject here
 						// lambda has no name
+						def metadata = FunctionProfileMetadata.new(
+							FuncObjects.identifier_id,
+							Strings.format1("lambda-%d", FuncObjects.identifier_id++));
+
 						def func = ASTData.Func("", params.extract(),
 							CodeObjects.fromAST(body), Vector.new(),
-							FuncObjects.identifier_id, Strings.format1("lambda-%d", FuncObjects.identifier_id++));
+							metadata);
 
 						def vars = varStack.peek();
 						if (vars != null) {
@@ -403,11 +408,13 @@ class Parser extends TextReader {
 									}
 									def methodBody = readCode(methodParams.copy()).0; // XXX ignoring .1
 
+									def metadata = FunctionProfileMetadata.new(
+										FuncObjects.identifier_id++ ,Strings.format2("%s.%s", name, methodName));
 									// XXX creating CodeObject here
 									methods.put(ASTData.Func(methodName, 
 												Ranges.dup(methodParams.copy()[1 ...]), 
 												CodeObjects.fromAST(methodBody), Vector.new(),
-												FuncObjects.identifier_id++ ,Strings.format2("%s[%s]", name, methodName)
+												metadata
 												));
 								}
 							}
