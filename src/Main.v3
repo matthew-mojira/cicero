@@ -109,26 +109,12 @@ def main(args: Array<string>) -> int {
 		}
 	}
 
-	if (CiceroOptions.profileBytecode) {
-		/* Output Cicero's profiling */
-		var i = 0;
-		var total = 0;
-		System.puts("\nSTATIC COUNTS:\n");
-		for (op in Opcode.set.all) {
-			def count = Profiling.staticCounts[i++];
-			total += count;
-			System.puts(Strings.format2("%s: %d\n", op.name, count));
-		}
-		System.puts(Strings.format1("Total static bytecodes: %d\n", total));
-		System.puts("\nDYNAMIC COUNTS:\n");
-		i = 0;
-		total = 0;
-		for (op in Opcode.set.all) {
-			def count = Profiling.dynamicCounts[i++];
-			total += count;
-			System.puts(Strings.format2("%s: %d\n", op.name, count));
-		}
-		System.puts(Strings.format1("Total dynamic bytecodes: %d\n", total));
+	if (CiceroOptions.profileStaticBytecode) {
+		ProfileBytecode.printStaticStats();
+	}
+
+	if (CiceroOptions.profileDynamicBytecode) {
+		ProfileBytecode.printDynamicStats();
 	}
 
 	if (CiceroOptions.profileStaticOpcodePairCounts) {

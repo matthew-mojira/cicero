@@ -1,6 +1,7 @@
 component Profiling {
-	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
 	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+	def dynamicOpExecutionTimes: Array<int> = Array.new(Opcodes.numOpcodes);
     /* 
         Matrix array is used to keep track of (row, col) op pair counts
         For e.g. staticOpcodePairCounts[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
@@ -9,11 +10,11 @@ component Profiling {
 	def staticOpcodePairCounts: Array<Array<int>> = ProfileOpcodePairCounts.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 	def dynamicOpcodePairCounts: Array<Array<int>>= ProfileOpcodePairCounts.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 	/*
-		Mapping from func object's `identifier_id` -> Triplet<# of calls, execution time(ms), label>
+		Mapping from func object's `identifier_id` -> Triplet<# of calls, execution time(μs), label>
 	*/
 	def funcCallCounts: HashMap<int, Triplet<int, int, string>> = HashMap.new(int.!<int>, int.==);
 	/*
-		Mapping from func object's `uid` -> Triplet<# of calls, execution time(ms), label>
+		Mapping from func object's `uid` -> Triplet<# of calls, execution time(μs), label>
 	*/
 	def funcObjectCallCounts: HashMap<int, Triplet<int, int, string>> = HashMap.new(int.!<int>, int.==);
 	/* 
@@ -55,5 +56,10 @@ component ProfilingHelpers {
             def triplet: Triplet<string, int, int> = map[key];
 			System.puts(Strings.format3("%s, %d, %d\n", triplet.fst, triplet.snd, triplet.thd));
 		}
+    }
+
+    def longToString(value: long) -> string{
+		// TODO: SUPREME
+		return "TODO";
     }
 }

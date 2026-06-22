@@ -13,7 +13,8 @@ component CiceroOptions {
 	def traceBytecodeEvaluation = false;
 
 	/* profiling */
-	def profileBytecode = false;
+	def profileStaticBytecode = false;
+	def profileDynamicBytecode = false;
 	def profileStaticOpcodePairCounts = false;
 	def profileDynamicOpcodePairCounts = false;
 	def profileJumpOutcomes = false;

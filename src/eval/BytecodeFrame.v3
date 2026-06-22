@@ -110,8 +110,8 @@ class BytecodeFrame extends FrameObject {
 				ProfileOpcodePairCounts.profileDynamic(currentInstr, opcode);
  			}
 
- 			if (CiceroOptions.profileBytecode) {
- 				Profiling.dynamicCounts[opcode.tag] += 1;
+ 			if (CiceroOptions.profileDynamicBytecode) {
+				ProfileBytecode.profileDynamicCount(opcode.tag);
  			}
 
   			if (CiceroOptions.traceBytecodeEvaluation) {

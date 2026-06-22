@@ -1,0 +1,43 @@
+component ProfileBytecode{
+
+    def profileStaticCount(opTag: int){
+		Profiling.staticCounts[opTag]++;
+    }
+
+    def profileDynamicCount(opTag: int){
+		Profiling.dynamicCounts[opTag]++;
+    }
+
+    def profileDynamicExecutionTime(opTag: int, executionTime: int){
+		Profiling.dynamicOpExecutionTimes[opTag] += executionTime;
+    }
+
+    def printStaticStats(){
+		/* Output Cicero's profiling */
+		var i = 0;
+		var total = 0;
+		System.puts("# STATIC COUNTS\n");
+		System.puts("instruction, counts\n");
+		for (op in Opcode.set.all) {
+			def count = Profiling.staticCounts[i++];
+			total += count;
+			System.puts(Strings.format2("%s, %d\n", op.name, count));
+		}
+		System.puts(Strings.format1("# Total static bytecodes: %d\n", total));
+    }
+
+    def printDynamicStats(){
+		var i = 0;
+		var total = 0;
+		System.puts("# DYNAMIC COUNTS:\n");
+		System.puts("instruction, counts, total execution time(μs)\n");
+		for (op in Opcode.set.all) {
+			def execTime = Profiling.dynamicOpExecutionTimes[i];
+			def count = Profiling.dynamicCounts[i++];
+			total += count;
+
+			System.puts(Strings.format3("%s, %d, %d\n", op.name, count, execTime));
+		}
+		System.puts(Strings.format1("# Total dynamic bytecodes: %d\n", total));
+    }
+}

@@ -237,8 +237,8 @@ class BytecodeCompiler {
 		writer.putbbb(operand, operand >> 8, operand >> 16);
 
 		source.put(loc);
-		if (CiceroOptions.profileBytecode) {
-			Profiling.staticCounts[op.tag]++;
+		if (CiceroOptions.profileStaticBytecode) {
+			ProfileBytecode.profileStaticCount(op.tag);
 		}
 		if (CiceroOptions.profileStaticOpcodePairCounts) {
 			ProfileOpcodePairCounts.profileStatic(recentInstr, op);
