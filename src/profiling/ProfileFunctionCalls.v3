@@ -4,7 +4,7 @@ class FunctionProfileMetadata {
     new(identifier, label) {}
 }
 
-// Used during both `profileFunctionCalls` and `profileFunctObjectCalls` 
+// Used during both `profileFunctionCalls` and `profileFuncObjectCalls`
 class ProfiledFuncData #unboxed {
 	var calls: int;
 	var time: int; // μs

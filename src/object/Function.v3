@@ -40,7 +40,8 @@ component FuncObjects {
 	// built-in functions/methods are assigned a unique identifier id
 	// Note that different `FuncObject`s can share the same identifier id
 	// For example, evaluating an function expression twice will two create two seperate `FuncObject`. However, those two `FuncObject` will have the same identifier(int) since it belongs to the same func expression.
-	var identifier_id: int = 0;
+	def mainProgramId: int = 0;
+	var identifier_id: int = 1 + FuncObjects.mainProgramId; // `0` is assigned to the main program (treated as a function for profiling reasons)
 
 	// XXX hackfix: use this function so that we can have MethodObject as a
 	// subclass of FuncObject in Virgil

@@ -10,7 +10,7 @@ class ProfiledJumpData #unboxed {
 component ProfileJumpOutcomes{
 
     def profileJump(b: Bytecode, instrIndex: int, op_name: string, jump_taken: bool){
-        def key: long = ProfilingHelpers.constructKey(b, instrIndex);
+        def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);
         if (Profiling.jumpOpcodeOutcomes.has(key)){
             var data : ProfiledJumpData = Profiling.jumpOpcodeOutcomes[key];
             if (jump_taken){

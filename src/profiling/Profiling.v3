@@ -24,25 +24,29 @@ component Profiling {
 	def funcCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
 	def funcObjectCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
 	/* 
+	 	Each user defined function/method as well as built in function/methods are given an unique identifier id before run time.
+		key : long = (caller.identifier_id << 32) | callee.identifier_id;
+	*/
+	def callerCalleeData: HashMap<long, ProfiledCallerCalleeData> = HashMap.new(int.view<long>, long.==);
+	/* 
 	 	Note: Each bytecode object has its own set of bytecode instrs. So, we need to keep track for all bytecode objects.
 		The key is a combination of the bytecode object id (int : 32 bit) 
 			and the instruction index (int as well) where inline caching is performed, currently LOAD_FIELD
-		So, key : int = (bytecode.id << 32) | instr_index;
+		So, key : long = (bytecode.id << 32) | instr_index;
 	*/
 	def inlineCacheHitMissCounts: HashMap<long, ProfiledInlineCacheData> = HashMap.new(int.view<long>, long.==);
 	/* 
-		key : int = (bytecode.id << 32) | instr_index;
+		key : long = (bytecode.id << 32) | instr_index;
 	*/
 	def jumpOpcodeOutcomes: HashMap<long, ProfiledJumpData> = HashMap.new(int.view<long>, long.==);
 }
 
 component ProfilingHelpers {
 	/* 
-		Contructs key for any hash maps which need mappings from (bytecode object ID, pc) -> Any
-		Used by inline cache profiler, jump outcomes profiler etc.
+		Combines two ints to form a long
 	*/
-	def constructKey(b: Bytecode, instrIndex: int) -> long{
-		return long.!(b.id) << 32 | long.!(instrIndex);
+	def constructLong(one: int, two: int) -> long{
+		return long.!(one) << 32 | long.!(two);
 	}
 
     def longToString(value: long) -> string{

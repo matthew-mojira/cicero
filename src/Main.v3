@@ -139,8 +139,12 @@ def main(args: Array<string>) -> int {
 		ProfileFunctionCalls.printFuncCallsStats();
 	}
 
-	if (CiceroOptions.profileFunctObjectCalls) {
+	if (CiceroOptions.profileFuncObjectCalls) {
 		ProfileFunctionCalls.printFuncObjectCallsStats();
+	}
+
+	if (CiceroOptions.profileCallerCalleePairs) {
+		ProfileCallerCalleePairs.printStats();
 	}
 
 	// experimental results

@@ -10,14 +10,14 @@ class ProfiledInlineCacheData #unboxed {
 component ProfileInlineCache{
 
     def profileCacheHit(b: Bytecode, instrIndex: int){
-        def key: long = ProfilingHelpers.constructKey(b, instrIndex);
+        def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);
         // The key will always exist because a new ProfiledInlineCacheData instance gets created on initial bytecode execution which will be a miss
         var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
         data.hits++; // increase hits
     }
 
     def profileCacheMiss(b: Bytecode, instrIndex: int, op_name: string){
-        def key: long = ProfilingHelpers.constructKey(b, instrIndex);
+        def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);
         if (Profiling.inlineCacheHitMissCounts.has(key)){
             var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
             data.misses++; // increase misses

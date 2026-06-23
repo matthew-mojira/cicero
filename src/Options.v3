@@ -36,7 +36,7 @@ component CiceroOptions {
                 Similarly, each method-object binding (e.g. x.show() vs y.show()) is assigned a unique identifier at runtime 
                 even though they are instances of the same class (underlying method definition is the same).
 	*/
-	def profileFunctObjectCalls = false;
+	def profileFuncObjectCalls = false;
     /* 
 	    Profiles caller callee pairs.
 	    Uses `FunctionProfileMetadata` to idenfity the "same"(same function identifier id) function/methods.

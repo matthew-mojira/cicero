@@ -1,5 +1,6 @@
 class BytecodeFrame extends FrameObject {
 	var currentInstr: Maybe<Opcode> = Maybe.Nothing;
+	var associatedFunc: FunctionProfileMetadata;
 
 	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
 		if (code != null) {
@@ -488,7 +489,10 @@ class BytecodeFrame extends FrameObject {
 					def frame = newFrame(fv.id, code, argv, fv.nonlocals);
  
 					var startTime: int;
-					if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFunctObjectCalls) {
+					if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+						if (CiceroOptions.profileCallerCalleePairs && BytecodeFrame.?(frame)) {
+							BytecodeFrame.!(frame).associatedFunc = fv.metadata;
+						}
 						startTime = System.ticksUs();
 					}
 
@@ -504,13 +508,17 @@ class BytecodeFrame extends FrameObject {
 						opExecTime = System.ticksNs();
 					}
 
-					if (CiceroOptions.profileFunctionCalls) {
+					if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 						def executionTime: int = System.ticksUs() - startTime; // in microseconds
-						ProfileFunctionCalls.profileFunctionCall(fv.metadata, executionTime);
-					}
-					if (CiceroOptions.profileFunctObjectCalls) {
-						def executionTime: int = System.ticksUs() - startTime; // in microseconds
-						ProfileFunctionCalls.profileFunctionObjectCall(fv.uid, fv.metadata.label, executionTime);
+						if (CiceroOptions.profileFunctionCalls) {
+							ProfileFunctionCalls.profileFunctionCall(fv.metadata, executionTime);
+						}
+						if (CiceroOptions.profileFuncObjectCalls) {
+							ProfileFunctionCalls.profileFunctionObjectCall(fv.uid, fv.metadata.label, executionTime);
+						}
+						if (CiceroOptions.profileCallerCalleePairs) {
+							ProfileCallerCalleePairs.profilePair(associatedFunc, fv.metadata, executionTime);
+						}
 					}
 
 					if (frame.isExn()) {
@@ -682,6 +690,11 @@ class BytecodeFrame extends FrameObject {
 								ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
 							}
 
+							if (CiceroOptions.profileCallerCalleePairs && BytecodeFrame.?(frame)) {
+								// treat the new frame as if the field expr is being evaluated in the current frame for caller-callee data
+								BytecodeFrame.!(frame).associatedFunc = associatedFunc;
+							}
+
 							frame.eval();
 
 							if (CiceroOptions.profileDynamicBytecode) {
@@ -705,6 +718,11 @@ class BytecodeFrame extends FrameObject {
 							if (CiceroOptions.profileDynamicBytecode) {
 								opExecTime = System.ticksNs() - opExecTime;
 								ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+							}
+
+							if (CiceroOptions.profileCallerCalleePairs && BytecodeFrame.?(frame)) {
+								// treat the new frame as if the initializer expr is being evaluated in the current frame for caller-callee data
+								BytecodeFrame.!(frame).associatedFunc = associatedFunc;
 							}
 
 							frame.eval();
