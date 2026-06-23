@@ -1,7 +1,7 @@
 component Profiling {
 	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
 	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
-	def dynamicOpExecutionTimes: Array<int> = Array.new(Opcodes.numOpcodes);
+	def dynamicOpExecutionTimes: Array<long> = Array.new(Opcodes.numOpcodes);
     /* 
         Matrix array is used to keep track of (row, col) op pair counts
         For e.g. staticOpcodePairCounts[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
@@ -59,7 +59,8 @@ component ProfilingHelpers {
     }
 
     def longToString(value: long) -> string{
-		// TODO: SUPREME
-		return "TODO";
+        var a: Array<byte> = Array<byte>.new(19); // 19 is the maximum possible length of a +ve double
+        def l = Longs.renderDecimal(value, a, 0);
+        return Strings.format1("%s", Arrays.range(a, 0, l));
     }
 }
