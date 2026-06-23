@@ -75,6 +75,9 @@ class BytecodeFrame extends FrameObject {
 		}
 
 		var pc = 0;
+		var dispatchStartTime : int = System.ticksNs(); 
+		var opExecTime : int;
+
 		while (pc < code.length || isExn()) {
 			if (CiceroOptions.sanityChecks)
 				if ((pc & 0b11) != 0) System.error("eval error", Strings.format1("unaligned pc access: %d", pc));
@@ -105,14 +108,9 @@ class BytecodeFrame extends FrameObject {
  			def opcode = bytecode.opcode;
  			def opcode_pc = pc;
 			def operand  = bytecode.operand;
-			var opExecTime : int;
 
  			if (CiceroOptions.profileDynamicOpcodePairCounts) {
 				ProfileOpcodePairCounts.profileDynamic(currentInstr, opcode);
- 			}
-
- 			if (CiceroOptions.profileDynamicBytecode) {
-				ProfileBytecode.profileDynamicCount(opcode.tag);
  			}
 
   			if (CiceroOptions.traceBytecodeEvaluation) {
@@ -144,9 +142,18 @@ class BytecodeFrame extends FrameObject {
 			currentInstr = Maybe.Just(opcode);
 			pc += 4;
 			match (opcode) {
-				NOP => ;
+				NOP => {
+					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, 0); // NOP has 0 zero execution time
+						dispatchStartTime = System.ticksNs();
+					}
+				}
 				LOAD_CONST => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -154,11 +161,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				LOAD_GLOBAL => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -181,11 +191,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				LOAD_GLOBAL_BY_INDEX => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -194,11 +207,14 @@ class BytecodeFrame extends FrameObject {
 					
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				LOAD_LOCAL => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -210,11 +226,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				LOAD_LOCAL_SAFE => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -222,11 +241,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				LOAD_NONLOCAL => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -240,11 +262,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				STORE_GLOBAL => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -261,11 +286,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				STORE_GLOBAL_BY_INDEX => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -274,11 +302,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				STORE_LOCAL => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -287,11 +318,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				JUMP => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -299,11 +333,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				JUMP_IF_FALSE => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -312,11 +349,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				JUMP_IF_TRUE_PEEK => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -329,11 +369,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				JUMP_IF_FALSE_PEEK => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -346,11 +389,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				RAISE => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -359,7 +405,8 @@ class BytecodeFrame extends FrameObject {
 					if (isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
 							opExecTime = System.ticksNs() - opExecTime;
-							ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						    dispatchStartTime = System.ticksNs();
 						}
 						continue;
 					}
@@ -368,11 +415,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				ASSERT_FUNC => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -381,11 +431,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				CALL => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -425,7 +478,8 @@ class BytecodeFrame extends FrameObject {
 					if (isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
 							opExecTime = System.ticksNs() - opExecTime;
-							ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						    dispatchStartTime = System.ticksNs();
 						}
 						continue;
 					}
@@ -464,7 +518,8 @@ class BytecodeFrame extends FrameObject {
 
 						if (CiceroOptions.profileDynamicBytecode) {
 							opExecTime = System.ticksNs() - opExecTime;
-							ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						    dispatchStartTime = System.ticksNs();
 						}
 						continue;
 					}
@@ -472,11 +527,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				TRY => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -484,11 +542,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				CATCH => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -496,12 +557,15 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				// stack manipulation
 				POP => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -509,11 +573,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				DUPE => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -522,11 +589,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				SWAP => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -537,12 +607,15 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				// objects
 				CREATE_CLASS => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -551,7 +624,8 @@ class BytecodeFrame extends FrameObject {
 					if (isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
 							opExecTime = System.ticksNs() - opExecTime;
-							ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						    dispatchStartTime = System.ticksNs();
 						}
 						continue;
 					}
@@ -561,11 +635,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				CREATE_OBJECT => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -574,7 +651,8 @@ class BytecodeFrame extends FrameObject {
 					if (isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
 							opExecTime = System.ticksNs() - opExecTime;
-							ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						    dispatchStartTime = System.ticksNs();
 						}
 						continue;
 					}
@@ -645,11 +723,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				LOAD_FIELD => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -705,11 +786,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				STORE_FIELD => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -754,11 +838,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				CREATE_LIST => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -775,11 +862,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				CREATE_FUNC => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -802,11 +892,14 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+						dispatchStartTime = System.ticksNs();
 					}
 				}
 				RETURN => {
 					if (CiceroOptions.profileDynamicBytecode) {
+						def dispatchEndTime = System.ticksNs();
+						ProfileBytecode.profileDispatchCost(dispatchStartTime, dispatchEndTime);
 						opExecTime = System.ticksNs();
 					}
 
@@ -815,7 +908,7 @@ class BytecodeFrame extends FrameObject {
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksNs() - opExecTime;
-						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					return null;
 				}

@@ -1,7 +1,18 @@
 component Profiling {
 	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+
+	/* 
+	    `dynamicCounts` tracks op execution counts at runtime.
+	    `dynamicOpExecutionTimes` tracks op's total execution runtime cost
+	*/
 	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
 	def dynamicOpExecutionTimes: Array<long> = Array.new(Opcodes.numOpcodes);
+	/* 
+	    `totalDispatchCost` tracks total dispatch cost(cost to get from the end of one instruction to the start of another)
+	    totalDispatchCost -> sum(frame.dispatchCost for all executed frames) i.e dispatchCost doesn't carry timing across frame.eval() boundaries.
+	*/
+	var totalDispatchCost: long = 0L;
+
     /* 
         Matrix array is used to keep track of (row, col) op pair counts
         For e.g. staticOpcodePairCounts[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
