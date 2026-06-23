@@ -1,0 +1,174 @@
+class BeyondRelooper {
+	def flowLeaving(cfgNode: BasicBlock) -> ControlFlow {
+		def successors = cfgNode.successors.toArray();
+		match (successors.length) {
+			0 => ;
+			1 => return ControlFlow.Unconditional(successors[0]);
+			// TODO what if it is sentinel/leave function?
+			2 => {
+				// FIXME how do we order this?
+				return ControlFlow.Conditional(successors[0], successors[1]);
+			}
+			_ => System.error("BeyondRelooper.flowLeaving", "incorrect successor size");
+		}
+		return ControlFlow.TerminalFlow;
+	}
+	
+	// Top-level entry point: runs the CFGraph precomputation g needs, then
+	// translates from the entry with an empty context.
+	def structuredControl(g: CFGraph) -> Wasm {
+		g.computeReversePostorder();
+		g.computeDominators();
+		g.computeImmediateDominator();
+		g.computeDominatorTree();
+		g.computeMergeNodes();
+		g.computeLoopHeaders();
+		return doTree(g.head, null);
+	}
+
+	def doTree(tree: BasicBlock, ctx: List<ContainingSyntax>) -> Wasm {
+		def codeForX = nodeWithin(tree, Lists.fromArray(Arrays.filter(tree.sortedDomChildren, BasicBlock.isMerge)), _);
+		if (tree.isLoopHead) {
+			return Wasm.Loop(codeForX(List.new(ContainingSyntax.LoopHeadedBy(tree), ctx)));
+		} else {
+			return codeForX(ctx);
+		}
+	}
+	def nodeWithin(node: BasicBlock, arr: List<BasicBlock>, ctx: List<ContainingSyntax>) -> Wasm {
+		if (arr == null) { // []
+			def fst = Wasm.Actions(node);
+			var snd: Wasm;
+			match (flowLeaving(node)) {
+				Unconditional(tgt) => snd = doBranch(node, tgt, ctx);
+				Conditional(t, f) => snd = Wasm.If(
+						doBranch(node, t, List.new(ContainingSyntax.IfThenElse, ctx)),
+						doBranch(node, f, List.new(ContainingSyntax.IfThenElse, ctx)));
+				TerminalFlow => snd = Wasm.Return;
+			}
+			return Wasm.Seq(fst, snd);
+		} else { // y_n:ys
+			return Wasm.Seq(Wasm.Block(nodeWithin(node, arr.tail, List.new(ContainingSyntax.BlockFollowedBy(arr.head), ctx))),
+					doTree(arr.head, ctx));
+		}
+	}
+	def doBranch(src: BasicBlock, dst: BasicBlock, ctx: List<ContainingSyntax>) -> Wasm {
+		if (src.isBackward(dst) || dst.isMerge) {
+			return Wasm.Br(index(dst, ctx));
+		} else {
+			return doTree(dst, ctx);
+		}
+	}
+	def index(block: BasicBlock, ctx: List<ContainingSyntax>) -> int {
+		if (matchesFrame(block, ctx.head)) return 0;
+		return 1 + index(block, ctx.tail);
+	}
+
+	def matchesFrame(block: BasicBlock, frame: ContainingSyntax) -> bool {
+		match (frame) {
+			BlockFollowedBy(l) => return block == l;
+			LoopHeadedBy(l) => return block == l;
+			_ => return false;
+		}
+	}
+}
+
+type ControlFlow {
+	// this is basically successor count, but combines multiple actual types
+	// of logic together
+
+	// the following cases
+	// - regular instructions (fallthrough)
+	// - JUMP
+	// - RAISE
+	case Unconditional(tgt: BasicBlock);
+	// here, the condition can mean either truthiness or indicate exception
+	// - conditional jumps
+	// - any instruction with exception side effect
+	case Conditional(tgtT: BasicBlock, tgtF: BasicBlock);
+	// - RETURN only
+	case TerminalFlow;
+}
+
+type Wasm {
+	case Block(body: Wasm);
+	case Loop(body: Wasm);
+	// no cond field: If always follows Actions of the same node in a Seq,
+	// so whatever determines the branch is already shown there.
+	case If(bodyT: Wasm, bodyF: Wasm);
+	case Br(depth: int);
+	case Return;
+	case Actions(actions: BasicBlock);
+	case Seq(fst: Wasm, snd: Wasm);
+}
+
+// type Context = [ContainingSyntax]
+// List<ContainingSyntax>
+type ContainingSyntax {
+	case IfThenElse;
+	case LoopHeadedBy(tgt: BasicBlock);
+	case BlockFollowedBy(tgt: BasicBlock);
+}
+
+// Prints a Wasm tree. Wasm.Block/Loop/If/Br/Return/Seq are structured Wasm
+// control flow and print as such; Wasm.Actions and If.cond instead carry the
+// originating BasicBlock, which gets disassembled (using its real startPc,
+// the same way BasicBlock.display() does) rather than printed as opaque
+// bytes.
+component WasmPrinter {
+	def display(w: Wasm) {
+		displayAt(w, 0);
+	}
+
+	private def displayAt(w: Wasm, indent: int) {
+		match (w) {
+			Block(body) => {
+				printIndent(indent); System.puts("block {\n");
+				displayAt(body, indent + 1);
+				printIndent(indent); System.puts("}\n");
+			}
+			Loop(body) => {
+				printIndent(indent); System.puts("loop {\n");
+				displayAt(body, indent + 1);
+				printIndent(indent); System.puts("}\n");
+			}
+			If(bodyT, bodyF) => {
+				printIndent(indent); System.puts("if {\n");
+				displayAt(bodyT, indent + 1);
+				printIndent(indent); System.puts("} else {\n");
+				displayAt(bodyF, indent + 1);
+				printIndent(indent); System.puts("}\n");
+			}
+			Br(depth) => {
+				printIndent(indent); System.puts(Strings.format1("br %d\n", depth));
+			}
+			Return => {
+				printIndent(indent); System.puts("return\n");
+			}
+			Actions(actions) => {
+				disassemble(actions, indent);
+			}
+			Seq(fst, snd) => {
+				displayAt(fst, indent);
+				displayAt(snd, indent);
+			}
+		}
+	}
+
+	private def disassemble(block: BasicBlock, indent: int) {
+		def dup = Ranges.dup(block.bytes);
+		var pc = 0;
+		while (pc < dup.length) {
+			def ins = Ref<Instruction>.at(dup, pc);
+			def opcode = ins.opcode;
+			def operand = ins.operand;
+			printIndent(indent);
+			System.puts(Strings.format3("+%d: %s %d\n", block.startPc + pc, opcode.name, operand));
+			pc += 4;
+		}
+	}
+
+	private def printIndent(indent: int) {
+		for (i < indent) System.puts("  ");
+	}
+}
+

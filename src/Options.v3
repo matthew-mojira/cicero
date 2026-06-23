@@ -12,6 +12,12 @@ component CiceroOptions {
 	def traceBytecodeCompilation = false;
 	def traceBytecodeEvaluation = false;
 
+	/* testing */
+	// run Beyond Relooper (Ramsey 2022) over each function's bytecode right
+	// after it's compiled (tier 1), then print the resulting Wasm tree via
+	// WasmPrinter
+	def testBeyondRelooper = true;
+
 	/* profiling */
 	def profileBytecode = false;
 }

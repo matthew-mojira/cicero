@@ -58,7 +58,7 @@ class CFGraph(bytecode: Bytecode) {
 		}
 		map[bc.length] = num;
 		basicBlocks.put(BasicBlock.new(bc[prev ... bc.length], prev));
-		basicBlocks.put(BasicBlock.new(null, bc.length));
+		basicBlocks.put(BasicBlock.new(null, bc.length)); // sentinel to indicate implicit return
 
 		for (i < basicBlocks.length - 1) {
 			def block = basicBlocks[i];
@@ -156,6 +156,72 @@ class CFGraph(bytecode: Bytecode) {
 		}
 	}
 
+	// head starts at 1, unreachable blocks are -1
+	def computeReversePostorder() {
+		def visited:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+		def postorder: Vector<BasicBlock>  = Vector.new();
+
+		visitReversePostorder(head, visited, postorder);
+
+		def n = postorder.length;
+		for (i < n) {
+			postorder[i].reversePostorder = n - i;
+		}
+	}
+
+	private def visitReversePostorder(b: BasicBlock, visited: HashSet<BasicBlock>, postorder: Vector<BasicBlock>) {
+		if (visited.contains(b)) return;
+		visited.add(b);
+		for (s in b.successors.toArray()) {
+			visitReversePostorder(s, visited, postorder);
+		}
+		postorder.put(b);
+	}
+
+	// Builds the immediate dominator (really: dominates) tree and sorts 
+	// children in reverse postorder
+	def computeDominatorTree() {
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			if (block == head) continue;
+			if (block.predecessors.size() == 0) continue;
+
+			block.immDom.domChildren.add(block);
+		}
+
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			def arr = block.domChildren.toArray();
+			block.sortedDomChildren = Arrays.sort(arr, 0, arr.length,
+				fun(a: BasicBlock, b: BasicBlock) => a.reversePostorder >= b.reversePostorder);
+		}
+	}
+
+	// computes which nodes are merge nodes (entered by two or more forward edges)
+	def computeMergeNodes() {
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			var forwardPreds = 0;
+			for (p in block.predecessors.toArray()) {
+				if (p.reversePostorder < block.reversePostorder) forwardPreds++;
+			}
+			block.isMerge = forwardPreds >= 2;
+		}
+	}
+
+	// computes which nodes are loop headers (the target of a back edge)
+	def computeLoopHeaders() {
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			for (p in block.predecessors.toArray()) {
+				if (p.reversePostorder >= block.reversePostorder) {
+					block.isLoopHead = true;
+					break;
+				}
+			}
+		}
+	}
+
 	def entryNodes() -> Array<BasicBlock> {
 		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.startPc == 0);
 	}
@@ -180,6 +246,18 @@ class BasicBlock(bytes: Range<byte>, startPc: int) {
 	var dominators:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
 
 	var immDom: BasicBlock;
+
+	var reversePostorder: int = -1;
+	// children of this node in the dominator tree
+	def domChildren: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+	// domChildren sorted by descending reverse Postorder
+	var sortedDomChildren: Array<BasicBlock>;
+	var isMerge: bool;
+	var isLoopHead: bool;
+
+	def isBackward(target: BasicBlock) -> bool {
+		return target.reversePostorder <= reversePostorder;
+	}
 
 	def hash() -> int {
 		return startPc;
