@@ -4,15 +4,24 @@ class FunctionProfileMetadata {
     new(identifier, label) {}
 }
 
+// Used during both `profileFunctionCalls` and `profileFunctObjectCalls` 
+class ProfiledFuncData #unboxed {
+	var calls: int;
+	var time: int; // μs
+	def label: string;
+
+	new(calls, time, label) {}
+}
+
 component ProfileFunctionCalls{
 
-    private def profile(dict: HashMap<int, Triplet<int, int, string>>, key: int, name: string, executionTime: int){
+    private def profile(dict: HashMap<int, ProfiledFuncData>, key: int, name: string, executionTime: int){
         if (dict.has(key)){
-            def triplet: Triplet<int, int, string> = dict[key];
-            triplet.fst += 1; // increment calls
-            triplet.snd += executionTime;
+            def data: ProfiledFuncData = dict[key];
+            data.calls += 1; // increment calls
+            data.time += executionTime;
         } else {
-            dict[key] = Triplet.new(1, executionTime, name);
+            dict[key] = ProfiledFuncData.new(1, executionTime, name);
         }
     }
 
@@ -24,14 +33,13 @@ component ProfileFunctionCalls{
         profile(Profiling.funcObjectCallCounts, uid, label, executionTime);
     }
 
-    private def printStats(dict: HashMap<int, Triplet<int, int, string>>){
+    private def printStats(dict: HashMap<int, ProfiledFuncData>){
         for (list = Maps.keyList(dict); list != null; list = list.tail) {
             def key: int = list.head;
-		    // Triplet<# of calls, execution time(ms), name>
-            def triplet: Triplet<int, int, string> = dict[key];
+            def data: ProfiledFuncData = dict[key];
 
-            System.puts(Strings.format3("%d, %s, %d, ", key, triplet.thd, triplet.fst));
-            System.puts(Strings.format1("%d\n", triplet.snd));
+            System.puts(Strings.format3("%d, %s, %d, ", key, data.label, data.calls));
+            System.puts(Strings.format1("%d\n", data.time));
         }
     }
 

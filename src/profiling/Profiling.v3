@@ -20,27 +20,20 @@ component Profiling {
     */
 	def staticOpcodePairCounts: Array<Array<int>> = ProfileOpcodePairCounts.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 	def dynamicOpcodePairCounts: Array<Array<int>>= ProfileOpcodePairCounts.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
-	/*
-		Mapping from func object's `identifier_id` -> Triplet<# of calls, execution time(μs), label>
-	*/
-	def funcCallCounts: HashMap<int, Triplet<int, int, string>> = HashMap.new(int.!<int>, int.==);
-	/*
-		Mapping from func object's `uid` -> Triplet<# of calls, execution time(μs), label>
-	*/
-	def funcObjectCallCounts: HashMap<int, Triplet<int, int, string>> = HashMap.new(int.!<int>, int.==);
+
+	def funcCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
+	def funcObjectCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
 	/* 
 	 	Note: Each bytecode object has its own set of bytecode instrs. So, we need to keep track for all bytecode objects.
 		The key is a combination of the bytecode object id (int : 32 bit) 
 			and the instruction index (int as well) where inline caching is performed, currently LOAD_FIELD
 		So, key : int = (bytecode.id << 32) | instr_index;
-		The value is a Triplet(unboxed) where fst: instruction, snd: hits, thd: misses
 	*/
-	def inlineCacheHitMissCounts: HashMap<long, Triplet<string, int, int>> = HashMap.new(int.view<long>, long.==);
+	def inlineCacheHitMissCounts: HashMap<long, ProfiledInlineCacheData> = HashMap.new(int.view<long>, long.==);
 	/* 
 		key : int = (bytecode.id << 32) | instr_index;
-		The value is a Triplet(unboxed) where fst: instruction, snd: jumps taken, thd: jumps not taken
 	*/
-	def jumpOpcodeOutcomes: HashMap<long, Triplet<string, int, int>> = HashMap.new(int.view<long>, long.==);
+	def jumpOpcodeOutcomes: HashMap<long, ProfiledJumpData> = HashMap.new(int.view<long>, long.==);
 }
 
 component ProfilingHelpers {
@@ -51,23 +44,6 @@ component ProfilingHelpers {
 	def constructKey(b: Bytecode, instrIndex: int) -> long{
 		return long.!(b.id) << 32 | long.!(instrIndex);
 	}
-
-    /* 
-		Prints key and values of the provided hash map 
-		key : int = (bytecode.id << 32) | instr_index;
-		value: Triplet<string, int, int>
-	*/
-    def printHashMap(map: HashMap<long, Triplet<string, int, int>>){
-        for (list = Maps.keyList(map); list != null; list = list.tail) {
-            def key : long = list.head;
-            def bytecodeObjectId : int = int.!(key >> 32);
-            def instrIndex : int = int.!(key & 0x00000000FFFFFFFF);
-            System.puts(Strings.format2("%d, %d, ", bytecodeObjectId, instrIndex));
-            
-            def triplet: Triplet<string, int, int> = map[key];
-			System.puts(Strings.format3("%s, %d, %d\n", triplet.fst, triplet.snd, triplet.thd));
-		}
-    }
 
     def longToString(value: long) -> string{
         var a: Array<byte> = Array<byte>.new(19); // 19 is the maximum possible length of a +ve double

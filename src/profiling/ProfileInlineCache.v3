@@ -1,24 +1,41 @@
+// Used during `profileInlineCaching`
+class ProfiledInlineCacheData #unboxed {
+	def instruction: string;
+	var hits: int;
+	var misses: int;
+
+	new(instruction, hits, misses) {}
+}
+
 component ProfileInlineCache{
 
     def profileCacheHit(b: Bytecode, instrIndex: int){
         def key: long = ProfilingHelpers.constructKey(b, instrIndex);
-        // The key will always exist because a new Triplet gets created on initial bytecode execution which will be a miss
-        var triplet = Profiling.inlineCacheHitMissCounts[key];
-        triplet.snd = triplet.snd + 1; // increase hits
+        // The key will always exist because a new ProfiledInlineCacheData instance gets created on initial bytecode execution which will be a miss
+        var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+        data.hits++; // increase hits
     }
 
     def profileCacheMiss(b: Bytecode, instrIndex: int, op_name: string){
         def key: long = ProfilingHelpers.constructKey(b, instrIndex);
         if (Profiling.inlineCacheHitMissCounts.has(key)){
-            var triplet = Profiling.inlineCacheHitMissCounts[key];
-            triplet.thd = triplet.thd + 1; // increase misses
+            var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+            data.misses++; // increase misses
         } else {
-            Profiling.inlineCacheHitMissCounts[key] = Triplet.new(op_name, 0, 1);
+            Profiling.inlineCacheHitMissCounts[key] = ProfiledInlineCacheData.new(op_name, 0, 1);
         }
     }
 
     def printCacheStats(){
         System.puts("Bytecode ID, Instruction Index, Instruction, Hits, Misses\n");
-        ProfilingHelpers.printHashMap(Profiling.inlineCacheHitMissCounts);
+        for (list = Maps.keyList(Profiling.inlineCacheHitMissCounts); list != null; list = list.tail) {
+            def key : long = list.head;
+            def bytecodeObjectId : int = int.!(key >> 32);
+            def instrIndex : int = int.!(key & 0x00000000FFFFFFFF);
+            System.puts(Strings.format2("%d, %d, ", bytecodeObjectId, instrIndex));
+            
+            def data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+            System.puts(Strings.format3("%s, %d, %d\n", data.instruction, data.hits, data.misses));
+		}
     }
 }

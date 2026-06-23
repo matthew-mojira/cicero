@@ -21,6 +21,7 @@ component CiceroOptions {
 	def profileInlineCaching = false;
 	/*
         Profiles calls based on the **static** definition of the function/method.
+        Uses `FunctionProfileMetadata` to idenfity the "same"(same function identifier id) function/methods.
 		
         Logic: All instances of a closure created from the same function definition share the same identifier id.
                 Likewise, method calls are aggregated by the underlying method definition,
@@ -36,6 +37,11 @@ component CiceroOptions {
                 even though they are instances of the same class (underlying method definition is the same).
 	*/
 	def profileFunctObjectCalls = false;
+    /* 
+	    Profiles caller callee pairs.
+	    Uses `FunctionProfileMetadata` to idenfity the "same"(same function identifier id) function/methods.
+	*/
+	def profileCallerCalleePairs = false;
 }
 
 // for parsing
