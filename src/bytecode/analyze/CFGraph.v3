@@ -5,18 +5,21 @@ def ignoreExceptions = false;
 
 class CFGraph(bytecode: Bytecode) {
 	def var head:    BasicBlock;
+	def var returnSentinel:    BasicBlock; // null bytes; target of implicit (fallthrough) return
+	def var exceptionSentinel: BasicBlock; // null bytes; target of an exception with no active handler
 	def basicBlocks: Vector<BasicBlock> = Vector.new();
 
 	new() {
 		def bc = bytecode.instrs;
-		def boundaries: Array<bool> = Array.new(bc.length + 4);
-		def map: Array<int> = Array.new(bc.length + 4);
+		def exceptionExitPc = bc.length + 4; // sentinel pc: exception escapes uncaught
+		def boundaries: Array<bool> = Array.new(bc.length + 8);
+		def map: Array<int> = Array.new(bc.length + 8);
 		def handlerStk: Stack<int> = ArrayStack.new();
-		def handlerLoc: Array<int> = Array.new(bc.length + 4);
+		def handlerLoc: Array<int> = Array.new(bc.length + 8);
 		if (bc.length > 0)
 			boundaries[0] = true; // entry point
 		if (!ignoreExceptions)
-			handlerStk.push(bc.length); // no handler = exit function
+			handlerStk.push(exceptionExitPc); // no handler = exception escapes the frame
 
 		var pc = 0;
 		while (pc < bc.length) {
@@ -58,9 +61,13 @@ class CFGraph(bytecode: Bytecode) {
 		}
 		map[bc.length] = num;
 		basicBlocks.put(BasicBlock.new(bc[prev ... bc.length], prev));
-		basicBlocks.put(BasicBlock.new(null, bc.length)); // sentinel to indicate implicit return
+		returnSentinel = BasicBlock.new(null, bc.length); // sentinel: implicit return
+		basicBlocks.put(returnSentinel);
+		map[exceptionExitPc] = num + 1;
+		exceptionSentinel = BasicBlock.new(null, exceptionExitPc); // sentinel: exception escapes uncaught
+		basicBlocks.put(exceptionSentinel);
 
-		for (i < basicBlocks.length - 1) {
+		for (i < basicBlocks.length - 2) {
 			def block = basicBlocks[i];
 			def lastOp = Opcodes.map[block.bytes[block.bytes.length - 4]];
 			def lastPc = block.startPc + block.bytes.length;
@@ -184,7 +191,7 @@ class CFGraph(bytecode: Bytecode) {
 		for (i < basicBlocks.length) {
 			def block = basicBlocks[i];
 			if (block == head) continue;
-			if (block.predecessors.size() == 0) continue;
+			if (block.reversePostorder == -1) continue; // unreachable from head
 
 			block.immDom.domChildren.add(block);
 		}

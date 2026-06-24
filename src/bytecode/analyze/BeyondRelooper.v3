@@ -1,4 +1,7 @@
 class BeyondRelooper {
+	var returnSentinel: BasicBlock;
+	var exceptionSentinel: BasicBlock;
+
 	def flowLeaving(cfgNode: BasicBlock) -> ControlFlow {
 		def successors = cfgNode.successors.toArray();
 		match (successors.length) {
@@ -23,16 +26,24 @@ class BeyondRelooper {
 		g.computeDominatorTree();
 		g.computeMergeNodes();
 		g.computeLoopHeaders();
-		return doTree(g.head, null);
+
+		returnSentinel = g.returnSentinel;
+		exceptionSentinel = g.exceptionSentinel;
+
+		def outerCtx: List<ContainingSyntax> = List.new(ContainingSyntax.BlockFollowedBy(exceptionSentinel), null);
+		return Wasm.Seq(Wasm.Block(doTree(g.head, outerCtx)), Wasm.ReturnWithException);
 	}
 
 	def doTree(tree: BasicBlock, ctx: List<ContainingSyntax>) -> Wasm {
-		def codeForX = nodeWithin(tree, Lists.fromArray(Arrays.filter(tree.sortedDomChildren, BasicBlock.isMerge)), _);
+		def codeForX = nodeWithin(tree, Lists.fromArray(Arrays.filter(tree.sortedDomChildren, isStructuralMergeChild)), _);
 		if (tree.isLoopHead) {
 			return Wasm.Loop(codeForX(List.new(ContainingSyntax.LoopHeadedBy(tree), ctx)));
 		} else {
 			return codeForX(ctx);
 		}
+	}
+	def isStructuralMergeChild(b: BasicBlock) -> bool {
+		return b.isMerge && b != returnSentinel && b != exceptionSentinel;
 	}
 	def nodeWithin(node: BasicBlock, arr: List<BasicBlock>, ctx: List<ContainingSyntax>) -> Wasm {
 		if (arr == null) { // []
@@ -43,7 +54,7 @@ class BeyondRelooper {
 				Conditional(t, f) => snd = Wasm.If(
 						doBranch(node, t, List.new(ContainingSyntax.IfThenElse, ctx)),
 						doBranch(node, f, List.new(ContainingSyntax.IfThenElse, ctx)));
-				TerminalFlow => snd = Wasm.Return;
+				TerminalFlow => snd = Wasm.ReturnWithValue;
 			}
 			return Wasm.Seq(fst, snd);
 		} else { // y_n:ys
@@ -52,7 +63,8 @@ class BeyondRelooper {
 		}
 	}
 	def doBranch(src: BasicBlock, dst: BasicBlock, ctx: List<ContainingSyntax>) -> Wasm {
-		if (src.isBackward(dst) || dst.isMerge) {
+		if (dst == returnSentinel) return Wasm.ReturnWithValue;
+		if (src.isBackward(dst) || dst.isMerge || dst == exceptionSentinel) {
 			return Wasm.Br(index(dst, ctx));
 		} else {
 			return doTree(dst, ctx);
@@ -96,9 +108,10 @@ type Wasm {
 	// so whatever determines the branch is already shown there.
 	case If(bodyT: Wasm, bodyF: Wasm);
 	case Br(depth: int);
-	case Return;
 	case Actions(actions: BasicBlock);
 	case Seq(fst: Wasm, snd: Wasm);
+	case ReturnWithValue;
+	case ReturnWithException;
 }
 
 // type Context = [ContainingSyntax]
@@ -109,7 +122,7 @@ type ContainingSyntax {
 	case BlockFollowedBy(tgt: BasicBlock);
 }
 
-// Prints a Wasm tree. Wasm.Block/Loop/If/Br/Return/Seq are structured Wasm
+// Prints a Wasm tree. Wasm.Block/Loop/If/Br/Seq are structured Wasm
 // control flow and print as such; Wasm.Actions and If.cond instead carry the
 // originating BasicBlock, which gets disassembled (using its real startPc,
 // the same way BasicBlock.display() does) rather than printed as opaque
@@ -141,8 +154,11 @@ component WasmPrinter {
 			Br(depth) => {
 				printIndent(indent); System.puts(Strings.format1("br %d\n", depth));
 			}
-			Return => {
-				printIndent(indent); System.puts("return\n");
+			ReturnWithValue => {
+				printIndent(indent); System.puts("<return value>\n");
+			}
+			ReturnWithException => {
+				printIndent(indent); System.puts("<return exception>\n");
 			}
 			Actions(actions) => {
 				disassemble(actions, indent);
