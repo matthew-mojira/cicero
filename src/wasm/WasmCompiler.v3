@@ -1,6 +1,8 @@
 /* RUNTIME DEFINITIONS */
 def IS_NULL: u32       = u32.view(CiWasmTarget.functionId(WasmRuntime.isNull));
+def IS_NOT_NULL: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.isNotNull));
 def GET_GLOBAL: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobal));
+def GET_GLOBAL_BY_INDEX: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobalByIndex));
 def GET_NONLOCAL: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.getNonlocal));
 def SET_GLOBAL: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.setGlobal));
 def IS_TRUE: u32       = u32.view(CiWasmTarget.functionId(WasmRuntime.isTrue));
@@ -60,6 +62,7 @@ def CREATE_LIST8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8
 def CREATE_LIST9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9));
 def CREATE_LIST_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRest));
 
+def compileFromTier1 = true;
 
 class WasmCompiler {
 	// TODO need extra information about parameters and locals
@@ -69,49 +72,73 @@ class WasmCompiler {
 	def var scratch0: u32;
 	def var scratch1: u32;
 
+	def var ciceroBytecode: Bytecode;
+
 	new(ast: AST, params) {
 		addConst(null); // XXX what is this?
 
 		scratch0 = addLocal("<receiver>"); /* also used as scratch */
-		// XXX I don't know what this receiver local (parameter) is or why virgil compiler adds it.
-		Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
-		scratch1 = addLocal("<scratch>");
+		// XXX Virgil calling convention always requires a receiver object as the first argument
 
 		wasm.put_uleb32(1); // 1 set of
 		def hole = wasm.skip_leb32();
 		wasm.putb(0x7F);    // i32
 
-		// FUNCTION BODY
-		withBlock<void, int>(fun {
-			handlerStack.push(blockDepth);
-
-			// initialize extra parameters (beyond 9) from WasmRuntime.xargs.
-			// xargs were pushed left-to-right, so pop in reverse to fill
-			// the tail of the parameter locals first.
-			if (params.length > 9) {
-				for (i = params.length - 1; i >= 9; i--) {
-					emitCall(POP_ARG);
-					wasm.putb(WasmOp.SET_LOCAL.opcode);
-					wasm.put_uleb32(u32.view(1 + i)); // skip <receiver> at slot 0
-				}
+		if (compileFromTier1) {
+			ciceroBytecode = BytecodeCompiler.new(ast, params).extract();
+			if (CiceroOptions.optimizeBytecode) {
+				ciceroBytecode.optimize();
 			}
+			locals.puta(ciceroBytecode.locals); // XXX everything off by 1!!
+			nonlocals.puta(ciceroBytecode.nonlocals);
+			consts.puta(ciceroBytecode.constPool); // XXX everything off by 1!!
+			strings.puta(ciceroBytecode.stringPool);
+			classholes.puta(ciceroBytecode.classPool);
+			funcholes.puta(ciceroBytecode.funcPool);
 
-			compileAST(ast);
-			
+			scratch1 = addLocal("<scratch1>"); // appended last; doesn't shift the offsets above
+
+
+			def br = BeyondRelooper.new(CFGraph.new(ciceroBytecode));
+			br.structuredControl();
+
+			compileWasmStructure(br.output);
+		} else {
+			Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
+			scratch1 = addLocal("<scratch>");
+
+			// FUNCTION BODY
+			withBlock<void, int>(fun {
+				handlerStack.push(blockDepth);
+
+				// initialize extra parameters (beyond 9) from WasmRuntime.xargs.
+				// xargs were pushed left-to-right, so pop in reverse to fill
+				// the tail of the parameter locals first.
+				if (params.length > 9) {
+					for (i = params.length - 1; i >= 9; i--) {
+						emitCall(POP_ARG);
+						wasm.putb(WasmOp.SET_LOCAL.opcode);
+						wasm.put_uleb32(u32.view(1 + i)); // skip <receiver> at slot 0
+					}
+				}
+
+				compileAST(ast);
+				
+				emitCall(SET_RESULT);
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.putb(0); // OK
+				wasm.putb(WasmOp.RETURN.opcode); 
+				wasm.putb(WasmOp.UNREACHABLE.opcode); 
+
+				handlerStack.pop(); // XXX unnecessary
+			});
+
 			emitCall(SET_RESULT);
 
 			wasm.putb(WasmOp.I32_CONST.opcode);
-			wasm.putb(0); // OK
-			wasm.putb(WasmOp.RETURN.opcode); 
-			wasm.putb(WasmOp.UNREACHABLE.opcode); 
-
-			handlerStack.pop(); // XXX unnecessary
-		});
-
-		emitCall(SET_RESULT);
-
-		wasm.putb(WasmOp.I32_CONST.opcode);
-		wasm.putb(1); // exception
+			wasm.putb(1); // exception
+		}
 
 		wasm.putb(WasmOp.END.opcode);
 
@@ -126,6 +153,177 @@ class WasmCompiler {
 	def strings: Vector<string> = Vector.new();
 	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
 	def funcholes:  Vector<ASTData.Func> = Vector.new();
+
+	def compileWasmStructure(ws: WasmStructure) {
+		match (ws) {
+			Block(body) => {
+				withBlock<void, int>(fun {
+					compileWasmStructure(body);
+				});
+			}
+			Loop(body) => {
+				withLoop<void, int>(fun {
+					compileWasmStructure(body);
+				});
+			}
+			If(bodyFallthrough, bodyBranch) => {
+				withIfElse<void, int>(fun {
+					compileWasmStructure(bodyFallthrough);
+				}, /* else */ fun {
+					compileWasmStructure(bodyBranch);
+				});
+			}
+			Br(depth) => {
+				wasm.putb(WasmOp.BR.opcode);
+				wasm.put_uleb32(u32.!(depth));
+			}
+			Actions(actions) => compileActions(actions);
+			Seq(fst, snd) => {
+				compileWasmStructure(fst);
+				compileWasmStructure(snd);
+			}
+			ReturnWithValue => {
+				emitCall(SET_RESULT);
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.putb(0); // OK
+				wasm.putb(WasmOp.RETURN.opcode); 
+				wasm.putb(WasmOp.UNREACHABLE.opcode); 
+			}
+			ReturnWithException => {
+				emitCall(SET_RESULT);
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.putb(1); // exception
+				// not necessary, but pedantic
+				wasm.putb(WasmOp.RETURN.opcode); 
+				wasm.putb(WasmOp.UNREACHABLE.opcode); 
+			}
+
+		}
+	}
+
+	def compileActions(bb: BasicBlock) {
+		def bc = Ranges.dup(bb.bytes);
+		var pc = 0;
+		while (pc < bc.length) {
+			def ins = Ref<Instruction>.at(bc, pc);
+			def opcode = ins.opcode;
+			def operand = ins.operand;
+
+			match (opcode) {
+				NOP => /* no implementation */ ;
+				LOAD_CONST => {
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(operand + 1); // consts[0] is the reserved null const
+				}
+				LOAD_GLOBAL => {
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(operand);
+					emitCall(GET_GLOBAL);
+					emitNullGuard(Exceptions.unboundGlobal(ciceroBytecode.stringPool[operand]));
+				}
+				LOAD_GLOBAL_BY_INDEX => {
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(operand);
+					emitCall(GET_GLOBAL_BY_INDEX);
+				}
+				LOAD_LOCAL => {
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.put_uleb32(operand + 1); // locals[0] is <receiver>
+					emitNullGuard(Exceptions.unboundLocal(ciceroBytecode.locals[operand]));
+				}
+				LOAD_LOCAL_SAFE => {
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.put_uleb32(operand + 1); // locals[0] is <receiver>
+				}
+				LOAD_FIELD => {
+					wasm.putb(WasmOp.TEE_LOCAL.opcode);
+					wasm.put_uleb32(scratch1);          // stash obj for the error path; [obj]
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(operand);            // [obj, fieldStrIdx]
+					emitCall(GET_FIELD);                  // [fieldValueOrNull]
+					emitFieldGuard(ciceroBytecode.stringPool[operand]);
+				}
+				LOAD_NONLOCAL => {
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(addString(ciceroBytecode.nonlocals[operand]));
+					emitCall(GET_NONLOCAL);
+				}
+				STORE_GLOBAL => ;
+				STORE_GLOBAL_BY_INDEX => ;
+				STORE_LOCAL => {
+					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					wasm.put_uleb32(operand + 1); // locals[0] is <receiver>
+				}
+				STORE_FIELD => {
+					// stack: [..., val_orig, obj, val_dupe]
+					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					wasm.put_uleb32(scratch0);          // pop val_dupe; [..., val_orig, obj]
+					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					wasm.put_uleb32(scratch1);          // pop obj; [..., val_orig]
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.put_uleb32(scratch1);          // [..., val_orig, obj]
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(operand);            // [..., val_orig, obj, fieldStrIdx]
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.put_uleb32(scratch0);          // [..., val_orig, obj, fieldStrIdx, val]
+					emitCall(SET_FIELD);                  // [..., val_orig, setFieldResult]
+					emitFieldGuard(ciceroBytecode.stringPool[operand]);
+				}
+				CALL => ;
+				JUMP => /* no implementation */ ;
+				JUMP_IF_FALSE => {
+					emitCall(IS_TRUE); // bytecode pops unconditionally; flag IS the condition, no value to preserve
+				}
+				JUMP_IF_TRUE_PEEK => {
+					wasmDup();
+					emitCall(IS_FALSE); // peek: value rides along unchanged either way
+				}
+				JUMP_IF_FALSE_PEEK => {
+					wasmDup();
+					emitCall(IS_TRUE); // peek: value rides along unchanged either way
+				}
+				RAISE => ;
+				TRY => /* no implementation */ ;
+				CATCH => /* no implementation */ ;
+				ASSERT_FUNC => ;
+				CREATE_OBJECT => ;
+				CREATE_CLASS => ;
+				CREATE_LIST => {
+					if (operand <= 9) {
+						wasm.putb(WasmOp.CALL.opcode);
+						match (operand) {
+							0 => wasm.put_uleb32(CREATE_LIST0);
+							1 => wasm.put_uleb32(CREATE_LIST1);
+							2 => wasm.put_uleb32(CREATE_LIST2);
+							3 => wasm.put_uleb32(CREATE_LIST3);
+							4 => wasm.put_uleb32(CREATE_LIST4);
+							5 => wasm.put_uleb32(CREATE_LIST5);
+							6 => wasm.put_uleb32(CREATE_LIST6);
+							7 => wasm.put_uleb32(CREATE_LIST7);
+							8 => wasm.put_uleb32(CREATE_LIST8);
+							9 => wasm.put_uleb32(CREATE_LIST9);
+						}
+					} else {
+						// elements are already on the stack with none of them routed through
+						// PUSH_ARG; reproducing CREATE_LIST_REST's xargs ordering for >9 elements
+						// needs a scratch buffer to reverse them first. Not yet implemented.
+						System.error("compile error", "tier1->Wasm: CREATE_LIST with >9 elements unsupported");
+					}
+				}
+				CREATE_FUNC => ;
+				POP => {
+					for (i < operand) wasm.putb(WasmOp.DROP.opcode);
+				}
+				DUPE => ;
+				SWAP => ;
+				RETURN => /* no implementation */ ;
+			}
+
+			pc += 4;
+		}
+	}
 	
 	def handlerStack: Stack<int> = ArrayStack.new();
 	var blockDepth = 0;
@@ -219,6 +417,50 @@ class WasmCompiler {
 			emitPushConst(ExnObjects.fromWasm(exn));
 			emitJumpToExnHandler();
 		});
+	}
+
+	// For the bytecode/relooper path: assumes a value is already on top of the
+	// stack. Turns [value] into [value, 1] if non-null, or [exn, 0] if null,
+	// matching the convention relooper's If expects (1 = no exception / take
+	// fallthrough, 0 = exception / take branch). The non-null case is the hot
+	// path: it costs nothing beyond the check itself, since the param passes
+	// straight through an empty true-arm; exception construction only runs on
+	// the (rare) null arm.
+	def emitNullGuard(exn: string) {
+		wasmDup();
+		emitCall(IS_NOT_NULL);
+		wasm.putb(WasmOp.TEE_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);              // stash flag, leave on stack; [value, flag]
+		withIfElse<int, int>(fun {
+			// hot path: non-null, param passes through unchanged
+		}, /* else */ fun {
+			wasm.putb(WasmOp.DROP.opcode);
+			emitPushConst(ExnObjects.fromWasm(exn));
+		});
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);              // [resultValue, flag]
+	}
+
+	// Same shape as emitNullGuard, but for guards whose exception depends on a
+	// runtime value (the field's object) rather than a precomputable constant.
+	// Assumes the caller already stashed that object in scratch1 (e.g. via
+	// TEE_LOCAL before GET_FIELD/SET_FIELD).
+	def emitFieldGuard(field: string) {
+		wasmDup();
+		emitCall(IS_NOT_NULL);
+		wasm.putb(WasmOp.TEE_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);              // stash flag, leave on stack; [value, flag]
+		withIfElse<int, int>(fun {
+			// hot path: field present, param passes through unchanged
+		}, /* else */ fun {
+			wasm.putb(WasmOp.DROP.opcode);
+			wasm.putb(WasmOp.GET_LOCAL.opcode);
+			wasm.put_uleb32(scratch1);          // reload the object stashed by the caller
+			emitPushString(field);
+			emitCall(RAISE_FIELD);              // dynamically builds the real exn from obj+field
+		});
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);              // [resultValue, flag]
 	}
 
 	def emitAssertType(isFunc: u32, expectedClass: Object) {
@@ -662,6 +904,10 @@ class WasmCompiler {
 		return idx;
 	}
 
+
+	def compileBytecode() {
+		
+	}
 }
 
 def ptrAt(o: Object) -> i32 {

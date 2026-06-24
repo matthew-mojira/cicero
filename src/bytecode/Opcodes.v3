@@ -3,7 +3,7 @@ enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
 	// Loads
 	LOAD_CONST           (true, false, false),  // [0] index into the constant pool
 	LOAD_GLOBAL          (true, false, true),   // [0] index into the string pool
-	LOAD_GLOBAL_BY_INDEX (true, false, true),   // [0] index into the Globals.values vector
+	LOAD_GLOBAL_BY_INDEX (true, false, false),  // [0] index into the Globals.values vector
 	LOAD_LOCAL           (true, false, true),   // [0] index into the runtime locals
 	LOAD_LOCAL_SAFE      (true, false, false),  // [0] index into the runtime locals
 	LOAD_FIELD           (true, false, true),   // [1] index into the string pool

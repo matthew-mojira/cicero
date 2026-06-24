@@ -21,6 +21,9 @@ component WasmRuntime {
 	def isNull(idx: int) -> bool {
 		return objects[idx] == null; /* XXX should also be idx == 0 */
 	}
+	def isNotNull(idx: int) -> bool {
+		return objects[idx] != null;
+	}
 	def isTrue(idx: int)  -> bool => objects[idx].isTrue();
 	def isFalse(idx: int) -> bool => !objects[idx].isTrue();
 	def isFunc(idx: int)  -> bool => objects[idx].instanceOf(ClassObjects.classFunc);
@@ -31,6 +34,9 @@ component WasmRuntime {
 		def id = strings[idx];
 		def obj = frame.getGlobal(id);
 		return alloc(obj);
+	}
+	def getGlobalByIndex(idx: int) -> int {
+		return alloc(Globals.loadGlobalByIndex(idx));
 	}
 
 	def getNonlocal(idx: int) -> int {
@@ -332,12 +338,14 @@ component WasmRuntime {
 }
 
 export "fast:is_null"          = WasmRuntime.isNull;
+export "fast:is_not_null"      = WasmRuntime.isNotNull;
 export "fast:is_true"          = WasmRuntime.isTrue;
 export "fast:is_false"         = WasmRuntime.isFalse;
 export "fast:is_func"          = WasmRuntime.isFunc;
 export "fast:is_class"         = WasmRuntime.isClass;
 export "fast:is_string"        = WasmRuntime.isString;
 export "fast:get_global"       = WasmRuntime.getGlobal;
+export "fast:get_global_by_index" = WasmRuntime.getGlobalByIndex;
 export "fast:get_nonlocal"     = WasmRuntime.getNonlocal;
 export "fast:set_global"       = WasmRuntime.setGlobal;
 export "fast:raise_type"       = WasmRuntime.raiseTypeException;
