@@ -30,6 +30,9 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 					if (CiceroOptions.optimizeBytecode) {
 						bytecode.optimize();
 					}
+					if (CiceroOptions.testBeyondRelooper) {
+						WasmPrinter.display(BeyondRelooper.new().structuredControl(CFGraph.new(bytecode)));
+					}
 					code = Code.Bytecode(bytecode);
 				}
 				2 => code = Code.Wasm(WasmCompiler.new(ast, params).compile());

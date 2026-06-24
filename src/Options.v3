@@ -15,6 +15,9 @@ component CiceroOptions {
 	def traceBytecodeCompilation = false;
 	def traceBytecodeEvaluation = false;
 
+	/* testing */
+	def testBeyondRelooper = false;
+
 	/* profiling */
 	def profileBytecode = false;
 }

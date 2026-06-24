@@ -62,9 +62,7 @@ class Bytecode(instrs:     Array<byte>,
 		/* Beyond Relooper test */
 		if (CLOptions.DUMP_RELOOP.get()) {
 			System.puts("\n=== Beyond Relooper Output ===\n");
-			def relooper = BeyondRelooper.new(cfg);
-			def region = relooper.reloop();
-			relooper.displayRegion(region, 0);
+			WasmPrinter.display(BeyondRelooper.new().structuredControl(cfg));
 			System.puts("=== End Relooper Output ===\n\n");
 		}
 	}
