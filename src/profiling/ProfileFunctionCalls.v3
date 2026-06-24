@@ -6,31 +6,33 @@ class FunctionProfileMetadata {
 
 // Used during both `profileFunctionCalls` and `profileFuncObjectCalls`
 class ProfiledFuncData #unboxed {
-	var calls: int;
-	var time: int; // μs
 	def label: string;
+	var calls: int;
+	var inclusiveTime: int; // μs
+	var exclusiveTime: int; // μs
 
-	new(calls, time, label) {}
+	new(label, calls, inclusiveTime, exclusiveTime) {}
 }
 
 component ProfileFunctionCalls{
 
-    private def profile(dict: HashMap<int, ProfiledFuncData>, key: int, name: string, executionTime: int){
+    private def profile(dict: HashMap<int, ProfiledFuncData>, key: int, name: string, inclusiveTime: int, exclusiveTime: int){
         if (dict.has(key)){
             def data: ProfiledFuncData = dict[key];
             data.calls += 1; // increment calls
-            data.time += executionTime;
+            data.inclusiveTime += inclusiveTime;
+            data.exclusiveTime += exclusiveTime;
         } else {
-            dict[key] = ProfiledFuncData.new(1, executionTime, name);
+            dict[key] = ProfiledFuncData.new(name, 1, inclusiveTime, exclusiveTime);
         }
     }
 
-    def profileFunctionCall(metadata: FunctionProfileMetadata, executionTime: int){
-        profile(Profiling.funcCallCounts, metadata.identifier, metadata.label, executionTime);
+    def profileFunctionCall(metadata: FunctionProfileMetadata, inclusiveTime: int, exclusiveTime: int){
+        profile(Profiling.funcCallCounts, metadata.identifier, metadata.label, inclusiveTime, exclusiveTime);
     }
 
-    def profileFunctionObjectCall(uid: int, label: string, executionTime: int){
-        profile(Profiling.funcObjectCallCounts, uid, label, executionTime);
+    def profileFunctionObjectCall(uid: int, label: string, inclusiveTime: int, exclusiveTime: int){
+        profile(Profiling.funcObjectCallCounts, uid, label, inclusiveTime, exclusiveTime);
     }
 
     private def printStats(dict: HashMap<int, ProfiledFuncData>){
@@ -39,17 +41,17 @@ component ProfileFunctionCalls{
             def data: ProfiledFuncData = dict[key];
 
             System.puts(Strings.format3("%d, %s, %d, ", key, data.label, data.calls));
-            System.puts(Strings.format1("%d\n", data.time));
+            System.puts(Strings.format2("%d, %d\n", data.inclusiveTime, data.exclusiveTime));
         }
     }
 
     def printFuncCallsStats(){
-        System.puts("Function identifier, Function label, calls, execution time(μs)\n");
+        System.puts("Function identifier, Function label, calls, inclusive execution time(μs), exclusive execution time(μs)\n");
         printStats(Profiling.funcCallCounts);
     }
 
     def printFuncObjectCallsStats(){
-        System.puts("Function object uid, Function label, calls, execution time(μs)\n");
+        System.puts("Function object uid, Function label, calls, inclusive execution time(μs), exclusive execution time(μs)\n");
         printStats(Profiling.funcObjectCallCounts);
     }
 }
