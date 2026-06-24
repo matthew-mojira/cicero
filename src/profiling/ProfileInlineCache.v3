@@ -1,10 +1,11 @@
 // Used during `profileInlineCaching`
 class ProfiledInlineCacheData #unboxed {
 	def instruction: string;
+	def lineNumber: int;
 	var hits: int;
 	var misses: int;
 
-	new(instruction, hits, misses) {}
+	new(instruction, lineNumber, hits, misses) {}
 }
 
 component ProfileInlineCache{
@@ -22,19 +23,20 @@ component ProfileInlineCache{
             var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
             data.misses++; // increase misses
         } else {
-            Profiling.inlineCacheHitMissCounts[key] = ProfiledInlineCacheData.new(op_name, 0, 1);
+            def ln = b.sourceMap[instrIndex >> 2].beginLine;
+            Profiling.inlineCacheHitMissCounts[key] = ProfiledInlineCacheData.new(op_name, ln, 0, 1);
         }
     }
 
     def printCacheStats(){
-        System.puts("Bytecode ID, Instruction Index, Instruction, Hits, Misses\n");
+        System.puts("Line Number, Bytecode ID, Instruction Index, Instruction, Hits, Misses\n");
         for (list = Maps.keyList(Profiling.inlineCacheHitMissCounts); list != null; list = list.tail) {
             def key : long = list.head;
             def bytecodeObjectId : int = int.!(key >> 32);
             def instrIndex : int = int.!(key & 0x00000000FFFFFFFF);
-            System.puts(Strings.format2("%d, %d, ", bytecodeObjectId, instrIndex));
-            
             def data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+
+            System.puts(Strings.format3("%d, %d, %d, ", data.lineNumber, bytecodeObjectId, instrIndex));
             System.puts(Strings.format3("%s, %d, %d\n", data.instruction, data.hits, data.misses));
 		}
     }

@@ -1,10 +1,11 @@
 // Used during `profileJumpOutcomes`
 class ProfiledJumpData #unboxed {
 	def instruction: string;
+	def lineNumber: int;
 	var jumpsTaken: int;
 	var jumpsNotTaken: int;
 
-	new(instruction, jumpsTaken, jumpsNotTaken) {}
+	new(instruction, lineNumber, jumpsTaken, jumpsNotTaken) {}
 }
 
 component ProfileJumpOutcomes{
@@ -19,23 +20,24 @@ component ProfileJumpOutcomes{
                 data.jumpsNotTaken++; // increase jump not taken
             }
         } else {
+            def ln = b.sourceMap[instrIndex >> 2].beginLine;
             if (jump_taken){
-                Profiling.jumpOpcodeOutcomes[key] = ProfiledJumpData.new(op_name, 1, 0);
+                Profiling.jumpOpcodeOutcomes[key] = ProfiledJumpData.new(op_name, ln, 1, 0);
             } else {
-                Profiling.jumpOpcodeOutcomes[key] = ProfiledJumpData.new(op_name, 0, 1);
+                Profiling.jumpOpcodeOutcomes[key] = ProfiledJumpData.new(op_name, ln, 0, 1);
             }
         }
     }
 
     def printJumpStats(){
-        System.puts("Bytecode ID, Instruction Index, Instruction, Jumps taken, Jumps not taken\n");
+        System.puts("Line Number, Bytecode ID, Instruction Index, Instruction, Jumps taken, Jumps not taken\n");
         for (list = Maps.keyList(Profiling.jumpOpcodeOutcomes); list != null; list = list.tail) {
             def key : long = list.head;
             def bytecodeObjectId : int = int.!(key >> 32);
             def instrIndex : int = int.!(key & 0x00000000FFFFFFFF);
-            System.puts(Strings.format2("%d, %d, ", bytecodeObjectId, instrIndex));
-            
             def data: ProfiledJumpData = Profiling.jumpOpcodeOutcomes[key];
+            
+            System.puts(Strings.format3("%d, %d, %d, ", data.lineNumber, bytecodeObjectId, instrIndex));
             System.puts(Strings.format3("%s, %d, %d\n", data.instruction, data.jumpsTaken, data.jumpsNotTaken));
 		}
     }
