@@ -58,13 +58,6 @@ class Bytecode(instrs:     Array<byte>,
 			def result = analysis.runAnalysis(cfg);
 			analysis.processResults(cfg, result);
 		}
-
-		/* Beyond Relooper test */
-		if (CLOptions.DUMP_RELOOP.get()) {
-			System.puts("\n=== Beyond Relooper Output ===\n");
-			WasmPrinter.display(BeyondRelooper.new().structuredControl(cfg));
-			System.puts("=== End Relooper Output ===\n\n");
-		}
 	}
 
 	/* print this bytecode */

@@ -73,22 +73,22 @@ class CFGraph(bytecode: Bytecode) {
 			def lastPc = block.startPc + block.bytes.length;
 			
 			if (lastOp.fallthrough)	{
-				block.successors.add(basicBlocks[map[lastPc]]);
-				basicBlocks[map[lastPc]].predecessors.add(block);
+				block.fallthroughSuccessor = basicBlocks[map[lastPc]];
+				block.fallthroughSuccessor.predecessors.add(block);
 			}
 			if (lastOp.jump) {
 				def operand = (u24.!(block.bytes[block.bytes.length - 1]) << 16)
 				            | (u24.!(block.bytes[block.bytes.length - 2]) << 8)
 				            |  u24.!(block.bytes[block.bytes.length - 3]);
 				def target = lastPc + i24.view(operand);
-				block.successors.add(basicBlocks[map[target]]);
-				basicBlocks[map[target]].predecessors.add(block);
+				block.branchSuccessor = basicBlocks[map[target]];
+				block.branchSuccessor.predecessors.add(block);
 			}
 			if (!ignoreExceptions && lastOp.exception) {
 				// get target from its mapping in handlerLoc
 				def target = handlerLoc[lastPc];
-				block.successors.add(basicBlocks[map[target]]);
-				basicBlocks[map[target]].predecessors.add(block);
+				block.branchSuccessor = basicBlocks[map[target]];
+				block.branchSuccessor.predecessors.add(block);
 			}
 		}
 		head = basicBlocks[0];
@@ -179,7 +179,7 @@ class CFGraph(bytecode: Bytecode) {
 	private def visitReversePostorder(b: BasicBlock, visited: HashSet<BasicBlock>, postorder: Vector<BasicBlock>) {
 		if (visited.contains(b)) return;
 		visited.add(b);
-		for (s in b.successors.toArray()) {
+		for (s in b.successors()) {
 			visitReversePostorder(s, visited, postorder);
 		}
 		postorder.put(b);
@@ -234,7 +234,7 @@ class CFGraph(bytecode: Bytecode) {
 	}
 
 	def exitNodes() -> Array<BasicBlock> {
-		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.successors.size() == 0);
+		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.fallthroughSuccessor == null && bb.branchSuccessor == null);
 	}
 
 	def display() {
@@ -248,9 +248,19 @@ class CFGraph(bytecode: Bytecode) {
 }
 
 class BasicBlock(bytes: Range<byte>, startPc: int) {
-	def successors:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
 	def predecessors: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
 	var dominators:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+
+	// successors
+	var fallthroughSuccessor: BasicBlock;
+	var branchSuccessor: BasicBlock; // jump target, or exception handler
+
+	def successors() -> Array<BasicBlock> {
+		if (fallthroughSuccessor != null && branchSuccessor != null) return [fallthroughSuccessor, branchSuccessor];
+		if (fallthroughSuccessor != null) return [fallthroughSuccessor];
+		if (branchSuccessor != null) return [branchSuccessor];
+		return [];
+	}
 
 	var immDom: BasicBlock;
 
@@ -286,7 +296,7 @@ class BasicBlock(bytes: Range<byte>, startPc: int) {
 		if (predecessors.length > 0)
 			System.puts(Strings.format1("%d", predecessors[predecessors.length - 1].startPc));
 		System.puts(Strings.format1("] -> %d ", startPc));
-		def successors = successors.toArray();
+		def successors = successors();
 		match (successors.length) {
 			0 => System.puts("-> []\n");
 			1 => System.puts(Strings.format1("-> [%d]\n", successors[0].startPc));

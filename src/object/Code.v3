@@ -31,7 +31,9 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 						bytecode.optimize();
 					}
 					if (CiceroOptions.testBeyondRelooper) {
-						WasmPrinter.display(BeyondRelooper.new().structuredControl(CFGraph.new(bytecode)));
+						def br = BeyondRelooper.new(CFGraph.new(bytecode));
+						br.structuredControl();
+						br.display();
 					}
 					code = Code.Bytecode(bytecode);
 				}
