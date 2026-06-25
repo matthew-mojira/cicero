@@ -23,6 +23,7 @@ def main(args: Array<string>) -> int {
 		// Compile deferred code objects now that the execution tier is known to be bytecode(TIER=1).
 		CodeObjects.MaybeCompileLater.apply(CodeObjects.CompileUncompiledCodeObject);
 	}
+	CodeObjects.MaybeCompileLater = null;
 
 	def frame = FrameObjects.newTopFrame();
 	loadCore(frame);

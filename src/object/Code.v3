@@ -56,7 +56,7 @@ component CodeObjects {
 	 * fully finishes booting and confirms we are running in TIER 1, it will 
 	 * loop through this vector and compile them all at once.
 	 */
-	def MaybeCompileLater: Vector<(CodeObject, Array<string>)> = Vector.new();
+	var MaybeCompileLater: Vector<(CodeObject, Array<string>)> = Vector.new();
 	def CompileUncompiledCodeObject(t: (CodeObject, Array<string>)){
 		t.0.compile(t.1);
 	}
