@@ -51,6 +51,10 @@ component WasmRuntime {
 		frame.setGlobal(id, obj);
 		return objIdx;
 	}
+	def setGlobalByIndex(idx: int, objIdx: int) -> int {
+		Globals.storeGlobalByIndex(idx, objects[objIdx]);
+		return objIdx;
+	}
 
 	def raiseTypeException(actIdx: int, expIdx: int) -> int {
 		def act = objects[actIdx];
@@ -348,6 +352,7 @@ export "fast:get_global"       = WasmRuntime.getGlobal;
 export "fast:get_global_by_index" = WasmRuntime.getGlobalByIndex;
 export "fast:get_nonlocal"     = WasmRuntime.getNonlocal;
 export "fast:set_global"       = WasmRuntime.setGlobal;
+export "fast:set_global_by_index" = WasmRuntime.setGlobalByIndex;
 export "fast:raise_type"       = WasmRuntime.raiseTypeException;
 export "fast:raise_string"     = WasmRuntime.raiseString;
 export "fast:raise_field"      = WasmRuntime.raiseMissingField;

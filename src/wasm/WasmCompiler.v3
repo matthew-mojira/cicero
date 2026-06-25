@@ -5,6 +5,7 @@ def GET_GLOBAL: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobal)
 def GET_GLOBAL_BY_INDEX: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobalByIndex));
 def GET_NONLOCAL: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.getNonlocal));
 def SET_GLOBAL: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.setGlobal));
+def SET_GLOBAL_BY_INDEX: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.setGlobalByIndex));
 def IS_TRUE: u32       = u32.view(CiWasmTarget.functionId(WasmRuntime.isTrue));
 def IS_FALSE: u32      = u32.view(CiWasmTarget.functionId(WasmRuntime.isFalse));
 def IS_FUNC: u32       = u32.view(CiWasmTarget.functionId(WasmRuntime.isFunc));
@@ -71,6 +72,7 @@ class WasmCompiler {
 	def params: Array<string>;
 	def var scratch0: u32;
 	def var scratch1: u32;
+	def argScratch: Array<u32> = Array.new(9); // reorder buffer for <=9-arity RTS calls
 
 	def var ciceroBytecode: Bytecode;
 
@@ -97,10 +99,24 @@ class WasmCompiler {
 			funcholes.puta(ciceroBytecode.funcPool);
 
 			scratch1 = addLocal("<scratch1>"); // appended last; doesn't shift the offsets above
+			for (i < 9) argScratch[i] = addLocal(Strings.format1("<arg%d>", i));
 
 
 			def br = BeyondRelooper.new(CFGraph.new(ciceroBytecode));
 			br.structuredControl();
+
+			if (CiceroOptions.traceWasmCompilation) {
+				System.puts("=== WasmCompiler: params=[");
+				for (i < params.length) {
+					if (i > 0) System.puts(", ");
+					System.puts(params[i]);
+				}
+				System.puts("]\n--- bytecode ---\n");
+				ciceroBytecode.inspect();
+				System.puts("--- wasm structure ---\n");
+				br.display();
+				System.puts("---\n");
+			}
 
 			compileWasmStructure(br.output);
 		} else {
@@ -194,10 +210,7 @@ class WasmCompiler {
 				emitCall(SET_RESULT);
 
 				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.putb(1); // exception
-				// not necessary, but pedantic
-				wasm.putb(WasmOp.RETURN.opcode); 
-				wasm.putb(WasmOp.UNREACHABLE.opcode); 
+				wasm.putb(1); // exception — falls through to function-level end
 			}
 
 		}
@@ -230,12 +243,12 @@ class WasmCompiler {
 				}
 				LOAD_LOCAL => {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
-					wasm.put_uleb32(operand + 1); // locals[0] is <receiver>
+					wasm.put_uleb32(u32.!(operand + 1)); // locals[0] is <receiver>
 					emitNullGuard(Exceptions.unboundLocal(ciceroBytecode.locals[operand]));
 				}
 				LOAD_LOCAL_SAFE => {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
-					wasm.put_uleb32(operand + 1); // locals[0] is <receiver>
+					wasm.put_uleb32(u32.!(operand + 1)); // locals[0] is <receiver>
 				}
 				LOAD_FIELD => {
 					wasm.putb(WasmOp.TEE_LOCAL.opcode);
@@ -250,11 +263,31 @@ class WasmCompiler {
 					wasm.put_sleb32(addString(ciceroBytecode.nonlocals[operand]));
 					emitCall(GET_NONLOCAL);
 				}
-				STORE_GLOBAL => ;
-				STORE_GLOBAL_BY_INDEX => ;
+				STORE_GLOBAL => {
+					// value is already pushed, but SET_GLOBAL(strIdx,objIdx) needs the
+					// string index first - stash value, push the string, reload it.
+					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					wasm.put_uleb32(scratch0);
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(operand);
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.put_uleb32(scratch0);
+					emitCall(SET_GLOBAL);
+					wasm.putb(WasmOp.DROP.opcode); // bytecode's STORE_GLOBAL doesn't push anything back
+				}
+				STORE_GLOBAL_BY_INDEX => {
+					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					wasm.put_uleb32(scratch0);
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(operand);
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.put_uleb32(scratch0);
+					emitCall(SET_GLOBAL_BY_INDEX);
+					wasm.putb(WasmOp.DROP.opcode);
+				}
 				STORE_LOCAL => {
 					wasm.putb(WasmOp.SET_LOCAL.opcode);
-					wasm.put_uleb32(operand + 1); // locals[0] is <receiver>
+					wasm.put_uleb32(u32.!(operand + 1)); // locals[0] is <receiver>
 				}
 				STORE_FIELD => {
 					// stack: [..., val_orig, obj, val_dupe]
@@ -271,7 +304,32 @@ class WasmCompiler {
 					emitCall(SET_FIELD);                  // [..., val_orig, setFieldResult]
 					emitFieldGuard(ciceroBytecode.stringPool[operand]);
 				}
-				CALL => ;
+				CALL => {
+					// fn and args are already on the stack in the order ASSERT_FUNC's
+					// preceding opcode and the arg-pushing instructions left them -
+					// matches callFuncN's (func, o0, o1, ...) param order directly.
+					if (operand <= 9) {
+						wasm.putb(WasmOp.CALL.opcode);
+						match (operand) {
+							0 => wasm.put_uleb32(CALL_FUNC0);
+							1 => wasm.put_uleb32(CALL_FUNC1);
+							2 => wasm.put_uleb32(CALL_FUNC2);
+							3 => wasm.put_uleb32(CALL_FUNC3);
+							4 => wasm.put_uleb32(CALL_FUNC4);
+							5 => wasm.put_uleb32(CALL_FUNC5);
+							6 => wasm.put_uleb32(CALL_FUNC6);
+							7 => wasm.put_uleb32(CALL_FUNC7);
+							8 => wasm.put_uleb32(CALL_FUNC8);
+							9 => wasm.put_uleb32(CALL_FUNC9);
+						}
+						emitResultGuard();
+					} else {
+						// same xargs-ordering complication as CREATE_LIST/CREATE_FUNC's
+						// >9 cases: args 9..N-1 are already stacked with N-1 on top, but
+						// PUSH_ARG needs them fed in forward order. Needs a scratch buffer.
+						System.error("compile error", "tier1->Wasm: CALL with >9 arguments unsupported");
+					}
+				}
 				JUMP => /* no implementation */ ;
 				JUMP_IF_FALSE => {
 					emitCall(IS_TRUE); // bytecode pops unconditionally; flag IS the condition, no value to preserve
@@ -284,12 +342,34 @@ class WasmCompiler {
 					wasmDup();
 					emitCall(IS_TRUE); // peek: value rides along unchanged either way
 				}
-				RAISE => ;
+				RAISE => {
+					// bespoke, not a named guard: both arms do real work (unlike
+					// emitTypeGuard's passthrough hot arm), and RAISE's flowLeaving
+					// is Unconditional (no fallthrough successor at all), so the
+					// result is just [exnObj] - no flag.
+					wasmDup();
+					emitCall(IS_STRING);
+					withIfElse<int, int>(fun {
+						emitCall(RAISE_STRING);
+					}, /* else */ fun {
+						emitPushConst(ClassObjects.classStr);
+						emitCall(RAISE_TYPE);
+					});
+				}
 				TRY => /* no implementation */ ;
 				CATCH => /* no implementation */ ;
-				ASSERT_FUNC => ;
-				CREATE_OBJECT => ;
-				CREATE_CLASS => ;
+				ASSERT_FUNC => {
+					emitTypeGuard(IS_FUNC, ClassObjects.classFunc);
+				}
+				CREATE_OBJECT => {
+					emitGuardedCall(IS_CLASS, ClassObjects.classClass, fun {}, CREATE_OBJECT);
+				}
+				CREATE_CLASS => {
+					emitGuardedCall(IS_CLASS, ClassObjects.classClass, fun {
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);
+					}, CREATE_CLASS);
+				}
 				CREATE_LIST => {
 					if (operand <= 9) {
 						wasm.putb(WasmOp.CALL.opcode);
@@ -312,12 +392,73 @@ class WasmCompiler {
 						System.error("compile error", "tier1->Wasm: CREATE_LIST with >9 elements unsupported");
 					}
 				}
-				CREATE_FUNC => ;
+				CREATE_FUNC => {
+					def funchole = ciceroBytecode.funcPool[operand];
+					var nonlocalCount = funchole.nonlocals.length;
+					for (i < funchole.nonlocals.length) {
+						if (Strings.equal(funchole.nonlocals[i], funchole.id)) nonlocalCount--;
+					}
+					if (nonlocalCount <= 9) {
+						// nonlocal values are already on the stack (forward order, last
+						// pushed on top), but createFuncN needs the funchole index FIRST.
+						// Buffer them through argScratch to reinsert the index underneath.
+						for (i = nonlocalCount - 1; i >= 0; i--) {
+							wasm.putb(WasmOp.SET_LOCAL.opcode);
+							wasm.put_uleb32(argScratch[i]);
+						}
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);
+						for (i < nonlocalCount) {
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.put_uleb32(argScratch[i]);
+						}
+						match (nonlocalCount) {
+							0 => emitCall(CREATE_FUNC0);
+							1 => emitCall(CREATE_FUNC1);
+							2 => emitCall(CREATE_FUNC2);
+							3 => emitCall(CREATE_FUNC3);
+							4 => emitCall(CREATE_FUNC4);
+							5 => emitCall(CREATE_FUNC5);
+							6 => emitCall(CREATE_FUNC6);
+							7 => emitCall(CREATE_FUNC7);
+							8 => emitCall(CREATE_FUNC8);
+							9 => emitCall(CREATE_FUNC9);
+						}
+					} else {
+						// same xargs-ordering complication as CREATE_LIST/CALL's >9 cases
+						System.error("compile error", "tier1->Wasm: CREATE_FUNC with >9 nonlocals unsupported");
+					}
+				}
 				POP => {
 					for (i < operand) wasm.putb(WasmOp.DROP.opcode);
 				}
-				DUPE => ;
-				SWAP => ;
+				DUPE => {
+					// only depths 0 (VarSet) and 1 (SetField) are ever emitted by BytecodeCompiler
+					match (operand) {
+						0 => wasmDup();
+						1 => {
+							// [..., a, b] -> [..., a, b, a]
+							wasm.putb(WasmOp.SET_LOCAL.opcode);
+							wasm.put_uleb32(scratch0); // pop b; [..., a]
+							wasm.putb(WasmOp.SET_LOCAL.opcode);
+							wasm.put_uleb32(scratch1); // pop a; [...]
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.put_uleb32(scratch1); // [..., a]
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.put_uleb32(scratch0); // [..., a, b]
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.put_uleb32(scratch1); // [..., a, b, a]
+						}
+						_ => System.error("compile error", "tier1->Wasm: DUPE at unsupported depth");
+					}
+				}
+				SWAP => {
+					// only depth 1 (SetField) is ever emitted by BytecodeCompiler
+					match (operand) {
+						1 => wasmSwap();
+						_ => System.error("compile error", "tier1->Wasm: SWAP at unsupported depth");
+					}
+				}
 				RETURN => /* no implementation */ ;
 			}
 
@@ -342,6 +483,19 @@ class WasmCompiler {
 		 * Those bona-fide locals will be emitted as part of the code's locals declaration.
 		 */
 		def wasm = wasm.extract();
+
+		if (CiceroOptions.traceWasmCompilation) {
+			System.puts(Strings.format1("--- raw bytes (%d) ---\n", wasm.length));
+			def sb = StringBuilder.new();
+			for (i < wasm.length) {
+				sb.putx(int.!(wasm[i]));
+				sb.putc(' ');
+				if ((i & 15) == 15) sb.ln();
+			}
+			sb.ln();
+			System.puts(sb.extract());
+			System.puts("---\n");
+		}
 
 		var sig: int;
 		match (params.length) {
@@ -461,6 +615,68 @@ class WasmCompiler {
 		});
 		wasm.putb(WasmOp.GET_LOCAL.opcode);
 		wasm.put_uleb32(scratch0);              // [resultValue, flag]
+	}
+
+	// For guards whose exception is signaled by the preceding RTS call's own
+	// bool return (true = exception), not a null check on the value itself
+	// (CALL, CREATE_OBJECT, CREATE_CLASS). Assumes that bool is on top of the
+	// stack already. The call always runs regardless of outcome, so there's
+	// no hot/cold split to exploit here - just reorder and invert.
+	def emitResultGuard() {
+		// stack: [exceptionBool]
+		emitCall(GET_RESULT);
+		wasmSwap();                              // [resultValue, exceptionBool]
+		wasm.putb(WasmOp.I32_EQZ.opcode);        // [resultValue, flag]  (invert: exceptionBool=1 -> flag=0, and vice versa)
+	}
+
+	// For the bytecode/relooper path: like emitNullGuard, but the check is a
+	// type test (checkFn returns true when the value IS the expected type,
+	// matching our flag convention directly - no inversion needed) and the
+	// exn is built from the bad value itself via RAISE_TYPE. No DROP needed
+	// in the cold arm: the still-present param IS RAISE_TYPE's first argument,
+	// not something being discarded and replaced.
+	def emitTypeGuard(checkFn: u32, expectedClass: Object) {
+		wasmDup();
+		emitCall(checkFn);
+		wasm.putb(WasmOp.TEE_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);              // stash flag, leave on stack; [value, flag]
+		withIfElse<int, int>(fun {
+			// hot path: correct type, param passes through unchanged
+		}, /* else */ fun {
+			emitPushConst(expectedClass);        // [value, expectedClassIdx]
+			emitCall(RAISE_TYPE);                // [exnObj]
+		});
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);              // [resultValue, flag]
+	}
+
+	// CREATE_OBJECT/CREATE_CLASS: a type check that, unlike emitTypeGuard,
+	// must skip the RTS call entirely on failure rather than always proceeding
+	// - calling rtsFn on a non-class value would be a hard Virgil cast failure,
+	// not a graceful Cicero exception. Both arms must agree on a single-value
+	// block type, so the flag (which differs in shape: a fixed 0 on the cold
+	// arm vs. emitResultGuard's computed value on the hot arm) is stashed into
+	// scratch1 as a side effect inside each arm rather than carried as part of
+	// the block's own result - avoids needing a multi-value (tuple) block type.
+	def emitGuardedCall(checkFn: u32, expectedClass: Object, pushExtraArgs: void -> void, rtsFn: u32) {
+		wasmDup();
+		emitCall(checkFn);
+		withIfElse<int, int>(fun {
+			pushExtraArgs();
+			emitCall(rtsFn);
+			emitResultGuard();                   // [resultValue, flag]
+			wasm.putb(WasmOp.SET_LOCAL.opcode);
+			wasm.put_uleb32(scratch1);            // [resultValue]
+		}, /* else */ fun {
+			emitPushConst(expectedClass);
+			emitCall(RAISE_TYPE);                 // [exnObj]
+			wasm.putb(WasmOp.I32_CONST.opcode);
+			wasm.putb(0);
+			wasm.putb(WasmOp.SET_LOCAL.opcode);
+			wasm.put_uleb32(scratch1);            // [exnObj]
+		});
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(scratch1);                // [resultValue, flag]
 	}
 
 	def emitAssertType(isFunc: u32, expectedClass: Object) {

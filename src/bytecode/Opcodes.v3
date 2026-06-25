@@ -10,7 +10,7 @@ enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
 	LOAD_NONLOCAL        (true, false, false),  // [1] index into the nonlocal variables
 	// Stores
 	STORE_GLOBAL         (true, false, false),  // [1] index into the string pool
-	STORE_GLOBAL_BY_INDEX(true, false, true),   // [1] index into the Globals.values vector
+	STORE_GLOBAL_BY_INDEX(true, false, false),  // [1] index into the Globals.values vector
 	STORE_LOCAL          (true, false, false),  // [0] index into the runtime locals
 	STORE_FIELD          (true, false, true),   // [2] index into the string pool
 	// Control flow
