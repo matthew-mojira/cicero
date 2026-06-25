@@ -49,6 +49,18 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 
 component CodeObjects {
 
+	/*
+	 * Holds code objects whose compilation is delayed.
+	 * We can't compile these during early startup (like in `fromCiceroMethod`) 
+	 * because command-line arguments haven't been parsed yet. Once the VM 
+	 * fully finishes booting and confirms we are running in TIER 1, it will 
+	 * loop through this vector and compile them all at once.
+	 */
+	def MaybeCompileLater: Vector<(CodeObject, Array<string>)> = Vector.new();
+	def CompileUncompiledCodeObject(t: (CodeObject, Array<string>)){
+		t.0.compile(t.1);
+	}
+
 	/* Create a CodeObject from a Virgil function */
 	def fromVirgil(func: Range<Object> -> Result) -> CodeObject {
 		def code = CodeObject.new(null); // XXX null

@@ -19,6 +19,9 @@ def main(args: Array<string>) -> int {
 	if (tier < 0 || tier > 1) {
 		System.error("argument error", Strings.format1("unrecognized tier: %d", tier));
 		return 1;
+	} else if (tier == 1){
+		// Compile deferred code objects now that the execution tier is known to be bytecode(TIER=1).
+		CodeObjects.MaybeCompileLater.apply(CodeObjects.CompileUncompiledCodeObject);
 	}
 
 	def frame = FrameObjects.newTopFrame();
