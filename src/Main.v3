@@ -122,11 +122,11 @@ def main(args: Array<string>) -> int {
 	}
 
 	if (CiceroOptions.profileStaticOpcodePairCounts) {
-		ProfileOpcodePairCounts.printStaticStats();
+		ProfileStaticOpcodePairCounts.printStats();
 	}
 
-	if (CiceroOptions.profileDynamicOpcodePairCounts) {
-		ProfileOpcodePairCounts.printDynamicStats();
+	if (CiceroOptions.profileDynamicOpcodePair) {
+		ProfileDynamicOpcodePair.printStats();
 	}
 
 	if (CiceroOptions.profileJumpOutcomes) {

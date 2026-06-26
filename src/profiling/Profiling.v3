@@ -7,19 +7,14 @@ component Profiling {
 	*/
 	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
 	def dynamicOpExecutionTimes: Array<long> = Array.new(Opcodes.numOpcodes);
-	/* 
-	    `totalDispatchCost` tracks total dispatch cost(cost to get from the end of one instruction to the start of another)
-	    totalDispatchCost -> sum(frame.dispatchCost for all executed frames) i.e dispatchCost doesn't carry timing across frame.eval() boundaries.
-	*/
-	var totalDispatchCost: long = 0L;
-
     /* 
         Matrix array is used to keep track of (row, col) op pair counts
         For e.g. staticOpcodePairCounts[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
             would track counts of LOAD_LOCAL followed by LOAD_CONST
     */
-	def staticOpcodePairCounts: Array<Array<int>> = ProfileOpcodePairCounts.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
-	def dynamicOpcodePairCounts: Array<Array<int>>= ProfileOpcodePairCounts.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
+	def staticOpcodePairCounts: Array<Array<int>> = ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
+	def dynamicOpcodePairCounts: Array<Array<int>>= ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
+	def dynamicOpcodePairDispatchCost: Array<Array<long>>= ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 
 	def funcCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
 	def funcObjectCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
@@ -53,5 +48,13 @@ component ProfilingHelpers {
         var a: Array<byte> = Array<byte>.new(19); // 19 is the maximum possible length of a +ve double
         def l = Longs.renderDecimal(value, a, 0);
         return Strings.format1("%s", Arrays.range(a, 0, l));
+    }
+
+    def createMatrix<T>(rows: int, cols: int) -> Array<Array<T>>{
+        var matrix = Array<Array<T>>.new(rows);
+        for (i=0; i < rows; i++) {
+            matrix[i] = Array<T>.new(cols);
+        }
+        return matrix;
     }
 }

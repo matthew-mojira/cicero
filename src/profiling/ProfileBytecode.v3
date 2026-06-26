@@ -13,10 +13,6 @@ component ProfileBytecode{
 		Profiling.dynamicOpExecutionTimes[opTag] += executionTime;
     }
 
-    def profileDispatchCost(dispatchStartTime: int, dispatchEndTime: int){
-		Profiling.totalDispatchCost += (dispatchEndTime - dispatchStartTime);
-    }
-
     def printStaticStats(){
 		/* Output Cicero's profiling */
 		var i = 0;
@@ -47,6 +43,5 @@ component ProfileBytecode{
 		}
 		System.puts(Strings.format1("# Total dynamic bytecodes: %d\n", total));
 		System.puts(Strings.format1("# Total op execution time: %s nanoseconds\n", ProfilingHelpers.longToString(totalExecTime)));
-		System.puts(Strings.format1("# Total dispatch cost: %s nanoseconds\n", ProfilingHelpers.longToString(Profiling.totalDispatchCost)));
     }
 }

@@ -241,7 +241,7 @@ class BytecodeCompiler {
 			ProfileBytecode.profileStaticCount(op.tag);
 		}
 		if (CiceroOptions.profileStaticOpcodePairCounts) {
-			ProfileOpcodePairCounts.profileStatic(recentInstr, op);
+			ProfileStaticOpcodePairCounts.profile(recentInstr, op);
 		}
 		recentInstr = Maybe.Just(op);
 	}

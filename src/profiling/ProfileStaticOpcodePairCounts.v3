@@ -1,0 +1,29 @@
+component ProfileStaticOpcodePairCounts{
+
+    def profile(maybeOpOne: Maybe<Opcode>, opTwo: Opcode){
+        match (maybeOpOne) {
+            Nothing => {}
+            Just(opOne) => {
+                Profiling.staticOpcodePairCounts[opOne.tag][opTwo.tag]++;
+            }
+        }
+    }
+
+    def printStats(){
+        System.puts("# Omitting opcode pairs seen zero times during compilation\n");
+        System.puts("opcode, next opcode, counts\n");
+        for (row=0; row < Opcodes.numOpcodes; row++){
+            for (col=0; col < Opcodes.numOpcodes; col++){
+                def counts = Profiling.staticOpcodePairCounts[row][col];
+                if (counts != 0){
+                    System.puts(
+                        Strings.format3("%s, %s, %d\n",
+                                Opcodes.map[row].name,
+                            Opcodes.map[col].name,
+                            counts)
+                    );
+                }
+            }
+        }
+    }
+}
