@@ -195,12 +195,24 @@ class WasmCompiler {
 					compileWasmStructure(body);
 				});
 			}
-			If(bodyFallthrough, bodyBranch) => {
-				withIfElse<void, int>(fun {
-					compileWasmStructure(bodyFallthrough);
-				}, /* else */ fun {
-					compileWasmStructure(bodyBranch);
-				});
+			If(peeksValue, bodyFallthrough, bodyBranch) => {
+				if (peeksValue) {
+					// *_PEEK: the tested value is the if's input. The branch (else)
+					// arm keeps it; the fall-through arm drops it (matches the VM's
+					// pop-on-fall-through). Both arms then produce the result value.
+					withIfElse<int, int>(fun {
+						wasm.putb(WasmOp.DROP.opcode);
+						compileWasmStructure(bodyFallthrough);
+					}, /* else */ fun {
+						compileWasmStructure(bodyBranch);
+					});
+				} else {
+					withIfElse<void, int>(fun {
+						compileWasmStructure(bodyFallthrough);
+					}, /* else */ fun {
+						compileWasmStructure(bodyBranch);
+					});
+				}
 			}
 			Br(depth) => {
 				wasm.putb(WasmOp.BR.opcode);
@@ -225,7 +237,7 @@ class WasmCompiler {
 				wasm.putb(WasmOp.I32_CONST.opcode);
 				wasm.putb(1); // exception — falls through to function-level end
 			}
-
+			Fallthrough => /* emit nothing: control falls through to the next structure */ ;
 		}
 	}
 

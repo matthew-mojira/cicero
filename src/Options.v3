@@ -14,7 +14,7 @@ component CiceroOptions {
 	def traceFunctionCalls = false;
 	def traceBytecodeCompilation = false;
 	def traceBytecodeEvaluation = false;
-	def traceWasmCompilation = true;
+	def traceWasmCompilation = false;
 
 	/* testing */
 	def testBeyondRelooper = false;
