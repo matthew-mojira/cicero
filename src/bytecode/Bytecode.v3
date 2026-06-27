@@ -50,7 +50,7 @@ class Bytecode(instrs:     Array<byte>,
 
 	def optimize() {
 		/* Create CFG regardless of locals */
-		def cfg = CFGraph.new(this);
+		def cfg = CFGraph.new(this, false);
 
 		/* local variable optimization */
 		if (locals.length > 0) {

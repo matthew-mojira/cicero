@@ -18,8 +18,14 @@ class BeyondRelooper(g: CFGraph) {
 		g.computeMergeNodes();
 		g.computeLoopHeaders();
 
+		// The outermost frame is the function-level exception handler block. It is
+		// not a relooper branch target (with exception edges ignored, nothing
+		// branches to exceptionSentinel); it exists so depth counting stays
+		// consistent with the handler block that WasmCompiler emits around this
+		// body, which exception guards br to. The handler block and its
+		// exception-return epilogue are emitted by WasmCompiler, not here.
 		def outerCtx: List<ContainingSyntax> = List.new(ContainingSyntax.BlockFollowedBy(exceptionSentinel), null);
-		output = WasmStructure.Seq(WasmStructure.Block(doTree(g.head, outerCtx)), WasmStructure.ReturnWithException);
+		output = doTree(g.head, outerCtx);
 	}
 
 	def flowLeaving(cfgNode: BasicBlock) -> ControlFlow {

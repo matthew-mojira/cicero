@@ -31,7 +31,7 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 						bytecode.optimize();
 					}
 					if (CiceroOptions.testBeyondRelooper) {
-						def br = BeyondRelooper.new(CFGraph.new(bytecode));
+						def br = BeyondRelooper.new(CFGraph.new(bytecode, false));
 						br.structuredControl();
 						br.display();
 					}

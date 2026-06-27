@@ -102,7 +102,7 @@ class WasmCompiler {
 			for (i < 9) argScratch[i] = addLocal(Strings.format1("<arg%d>", i));
 
 
-			def br = BeyondRelooper.new(CFGraph.new(ciceroBytecode));
+			def br = BeyondRelooper.new(CFGraph.new(ciceroBytecode, true));
 			br.structuredControl();
 
 			if (CiceroOptions.traceWasmCompilation) {
@@ -118,7 +118,20 @@ class WasmCompiler {
 				System.puts("---\n");
 			}
 
-			compileWasmStructure(br.output);
+			// FUNCTION BODY — wrap the relooper body in the function-level handler
+			// block. Fallible ops inside emit inline guards that br here carrying
+			// the exn; normal paths return directly via ReturnWithValue. Mirrors
+			// the AST tier below.
+			withBlock<void, int>(fun {
+				handlerStack.push(blockDepth);
+				compileWasmStructure(br.output);
+				handlerStack.pop();
+			});
+
+			// exception epilogue: a guard's br left the exn on the stack
+			emitCall(SET_RESULT);
+			wasm.putb(WasmOp.I32_CONST.opcode);
+			wasm.putb(1); // exception
 		} else {
 			Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
 			scratch1 = addLocal("<scratch>");
@@ -234,7 +247,7 @@ class WasmCompiler {
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(operand);
 					emitCall(GET_GLOBAL);
-					emitNullGuard(Exceptions.unboundGlobal(ciceroBytecode.stringPool[operand]));
+					emitRaiseIfNull(Exceptions.unboundGlobal(ciceroBytecode.stringPool[operand]));
 				}
 				LOAD_GLOBAL_BY_INDEX => {
 					wasm.putb(WasmOp.I32_CONST.opcode);
@@ -244,7 +257,7 @@ class WasmCompiler {
 				LOAD_LOCAL => {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.put_uleb32(u32.!(operand + 1)); // locals[0] is <receiver>
-					emitNullGuard(Exceptions.unboundLocal(ciceroBytecode.locals[operand]));
+					emitRaiseIfNull(Exceptions.unboundLocal(ciceroBytecode.locals[operand]));
 				}
 				LOAD_LOCAL_SAFE => {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
@@ -256,7 +269,8 @@ class WasmCompiler {
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(operand);            // [obj, fieldStrIdx]
 					emitCall(GET_FIELD);                  // [fieldValueOrNull]
-					emitFieldGuard(ciceroBytecode.stringPool[operand]);
+					wasmDup();                            // [fieldValueOrNull, fieldValueOrNull]
+					emitAssertField(ciceroBytecode.stringPool[operand]); // null -> br handler; else [fieldValue]
 				}
 				LOAD_NONLOCAL => {
 					wasm.putb(WasmOp.I32_CONST.opcode);
@@ -302,7 +316,8 @@ class WasmCompiler {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.put_uleb32(scratch0);          // [..., val_orig, obj, fieldStrIdx, val]
 					emitCall(SET_FIELD);                  // [..., val_orig, setFieldResult]
-					emitFieldGuard(ciceroBytecode.stringPool[operand]);
+					wasmDup();                            // [..., val_orig, setFieldResult, setFieldResult]
+					emitAssertField(ciceroBytecode.stringPool[operand]); // null -> br handler; else [..., val_orig, val]
 				}
 				CALL => {
 					// fn and args are already on the stack in the order ASSERT_FUNC's
@@ -322,7 +337,7 @@ class WasmCompiler {
 							8 => wasm.put_uleb32(CALL_FUNC8);
 							9 => wasm.put_uleb32(CALL_FUNC9);
 						}
-						emitResultGuard();
+						emitInterpretResult(); // excBool: true -> GET_RESULT(exn) + br handler; else GET_RESULT(value)
 					} else {
 						// same xargs-ordering complication as CREATE_LIST/CREATE_FUNC's
 						// >9 cases: args 9..N-1 are already stacked with N-1 on top, but
@@ -343,10 +358,9 @@ class WasmCompiler {
 					emitCall(IS_TRUE); // peek: value rides along unchanged either way
 				}
 				RAISE => {
-					// bespoke, not a named guard: both arms do real work (unlike
-					// emitTypeGuard's passthrough hot arm), and RAISE's flowLeaving
-					// is Unconditional (no fallthrough successor at all), so the
-					// result is just [exnObj] - no flag.
+					// build the exn from the value on top (a string raises it directly;
+					// a non-string raises a type error), then br to the handler. RAISE
+					// has no fallthrough successor, so control never returns here.
 					wasmDup();
 					emitCall(IS_STRING);
 					withIfElse<int, int>(fun {
@@ -355,20 +369,27 @@ class WasmCompiler {
 						emitPushConst(ClassObjects.classStr);
 						emitCall(RAISE_TYPE);
 					});
+					emitJumpToExnHandler(); // [exnObj] -> br handler
 				}
 				TRY => /* no implementation */ ;
 				CATCH => /* no implementation */ ;
 				ASSERT_FUNC => {
-					emitTypeGuard(IS_FUNC, ClassObjects.classFunc);
+					emitAssertType(IS_FUNC, ClassObjects.classFunc); // non-func -> br handler; else value passes through
 				}
 				CREATE_OBJECT => {
-					emitGuardedCall(IS_CLASS, ClassObjects.classClass, fun {}, CREATE_OBJECT);
+					// createObject hard-casts its arg to a class, so assert first: a
+					// non-class brs to the handler before CREATE_OBJECT ever runs.
+					emitAssertType(IS_CLASS, ClassObjects.classClass);
+					emitCall(CREATE_OBJECT);
+					emitInterpretResult();
 				}
 				CREATE_CLASS => {
-					emitGuardedCall(IS_CLASS, ClassObjects.classClass, fun {
-						wasm.putb(WasmOp.I32_CONST.opcode);
-						wasm.put_sleb32(operand);
-					}, CREATE_CLASS);
+					// createClass checks its superclass arg internally and signals a
+					// type exception via its result bool, so no pre-assert is needed.
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(operand);
+					emitCall(CREATE_CLASS);
+					emitInterpretResult();
 				}
 				CREATE_LIST => {
 					if (operand <= 9) {
@@ -571,112 +592,6 @@ class WasmCompiler {
 			emitPushConst(ExnObjects.fromWasm(exn));
 			emitJumpToExnHandler();
 		});
-	}
-
-	// For the bytecode/relooper path: assumes a value is already on top of the
-	// stack. Turns [value] into [value, 1] if non-null, or [exn, 0] if null,
-	// matching the convention relooper's If expects (1 = no exception / take
-	// fallthrough, 0 = exception / take branch). The non-null case is the hot
-	// path: it costs nothing beyond the check itself, since the param passes
-	// straight through an empty true-arm; exception construction only runs on
-	// the (rare) null arm.
-	def emitNullGuard(exn: string) {
-		wasmDup();
-		emitCall(IS_NOT_NULL);
-		wasm.putb(WasmOp.TEE_LOCAL.opcode);
-		wasm.put_uleb32(scratch0);              // stash flag, leave on stack; [value, flag]
-		withIfElse<int, int>(fun {
-			// hot path: non-null, param passes through unchanged
-		}, /* else */ fun {
-			wasm.putb(WasmOp.DROP.opcode);
-			emitPushConst(ExnObjects.fromWasm(exn));
-		});
-		wasm.putb(WasmOp.GET_LOCAL.opcode);
-		wasm.put_uleb32(scratch0);              // [resultValue, flag]
-	}
-
-	// Same shape as emitNullGuard, but for guards whose exception depends on a
-	// runtime value (the field's object) rather than a precomputable constant.
-	// Assumes the caller already stashed that object in scratch1 (e.g. via
-	// TEE_LOCAL before GET_FIELD/SET_FIELD).
-	def emitFieldGuard(field: string) {
-		wasmDup();
-		emitCall(IS_NOT_NULL);
-		wasm.putb(WasmOp.TEE_LOCAL.opcode);
-		wasm.put_uleb32(scratch0);              // stash flag, leave on stack; [value, flag]
-		withIfElse<int, int>(fun {
-			// hot path: field present, param passes through unchanged
-		}, /* else */ fun {
-			wasm.putb(WasmOp.DROP.opcode);
-			wasm.putb(WasmOp.GET_LOCAL.opcode);
-			wasm.put_uleb32(scratch1);          // reload the object stashed by the caller
-			emitPushString(field);
-			emitCall(RAISE_FIELD);              // dynamically builds the real exn from obj+field
-		});
-		wasm.putb(WasmOp.GET_LOCAL.opcode);
-		wasm.put_uleb32(scratch0);              // [resultValue, flag]
-	}
-
-	// For guards whose exception is signaled by the preceding RTS call's own
-	// bool return (true = exception), not a null check on the value itself
-	// (CALL, CREATE_OBJECT, CREATE_CLASS). Assumes that bool is on top of the
-	// stack already. The call always runs regardless of outcome, so there's
-	// no hot/cold split to exploit here - just reorder and invert.
-	def emitResultGuard() {
-		// stack: [exceptionBool]
-		emitCall(GET_RESULT);
-		wasmSwap();                              // [resultValue, exceptionBool]
-		wasm.putb(WasmOp.I32_EQZ.opcode);        // [resultValue, flag]  (invert: exceptionBool=1 -> flag=0, and vice versa)
-	}
-
-	// For the bytecode/relooper path: like emitNullGuard, but the check is a
-	// type test (checkFn returns true when the value IS the expected type,
-	// matching our flag convention directly - no inversion needed) and the
-	// exn is built from the bad value itself via RAISE_TYPE. No DROP needed
-	// in the cold arm: the still-present param IS RAISE_TYPE's first argument,
-	// not something being discarded and replaced.
-	def emitTypeGuard(checkFn: u32, expectedClass: Object) {
-		wasmDup();
-		emitCall(checkFn);
-		wasm.putb(WasmOp.TEE_LOCAL.opcode);
-		wasm.put_uleb32(scratch0);              // stash flag, leave on stack; [value, flag]
-		withIfElse<int, int>(fun {
-			// hot path: correct type, param passes through unchanged
-		}, /* else */ fun {
-			emitPushConst(expectedClass);        // [value, expectedClassIdx]
-			emitCall(RAISE_TYPE);                // [exnObj]
-		});
-		wasm.putb(WasmOp.GET_LOCAL.opcode);
-		wasm.put_uleb32(scratch0);              // [resultValue, flag]
-	}
-
-	// CREATE_OBJECT/CREATE_CLASS: a type check that, unlike emitTypeGuard,
-	// must skip the RTS call entirely on failure rather than always proceeding
-	// - calling rtsFn on a non-class value would be a hard Virgil cast failure,
-	// not a graceful Cicero exception. Both arms must agree on a single-value
-	// block type, so the flag (which differs in shape: a fixed 0 on the cold
-	// arm vs. emitResultGuard's computed value on the hot arm) is stashed into
-	// scratch1 as a side effect inside each arm rather than carried as part of
-	// the block's own result - avoids needing a multi-value (tuple) block type.
-	def emitGuardedCall(checkFn: u32, expectedClass: Object, pushExtraArgs: void -> void, rtsFn: u32) {
-		wasmDup();
-		emitCall(checkFn);
-		withIfElse<int, int>(fun {
-			pushExtraArgs();
-			emitCall(rtsFn);
-			emitResultGuard();                   // [resultValue, flag]
-			wasm.putb(WasmOp.SET_LOCAL.opcode);
-			wasm.put_uleb32(scratch1);            // [resultValue]
-		}, /* else */ fun {
-			emitPushConst(expectedClass);
-			emitCall(RAISE_TYPE);                 // [exnObj]
-			wasm.putb(WasmOp.I32_CONST.opcode);
-			wasm.putb(0);
-			wasm.putb(WasmOp.SET_LOCAL.opcode);
-			wasm.put_uleb32(scratch1);            // [exnObj]
-		});
-		wasm.putb(WasmOp.GET_LOCAL.opcode);
-		wasm.put_uleb32(scratch1);                // [resultValue, flag]
 	}
 
 	def emitAssertType(isFunc: u32, expectedClass: Object) {
