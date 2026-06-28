@@ -1,3 +1,7 @@
+component TopLevelName {
+	def name: string = "\"repl\"";
+}
+
 def main(args: Array<string>) -> int {
 	def files = CLOptions.parse(args);
 
@@ -23,7 +27,7 @@ def main(args: Array<string>) -> int {
 		// Compile deferred code objects now that the execution tier is known to be bytecode(TIER=1).
 		CodeObjects.MaybeCompileLater.apply(CodeObjects.CompileUncompiledCodeObject);
 	}
-	CodeObjects.MaybeCompileLater = null;
+	CodeObjects.MaybeCompileLater.clear();
 
 	def frame = FrameObjects.newTopFrame();
 	loadCore(frame);
@@ -42,7 +46,7 @@ def main(args: Array<string>) -> int {
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
 				// compile to tier1 bytecode
-				if (CLOptions.TIER.get() > 0) expr.compile([]);
+				if (CLOptions.TIER.get() > 0) expr.compile([], TopLevelName.name);
 
 				if (!CLOptions.DO_NOT_EVALUATE.get()) {
 					// evaluate
@@ -89,7 +93,7 @@ def main(args: Array<string>) -> int {
 
 				for (expr in exprs) {
 					// compile to tier1 bytecode
-					if (CLOptions.TIER.get() > 0) expr.compile([]);
+					if (CLOptions.TIER.get() > 0) expr.compile([], TopLevelName.name);
 
 					// evaluate
 					frame.evalCode(expr);
@@ -115,6 +119,10 @@ def main(args: Array<string>) -> int {
 
 	if (CiceroOptions.profileStaticBytecode) {
 		ProfileBytecode.printStaticStats();
+	}
+
+	if (CiceroOptions.profileCompilationTimes) {
+		ProfileCompilationTimes.printStats();
 	}
 
 	if (CiceroOptions.profileDynamicBytecode) {
@@ -168,7 +176,7 @@ def loadCore(frame: FrameObject) {
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
  		if (CLOptions.TIER.get() > 0) {
- 			expr.compile([]);
+ 			expr.compile([], TopLevelName.name);
 		}
 		frame.evalCode(expr);
 	}

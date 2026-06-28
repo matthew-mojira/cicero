@@ -22,7 +22,6 @@ component ProfileJumpOutcomes{
             }
         } else {
             def ln = b.sourceMap[instrIndex >> 2].beginLine;
-            /* TODO */
             def jumpData = ProfiledJumpData.new(op_name, ln, 0, 0, funcMetadata);
             if (jump_taken) jumpData.jumpsTaken++; else jumpData.jumpsNotTaken++;
             Profiling.jumpOpcodeOutcomes[key] = jumpData;

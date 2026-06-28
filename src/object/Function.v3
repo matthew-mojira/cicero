@@ -92,7 +92,7 @@ component FuncObjects {
 			 * because command-line arguments haven't been properly parsed yet when this runs,
 			 * the compilation for the code object, if we are in TIER 1, is delayed.
 			*/
-			CodeObjects.MaybeCompileLater.put((fn.body, fn.params));
+			CodeObjects.MaybeCompileLater.put(fn);
 
 			return newFO(id, Arrays.deleteAt(fn.params, 0), [], fn.body, fn.metadata);
 		} else {

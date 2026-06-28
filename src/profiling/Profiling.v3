@@ -1,5 +1,10 @@
 component Profiling {
 	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+	/* 
+	    mapping from bytecode id to compilation time(in nanoseconds)
+	    and associated label with the bytecode(e.g. function name, "repl")
+	*/
+	def compilationTimes: HashMap<int, CompilationTimeData> = HashMap.new(int.!<int>, int.==);
 
 	/* 
 	    `dynamicCounts` tracks op execution counts at runtime.
