@@ -6,6 +6,7 @@ component CiceroOptions {
 	def useLazyMethods: bool = true;
 	def optimizeBytecode: bool = true;
 	def useOptimizedGlobals: bool = true;
+	def useExceptionTables: bool = true;
 
 	/* tracing */
 	def traceFunctionCalls = false;

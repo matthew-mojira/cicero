@@ -10,6 +10,7 @@ class BytecodeCompiler {
 	def constants:  Vector<Object> = Vector.new();
 	def locals:     Vector<string> = Vector.new();
 	def nonlocals:  Vector<string> = Vector.new();
+	def exceptions: Vector<(int, int, int)> = Vector.new();
 
 	/* Source mappings */
 	def source: Vector<FileRange>  = Vector.new();
@@ -44,6 +45,7 @@ class BytecodeCompiler {
 				constants.extract(),
 				classholes.extract(),
 				funcholes.extract(),
+				exceptions.extract(),
 				source.extract());
 		return b;
 	}
@@ -137,15 +139,27 @@ class BytecodeCompiler {
 				writeInstr(loc, Opcode.RAISE);
 			}
 			Catch(try, id, b, catch) => {
-				def hole1 = writeInstrDeferOperand(loc, Opcode.TRY);
+				var startPc: int;
+				var hole1: int;
+
+				if (CiceroOptions.useExceptionTables) {
+					startPc = writer.pos;
+				} else {
+					hole1 = writeInstrDeferOperand(loc, Opcode.TRY);
+				}
 
 				compileAST(try, stackDepth);
 
-				writeInstr(loc, Opcode.CATCH);
+				if (CiceroOptions.useExceptionTables) {
+					exceptions.put((startPc, writer.pos + 4, stackDepth));
+				} else {
+					writeInstr(loc, Opcode.CATCH);
+				}
 
 				def hole2 = writeInstrDeferOperand(loc, Opcode.JUMP);
 
-				fillHole(hole1, writer.pos - hole1 - 4);
+				if (!CiceroOptions.useExceptionTables)
+					fillHole(hole1, writer.pos - hole1 - 4);
 
 				match (b.data) {
 					Local  => writeInstrWithOperand(loc, Opcode.STORE_LOCAL, addLocal(id));
