@@ -76,6 +76,14 @@ class WasmCompiler {
 
 	def var ciceroBytecode: Bytecode;
 
+	// When compiling a try/catch sub-region (compileRegion), regionMode makes the
+	// relooper's implicit return (ReturnWithValue) leave the region's value on the
+	// stack and fall through, instead of returning from the whole function.
+	// regionOffset is the absolute bytecode pc of the current region's first
+	// instruction, so TRY operands (which are absolute) map to the sliced bytecode.
+	def var regionMode = false;
+	def var regionOffset = 0;
+
 	new(ast: AST, params) {
 		addConst(null); // XXX what is this?
 
@@ -224,12 +232,17 @@ class WasmCompiler {
 				compileWasmStructure(snd);
 			}
 			ReturnWithValue => {
-				emitCall(SET_RESULT);
+				if (regionMode) {
+					// inside a try/catch region: the value is already on the stack;
+					// leave it as the region's result and fall through.
+				} else {
+					emitCall(SET_RESULT);
 
-				wasm.putb(WasmOp.I32_CONST.opcode);
-				wasm.putb(0); // OK
-				wasm.putb(WasmOp.RETURN.opcode); 
-				wasm.putb(WasmOp.UNREACHABLE.opcode); 
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.putb(0); // OK
+					wasm.putb(WasmOp.RETURN.opcode);
+					wasm.putb(WasmOp.UNREACHABLE.opcode);
+				}
 			}
 			ReturnWithException => {
 				emitCall(SET_RESULT);
@@ -239,6 +252,30 @@ class WasmCompiler {
 			}
 			Fallthrough => /* emit nothing: control falls through to the next structure */ ;
 		}
+	}
+
+	// Compiles a contiguous bytecode sub-range [absStart, absEnd) as a self-
+	// contained region: reloops the slice and compiles it in regionMode, leaving
+	// the region's value on the stack. Used for the try and catch arms of a
+	// Catch, which are dropped from the main relooping (the catch is unreachable
+	// once exception edges are ignored). Pools are shared with the full bytecode,
+	// so operands (pool indices) resolve unchanged.
+	def compileRegion(absStart: int, absEnd: int) {
+		def slice = Bytecode.new(
+			Ranges.dup(ciceroBytecode.instrs[absStart ... absEnd]),
+			ciceroBytecode.locals, ciceroBytecode.nonlocals, ciceroBytecode.params,
+			ciceroBytecode.stringPool, ciceroBytecode.constPool, ciceroBytecode.classPool,
+			ciceroBytecode.funcPool,
+			Ranges.dup(ciceroBytecode.sourceMap[(absStart >> 2) ... (absEnd >> 2)]));
+		def br = BeyondRelooper.new(CFGraph.new(slice, true));
+		br.structuredControl();
+
+		def savedOffset = regionOffset, savedMode = regionMode;
+		regionOffset = absStart;
+		regionMode = true;
+		compileWasmStructure(br.output);
+		regionOffset = savedOffset;
+		regionMode = savedMode;
 	}
 
 	def compileActions(bb: BasicBlock) {
@@ -383,8 +420,34 @@ class WasmCompiler {
 					});
 					emitJumpToExnHandler(); // [exnObj] -> br handler
 				}
-				TRY => /* no implementation */ ;
-				CATCH => /* no implementation */ ;
+				TRY => {
+					// Open the outer (try/catch value) and handler (exn) blocks. The
+					// try-region that follows is compiled inline by the main relooper
+					// as normal control flow; its guards br to this handler. Both
+					// blocks are closed at the matching CATCH. Manual open/close
+					// (rather than withBlock) because the span crosses basic blocks.
+					def sig = CiWasmTarget.functionTypeId<void, int>();
+					wasm.putb(WasmOp.BLOCK.opcode); wasm.put_sleb32(sig); blockDepth++; // outer
+					wasm.putb(WasmOp.BLOCK.opcode); wasm.put_sleb32(sig); blockDepth++; // handler
+					handlerStack.push(blockDepth);
+				}
+				CATCH => {
+					// Layout: ... CATCH JUMP[->E] H:<catch-region> E:...  The handler
+					// (catch entry H) is 8 bytes after CATCH; the normal-completion
+					// JUMP at CATCH+4 targets E (end of catch). The try value is on
+					// the stack now; br it past the catch, close the handler, then
+					// emit the catch region (dropped from the main relooping).
+					def catchAbs = regionOffset + bb.startPc + pc;
+					def handlerAbs = catchAbs + 8;
+					def jumpIns = Ref<Instruction>.at(ciceroBytecode.instrs, catchAbs + 4);
+					def endAbs = handlerAbs + i24.view(jumpIns.operand);
+
+					wasm.putb(WasmOp.BR.opcode); wasm.put_uleb32(1);    // normal: br outer
+					wasm.putb(WasmOp.END.opcode); blockDepth--;          // close handler
+					handlerStack.pop();
+					compileRegion(handlerAbs, endAbs);                   // STORE exn + catch body
+					wasm.putb(WasmOp.END.opcode); blockDepth--;          // close outer
+				}
 				ASSERT_FUNC => {
 					emitAssertType(IS_FUNC, ClassObjects.classFunc); // non-func -> br handler; else value passes through
 				}
