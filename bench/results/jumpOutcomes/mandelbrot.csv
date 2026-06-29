@@ -1,0 +1,15 @@
+Line Number,Bytecode ID,Instruction Index,Function Identifier,Function Label,Instruction,Jumps taken,Jumps not taken
+19,40,20,106,Mandelbrot._verify_result,JUMP_IF_FALSE,0,1
+37,41,1072,107,Mandelbrot._mandelbrot,JUMP,500,0
+37,41,84,107,Mandelbrot._mandelbrot,JUMP_IF_FALSE_PEEK,1,500
+41,41,188,107,Mandelbrot._mandelbrot,JUMP_IF_FALSE_PEEK,500,250000
+41,41,1032,107,Mandelbrot._mandelbrot,JUMP,250000,0
+50,41,380,107,Mandelbrot._mandelbrot,JUMP_IF_FALSE_PEEK,250000,8195047
+50,41,356,107,Mandelbrot._mandelbrot,JUMP_IF_FALSE_PEEK,99855,8345192
+50,41,668,107,Mandelbrot._mandelbrot,JUMP,8195047,0
+57,41,628,107,Mandelbrot._mandelbrot,JUMP,99855,0
+57,41,596,107,Mandelbrot._mandelbrot,JUMP_IF_FALSE,8095192,99855
+68,41,836,107,Mandelbrot._mandelbrot,JUMP,31000,0
+68,41,772,107,Mandelbrot._mandelbrot,JUMP_IF_FALSE,219000,31000
+73,41,876,107,Mandelbrot._mandelbrot,JUMP_IF_FALSE,218500,500
+73,41,988,107,Mandelbrot._mandelbrot,JUMP,500,0

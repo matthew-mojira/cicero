@@ -1,6 +1,6 @@
 component ProfileDynamicOpcodePair{
 
-    def profile(maybeOpOne: Maybe<Opcode>, opTwo: Opcode, dispatchCost: int){
+    def profile(maybeOpOne: Maybe<Opcode>, opTwo: Opcode, dispatchCost: long){
         match (maybeOpOne) {
             Nothing => {}
             Just(opOne) => {

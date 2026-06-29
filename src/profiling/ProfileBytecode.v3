@@ -4,12 +4,12 @@ component ProfileBytecode{
 		Profiling.staticCounts[opTag]++;
     }
 
-    def profileDynamicCountAndExecutionTime(opTag: int, executionTime: int){
+    def profileDynamicCountAndExecutionTime(opTag: int, executionTime: long){
 		Profiling.dynamicCounts[opTag]++;
 		Profiling.dynamicOpExecutionTimes[opTag] += executionTime;
     }
 
-    def profileDynamicExecutionTime(opTag: int, executionTime: int){
+    def profileDynamicExecutionTime(opTag: int, executionTime: long){
 		Profiling.dynamicOpExecutionTimes[opTag] += executionTime;
     }
 
@@ -30,18 +30,15 @@ component ProfileBytecode{
     def printDynamicStats(){
 		var i = 0;
 		var total = 0;
-		var totalExecTime = 0L;
 		System.puts("# DYNAMIC COUNTS:\n");
 		System.puts("instruction, counts, total execution time(ns)\n");
 		for (op in Opcode.set.all) {
 			def execTime : long = Profiling.dynamicOpExecutionTimes[i];
 			def count = Profiling.dynamicCounts[i++];
 			total += count;
-			totalExecTime += execTime;
 
 			System.puts(Strings.format3("%s, %d, %s\n", op.name, count, ProfilingHelpers.longToString(execTime)));
 		}
 		System.puts(Strings.format1("# Total dynamic bytecodes: %d\n", total));
-		System.puts(Strings.format1("# Total op execution time: %s nanoseconds\n", ProfilingHelpers.longToString(totalExecTime)));
     }
 }

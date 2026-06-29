@@ -16,7 +16,7 @@ component ProfileCompilationTimes {
                 "# Code label is the function/method name. Exceptions: if it is the top-level code, it is \"repl\", classes field and init have their labels as well\n",
                 TopLevelName.name));
         var replTotalCompilationTime = 0L;
-        System.puts("Bytecode ID, Label, Inclusive Compilation Time(μs)\n");
+        System.puts("Bytecode ID, Label, Inclusive Compilation Time(ns)\n");
         for (list = Maps.keyList(Profiling.compilationTimes); list != null; list = list.tail) {
             def bytecodeId: int = list.head;
             def data: CompilationTimeData = Profiling.compilationTimes[bytecodeId];
@@ -24,6 +24,5 @@ component ProfileCompilationTimes {
             
             if (data.label == TopLevelName.name) replTotalCompilationTime += data.time;
         }
-        System.puts(Strings.format1("# Total compilation time: %s ns\n", ProfilingHelpers.longToString(replTotalCompilationTime)));
     }
 }
