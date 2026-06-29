@@ -24,10 +24,10 @@ class BytecodeCompiler {
 		locals.puta(params);
 		if (CiceroOptions.traceBytecodeCompilation) {
 			System.puts("== Beginning Bytecode compilation ==\n");
-			compileAST(ast);
+			compileAST(ast, 0);
 			System.puts("== Done compiling! ==\n");
 		} else {
-			compileAST(ast);
+			compileAST(ast, 0);
 		}
 	}
 
@@ -36,19 +36,19 @@ class BytecodeCompiler {
 	 */
 	def extract() -> Bytecode {
 		def bytecode = writer.extract();
-		def b = Bytecode.new(bytecode, 
-				locals.extract(), 
+		def b = Bytecode.new(bytecode,
+				locals.extract(),
 				nonlocals.extract(),
 				params,
-				strings.extract(), 
-				constants.extract(), 
-				classholes.extract(), 
-				funcholes.extract(), 
+				strings.extract(),
+				constants.extract(),
+				classholes.extract(),
+				funcholes.extract(),
 				source.extract());
 		return b;
 	}
 
-	def compileAST(ast: AST) {
+	def compileAST(ast: AST, stackDepth: int) {
 		def loc = ast.loc;
 		match (ast.data) {
 			Lit(obj) => writeInstrWithOperand(loc, Opcode.LOAD_CONST, addConstant(obj));
@@ -58,7 +58,7 @@ class BytecodeCompiler {
 				Nonlocal => writeInstrWithOperand(loc, Opcode.LOAD_NONLOCAL, addNonlocal(id));
 			}
 			VarSet(id, mode, code) => {
-				compileAST(code);
+				compileAST(code, stackDepth);
 				writeInstrWithOperand(loc, Opcode.DUPE, 0);
 				match (mode.data) {
 					Local  => writeInstrWithOperand(loc, Opcode.STORE_LOCAL, addLocal(id));
@@ -67,32 +67,32 @@ class BytecodeCompiler {
 				}
 			}
 			And(left, right) => {
-				compileAST(left);
+				compileAST(left, stackDepth);
 				def hole = writeInstrDeferOperand(loc, Opcode.JUMP_IF_FALSE_PEEK);
-				compileAST(right);
+				compileAST(right, stackDepth);
 				fillHole(hole, writer.pos - hole - 4);
 			}
 			Or(left, right) => {
-				compileAST(left);
+				compileAST(left, stackDepth);
 				def hole = writeInstrDeferOperand(loc, Opcode.JUMP_IF_TRUE_PEEK);
-				compileAST(right);
+				compileAST(right, stackDepth);
 				fillHole(hole, writer.pos - hole - 4);
 			}
 			Apply(tgt, args) => {
-				compileAST(tgt);
+				compileAST(tgt, stackDepth);
 				writeInstr(loc, Opcode.ASSERT_FUNC);
-				for (arg in args) {
-					compileAST(arg);
+				for (i < args.length) {
+					compileAST(args[i], stackDepth + 1 + i);
 				}
 				writeInstrWithOperand(loc, Opcode.CALL, args.length);
 			}
 			If(cond, tru, fals) => {
-				compileAST(cond);
+				compileAST(cond, stackDepth);
 				def hole1 = writeInstrDeferOperand(loc, Opcode.JUMP_IF_FALSE);
-				compileAST(tru);
+				compileAST(tru, stackDepth);
 				def hole2 = writeInstrDeferOperand(loc, Opcode.JUMP);
 				fillHole(hole1, writer.pos - hole1 - 4);
-				compileAST(fals);
+				compileAST(fals, stackDepth);
 				fillHole(hole2, writer.pos - hole2 - 4);
 			}
 			Cond(cases) => {
@@ -101,9 +101,9 @@ class BytecodeCompiler {
 					def cond = c.0;
 					def body = c.1;
 
-					compileAST(cond);
+					compileAST(cond, stackDepth);
 					def hole = writeInstrDeferOperand(loc, Opcode.JUMP_IF_FALSE);
-					compileAST(body);
+					compileAST(body, stackDepth);
 					def end = writeInstrDeferOperand(loc, Opcode.JUMP);
 					ends.put(end);
 					fillHole(hole, writer.pos - hole - 4);
@@ -121,7 +121,7 @@ class BytecodeCompiler {
 			Func(id, params, code, nonlocals) => {
 				// XXX compiling code
 				code.compile(params);
-			
+
 				for (i < nonlocals.length) {
 					def nonlocal = nonlocals[i];
 					if (Strings.equal(nonlocal, id))
@@ -133,53 +133,53 @@ class BytecodeCompiler {
 				writeInstrWithOperand(loc, Opcode.CREATE_FUNC, addFunchole(ASTData.Func.!(ast.data)));
 			}
 			Raise(exn) => {
-				compileAST(exn);
+				compileAST(exn, stackDepth);
 				writeInstr(loc, Opcode.RAISE);
 			}
 			Catch(try, id, b, catch) => {
 				def hole1 = writeInstrDeferOperand(loc, Opcode.TRY);
 
-				compileAST(try);
+				compileAST(try, stackDepth);
 
 				writeInstr(loc, Opcode.CATCH);
 
 				def hole2 = writeInstrDeferOperand(loc, Opcode.JUMP);
 
 				fillHole(hole1, writer.pos - hole1 - 4);
-					
+
 				match (b.data) {
 					Local  => writeInstrWithOperand(loc, Opcode.STORE_LOCAL, addLocal(id));
 					Global => writeInstrWithOperand(loc, Opcode.STORE_GLOBAL, addString(id));
 					_ => System.error("compile error", "unimplemented case: Nonlocal");
 				}
 
-				compileAST(catch);
+				compileAST(catch, stackDepth);
 				fillHole(hole2, writer.pos - hole2 - 4);
 			}
 			Begin(exprs) => {
 				for (i < exprs.length - 1) {
-					compileAST(exprs[i]);
+					compileAST(exprs[i], stackDepth);
 					writeInstrWithOperand(loc, Opcode.POP, 1);
 				}
-				compileAST(exprs[exprs.length - 1]);
+				compileAST(exprs[exprs.length - 1], stackDepth);
 			}
 			While(cond, body) => {
 				def head = writer.pos;
-				compileAST(cond);
+				compileAST(cond, stackDepth);
 				def hole1 = writeInstrDeferOperand(loc, Opcode.JUMP_IF_FALSE_PEEK);
-				compileAST(body);
+				compileAST(body, stackDepth);
 				writeInstrWithOperand(loc, Opcode.POP, 1);
 				def hole2 = writeInstrDeferOperand(loc, Opcode.JUMP);
 				fillHole(hole2, head - writer.pos);
 				fillHole(hole1, writer.pos - hole1 - 4);
 			}
 			GetField(id, obj) => {
-				compileAST(obj);
+				compileAST(obj, stackDepth);
 				writeInstrWithOperand(loc, Opcode.LOAD_FIELD, addString(id));
 			}
 			SetField(id, obj, val) => {
-				compileAST(obj);
-				compileAST(val);
+				compileAST(obj, stackDepth);
+				compileAST(val, stackDepth + 1);
 				writeInstrWithOperand(loc, Opcode.SWAP, 1);
 				writeInstrWithOperand(loc, Opcode.DUPE, 1);
 				writeInstrWithOperand(loc, Opcode.STORE_FIELD, addString(id));
@@ -191,7 +191,7 @@ class BytecodeCompiler {
 						def idx = constants.length;
 						writeInstrWithOperand(loc, Opcode.LOAD_CONST, addConstant(ClassObjects.classBase));
 					}
-					Just(expr) => compileAST(expr);
+					Just(expr) => compileAST(expr, stackDepth);
 				}
 				var init2: CodeObject;
 				match (init) {
@@ -208,24 +208,24 @@ class BytecodeCompiler {
 				writeInstrWithOperand(loc, Opcode.CREATE_CLASS, idx);
 			}
 			New(obj) => {
-				compileAST(obj);
+				compileAST(obj, stackDepth);
 				writeInstr(loc, Opcode.CREATE_OBJECT);
 			}
 			List(elems) => {
-				for (elem in elems)
-					compileAST(elem);
+				for (i < elems.length)
+					compileAST(elems[i], stackDepth + i);
 				writeInstrWithOperand(loc, Opcode.CREATE_LIST, elems.length);
 			}
 			Return(expr) => {
-				compileAST(expr);
+				compileAST(expr, stackDepth);
 				writeInstr(loc, Opcode.RETURN);
 			}
 		}
-		
+
 	}
 
-	/* writer wrappers */	
-	
+	/* writer wrappers */
+
 	def writeInstr(loc: FileRange, op: Opcode) {
 		writeInstrWithOperand(loc, op, 0);
 	}
