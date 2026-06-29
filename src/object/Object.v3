@@ -117,7 +117,7 @@ class Object {
 		if (!CiceroOptions.useLazyMethods) {
 			for (clazz in classes.copy()) {
 				for (func in clazz.classMethods) {
-					def m = MethodObject.new(this, func.id, func.params, func.code);
+					def m = MethodObject.new(this, func.id, func.params, func.code, func.metadata);
 					fields.storeKey(func.id, m);
 				}
 			}
@@ -165,7 +165,7 @@ class Object {
 			for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
 				for (func in clazz.classMethods) {
 					if (Strings.equal(func.id, name)) {
-						def m = MethodObject.new(this, func.id, func.params, func.code);
+						def m = MethodObject.new(this, func.id, func.params, func.code, func.metadata);
 						fields.storeKey(name, m);
 						return m;
 					}

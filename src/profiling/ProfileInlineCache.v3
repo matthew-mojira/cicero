@@ -1,0 +1,45 @@
+// Used during `profileInlineCaching`
+class ProfiledInlineCacheData #unboxed {
+	def instruction: string;
+	def lineNumber: int;
+	var hits: int;
+	var misses: int;
+	def associatedFunc: FunctionProfileMetadata;
+
+	new(instruction, lineNumber, hits, misses, associatedFunc) {}
+}
+
+component ProfileInlineCache{
+
+    def profileCacheHit(b: Bytecode, instrIndex: int){
+        def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);
+        // The key will always exist because a new ProfiledInlineCacheData instance gets created on initial bytecode execution which will be a miss
+        var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+        data.hits++; // increase hits
+    }
+
+    def profileCacheMiss(b: Bytecode, instrIndex: int, op_name: string, funcMetadata: FunctionProfileMetadata){
+        def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);
+        if (Profiling.inlineCacheHitMissCounts.has(key)){
+            var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+            data.misses++; // increase misses
+        } else {
+            def ln = b.sourceMap[instrIndex >> 2].beginLine;
+            Profiling.inlineCacheHitMissCounts[key] = ProfiledInlineCacheData.new(op_name, ln, 0, 1, funcMetadata);
+        }
+    }
+
+    def printCacheStats(){
+        System.puts("Line Number, Bytecode ID, Instruction Index, Function identifier, Function label, Instruction, Hits, Misses\n");
+        for (list = Maps.keyList(Profiling.inlineCacheHitMissCounts); list != null; list = list.tail) {
+            def key : long = list.head;
+            def bytecodeObjectId : int = int.!(key >> 32);
+            def instrIndex : int = int.!(key & 0x00000000FFFFFFFF);
+            def data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+
+            System.puts(Strings.format3("%d, %d, %d, ", data.lineNumber, bytecodeObjectId, instrIndex));
+            System.puts(Strings.format2("%d, %s, ", data.associatedFunc.identifier, data.associatedFunc.label));
+            System.puts(Strings.format3("%s, %d, %d\n", data.instruction, data.hits, data.misses));
+		}
+    }
+}

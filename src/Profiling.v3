@@ -1,4 +1,0 @@
-component Profiling {
-	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
-	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
-}

@@ -13,6 +13,9 @@ layout Instruction {
 	=4;
 }
 
+/* Each bytecode object created is assigned a unique id */
+var current_bytecode_id : int = 0;
+
 /* The bytecode object, which contains the instructions (as bytes) and all the
  * locals and pools that the instructions will reference
  */
@@ -38,6 +41,7 @@ class Bytecode(instrs:     Array<byte>,
 		 */
                 sourceMap:  Array<FileRange>)
 {
+	var id: int;
 	def var cache: Array<Pair<ClassObject, int>>;
 
 	new() {
@@ -46,6 +50,7 @@ class Bytecode(instrs:     Array<byte>,
 			for (i < cache.length)
 				cache[i] = Pair.new(null, -1);
 		}
+		id = current_bytecode_id++;
 	}
 
 	def optimize() {

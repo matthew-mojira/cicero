@@ -1,0 +1,31 @@
+component ProfileDynamicOpcodePair{
+
+    def profile(maybeOpOne: Maybe<Opcode>, opTwo: Opcode, dispatchCost: long){
+        match (maybeOpOne) {
+            Nothing => {}
+            Just(opOne) => {
+                Profiling.dynamicOpcodePairCounts[opOne.tag][opTwo.tag]++;
+                Profiling.dynamicOpcodePairDispatchCost[opOne.tag][opTwo.tag] += dispatchCost;
+            }
+        }
+    }
+
+    def printStats(){
+        System.puts("# Omitting opcode pairs executed zero times\n");
+        System.puts("# Opcode pairs are only tracked if they are in the same bytecode frame\n");
+        System.puts("opcode, next opcode, counts, total dispatch cost, avg dispatch cost\n");
+        var totalDispatchCost=0L;
+        for (row=0; row < Opcodes.numOpcodes; row++){
+            for (col=0; col < Opcodes.numOpcodes; col++){
+                def counts : int = Profiling.dynamicOpcodePairCounts[row][col];
+                def dispatchCost : long = Profiling.dynamicOpcodePairDispatchCost[row][col];
+                totalDispatchCost += dispatchCost;
+                if (counts != 0){
+                    System.puts(Strings.format2("%s, %s, ", Opcodes.map[row].name, Opcodes.map[col].name));
+                    System.puts(Strings.format3("%d, %s, %d\n", counts, ProfilingHelpers.longToString(dispatchCost), dispatchCost / counts));
+                }
+            }
+        }
+		System.puts(Strings.format1("# Total dispatch cost: %s nanoseconds\n", ProfilingHelpers.longToString(totalDispatchCost)));
+    }
+}

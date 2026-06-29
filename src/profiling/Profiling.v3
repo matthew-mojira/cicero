@@ -1,0 +1,65 @@
+component Profiling {
+	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+	/* 
+	    mapping from bytecode id to compilation time(in nanoseconds)
+	    and associated label with the bytecode(e.g. function name, "repl")
+	*/
+	def compilationTimes: HashMap<int, CompilationTimeData> = HashMap.new(int.!<int>, int.==);
+
+	/* 
+	    `dynamicCounts` tracks op execution counts at runtime.
+	    `dynamicOpExecutionTimes` tracks op's total execution runtime cost
+	*/
+	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+	def dynamicOpExecutionTimes: Array<long> = Array.new(Opcodes.numOpcodes);
+    /* 
+        Matrix array is used to keep track of (row, col) op pair counts
+        For e.g. staticOpcodePairCounts[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
+            would track counts of LOAD_LOCAL followed by LOAD_CONST
+    */
+	def staticOpcodePairCounts: Array<Array<int>> = ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
+	def dynamicOpcodePairCounts: Array<Array<int>>= ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
+	def dynamicOpcodePairDispatchCost: Array<Array<long>>= ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
+
+	def funcCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
+	def funcObjectCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
+	/* 
+	 	Each user defined function/method as well as built in function/methods are given an unique identifier id before run time.
+		key : long = (caller.identifier_id << 32) | callee.identifier_id;
+	*/
+	def callerCalleeData: HashMap<long, ProfiledCallerCalleeData> = HashMap.new(int.view<long>, long.==);
+	/* 
+	 	Note: Each bytecode object has its own set of bytecode instrs. So, we need to keep track for all bytecode objects.
+		The key is a combination of the bytecode object id (int : 32 bit) 
+			and the instruction index (int as well) where inline caching is performed, currently LOAD_FIELD
+		So, key : long = (bytecode.id << 32) | instr_index;
+	*/
+	def inlineCacheHitMissCounts: HashMap<long, ProfiledInlineCacheData> = HashMap.new(int.view<long>, long.==);
+	/* 
+		key : long = (bytecode.id << 32) | instr_index;
+	*/
+	def jumpOpcodeOutcomes: HashMap<long, ProfiledJumpData> = HashMap.new(int.view<long>, long.==);
+}
+
+component ProfilingHelpers {
+	/* 
+		Combines two ints to form a long
+	*/
+	def constructLong(one: int, two: int) -> long{
+		return long.!(one) << 32 | long.!(two);
+	}
+
+    def longToString(value: long) -> string{
+        var a: Array<byte> = Array<byte>.new(19); // 19 is the maximum possible length of a +ve double
+        def l = Longs.renderDecimal(value, a, 0);
+        return Strings.format1("%s", Arrays.range(a, 0, l));
+    }
+
+    def createMatrix<T>(rows: int, cols: int) -> Array<Array<T>>{
+        var matrix = Array<Array<T>>.new(rows);
+        for (i=0; i < rows; i++) {
+            matrix[i] = Array<T>.new(cols);
+        }
+        return matrix;
+    }
+}

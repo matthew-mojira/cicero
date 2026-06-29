@@ -1,0 +1,7 @@
+Line Number,Bytecode ID,Instruction Index,Function Identifier,Function Label,Instruction,Jumps taken,Jumps not taken
+1,31,12,100,not,JUMP,5040,0
+1,31,4,100,not,JUMP_IF_FALSE,3620,5040
+18,40,60,104,Permute._permute,JUMP_IF_FALSE,5040,3620
+18,40,272,104,Permute._permute,JUMP,3620,0
+23,40,156,104,Permute._permute,JUMP_IF_FALSE_PEEK,3620,5039
+23,40,268,104,Permute._permute,JUMP,5039,0

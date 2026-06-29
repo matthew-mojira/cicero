@@ -17,12 +17,24 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 	def var code: Code;
 
 	/* Compile code */
-	def compile(params: Array<string>) {
+	def compile(params: Array<string>, label: string) {
 		match (code) {
 			Virgil   => System.error("compile error", "attempting to compile Virgil code to bytecode");
 			Bytecode => System.error("compile error", "compiling what has already been compiled to bytecode");
 			AST(ast) => {
+				var startTime: int;
+
+				if (CiceroOptions.profileCompilationTimes) {
+					startTime = System.ticksUs();
+				}
+
 				def bytecode = BytecodeCompiler.new(ast, params).extract();
+
+				if (CiceroOptions.profileCompilationTimes) {
+					def endTime = System.ticksUs();
+					ProfileCompilationTimes.profile(bytecode.id, label, endTime - startTime);
+				}
+
 				if (CiceroOptions.optimizeBytecode) {
 					bytecode.optimize();
 				}
@@ -53,6 +65,18 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 }
 
 component CodeObjects {
+
+	/*
+	 * Holds ASTData.Func whose compilation is delayed.
+	 * We can't compile these during early startup (like in `fromCiceroMethod`) 
+	 * because command-line arguments haven't been parsed yet. Once the VM 
+	 * fully finishes booting and confirms we are running in TIER 1, it will 
+	 * loop through this vector and compile them all at once.
+	 */
+	var MaybeCompileLater: Vector<ASTData.Func> = Vector.new();
+	def CompileUncompiledCodeObject(fn: ASTData.Func){
+		fn.body.compile(fn.params, fn.metadata.label);
+	}
 
 	/* Create a CodeObject from a Virgil function */
 	def fromVirgil(func: Range<Object> -> Result) -> CodeObject {

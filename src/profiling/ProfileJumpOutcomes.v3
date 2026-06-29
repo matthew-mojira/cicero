@@ -1,0 +1,45 @@
+// Used during `profileJumpOutcomes`
+class ProfiledJumpData #unboxed {
+	def instruction: string;
+	def lineNumber: int;
+	var jumpsTaken: int;
+	var jumpsNotTaken: int;
+	def associatedFunc: FunctionProfileMetadata;
+
+	new(instruction, lineNumber, jumpsTaken, jumpsNotTaken, associatedFunc) {}
+}
+
+component ProfileJumpOutcomes{
+
+    def profileJump(b: Bytecode, instrIndex: int, op_name: string, jump_taken: bool, funcMetadata: FunctionProfileMetadata){
+        def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);
+        if (Profiling.jumpOpcodeOutcomes.has(key)){
+            var data : ProfiledJumpData = Profiling.jumpOpcodeOutcomes[key];
+            if (jump_taken){
+                data.jumpsTaken++; // increase jump taken
+            } else {
+                data.jumpsNotTaken++; // increase jump not taken
+            }
+        } else {
+            def ln = b.sourceMap[instrIndex >> 2].beginLine;
+            def jumpData = ProfiledJumpData.new(op_name, ln, 0, 0, funcMetadata);
+            if (jump_taken) jumpData.jumpsTaken++; else jumpData.jumpsNotTaken++;
+            Profiling.jumpOpcodeOutcomes[key] = jumpData;
+        }
+    }
+
+    def printJumpStats(){
+        System.puts("Line Number, Bytecode ID, Instruction Index, Function Identifier, Function Label, Instruction, Jumps taken, Jumps not taken\n");
+        for (list = Maps.keyList(Profiling.jumpOpcodeOutcomes); list != null; list = list.tail) {
+            def key : long = list.head;
+            def bytecodeObjectId : int = int.!(key >> 32);
+            def instrIndex : int = int.!(key & 0x00000000FFFFFFFF);
+            def data: ProfiledJumpData = Profiling.jumpOpcodeOutcomes[key];
+            
+            System.puts(Strings.format3("%d, %d, %d, ", data.lineNumber, bytecodeObjectId, instrIndex));
+            System.puts(Strings.format2("%d, %s, ", data.associatedFunc.identifier, data.associatedFunc.label));
+            System.puts(Strings.format3("%s, %d, %d\n", data.instruction, data.jumpsTaken, data.jumpsNotTaken));
+		}
+    }
+
+}

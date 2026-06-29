@@ -1,0 +1,21 @@
+Line Number,Bytecode ID,Instruction Index,Function Identifier,Function Label,Instruction,Jumps taken,Jumps not taken
+26,42,264,104,Ball.bounce,JUMP,358,0
+26,42,168,104,Ball.bounce,JUMP_IF_FALSE,4642,358
+32,42,380,104,Ball.bounce,JUMP,354,0
+32,42,300,104,Ball.bounce,JUMP_IF_FALSE,4646,354
+38,42,416,104,Ball.bounce,JUMP_IF_FALSE,4645,355
+38,42,512,104,Ball.bounce,JUMP,355,0
+44,42,548,104,Ball.bounce,JUMP_IF_FALSE,4641,359
+44,42,628,104,Ball.bounce,JUMP,359,0
+66,44,104,105,Bounce.benchmark,JUMP_IF_FALSE_PEEK,1,100
+66,44,160,105,Bounce.benchmark,JUMP,100,0
+72,44,308,105,Bounce.benchmark,JUMP,100,0
+72,44,204,105,Bounce.benchmark,JUMP_IF_FALSE_PEEK,1,100
+81,44,352,105,Bounce.benchmark,JUMP_IF_FALSE_PEEK,1,50
+81,44,560,105,Bounce.benchmark,JUMP,50,0
+84,44,404,105,Bounce.benchmark,JUMP_IF_FALSE_PEEK,50,5000
+84,44,524,105,Bounce.benchmark,JUMP,5000,0
+86,44,484,105,Bounce.benchmark,JUMP,1331,0
+86,44,456,105,Bounce.benchmark,JUMP_IF_FALSE,3669,1331
+109,50,28,108,custom_abs,JUMP,713,0
+109,50,20,108,custom_abs,JUMP_IF_FALSE,713,713

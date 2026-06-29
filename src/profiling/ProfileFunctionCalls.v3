@@ -1,0 +1,57 @@
+class FunctionProfileMetadata {
+    def identifier: int;
+    def label: string;
+    new(identifier, label) {}
+}
+
+// Used during both `profileFunctionCalls` and `profileFuncObjectCalls`
+class ProfiledFuncData #unboxed {
+	def label: string;
+	var calls: int;
+	var inclusiveTime: int; // μs
+	var exclusiveTime: int; // μs
+
+	new(label, calls, inclusiveTime, exclusiveTime) {}
+}
+
+component ProfileFunctionCalls{
+
+    private def profile(dict: HashMap<int, ProfiledFuncData>, key: int, name: string, inclusiveTime: int, exclusiveTime: int){
+        if (dict.has(key)){
+            def data: ProfiledFuncData = dict[key];
+            data.calls += 1; // increment calls
+            data.inclusiveTime += inclusiveTime;
+            data.exclusiveTime += exclusiveTime;
+        } else {
+            dict[key] = ProfiledFuncData.new(name, 1, inclusiveTime, exclusiveTime);
+        }
+    }
+
+    def profileFunctionCall(metadata: FunctionProfileMetadata, inclusiveTime: int, exclusiveTime: int){
+        profile(Profiling.funcCallCounts, metadata.identifier, metadata.label, inclusiveTime, exclusiveTime);
+    }
+
+    def profileFunctionObjectCall(uid: int, label: string, inclusiveTime: int, exclusiveTime: int){
+        profile(Profiling.funcObjectCallCounts, uid, label, inclusiveTime, exclusiveTime);
+    }
+
+    private def printStats(dict: HashMap<int, ProfiledFuncData>){
+        for (list = Maps.keyList(dict); list != null; list = list.tail) {
+            def key: int = list.head;
+            def data: ProfiledFuncData = dict[key];
+
+            System.puts(Strings.format3("%d, %s, %d, ", key, data.label, data.calls));
+            System.puts(Strings.format2("%d, %d\n", data.inclusiveTime, data.exclusiveTime));
+        }
+    }
+
+    def printFuncCallsStats(){
+        System.puts("Function identifier, Function label, calls, inclusive execution time(μs), exclusive execution time(μs)\n");
+        printStats(Profiling.funcCallCounts);
+    }
+
+    def printFuncObjectCallsStats(){
+        System.puts("Function object uid, Function label, calls, inclusive execution time(μs), exclusive execution time(μs)\n");
+        printStats(Profiling.funcObjectCallCounts);
+    }
+}

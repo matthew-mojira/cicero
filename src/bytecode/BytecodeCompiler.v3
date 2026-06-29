@@ -11,6 +11,8 @@ class BytecodeCompiler {
 	def locals:     Vector<string> = Vector.new();
 	def nonlocals:  Vector<string> = Vector.new();
 
+	/* most recently compiled (written) instruction */
+	var recentInstr: Maybe<Opcode> = Maybe.Nothing;
 	/* Source mappings */
 	def source: Vector<FileRange>  = Vector.new();
 
@@ -118,9 +120,9 @@ class BytecodeCompiler {
 					fillHole(hole, writer.pos - hole - 4);
 				}
 			}
-			Func(id, params, code, nonlocals) => {
+			Func(id, params, code, nonlocals, metadata) => {
 				// XXX compiling code
-				code.compile(params);
+				code.compile(params, metadata.label);
 			
 				for (i < nonlocals.length) {
 					def nonlocal = nonlocals[i];
@@ -197,12 +199,12 @@ class BytecodeCompiler {
 				match (init) {
 					Nothing => ;
 					Just(code) => {
-						code.compile(["self"]);
+						code.compile(["self"], Strings.format1("%s.init", id));
 						init2 = code;
 					}
 				}
 				// XXX compiling subcode
-				for (field in fields) field.1.compile([]);
+				for (field in fields) field.1.compile([], Strings.format2("%s.%s", id, field.0));
 				//                                   XXX
 				def idx = addClasshole(ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc)));
 				writeInstrWithOperand(loc, Opcode.CREATE_CLASS, idx);
@@ -235,9 +237,13 @@ class BytecodeCompiler {
 		writer.putbbb(operand, operand >> 8, operand >> 16);
 
 		source.put(loc);
-		if (CiceroOptions.profileBytecode) {
-			Profiling.staticCounts[op.tag]++;
+		if (CiceroOptions.profileStaticBytecode) {
+			ProfileBytecode.profileStaticCount(op.tag);
 		}
+		if (CiceroOptions.profileStaticOpcodePairCounts) {
+			ProfileStaticOpcodePairCounts.profile(recentInstr, op);
+		}
+		recentInstr = Maybe.Just(op);
 	}
 
 	def writeInstrDeferOperand(loc: FileRange, op: Opcode) -> int {
@@ -308,7 +314,7 @@ class BytecodeCompiler {
 
 def funcToFunc(f: ASTData.Func) -> FuncObject {
 	// XXX compilation here
-	f.body.compile(Arrays.prepend("self", f.params));
+	f.body.compile(Arrays.prepend("self", f.params), f.metadata.label);
 	// XXX empty map = no variable capture for a method
-	return FuncObjects.newFO(f.id, f.params, [], f.body);
+	return FuncObjects.newFO(f.id, f.params, [], f.body, f.metadata);
 }

@@ -1,3 +1,7 @@
+component TopLevelName {
+	def name: string = "\"repl\"";
+}
+
 def main(args: Array<string>) -> int {
 	def files = CLOptions.parse(args);
 
@@ -19,7 +23,11 @@ def main(args: Array<string>) -> int {
 	if (tier < 0 || tier > 1) {
 		System.error("argument error", Strings.format1("unrecognized tier: %d", tier));
 		return 1;
+	} else if (tier == 1){
+		// Compile deferred code objects now that the execution tier is known to be bytecode(TIER=1).
+		CodeObjects.MaybeCompileLater.apply(CodeObjects.CompileUncompiledCodeObject);
 	}
+	CodeObjects.MaybeCompileLater.clear();
 
 	def frame = FrameObjects.newTopFrame();
 	loadCore(frame);
@@ -38,7 +46,7 @@ def main(args: Array<string>) -> int {
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
 				// compile to tier1 bytecode
-				if (CLOptions.TIER.get() > 0) expr.compile([]);
+				if (CLOptions.TIER.get() > 0) expr.compile([], TopLevelName.name);
 
 				if (!CLOptions.DO_NOT_EVALUATE.get()) {
 					// evaluate
@@ -85,7 +93,7 @@ def main(args: Array<string>) -> int {
 
 				for (expr in exprs) {
 					// compile to tier1 bytecode
-					if (CLOptions.TIER.get() > 0) expr.compile([]);
+					if (CLOptions.TIER.get() > 0) expr.compile([], TopLevelName.name);
 
 					// evaluate
 					frame.evalCode(expr);
@@ -109,26 +117,46 @@ def main(args: Array<string>) -> int {
 		}
 	}
 
-	if (CiceroOptions.profileBytecode) {
-		/* Output Cicero's profiling */
-		var i = 0;
-		var total = 0;
-		System.puts("\nSTATIC COUNTS:\n");
-		for (op in Opcode.set.all) {
-			def count = Profiling.staticCounts[i++];
-			total += count;
-			System.puts(Strings.format2("%s: %d\n", op.name, count));
+	if (CiceroOptions.profileStaticBytecode) {
+		ProfileBytecode.printStaticStats();
+	}
+
+	if (CiceroOptions.profileCompilationTimes) {
+		ProfileCompilationTimes.printStats();
+	}
+
+	if (CiceroOptions.profileDynamicBytecode) {
+		ProfileBytecode.printDynamicStats();
+	}
+
+	if (CiceroOptions.profileStaticOpcodePairCounts) {
+		ProfileStaticOpcodePairCounts.printStats();
+	}
+
+	if (CiceroOptions.profileDynamicOpcodePair) {
+		ProfileDynamicOpcodePair.printStats();
+	}
+
+	if (CiceroOptions.profileJumpOutcomes) {
+		ProfileJumpOutcomes.printJumpStats();
+	}
+
+	if (CiceroOptions.profileInlineCaching) {
+		if (CLOptions.CACHE.get()) {
+			ProfileInlineCache.printCacheStats();
 		}
-		System.puts(Strings.format1("Total static bytecodes: %d\n", total));
-		System.puts("\nDYNAMIC COUNTS:\n");
-		i = 0;
-		total = 0;
-		for (op in Opcode.set.all) {
-			def count = Profiling.dynamicCounts[i++];
-			total += count;
-			System.puts(Strings.format2("%s: %d\n", op.name, count));
-		}
-		System.puts(Strings.format1("Total dynamic bytecodes: %d\n", total));
+	}
+
+	if (CiceroOptions.profileFunctionCalls) {
+		ProfileFunctionCalls.printFuncCallsStats();
+	}
+
+	if (CiceroOptions.profileFuncObjectCalls) {
+		ProfileFunctionCalls.printFuncObjectCallsStats();
+	}
+
+	if (CiceroOptions.profileCallerCalleePairs) {
+		ProfileCallerCalleePairs.printStats();
 	}
 
 	// experimental results
@@ -148,7 +176,7 @@ def loadCore(frame: FrameObject) {
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
  		if (CLOptions.TIER.get() > 0) {
- 			expr.compile([]);
+ 			expr.compile([], TopLevelName.name);
 		}
 		frame.evalCode(expr);
 	}

@@ -130,6 +130,11 @@ component FrameObjects {
 		var frame: FrameObject;
 		if (CLOptions.TIER.get() > 0) {
 			frame = BytecodeFrame.new(null, null, null, null);
+
+			if (CiceroOptions.profileInlineCaching || CiceroOptions.profileJumpOutcomes || CiceroOptions.profileCallerCalleePairs){
+				// Treat the top frame as an implicit "main" function for profiling reasons
+				BytecodeFrame.!(frame).associatedFunc = FunctionProfileMetadata.new(FuncObjects.mainProgramId, "\"repl\"");
+			}
 		} else {
 			frame = ASTFrame.new(null, null, null, null);
 		}

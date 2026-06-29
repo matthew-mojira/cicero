@@ -1,0 +1,39 @@
+// Used during `profileCallerCalleePairs`
+class ProfiledCallerCalleeData #unboxed {
+	def callerLabel: string;
+	def calleeLabel: string;
+	var counts: int; // # of calls to the callee from the caller
+	var time: int; // exclusive time spent inside the callee(μs)
+
+	new(callerLabel, calleeLabel, counts, time) {}
+}
+
+component ProfileCallerCalleePairs{
+
+    def profilePair(caller: FunctionProfileMetadata, callee: FunctionProfileMetadata, time: int){
+        def key: long = ProfilingHelpers.constructLong(caller.identifier, callee.identifier);
+        if (Profiling.callerCalleeData.has(key)){
+            def data: ProfiledCallerCalleeData = Profiling.callerCalleeData[key];
+            data.counts += 1; // increment calls
+            data.time += time;
+        } else {
+            Profiling.callerCalleeData[key] = ProfiledCallerCalleeData.new(caller.label, callee.label, 1, time);
+        }
+    }
+
+    def printStats(){
+        System.puts("# Execution time is the total time spent inside the callee\n");
+        System.puts("caller identifier id, caller label, callee identifier id, callee label, calls, execution time(μs)\n");
+        for (list = Maps.keyList(Profiling.callerCalleeData); list != null; list = list.tail) {
+            def key : long = list.head;
+            def callerIdentifierId : int = int.!(key >> 32);
+            def calleeIdentifierId : int = int.!(key & 0x00000000FFFFFFFF);
+            
+            def data: ProfiledCallerCalleeData = Profiling.callerCalleeData[key];
+
+            System.puts(Strings.format2("%d, %s, ", callerIdentifierId, data.callerLabel));
+            System.puts(Strings.format2("%d, %s, ", calleeIdentifierId, data.calleeLabel));
+            System.puts(Strings.format2("%d, %d\n", data.counts, data.time));
+		}
+    }
+}
