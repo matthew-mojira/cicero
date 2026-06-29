@@ -31,7 +31,7 @@ component ProfileBytecode{
 		var i = 0;
 		var total = 0;
 		System.puts("# DYNAMIC COUNTS:\n");
-		System.puts("instruction, counts, total execution time(ns)\n");
+		System.puts("instruction, counts, total execution time(μs)\n");
 		for (op in Opcode.set.all) {
 			def execTime : long = Profiling.dynamicOpExecutionTimes[i];
 			def count = Profiling.dynamicCounts[i++];

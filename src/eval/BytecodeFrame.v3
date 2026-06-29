@@ -156,13 +156,13 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					stack.push(constants[operand]);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -175,7 +175,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def id = strings[operand];
@@ -196,7 +196,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -209,14 +209,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def value = Globals.loadGlobalByIndex(operand);
 					stack.push(value);
 					
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -229,7 +229,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def local = locals[operand];
@@ -239,7 +239,7 @@ class BytecodeFrame extends FrameObject {
 						stack.push(local);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -252,13 +252,13 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					stack.push(locals[operand]);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -271,7 +271,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def nonlocal = nonlocals[operand];
@@ -283,7 +283,7 @@ class BytecodeFrame extends FrameObject {
 					stack.push(nonlocal);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -296,7 +296,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def id = strings[operand];
@@ -311,7 +311,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -324,14 +324,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def top = stack.pop();
 					Globals.storeGlobalByIndex(operand, top);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -344,14 +344,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def top = stack.pop();
 					locals[operand] = top;
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -364,13 +364,13 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					pc += i24.view(operand);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -383,14 +383,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def top = stack.pop();
 					if (!top.isTrue()) pc += i24.view(operand);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -403,7 +403,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def top = stack.peek();
@@ -414,7 +414,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -427,7 +427,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def top = stack.peek();
@@ -438,7 +438,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -451,14 +451,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def top = stack.pop();
 					assertType(ClassObjects.classStr, top);
 					if (isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
-							opExecTime = System.ticksNs() - opExecTime;
+							opExecTime = System.ticksUs() - opExecTime;
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
@@ -470,7 +470,7 @@ class BytecodeFrame extends FrameObject {
 					throw(StrObject.!(top).str);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -483,14 +483,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def top = stack.peek();
 					assertType(ClassObjects.classFunc, top);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -503,7 +503,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					var args: Vector<Object> = Vector.new();
@@ -541,7 +541,7 @@ class BytecodeFrame extends FrameObject {
 					assertArity(params.length, args.length);
 					if (isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
-							opExecTime = System.ticksNs() - opExecTime;
+							opExecTime = System.ticksUs() - opExecTime;
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
@@ -564,7 +564,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
 					}
 
@@ -572,7 +572,7 @@ class BytecodeFrame extends FrameObject {
 					frame.eval();
 					
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
@@ -595,7 +595,7 @@ class BytecodeFrame extends FrameObject {
 						rethrow(frame.getExn());
 
 						if (CiceroOptions.profileDynamicBytecode) {
-							opExecTime = System.ticksNs() - opExecTime;
+							opExecTime = System.ticksUs() - opExecTime;
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
@@ -606,7 +606,7 @@ class BytecodeFrame extends FrameObject {
 					stack.push(frame.getValue());
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -619,13 +619,13 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					handlers.push((pc + operand, stack.top));
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -638,13 +638,13 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					handlers.pop();
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -658,13 +658,13 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					for (i < operand) stack.pop();
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -677,14 +677,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					// special path, operand = 0
 					stack.push(stack.elems[stack.top - operand - 1]);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -697,7 +697,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def top = stack.peek();
@@ -706,7 +706,7 @@ class BytecodeFrame extends FrameObject {
 					stack.elems[stack.top - operand - 1] = top;
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -720,14 +720,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def superclass = stack.pop();
 					assertType(ClassObjects.classClass, superclass);
 					if (isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
-							opExecTime = System.ticksNs() - opExecTime;
+							opExecTime = System.ticksUs() - opExecTime;
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
@@ -740,7 +740,7 @@ class BytecodeFrame extends FrameObject {
 					stack.push(classhole(ClassObject.!(superclass)));
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -753,14 +753,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def top = stack.pop();
 					assertType(ClassObjects.classClass, top);
 					if (isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
-							opExecTime = System.ticksNs() - opExecTime;
+							opExecTime = System.ticksUs() - opExecTime;
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
@@ -790,7 +790,7 @@ class BytecodeFrame extends FrameObject {
 							def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, [], []);
 
 							if (CiceroOptions.profileDynamicBytecode) {
-								opExecTime = System.ticksNs() - opExecTime;
+								opExecTime = System.ticksUs() - opExecTime;
 								ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
 							}
 
@@ -802,7 +802,7 @@ class BytecodeFrame extends FrameObject {
 							frame.eval();
 
 							if (CiceroOptions.profileDynamicBytecode) {
-								opExecTime = System.ticksNs();
+								opExecTime = System.ticksUs();
 							}
 
 							if (frame.isExn()) {
@@ -820,7 +820,7 @@ class BytecodeFrame extends FrameObject {
 							def frame = newFrame(Strings.format1("%s.init", cls.name), code, args, []);
 
 							if (CiceroOptions.profileDynamicBytecode) {
-								opExecTime = System.ticksNs() - opExecTime;
+								opExecTime = System.ticksUs() - opExecTime;
 								ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
 							}
 
@@ -832,7 +832,7 @@ class BytecodeFrame extends FrameObject {
 							frame.eval();
 
 							if (CiceroOptions.profileDynamicBytecode) {
-								opExecTime = System.ticksNs();
+								opExecTime = System.ticksUs();
 							}
 
 							if (frame.isExn()) {
@@ -844,7 +844,7 @@ class BytecodeFrame extends FrameObject {
 					stack.push(obj);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -857,7 +857,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def obj = stack.pop();
@@ -911,7 +911,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -924,7 +924,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def val = stack.pop();
@@ -967,7 +967,7 @@ class BytecodeFrame extends FrameObject {
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -980,7 +980,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def values: Vector<Object> = Vector.new();
@@ -995,7 +995,7 @@ class BytecodeFrame extends FrameObject {
 					stack.push(obj);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -1008,7 +1008,7 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					def funchole = funcholes[operand];
@@ -1029,7 +1029,7 @@ class BytecodeFrame extends FrameObject {
 					stack.push(fn);
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
@@ -1042,14 +1042,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs();
+						opExecTime = System.ticksUs();
 					}
 
 					// return value will be on top of the stack
 					result = Result.Return(stack.pop());
 
 					if (CiceroOptions.profileDynamicBytecode) {
-						opExecTime = System.ticksNs() - opExecTime;
+						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					return null;

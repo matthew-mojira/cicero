@@ -25,13 +25,13 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 				var startTime: int;
 
 				if (CiceroOptions.profileCompilationTimes) {
-					startTime = System.ticksNs();
+					startTime = System.ticksUs();
 				}
 
 				def bytecode = BytecodeCompiler.new(ast, params).extract();
 
 				if (CiceroOptions.profileCompilationTimes) {
-					def endTime = System.ticksNs();
+					def endTime = System.ticksUs();
 					ProfileCompilationTimes.profile(bytecode.id, label, endTime - startTime);
 				}
 
