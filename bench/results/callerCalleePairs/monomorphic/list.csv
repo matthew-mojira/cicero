@@ -1,0 +1,25 @@
+# Execution time is the total time spent inside the callee
+caller identifier id,caller label,callee identifier id,callee label,calls,execution time(μs),execution time(μs)_std
+0,repl,105,List.benchmark,1,229792.32,1615.2217695715822
+0,repl,109,List.verify_result,1,14.78,1.5291721116142472
+43,lambda-43,48,int.-,31,96.88,14.448557586365862
+86,+,47,int.+,9,23.76,3.4732799296036823
+91,=,5,base.=,18762,12715.62,147.2663684121602
+91,=,52,int.=,35,76.9,11.342983086742326
+92,!=,5,base.=,20859,14189.86,172.33368320600277
+92,!=,100,not,20859,27138.28,202.9642614564728
+104,Element.length,86,+,9,47.74,3.3855033086767494
+104,Element.length,91,=,10,28.24,1.2381684960011692
+104,Element.length,104,Element.length,9,562.5,11.075344929442242
+105,List.benchmark,104,Element.length,1,134.26,2.5539884774323363
+105,List.benchmark,106,List.make_list,3,1957.62,301.14434060355677
+105,List.benchmark,108,List.tail,1,227673.94,1417.856292335116
+106,List.make_list,43,lambda-43,31,357.9,54.628709653142515
+106,List.make_list,91,=,34,532.44,82.77709433737559
+106,List.make_list,103,Element.init-values,31,116.84,18.08072601034661
+106,List.make_list,106,List.make_list,31,10507.9,1609.7196770790588
+107,List.is_shorter_than,91,=,18752,54100.56,381.4627143627269
+107,List.is_shorter_than,92,!=,20859,110252.02,668.1088598210832
+108,List.tail,107,List.is_shorter_than,2809,217229.44,1349.6131442690062
+108,List.tail,108,List.tail,2808,2081847.66,11610.158876042073
+109,List.verify_result,91,=,1,8.24,1.2047524938461727

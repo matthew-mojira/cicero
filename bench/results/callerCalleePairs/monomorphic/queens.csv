@@ -1,0 +1,25 @@
+# Execution time is the total time spent inside the callee
+caller identifier id,caller label,callee identifier id,callee label,calls,execution time(μs),execution time(μs)_std
+0,repl,103,Queens.benchmark,1,305922.66,1559.9468804404594
+42,lambda-42,47,int.+,9810,7645.68,72.93285701693743
+86,+,47,int.+,10120,8123.8,84.3825110035564
+87,-,48,int.-,4580,3673.1,35.08895401515347
+91,=,52,int.=,1130,790.8,20.883544933262453
+93,<,53,int.<,9821,6912.06,54.68403117278519
+103,Queens.benchmark,42,lambda-42,10,42.14,1.6036947136827122
+103,Queens.benchmark,93,<,11,84.58,5.206314846963665
+103,Queens.benchmark,105,Queens.queens,10,305728.8,1553.4229879822972
+105,Queens.queens,106,Queens.place_queen,10,305644.32,1548.586326233035
+106,Queens.place_queen,42,lambda-42,9800,37466.66,183.13835630751956
+106,Queens.place_queen,65,list.set,1130,1392.14,13.680031626649226
+106,Queens.place_queen,91,=,1130,4146.42,39.14394680443662
+106,Queens.place_queen,93,<,9810,53112.9,284.6546242414497
+106,Queens.place_queen,106,Queens.place_queen,1120,1399038.36,6377.924912876083
+106,Queens.place_queen,107,Queens.get_row_column,8760,99436.5,560.6798078571891
+106,Queens.place_queen,108,Queens.set_row_column,2180,59011.08,295.7384282760431
+107,Queens.get_row_column,64,list.get,14520,27876.44,164.16767933663252
+107,Queens.get_row_column,86,+,5760,27402.5,176.82508941012264
+107,Queens.get_row_column,87,-,2400,8470.18,58.43143199424403
+108,Queens.set_row_column,65,list.set,6540,15910.66,91.05114283876343
+108,Queens.set_row_column,86,+,4360,19231.68,100.64129878140533
+108,Queens.set_row_column,87,-,2180,6535.7,47.23205846603322

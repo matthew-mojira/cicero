@@ -5,8 +5,9 @@ class ProfiledInlineCacheData #unboxed {
 	var hits: int;
 	var misses: int;
 	def associatedFunc: FunctionProfileMetadata;
+	var classesSeen: int;
 
-	new(instruction, lineNumber, hits, misses, associatedFunc) {}
+	new(instruction, lineNumber, hits, misses, associatedFunc, classesSeen) {}
 }
 
 component ProfileInlineCache{
@@ -18,19 +19,20 @@ component ProfileInlineCache{
         data.hits++; // increase hits
     }
 
-    def profileCacheMiss(b: Bytecode, instrIndex: int, op_name: string, funcMetadata: FunctionProfileMetadata){
+    def profileCacheMiss(b: Bytecode, instrIndex: int, op_name: string, funcMetadata: FunctionProfileMetadata, incrementClassesSeen: bool){
         def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);
         if (Profiling.inlineCacheHitMissCounts.has(key)){
             var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
             data.misses++; // increase misses
+            if (incrementClassesSeen) data.classesSeen++; // increment classes seen
         } else {
             def ln = b.sourceMap[instrIndex >> 2].beginLine;
-            Profiling.inlineCacheHitMissCounts[key] = ProfiledInlineCacheData.new(op_name, ln, 0, 1, funcMetadata);
+            Profiling.inlineCacheHitMissCounts[key] = ProfiledInlineCacheData.new(op_name, ln, 0, 1, funcMetadata, 1);
         }
     }
 
     def printCacheStats(){
-        System.puts("Line Number, Bytecode ID, Instruction Index, Function identifier, Function label, Instruction, Hits, Misses\n");
+        System.puts("Line Number, Bytecode ID, Instruction Index, Function identifier, Function label, Instruction, Hits, Misses, Classes seen\n");
         for (list = Maps.keyList(Profiling.inlineCacheHitMissCounts); list != null; list = list.tail) {
             def key : long = list.head;
             def bytecodeObjectId : int = int.!(key >> 32);
@@ -39,7 +41,12 @@ component ProfileInlineCache{
 
             System.puts(Strings.format3("%d, %d, %d, ", data.lineNumber, bytecodeObjectId, instrIndex));
             System.puts(Strings.format2("%d, %s, ", data.associatedFunc.identifier, data.associatedFunc.label));
-            System.puts(Strings.format3("%s, %d, %d\n", data.instruction, data.hits, data.misses));
+            System.puts(Strings.format3("%s, %d, %d, ", data.instruction, data.hits, data.misses));
+            System.puts(
+                if (data.classesSeen > InlineCache.picLimit,
+                    Strings.format1(">= %d\n", data.classesSeen),
+                    Strings.format1("%d\n", data.classesSeen))
+            );
 		}
     }
 }

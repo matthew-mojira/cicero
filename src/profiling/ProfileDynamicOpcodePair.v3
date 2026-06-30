@@ -20,7 +20,7 @@ component ProfileDynamicOpcodePair{
                 def dispatchCost : long = Profiling.dynamicOpcodePairDispatchCost[row][col];
                 if (counts != 0){
                     System.puts(Strings.format2("%s, %s, ", Opcodes.map[row].name, Opcodes.map[col].name));
-                    System.puts(Strings.format2("%d, %s, %d\n", counts, ProfilingHelpers.longToString(dispatchCost)));
+                    System.puts(Strings.format2("%d, %s\n", counts, ProfilingHelpers.longToString(dispatchCost)));
                 }
             }
         }

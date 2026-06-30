@@ -106,7 +106,7 @@ class BytecodeFrame extends FrameObject {
 			loc = source[pc >> 2];
 
 			/* Inline caches */
-			var cache: Pair<ClassObject, int>;
+			var cache: CacheState;
  
  			def opcode = bytecode.opcode;
  			def opcode_pc = pc;
@@ -864,50 +864,125 @@ class BytecodeFrame extends FrameObject {
 					def field = strings[operand];
 
 					if (CLOptions.CACHE.get()) {
-  						cache = b.cache[(pc - 4) >> 2];
+						def idx = (pc - 4) >> 2;
+  						cache = b.cache[idx];
 						
-						def cls = obj.getClass();
-						/* Inline cache */
-						if (cache.fst == cls) {
-							def res = obj.getFieldByIndex(cache.snd);
-							if (CiceroOptions.useLazyMethods && res == null) {
-								// if not yet initialized, must treat as cache miss
-								stack.push(obj.getField(field));
-								cache.snd = obj.getIndex(field);
-
-								if (CiceroOptions.profileInlineCaching) {
-									ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc);
+						def cls : ClassObject = obj.getClass();
+						match (cache){
+							Uncached => {
+								// cache miss
+								def v = obj.getField(field);
+								if (v == null) throw(Exceptions.missingField(obj, field));
+								else {
+									stack.push(v);
+									// transition to monomorphic state(initial cached state)
+									b.cache[idx] = CacheState.Monomorphic(cls, obj.getIndex(field));
 								}
-							} else {
-								// cache hit
-								stack.push(res);
 
-								if (CiceroOptions.profileInlineCaching) {
-									ProfileInlineCache.profileCacheHit(b, pc-4);
+								if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
+							}
+							Monomorphic(cachedClass, cachedIndex) => {
+								if (cachedClass == cls) {
+									def res = obj.getFieldByIndex(cachedIndex);
+									if (CiceroOptions.useLazyMethods && res == null) {
+										// if not yet initialized, must treat as cache miss
+										stack.push(obj.getField(field));
+										// don't transition state
+										if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
+									} else {
+										// cache hit
+										stack.push(res);
+										if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheHit(b, pc-4);
+									}
+								} else {
+									// cache miss
+									def v = obj.getField(field);
+									if (v == null) throw(Exceptions.missingField(obj, field));
+									else {
+										stack.push(v);
+
+										// Transition to Polymorphic state
+										// store newly seen class, and also previously cached class
+										def picArray: Array<(ClassObject, int)> = Array.new(InlineCache.picLimit);
+										picArray[0] = (cls, obj.getIndex(field));
+										picArray[1] = (cachedClass, cachedIndex);
+										b.cache[idx] = CacheState.Polymorphic(picArray);
+									}
+
+									if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
 								}
 							}
-						} else {
-							// cache miss
-							def v = obj.getField(field);
-							if (v == null) {
-								throw(Exceptions.missingField(obj, field));
-							} else {
-								cache.fst = cls;
-								cache.snd = obj.getIndex(field);
-								stack.push(v);
-							}
+							Polymorphic(values)=> {
+								var needToChangeState: bool = true;
+								for (i < values.length){
+									def cachedClass : ClassObject = values[i].0;
+									if (cachedClass == cls){
+										def cachedIndex : int = values[i].1;
+										def res = obj.getFieldByIndex(cachedIndex);
+										if (CiceroOptions.useLazyMethods && res == null) {
+											// if not yet initialized, must treat as cache miss
+											stack.push(obj.getField(field));
+											// don't transition state
+											if (CiceroOptions.profileInlineCaching) {
+												ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
+											}
+										} else {
+											// cache hit
+											stack.push(res);
+											if (CiceroOptions.profileInlineCaching) {
+												ProfileInlineCache.profileCacheHit(b, pc-4);
+											}
+										}
 
-							if (CiceroOptions.profileInlineCaching) {
-								ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc);
+										needToChangeState = false;
+										break;
+
+									} else if (cachedClass == null) {
+										// cache miss
+										def v = obj.getField(field);
+										if (v == null) throw(Exceptions.missingField(obj, field));
+										else {
+											stack.push(v);
+											values[i] = (cls, obj.getIndex(field));
+										}
+
+										if (CiceroOptions.profileInlineCaching) {
+											ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
+										}
+
+										needToChangeState = false;
+										break;
+									}
+								}
+								
+								if (needToChangeState){
+									def v = obj.getField(field);
+									if (v == null) throw(Exceptions.missingField(obj, field));
+									else {
+										stack.push(v);
+										// transition to megamorphic state
+									    b.cache[idx] = CacheState.Megamorphic;
+									}
+
+									if (CiceroOptions.profileInlineCaching) {
+										ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
+									}
+								}
+							}
+							Megamorphic => {
+								// perform expensive lookup
+								def v = obj.getField(field);
+								if (v == null) throw(Exceptions.missingField(obj, field));
+								else stack.push(v);
+
+								// treat every megamorphic state cache lookup as a cache miss
+								if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
 							}
 						}
 					} else {
 						def v = obj.getField(field);
-						if (v == null) {
-							throw(Exceptions.missingField(obj, field));
-						} else {
-							stack.push(v);
-						}
+						if (v == null) throw(Exceptions.missingField(obj, field));
+						else stack.push(v);
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -932,38 +1007,92 @@ class BytecodeFrame extends FrameObject {
 					def field = strings[operand];
 
 					if (CLOptions.CACHE.get()) {
-  						cache = b.cache[(pc - 4) >> 2];
-
-						def cls = obj.getClass();
+						def idx = (pc - 4) >> 2;
+  						cache = b.cache[idx];
+						
+						def cls : ClassObject = obj.getClass();
 						// obj.initClass() is guaranteed to have executed
 						// So, an index is guaranteed to exist for the field, given that the field exists.
 
-						/* Inline Cache */
-						if (cache.fst == cls){
-							/* cache hit */
-							// field exists since exception would have occured on initial cache miss otherwise
-							obj.setFieldByIndex(cache.snd, val);
+						match (cache){
+							Uncached => {
+								/* cache miss */
+								if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
+								else {
+									// transition to monomorphic
+									b.cache[idx] = CacheState.Monomorphic(cls, obj.getIndex(field));
 
-							if (CiceroOptions.profileInlineCaching) {
-								ProfileInlineCache.profileCacheHit(b, pc-4);
+									if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
+								}
 							}
-						} else {
-							/* cache miss */
-							if (!obj.setField(field, val)) {
-								throw(Exceptions.missingField(obj, field));
-							} else {
-								cache.fst = cls;
-								cache.snd = obj.getIndex(field);
+							Monomorphic(cachedClass, cachedIndex) => {
+								if (cachedClass == cls) {
+									/* cache hit */
+									// field exists since exception would have occured on initial cache miss otherwise
+									obj.setFieldByIndex(cachedIndex, val);
+									if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheHit(b, pc-4);
 
-								if (CiceroOptions.profileInlineCaching) {
-									ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc);
+								} else {
+									/* cache miss */
+									if (!obj.setField(field, val)) {
+										throw(Exceptions.missingField(obj, field));
+									} else {
+										// Transition to Polymorphic state
+										// store newly seen class, and also previously cached class
+										def picArray: Array<(ClassObject, int)> = Array.new(InlineCache.picLimit);
+										picArray[0] = (cls, obj.getIndex(field));
+										picArray[1] = (cachedClass, cachedIndex);
+										b.cache[idx] = CacheState.Polymorphic(picArray);
+
+										if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
+									}
+								}
+							}
+							Polymorphic(values)=> {
+								var needToChangeState: bool = true;
+								for (i < values.length){
+									def cachedClass : ClassObject = values[i].0;
+
+									if (cachedClass == cls){
+										needToChangeState = false;
+										// cached index = values[i].1
+										obj.setFieldByIndex(values[i].1, val);
+										if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheHit(b, pc-4);
+										break;
+
+									} else if (cachedClass == null) {
+										needToChangeState = false;
+
+										if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
+										else {
+											values[i] = (cls, obj.getIndex(field));
+											if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
+										}
+										break;
+									}
+								}
+								
+								if (needToChangeState){
+									if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
+									else {
+									    b.cache[idx] = CacheState.Megamorphic;
+										if (CiceroOptions.profileInlineCaching) {
+											ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
+										}
+									}
+								}
+							}
+							Megamorphic => {
+								// perform expensive method call
+								if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
+								else {
+									// treat every megamorphic state cache lookup as a cache miss
+									if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
 								}
 							}
 						}
 					} else {
-						if (!obj.setField(field, val)) {
-							throw(Exceptions.missingField(obj, field));
-						}
+						if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {

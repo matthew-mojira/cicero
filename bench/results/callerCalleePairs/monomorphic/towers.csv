@@ -1,0 +1,32 @@
+# Execution time is the total time spent inside the callee
+caller identifier id,caller label,callee identifier id,callee label,calls,execution time(μs),execution time(μs)_std
+0,repl,109,Towers.benchmark,1,464229.36,2112.8992921517793
+0,repl,110,Towers.verify_result,1,9.74,0.4430874976934521
+42,lambda-42,47,int.+,8191,6596.46,60.56880385148783
+43,lambda-43,48,int.-,8204,6650.28,65.23459705601935
+87,-,48,int.-,8190,10138.84,91.65938721869213
+91,=,52,int.=,8192,6078.1,55.46105454666863
+92,!=,5,base.=,8205,5657.3,63.68713386868789
+92,!=,100,not,8205,10617.26,70.2778189526021
+96,>=,56,int.>=,8092,5794.02,47.67427321449805
+104,Towers._push_disk,64,list.get,8205,13210.92,73.42074444110327
+104,Towers._push_disk,65,list.set,8205,9649.24,53.9635402236491
+104,Towers._push_disk,92,!=,8205,43471.58,211.32797703463447
+104,Towers._push_disk,96,>=,8077,23394.02,111.23233452956913
+105,Towers._pop_disk_from,64,list.get,8191,9735.64,47.14924632029051
+105,Towers._pop_disk_from,65,list.set,8191,9589.18,56.169092379844585
+106,Towers._move_top_disk,42,lambda-42,8191,33606.34,146.9332223723921
+106,Towers._move_top_disk,104,Towers._push_disk,8191,137088.1,539.6492152409762
+106,Towers._move_top_disk,105,Towers._pop_disk_from,8191,47825.72,203.77849519034262
+107,Towers._build_tower_at,43,lambda-43,14,175.1,35.477069340344215
+107,Towers._build_tower_at,96,>=,15,232.64,47.88155454145283
+107,Towers._build_tower_at,103,_TowersDisk.init-values,14,51.96,10.480224331607426
+107,Towers._build_tower_at,104,Towers._push_disk,14,657.02,136.2877343366315
+108,Towers._move_disks,43,lambda-43,8190,29095.68,147.90115838985605
+108,Towers._move_disks,87,-,8190,39791.68,194.06757081186095
+108,Towers._move_disks,91,=,8191,47491.72,215.9714682592156
+108,Towers._move_disks,106,Towers._move_top_disk,8191,282009.4,1096.414583437998
+108,Towers._move_disks,108,Towers._move_disks,8190,4990509.86,19786.1348279289
+109,Towers.benchmark,107,Towers._build_tower_at,1,1500.12,308.30793247091424
+109,Towers.benchmark,108,Towers._move_disks,1,462706.12,1876.0967256731763
+110,Towers.verify_result,91,=,1,7.44,0.5014265364224069

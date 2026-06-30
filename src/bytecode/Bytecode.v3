@@ -42,13 +42,13 @@ class Bytecode(instrs:     Array<byte>,
                 sourceMap:  Array<FileRange>)
 {
 	var id: int;
-	def var cache: Array<Pair<ClassObject, int>>;
+	def var cache: Array<CacheState>;
 
 	new() {
 		if (CLOptions.CACHE.get()) {
 			cache = Array.new(sourceMap.length);
 			for (i < cache.length)
-				cache[i] = Pair.new(null, -1);
+				cache[i] = CacheState.Uncached;
 		}
 		id = current_bytecode_id++;
 	}
