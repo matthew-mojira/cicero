@@ -366,7 +366,8 @@ class WasmCompiler {
 					wasm.put_uleb32(scratch0);          // [..., val_orig, obj, fieldStrIdx, val]
 					emitCall(SET_FIELD);                  // [..., val_orig, setFieldResult]
 					wasmDup();                            // [..., val_orig, setFieldResult, setFieldResult]
-					emitAssertField(ciceroBytecode.stringPool[operand]); // null -> br handler; else [..., val_orig, val]
+					emitAssertField(ciceroBytecode.stringPool[operand]); // null -> br handler; else [..., val_orig, setFieldResult]
+					wasm.putb(WasmOp.DROP.opcode);        // bytecode STORE_FIELD nets one value (val_orig from DUPE 1); [..., val_orig]
 				}
 				CALL => {
 					// fn and args are already on the stack in the order ASSERT_FUNC's
