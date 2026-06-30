@@ -83,7 +83,7 @@ class BytecodeFrame extends FrameObject {
 				if (CiceroOptions.useExceptionTables) {
 					var found = false;
 					for (entry in b.exnTable) {
-						if (pc >= entry.0 && pc <= entry.1) {
+						if (pc > entry.0 && pc <= entry.1) {
 							pc = entry.1;
 							while (stack.top != entry.2) stack.pop();
 							stack.push(getExn());
