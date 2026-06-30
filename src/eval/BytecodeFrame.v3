@@ -80,17 +80,34 @@ class BytecodeFrame extends FrameObject {
 			// if frame is in an exceptional state, try to handle it!
 			// Should this go after the handlers?
  			if (isExn()) {
- 				if (handlers.empty()) {
- 					if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
- 					return null;
- 				}
- 				def p = handlers.pop();
- 				pc = p.0;
- 				while (stack.top != p.1)
- 					stack.pop();
- 				// push error value
- 				stack.push(getExn());
- 				resetExn();
+				if (CiceroOptions.useExceptionTables) {
+					var found = false;
+					for (entry in b.exnTable) {
+						if (pc >= entry.0 && pc <= entry.1) {
+							pc = entry.1;
+							while (stack.top != entry.2) stack.pop();
+							stack.push(getExn());
+							resetExn();
+							found = true;
+							break;
+						}
+					}
+					if (!found) {
+						if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
+						return null;
+					}
+				} else {
+ 					if (handlers.empty()) {
+ 						if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
+ 						return null;
+ 					}
+ 					def p = handlers.pop();
+ 					pc = p.0;
+ 					while (stack.top != p.1)
+ 						stack.pop();
+ 					stack.push(getExn());
+ 					resetExn();
+				}
  			}
 
 			// Fetch

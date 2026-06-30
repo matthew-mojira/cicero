@@ -33,6 +33,9 @@ class Bytecode(instrs:     Array<byte>,
 		 * actual function object.
 		 */
                 funcPool:   Array<ASTData.Func>,
+		/* When exception tables are used, we don't add handler stack
+	         * at runtime and instead perform a lookup in this table. */
+		exnTable:   Array<(int, int, int)>,
 		/* Instructions are 4-byte aligned, so take pc >> 2 to find the
 		 * source location of an instruction.
 		 */
