@@ -1,0 +1,26 @@
+; Regression test for the lower-bound off-by-one in exception table dispatch.
+;
+; With useExceptionTables, the range check is `pc >= entry.0`. But `pc` is
+; incremented *before* each instruction executes, so when the instruction at
+; `startPc - 4` throws, `pc == startPc == entry.0` and the check incorrectly
+; fires the catch handler.
+;
+; The instruction at startPc - 4 in `(1 (try ...))` is ASSERT_FUNC (which peeks
+; without popping, so the stack depth matches entry.2). On tier 0 (TRY/CATCH
+; opcodes) ASSERT_FUNC fires before TRY executes, so the handlers stack is
+; empty and the exception propagates to the outer catch. On tier 1 (exception
+; tables) ASSERT_FUNC incorrectly triggers the inner catch.
+;
+; `flag` starts false. The inner catch body sets it true. The outer catch
+; returns flag. Correct result: false. Buggy result: true.
+(set flag false)
+--
+=> false
+==
+(try
+  (1 (try { (set flag true) "ok" } e "inner"))
+  outer
+  flag)
+--
+=> false
+--
