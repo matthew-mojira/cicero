@@ -78,7 +78,7 @@ class BytecodeFrame extends FrameObject {
 		}
 
 		var pc = 0;
-		var dispatchStartTime : int = System.ticksNs(); 
+		var dispatchStartTime : int = System.ticksUs(); 
 		var opExecTime : int;
 
 		while (pc < code.length || isExn()) {
@@ -145,14 +145,14 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, 0); // NOP has 0 zero execution time
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				LOAD_CONST => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -166,12 +166,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				LOAD_GLOBAL => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -200,12 +200,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				LOAD_GLOBAL_BY_INDEX => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -220,12 +220,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				LOAD_LOCAL => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -243,12 +243,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				LOAD_LOCAL_SAFE => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -262,12 +262,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				LOAD_NONLOCAL => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -287,12 +287,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				STORE_GLOBAL => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -315,12 +315,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				STORE_GLOBAL_BY_INDEX => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -335,12 +335,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				STORE_LOCAL => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -355,12 +355,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				JUMP => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -374,12 +374,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				JUMP_IF_FALSE => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -394,12 +394,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				JUMP_IF_TRUE_PEEK => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -418,12 +418,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				JUMP_IF_FALSE_PEEK => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -442,12 +442,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				RAISE => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -462,7 +462,7 @@ class BytecodeFrame extends FrameObject {
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
-						    dispatchStartTime = System.ticksNs();
+						    dispatchStartTime = System.ticksUs();
 						}
 						continue;
 					}
@@ -474,12 +474,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				ASSERT_FUNC => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -494,12 +494,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				CALL => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -545,7 +545,7 @@ class BytecodeFrame extends FrameObject {
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
-						    dispatchStartTime = System.ticksNs();
+						    dispatchStartTime = System.ticksUs();
 						}
 						continue;
 					}
@@ -599,7 +599,7 @@ class BytecodeFrame extends FrameObject {
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
-						    dispatchStartTime = System.ticksNs();
+						    dispatchStartTime = System.ticksUs();
 						}
 						continue;
 					}
@@ -610,12 +610,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				TRY => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -629,12 +629,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				CATCH => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -648,13 +648,13 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				// stack manipulation
 				POP => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -668,12 +668,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				DUPE => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -688,12 +688,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				SWAP => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -710,13 +710,13 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				// objects
 				CREATE_CLASS => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -731,7 +731,7 @@ class BytecodeFrame extends FrameObject {
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
-						    dispatchStartTime = System.ticksNs();
+						    dispatchStartTime = System.ticksUs();
 						}
 						continue;
 					}
@@ -744,12 +744,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				CREATE_OBJECT => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -764,7 +764,7 @@ class BytecodeFrame extends FrameObject {
 						    ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
 						if (CiceroOptions.profileDynamicOpcodePair){
-						    dispatchStartTime = System.ticksNs();
+						    dispatchStartTime = System.ticksUs();
 						}
 						continue;
 					}
@@ -848,12 +848,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				LOAD_FIELD => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -915,12 +915,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				STORE_FIELD => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -971,12 +971,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				CREATE_LIST => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -999,12 +999,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				CREATE_FUNC => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -1033,12 +1033,12 @@ class BytecodeFrame extends FrameObject {
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 					}
 					if (CiceroOptions.profileDynamicOpcodePair){
-						dispatchStartTime = System.ticksNs();
+						dispatchStartTime = System.ticksUs();
 					}
 				}
 				RETURN => {
 					if (CiceroOptions.profileDynamicOpcodePair){
-						def dispatchEndTime = System.ticksNs();
+						def dispatchEndTime = System.ticksUs();
 						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {

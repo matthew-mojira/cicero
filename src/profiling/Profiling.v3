@@ -50,7 +50,7 @@ component ProfilingHelpers {
 	}
 
     def longToString(value: long) -> string{
-        var a: Array<byte> = Array<byte>.new(19); // 19 is the maximum possible length of a +ve double
+        var a: Array<byte> = Array<byte>.new(20); // 20 is the maximum possible length of a long
         def l = Longs.renderDecimal(value, a, 0);
         return Strings.format1("%s", Arrays.range(a, 0, l));
     }
