@@ -7,13 +7,13 @@ Line Number,Bytecode ID,Instruction Index,Function identifier,Function label,Ins
 1,13,4,91,=,LOAD_FIELD,0,469002
 1,17,4,93,<,LOAD_FIELD,499,8595694
 1,21,4,95,>,LOAD_FIELD,0,8195047
+7,37,28,103,Mandelbrot.inner_benchmark_loop,LOAD_FIELD,0,1
 7,37,4,103,Mandelbrot.inner_benchmark_loop,LOAD_FIELD,0,1
 7,37,16,103,Mandelbrot.inner_benchmark_loop,LOAD_FIELD,0,1
-7,37,28,103,Mandelbrot.inner_benchmark_loop,LOAD_FIELD,0,1
-74,41,884,107,Mandelbrot._mandelbrot,LOAD_FIELD,0,500
 62,41,644,107,Mandelbrot._mandelbrot,LOAD_FIELD,249999,7945048
 65,41,688,107,Mandelbrot._mandelbrot,LOAD_FIELD,31497,218503
 66,41,728,107,Mandelbrot._mandelbrot,LOAD_FIELD,31497,218503
 69,41,780,107,Mandelbrot._mandelbrot,LOAD_FIELD,0,31000
+74,41,884,107,Mandelbrot._mandelbrot,LOAD_FIELD,0,500
 75,41,932,107,Mandelbrot._mandelbrot,LOAD_FIELD,0,500
 89,44,4,0,repl,LOAD_FIELD,0,1

@@ -1,0 +1,19 @@
+Line Number,Bytecode ID,Instruction Index,Function identifier,Function label,Instruction,Hits,Misses,Classes seen
+1,19,4,94,<=,LOAD_FIELD,0,11738,1
+1,1,4,43,lambda-43,LOAD_FIELD,0,16068,1
+1,17,4,93,<,LOAD_FIELD,0,10001,1
+1,0,4,42,lambda-42,LOAD_FIELD,5668,10000,1
+1,13,4,91,=,LOAD_FIELD,4997,3,2
+1,3,4,86,+,LOAD_FIELD,0,11738,1
+6,37,4,103,Sieve.benchmark,LOAD_FIELD,0,1,1
+15,38,76,104,Sieve._sieve,LOAD_FIELD,4999,1,1
+16,38,100,104,Sieve._sieve,LOAD_FIELD,0,5000,1
+20,38,164,104,Sieve._sieve,LOAD_FIELD,4999,1,1
+21,38,196,104,Sieve._sieve,LOAD_FIELD,4998,1,1
+21,38,208,104,Sieve._sieve,LOAD_FIELD,0,4999,1
+23,38,240,104,Sieve._sieve,LOAD_FIELD,0,669,1
+27,38,324,104,Sieve._sieve,LOAD_FIELD,11068,1,1
+27,38,336,104,Sieve._sieve,LOAD_FIELD,0,11069,1
+31,38,412,104,Sieve._sieve,LOAD_FIELD,0,4999,1
+43,42,4,0,repl,LOAD_FIELD,0,1,1
+44,42,32,0,repl,LOAD_FIELD,0,1,1
