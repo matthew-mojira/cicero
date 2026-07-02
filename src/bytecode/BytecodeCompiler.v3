@@ -127,7 +127,7 @@ class BytecodeCompiler {
 				code.compile(params, metadata.label, false);
 			
 				for (i < nonlocals.length) {
-					def nonlocal = nonlocals[i];
+					def nonlocal : string = nonlocals[i];
 					if (Strings.equal(nonlocal, id))
 						// the function itself is captured, but not loaded to a local
 						continue;
