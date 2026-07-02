@@ -46,7 +46,7 @@ def main(args: Array<string>) -> int {
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
 				// compile to tier1 bytecode
-				if (CLOptions.TIER.get() > 0) expr.compile([], TopLevelName.name);
+				if (CLOptions.TIER.get() > 0) expr.compile([], TopLevelName.name, true);
 
 				if (!CLOptions.DO_NOT_EVALUATE.get()) {
 					// evaluate
@@ -93,7 +93,7 @@ def main(args: Array<string>) -> int {
 
 				for (expr in exprs) {
 					// compile to tier1 bytecode
-					if (CLOptions.TIER.get() > 0) expr.compile([], TopLevelName.name);
+					if (CLOptions.TIER.get() > 0) expr.compile([], TopLevelName.name, true);
 
 					// evaluate
 					frame.evalCode(expr);
@@ -176,7 +176,7 @@ def loadCore(frame: FrameObject) {
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
  		if (CLOptions.TIER.get() > 0) {
- 			expr.compile([], TopLevelName.name);
+ 			expr.compile([], TopLevelName.name, true);
 		}
 		frame.evalCode(expr);
 	}
