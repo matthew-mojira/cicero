@@ -99,7 +99,7 @@ echo "}" >> "$CICERO_TEXT"
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="$V3C_OPTS -symbols -shadow-stack-size=32M -heap-size=1800M -stack-size=32M"
+V3C_OPTS="$V3C_OPTS -shadow-stack-size=32M -heap-size=1800M -stack-size=32M"
 
 # build
 exe=${PROGRAM}.${TARGET}
@@ -124,7 +124,25 @@ elif [[ "$TARGET" == wasm-* ]]; then
 	ls -a ${V3C_PATH/bin\/v3c/bin\/dev\/v3c-wasm-*} | cat
 	exit 1
     fi
-    exec $V3C_WASM_TARGET $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
+    $V3C_WASM_TARGET $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
+    STATUS=$?
+    if [ $STATUS != 0 ]; then
+	exit $STATUS
+    fi
+
+    # Optionally post-process with binaryen's wasm-opt. Set BINARYEN_OPT to the
+    # -O level to pass (e.g. "3"); leave unset to skip.
+    if [ "$BINARYEN_OPT" != "" ]; then
+	WASM_OPT_BIN=${WASM_OPT_BIN:=$(which wasm-opt)}
+	if [ ! -x "$WASM_OPT_BIN" ]; then
+	    echo "wasm-opt not found in \$PATH, and \$WASM_OPT_BIN not set"
+	    exit 1
+	fi
+	WASM_FILE="bin/${PROGRAM}.wasm"
+	echo "Optimizing $WASM_FILE with wasm-opt: -O$BINARYEN_OPT"
+	"$WASM_OPT_BIN" --skip-pass=duplicate-function-elimination --skip-pass=remove-unused-module-elements --preserve-type-order \
+	    "$WASM_FILE" -all -O$BINARYEN_OPT -o "$WASM_FILE.opt" && mv "$WASM_FILE.opt" "$WASM_FILE"
+    fi
 elif [ "$TARGET" = "v3i" ]; then
     # check that the sources typecheck
     $V3C $LANG_OPTS $V3C_OPTS $SOURCES $TARGET_V3 $CICERO_TEXT
