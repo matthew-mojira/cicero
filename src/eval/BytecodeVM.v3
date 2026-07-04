@@ -31,13 +31,10 @@ class VirtualMachine {
     var result: Result;
 
     def eval(bcode: Bytecode) -> Object {
-        // Clear stacks 
-        handlers.clear();
-        stack.clear();
-        callFrames.clear();
-		result = Result.Uncomputed;
+        // Reset VM
+        reset();
 
-        // Setup bytecode to execute
+        // Setup top level frame and bytecode to execute
         currentCallFrame = CallFrame.new(bcode, 0, 0, 0, 0, TopLevel.metadata);
         callFrames.push(currentCallFrame);
 
@@ -48,12 +45,12 @@ class VirtualMachine {
         }
 
         /*
-        * Local variables that are kept in sync with the call frames
-        * during CALL, RETURN
+        * Local variables for the active call frame
+        * kept in sync with active call frame during CALL, RETURN
         */
         var b = bcode;
         var code = b.instrs;
-        var pc : int= 0;
+        var pc: int = 0;
         var localsStartIndex: int = 0;
         var nonLocalsStartIndex: int = 0;
         var baseStartIndex: int = 0;
@@ -69,38 +66,42 @@ class VirtualMachine {
             // Should this go after the handlers?
             if (isExn()) {
                 def exn = getExn();
-                callFrames.pop(); // top-most call frame already dealt with in terms of stacktrace
                 if (handlers.empty()) {
                     // build full stack trace
+                    callFrames.pop();
                     while (!callFrames.empty()){
                         currentCallFrame = callFrames.pop();
-		                exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+                        exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
                     }
 		            result = Result.Exn(exn);
                     if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
                     return null;
                 } else {
+                    var isTopFrame = true; // Flag to prevent duplicating the stacktrace for the current frame that threw the exception 
                     def p = handlers.pop();
                     // build stack trace until the handlers call frame
                     while (callFrames.top > p.2){
                         currentCallFrame = callFrames.pop();
-		                exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+                        if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+                        isTopFrame = false;
                     }
-                    if (!callFrames.empty()){
-                        currentCallFrame = callFrames.peek();
-                        exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
-                    }
+
+                    currentCallFrame = callFrames.peek();
+                    // If we actually popped frames to get here, log the handler's frame as well.
+                    // If isOriginalFrame is still true, the exception was caught locally, so we skip it.
+                    if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
 
                     stack.resize(p.1); // equivalent to `while (stack.top != p.1) stack.pop();`
                     // push error value
                     stack.push(exn);
 
+                    // Restore VM context to the handler
                     pc = p.0;
-                    b = bcode;
+                    b = currentCallFrame.b;
                     code = b.instrs;
                     localsStartIndex = currentCallFrame.localsStartIndex; 
                     nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
-                    baseStartIndex = currentCallFrame.baseStartIndex ;
+                    baseStartIndex = currentCallFrame.baseStartIndex;
                     loc = currentCallFrame.loc;
 
 		            result = Result.Uncomputed;
@@ -1271,6 +1272,13 @@ class VirtualMachine {
         if (CiceroOptions.sanityChecks && stack.empty()) System.error("eval error", "stack is empty");
         if (CiceroOptions.traceBytecodeEvaluation) System.puts("RETURN\n");
         return stack.pop();
+    }
+
+    def reset(){
+        callFrames.clear();
+        handlers.clear();
+        stack.clear();
+        result = Result.Uncomputed;
     }
 
 	/* Exception helper methods */
