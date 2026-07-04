@@ -353,9 +353,11 @@ class Parser extends TextReader {
 					}
 					CLASS => {
 						def name = readIdentifier();
-						def fields: Vector<(string, CodeObject)> = Vector.new();
 						def methods: Vector<ASTData.Func> = Vector.new();
-						var init: Maybe<CodeObject> = Maybe.Nothing;
+						def fields: Vector<(string, AST)> = Vector.new();
+						def fields2: Vector<(string, CodeObject)> = Vector.new();
+						var init: Maybe<AST> = Maybe.Nothing;
+						var init2: Maybe<CodeObject> = Maybe.Nothing;
 						var superclass: Maybe<AST> = Maybe.Nothing;
 
 						while (opt1(')') < 0) {
@@ -381,13 +383,15 @@ class Parser extends TextReader {
 										fail(duplicatedInit);
 										// XXX fail but keep parsing
 									}
-									init = Maybe.Just(CodeObjects.fromAST(readCode(["self"]).0)); // XXX ignoring .1
+									def initAST = readCode(["self"]).0;
+									init = Maybe.Just(initAST); // XXX ignoring .1
+									init2 = Maybe.Just(CodeObjects.fromAST(initAST));
 								}
 								FIELD => {
 									def fieldName = readIdentifier();
-									def fieldInit = readCode(["self"]).0; // XXX ignoring .1
-									
-									fields.put(fieldName, CodeObjects.fromAST(fieldInit));
+									def fieldExpr = readCode(["self"]).0; // XXX ignoring .1
+									fields.put(fieldName, fieldExpr);
+									fields2.put(fieldName, CodeObjects.fromAST(fieldExpr));
 								}
 								METHOD => {
 									req1('(');
@@ -420,6 +424,8 @@ class Parser extends TextReader {
 							}
 							req1(')');
 
+							def initFunc : Maybe<ASTData.Func> = setupInitFunction(name, fields, init);
+
 							if (pos >= limit) {
 								failRel(startPos - pos, missingCloseParentheses);
 								return null;
@@ -431,7 +437,7 @@ class Parser extends TextReader {
 						
 						// XXX creating CodeObject here
 						return AST.new(ASTData.VarSet(name, b,
-															AST.new(ASTData.Class(name, superclass, init, fields.extract(), methods.extract()), range)),
+															AST.new(ASTData.Class(name, superclass, init2, fields2.extract(), methods.extract()), range)),
 										range);
 					}
 					NEW => {
@@ -674,6 +680,88 @@ class Parser extends TextReader {
 		}
 
 		return Maybe.Nothing;
+	}
+	
+	def setupInitFunction(className: string, fields: Vector<(string, AST)>, init: Maybe<AST>) -> Maybe<ASTData.Func>{
+		/*
+		(class A
+			(field x expr1)
+			(field y expr2)
+			(init expr3)
+			...
+		)
+		is parsed as if:
+		(class A
+			(field x) ; declared only
+			(field y) ; declared only
+			(init {
+				(set-field x self expr1)
+				(set-field y self expr2)
+				expr3
+			})
+			...
+		)
+		This function is responsible for that!
+		*/
+		
+		// these vars are necessary to compute the `loc`
+		var minBeginLine: int = int.max;
+		var minBeginColumn: int = int.max;
+		var maxEndLine: int = -1;
+		var maxEndColumn: int = -1;
+
+		def initBodyASTsSize: int = fields.length + if(Maybe.Just.?(init), 1, 0);
+		def initBodyASTs: Array<AST> = Array.new(initBodyASTsSize);
+		
+		// re-"parse" the field expressions so that they become part of the init body
+		// treat as if the user did ->  (set-field fieldName self fieldExpr) inside the init body
+		for (i < fields.length){
+			def field: (string, AST) = fields[i];
+			def loc = field.1.loc;
+			initBodyASTs[i] = (
+				AST.new(
+					ASTData.SetField(field.0, AST.new(ASTData.VarGet("self", Box.new(AccessMode.Local)), loc), field.1),
+					loc
+			));
+
+			// update loc ranges, if necessary
+			if (loc.beginLine < minBeginLine || (loc.beginLine == minBeginLine && loc.beginColumn < minBeginColumn)) {
+				minBeginLine = loc.beginLine;
+				minBeginColumn = loc.beginColumn;
+			}
+			if (loc.endLine > maxEndLine || (loc.endLine == maxEndLine && loc.endColumn > maxEndColumn)) {
+				maxEndLine = loc.endLine;
+				maxEndColumn = loc.endColumn;
+			}
+		}
+		match (init) {
+			Just(ast) => {
+				initBodyASTs[fields.length] = ast;
+
+				// update loc ranges, if necessary
+				def loc = ast.loc;
+				if (loc.beginLine < minBeginLine || (loc.beginLine == minBeginLine && loc.beginColumn < minBeginColumn)) {
+					minBeginLine = loc.beginLine;
+					minBeginColumn = loc.beginColumn;
+				}
+				if (loc.endLine > maxEndLine || (loc.endLine == maxEndLine && loc.endColumn > maxEndColumn)) {
+					maxEndLine = loc.endLine;
+					maxEndColumn = loc.endColumn;
+				}
+			}
+			Nothing => {}
+		}
+		if (Arrays.length(initBodyASTs) > 0){
+			def loc = FileRange.new(fileName, minBeginLine, minBeginColumn, maxEndLine, maxEndColumn);
+			def initBody = AST.new(ASTData.Begin(initBodyASTs), loc);
+			def body = CodeObjects.fromAST(initBody);
+			def metadata = FunctionProfileMetadata.new(FuncObjects.identifier_id++, Strings.format1("%s.init", className));
+			return Maybe.Just(
+				ASTData.Func("init", ["self"], body, Vector.new(), metadata)
+			);
+		} else {
+			return Maybe.Nothing;
+		}
 	}
 
 	private def readClassKeyword() -> Maybe<ClassKeyword> {
