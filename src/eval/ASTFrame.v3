@@ -223,7 +223,7 @@ class ASTFrame extends FrameObject {
 					}
 					Nothing => s = ClassObjects.classBase;
 				}
-				def f: Array<(string, CodeObject)> = fields;
+				def f: Array<string> = fields;
 				def m: Array<FuncObject> = Arrays.map(methods, funcToFunc);
 				value = ClassObject.new(id, s, i, f, m);
 			}
@@ -317,22 +317,7 @@ class ASTFrame extends FrameObject {
 				// initialization order is from base class downwards, which
 				// may involve reinitializing some fields
 				for (cls in classes.reverse().extract()) {
-					// initialize fields
-					for (field in cls.classFields) {
-						def name = field.0, expr = field.1;
-
-						// XXX hackfix
-						if (expr == null) continue;
-						// create new frames here!
-						def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, [], []);
-						frame.eval();
-						if (frame.isExn()) {
-							rethrow(frame.getExn());
-							return value;
-						}
-						obj.setField(name, frame.getValue());
-					}
-					// call initializer
+					// call initializer (initializes fields as well)
 					if (cls.init != null) {
 						def args = [("self", obj)];
 						def code = cls.init;

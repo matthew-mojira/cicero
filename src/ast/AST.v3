@@ -26,7 +26,7 @@ type ASTData {
 	case Begin(exprs: Array<AST>);
 	case GetField(field: string, obj: AST);
 	case SetField(field: string, obj: AST, val: AST);
-	case Class(id: string, superclass: Maybe<AST>, init: Maybe<CodeObject>, fields: Array<(string, CodeObject)>, methods: Array<ASTData.Func>);
+	case Class(id: string, superclass: Maybe<AST>, init: Maybe<CodeObject>, fields: Array<string>, methods: Array<ASTData.Func>);
 	case New(expr: AST);
 	case List(elems: Array<AST>);
 	case Return(value: AST);

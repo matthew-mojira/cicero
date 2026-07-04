@@ -205,8 +205,6 @@ class BytecodeCompiler {
 						init2 = code;
 					}
 				}
-				// XXX compiling subcode
-				for (field in fields) field.1.compile([], Strings.format2("%s.%s", id, field.0), false);
 				//                                   XXX
 				def idx = addClasshole(ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc)));
 				writeInstrWithOperand(loc, Opcode.CREATE_CLASS, idx);

@@ -97,7 +97,7 @@ class Object {
 		/* Figure out how much space needs to be allocated for fields. */
 		for (clazz in classes.reverse().copy()) {
 			for (field in clazz.classFields) {
-				fields.storeKey(field.0, null);
+				fields.storeKey(field, null);
 			}
 			// methods are not initialized but a slot is allocated
 			for (method in clazz.classMethods) {

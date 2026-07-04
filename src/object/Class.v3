@@ -9,7 +9,7 @@ class ClassObject(
 		/* CodeObject to evaluate after all fields are initialized */
 		init: CodeObject,
 		/* List of fields by name and initializer */
-		classFields: Array<(string, CodeObject)>, 
+		classFields: Array<string>, 
 		/* Note that the class methods are functions. The function
 		 * contains the name of the class. When an object is created,
 		 * the object is bound to this function to create the (bound)
@@ -220,7 +220,7 @@ component ClassObjects {
 	/* Returns the function which creates class objects when given the
 	 * superclass object.
 	 */
-	def classhole(name: string, init: CodeObject, classFields: Array<(string, CodeObject)>, classMethods: Array<FuncObject>) -> (ClassObject -> ClassObject) {
+	def classhole(name: string, init: CodeObject, classFields: Array<string>, classMethods: Array<FuncObject>) -> (ClassObject -> ClassObject) {
 		return ClassObject.new(name, _, init, classFields, classMethods);
 	}
 
