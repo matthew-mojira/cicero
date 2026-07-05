@@ -429,13 +429,13 @@ class Parser extends TextReader {
 						def b = bindLocal(name);
 						def range = FileRange.new(fileName, startLine, startColumn, line, column);
 						
-						def initCO : Maybe<CodeObject> = setupInitCodeObject(name, fields, init);
+						def initFO : Maybe<FuncObject> = setupInitFuncObject(name, fields, init);
 						def fieldNames : Array<string> = Array.new(fields.length);
 						for (i < fields.length) fieldNames[i] = fields[i].0;
 
 						// XXX creating CodeObject here
 						return AST.new(ASTData.VarSet(name, b,
-							AST.new(ASTData.Class(name, superclass, initCO, fieldNames, methods.extract()), range)),
+							AST.new(ASTData.Class(name, superclass, initFO, fieldNames, methods.extract()), range)),
 							range);
 					}
 					NEW => {
@@ -680,7 +680,7 @@ class Parser extends TextReader {
 		return Maybe.Nothing;
 	}
 	
-	def setupInitCodeObject(className: string, fields: Vector<(string, AST)>, init: Maybe<AST>) -> Maybe<CodeObject>{
+	def setupInitFuncObject(className: string, fields: Vector<(string, AST)>, init: Maybe<AST>) -> Maybe<FuncObject>{
 		/*
 		(class A
 			(field x expr1)
@@ -756,7 +756,10 @@ class Parser extends TextReader {
 		if (Arrays.length(initBodyASTs) > 0){
 			def loc = FileRange.new(fileName, minBeginLine, minBeginColumn, maxEndLine, maxEndColumn);
 			def initBody = AST.new(ASTData.Begin(initBodyASTs), loc);
-			return Maybe.Just(CodeObjects.fromAST(initBody));
+			def code =  CodeObjects.fromAST(initBody);
+			def metadata = FunctionProfileMetadata.new(FuncObjects.identifier_id++ ,Strings.format1("%s.init", className));
+			def fo = FuncObjects.newFO("init", ["self"], [], code, metadata);
+			return Maybe.Just(fo);
 		} else {
 			return Maybe.Nothing;
 		}

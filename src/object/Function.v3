@@ -107,6 +107,8 @@ component FuncObjects {
 	def funchole(id: string, params: Array<string>, code: CodeObject, metadata: FunctionProfileMetadata) -> (Array<(string, Object)> -> FuncObject) {
 		return newFO(id, params, _, code, metadata);
 	}
+
+	def initFail: FuncObject = FuncObjects.newFO("init", ["self"], [], CodeObjects.virgilFail, FunctionProfileMetadata.new(FuncObjects.identifier_id++, "init"));
 }
 
 def callMethod0<T>(args: Range<Object>, method: T -> Result) -> Result {

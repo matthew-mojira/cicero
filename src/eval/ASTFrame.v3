@@ -209,7 +209,7 @@ class ASTFrame extends FrameObject {
 				value = fn;
 			}
 			Class(id, superclass, init, fields, methods) => {
-				var i: CodeObject = if(init.isJust(), init.fromJust(), null);
+				var i: FuncObject = if(init.isJust(), init.fromJust(), null);
 				var s: ClassObject;
 				match (superclass) {
 					Just(e) => {
@@ -320,10 +320,10 @@ class ASTFrame extends FrameObject {
 					// call initializer (initializes fields as well)
 					if (cls.init != null) {
 						def args = [("self", obj)];
-						def code = cls.init;
+						def fv : FuncObject = cls.init;
 
 						// create new frames here!
-						def frame = newFrame(Strings.format1("%s.init", cls.name), code, args, []);
+						def frame = newFrame(Strings.format1("%s.init", cls.name), fv.code, args, []);
 						frame.eval();
 						if (frame.isExn()) {
 							rethrow(frame.getExn());

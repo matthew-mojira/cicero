@@ -197,12 +197,12 @@ class BytecodeCompiler {
 					}
 					Just(expr) => compileAST(expr);
 				}
-				var init2: CodeObject;
+				var init2: FuncObject;
 				match (init) {
 					Nothing => ;
-					Just(code) => {
-						code.compile(["self"], Strings.format1("%s.init", id), false);
-						init2 = code;
+					Just(fn) => {
+						fn.code.compile(["self"], Strings.format1("%s.init", id), false);
+						init2 = fn;
 					}
 				}
 				//                                   XXX
