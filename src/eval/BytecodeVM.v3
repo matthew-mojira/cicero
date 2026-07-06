@@ -1198,77 +1198,92 @@ class VirtualMachine {
                         opExecTime = System.ticksUs();
                     }
 
-                    def currentCallFrame = callFrames.peek();
-                    if (InitCallFrame.?(currentCallFrame)){
-                        def initCallFrame = InitCallFrame.!(currentCallFrame);
-                        def newIndex = initCallFrame.currentIndex + 1;
-                        if (newIndex < initCallFrame.initFOs.length){
-                            // reuse the same existing init call frame (no need to pop frame)
+                    // return value will be on top of the stack
+                    // put the return value as the base of the current call frame
+                    def returnValue = stack.pop();
+                    stack.elems[baseStartIndex] = returnValue;
+                    stack.resize(baseStartIndex + 1);
 
-                            def initFO = initCallFrame.initFOs[newIndex];
-                            // no need to pop the call frame
-                            // update all necessary local variables
-			                def bytecode = Code.Bytecode.!(initFO.code.code).bytecode;
-                            b = bytecode;
-                            code = b.instrs;
-                            pc = 0;
-                            nonLocalsStartIndex = localsStartIndex + bytecode.locals.length; // classes don't capture nonlocals.
-                            associatedFunc = initFO.metadata;
-                            loc = b.sourceMap[0];
+                    // finished with the current call frame. pop it and set the executing frame to the caller frame.
+                    callFrames.pop();
 
-                            // grow stack (if needed for remaining local variables)
-                            stack.resize(nonLocalsStartIndex);
-
-                            // update the current init FO index
-                            InitCallFrame.!(callFrames.elems[callFrames.top -1]).currentIndex = newIndex;
-                            updateInitFrame(b, pc, associatedFunc, loc);
-                        } else {
-                            // done with init frames
-                            callFrames.pop();
-                            stack.resize(baseStartIndex + 1);
-
-                            def currentCallFrame = callFrames.peek();
-                            
-                            // Sync the local variables relevant to the currently executing frame
-                            b = currentCallFrame.b;
-                            code = b.instrs;
-                            pc = currentCallFrame.ip;
-                            localsStartIndex = currentCallFrame.localsStartIndex;
-                            nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
-                            baseStartIndex = currentCallFrame.baseStartIndex;
-                            associatedFunc = currentCallFrame.associatedFunc;
+                    if (callFrames.empty()){
+                        // return from top-level code
+                        result = Result.Return(returnValue);
+                        if (CiceroOptions.profileDynamicBytecode) {
+                            opExecTime = System.ticksUs() - opExecTime;
+                            ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
                         }
+                        return null;
                     } else {
-                        // return value will be on top of the stack
-                        // put the return value as the base of the current call frame
-                        def returnValue = stack.pop();
-                        stack.elems[baseStartIndex] = returnValue;
+                        def currentCallFrame = callFrames.peek();
+                        
+                        // Sync the local variables relevant to the currently executing frame
+                        b = currentCallFrame.b;
+                        code = b.instrs;
+                        pc = currentCallFrame.ip;
+                        localsStartIndex = currentCallFrame.localsStartIndex;
+                        nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
+                        baseStartIndex = currentCallFrame.baseStartIndex;
+                        loc = currentCallFrame.loc;
+                        associatedFunc = currentCallFrame.associatedFunc;
+                    }
+
+                    if (CiceroOptions.profileDynamicBytecode) {
+                        opExecTime = System.ticksUs() - opExecTime;
+                        ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+                    }
+                }
+                RETURN_INIT => {
+                    if (CiceroOptions.profileDynamicOpcodePair){
+                        def dispatchEndTime = System.ticksUs();
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                    }
+                    if (CiceroOptions.profileDynamicBytecode) {
+                        opExecTime = System.ticksUs();
+                    }
+
+                    // sanity check make sure currentCallFrame is initCallFrame
+                    def initCallFrame = InitCallFrame.!(callFrames.peek());
+                    def newIndex = initCallFrame.currentIndex + 1;
+                    if (newIndex < initCallFrame.initFOs.length){
+                        def initFO = initCallFrame.initFOs[newIndex];
+                        // no need to pop the call frame
+                        // update all necessary local variables
+                        def bytecode = Code.Bytecode.!(initFO.code.code).bytecode;
+                        b = bytecode;
+                        code = b.instrs;
+                        pc = 0;
+                        nonLocalsStartIndex = localsStartIndex + bytecode.locals.length; // classes don't capture nonlocals.
+                        loc = b.sourceMap[0];
+                        associatedFunc = initFO.metadata;
+
+                        // grow stack (if needed for remaining local variables)
+                        stack.resize(nonLocalsStartIndex);
+
+                        // update the current init FO index
+                        InitCallFrame.!(callFrames.elems[callFrames.top -1]).currentIndex = newIndex;
+                        
+                        // reuse the same existing init call frame (no need to pop frame)
+                        // but update the contents of the frame
+                        updateInitFrame(b, pc, associatedFunc, loc);
+                    } else {
+                        // treat like a normal `RETURN` instruction
+                        // done with init frames
+                        callFrames.pop();
                         stack.resize(baseStartIndex + 1);
 
-                        // finished with the current call frame. pop it and set the executing frame to the caller frame.
-                        callFrames.pop();
-
-                        if (callFrames.empty()){
-                            // return from top-level code
-                            result = Result.Return(returnValue);
-                            if (CiceroOptions.profileDynamicBytecode) {
-                                opExecTime = System.ticksUs() - opExecTime;
-                                ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
-                            }
-                            return null;
-                        } else {
-                            def currentCallFrame = callFrames.peek();
-                            
-                            // Sync the local variables relevant to the currently executing frame
-                            b = currentCallFrame.b;
-                            code = b.instrs;
-                            pc = currentCallFrame.ip;
-                            localsStartIndex = currentCallFrame.localsStartIndex;
-                            nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
-                            baseStartIndex = currentCallFrame.baseStartIndex;
-                            loc = currentCallFrame.loc;
-                            associatedFunc = currentCallFrame.associatedFunc;
-                        }
+                        def currentCallFrame = callFrames.peek();
+                        
+                        // Sync the local variables relevant to the currently executing frame
+                        b = currentCallFrame.b;
+                        code = b.instrs;
+                        pc = currentCallFrame.ip;
+                        localsStartIndex = currentCallFrame.localsStartIndex;
+                        nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
+                        baseStartIndex = currentCallFrame.baseStartIndex;
+                        loc = currentCallFrame.loc;
+                        associatedFunc = currentCallFrame.associatedFunc;
                     }
 
                     if (CiceroOptions.profileDynamicBytecode) {

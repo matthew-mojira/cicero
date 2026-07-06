@@ -44,11 +44,12 @@ component ParseOption {
 	// TODO add allowEmptyBegin
 }
 
-def missingCloseParentheses: string = "expected closing parentheses but reached end of file";
-def duplicatedParameter: string     = "parameter redefined";
-def duplicatedFieldMethod: string   = "field/method redefined";
-def duplicatedExtends: string       = "extends clause defined";
-def duplicatedInit: string          = "init clause defined";
+def missingCloseParentheses: string      = "expected closing parentheses but reached end of file";
+def duplicatedParameter: string          = "parameter redefined";
+def duplicatedFieldMethod: string        = "field/method redefined";
+def duplicatedExtends: string            = "extends clause defined";
+def duplicatedInit: string               = "init clause defined";
+def returnUsedInsideFieldOrInit: string  = "return expression not allowed inside field/init";
 
 class Vars {
 	def referencedVars: HashMap<string, Box<AccessMode>> = Strings.newMap();
@@ -72,6 +73,7 @@ class Parser extends TextReader {
 		}
 	}
 
+	var returnExprAllowed = true;
 	def varStack: ArrayStack<Vars> = ArrayStack.new();
 	// all global-set/gets use this to reduce allocations. Don't mutate this
 	def global:   Box<AccessMode> = Box.new(AccessMode.Global);
@@ -381,12 +383,20 @@ class Parser extends TextReader {
 										fail(duplicatedInit);
 										// XXX fail but keep parsing
 									}
+
+									returnExprAllowed = false;
 									def initAST = readCode(["self"]).0;
+									returnExprAllowed = true;
+
 									init = Maybe.Just(initAST); // XXX ignoring .1
 								}
 								FIELD => {
 									def fieldName = readIdentifier();
+
+									returnExprAllowed = false;
 									def fieldExpr = readCode(["self"]).0; // XXX ignoring .1
+									returnExprAllowed = true;
+
 									fields.put(fieldName, fieldExpr);
 								}
 								METHOD => {
@@ -473,6 +483,10 @@ class Parser extends TextReader {
 							value = readExpr();
 							req1(')');
 						}
+						
+						if (!returnExprAllowed) 
+						    fail(returnUsedInsideFieldOrInit);// XXX fail but keep parsing
+
 						return AST.new(ASTData.Return(value),
 							FileRange.new(fileName, startLine, startColumn, line, column));
 					}

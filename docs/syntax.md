@@ -219,7 +219,9 @@ When a top-level return expression is evaluated, the program exits with the foll
 * All other values result in exit code 255
 
 #### Non-Top level return
-If not used at the top-level, `return`, like in other languages, does two things:
+Return expression is not allowed inside field expressions and inside the init clause of a class.
+
+Other than that, if not used at the top-level, `return`, like in other languages, does two things:
 * it <b>*immediately*</b> exits the function/method.
 * it sends a value back to where the function/method was called.
 
