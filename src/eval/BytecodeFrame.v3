@@ -34,8 +34,6 @@ class BytecodeFrame extends FrameObject {
 	def var locals: Array<Object>;
 	def var nonlocals: Array<Object>;
 
-	def handlers: ArrayStack<(int, int)> = ArrayStack.new();
-
 	def evalCode(code: CodeObject) -> Object {
 		def v = TopLevel.VM.eval(Code.Bytecode.!(code.code).bytecode);
 		result = TopLevel.VM.result;

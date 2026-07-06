@@ -1,17 +1,3 @@
-class CallFrame #unboxed {
-	def b: Bytecode;
-	var ip: int;
-	def localsStartIndex: int;
-	def nonLocalsStartIndex: int;
-	def baseStartIndex: int;
-    
-    def associatedFunc: FunctionProfileMetadata;
-    var loc: FileRange;
-    var lastInstr: Maybe<Opcode> = Maybe.Nothing;
-
-	new(b, ip, localsStartIndex, nonLocalsStartIndex, baseStartIndex, associatedFunc) {}
-}
- 
 class VirtualMachine {
 
     new() {}
@@ -26,27 +12,24 @@ class VirtualMachine {
 	def handlers: ArrayStack<(int, int, int)> = ArrayStack.new();
 	def stack: ArrayStack<Object> = ArrayStack.new();
     def callFrames: ArrayStack<CallFrame> = ArrayStack.new();
-    var currentCallFrame: CallFrame;
 
     var result: Result;
+    var lastInstr: Maybe<Opcode> = Maybe.Nothing;
 
     def eval(bcode: Bytecode) -> Object {
-        // Reset VM
-        reset();
-
-        // Setup top level frame and bytecode to execute
-        currentCallFrame = CallFrame.new(bcode, 0, 0, 0, 0, TopLevel.metadata);
-        callFrames.push(currentCallFrame);
-
         if (CiceroOptions.traceBytecodeEvaluation) {
             System.puts("Evaluating bytecode:\n");
             bcode.inspect();
             System.puts("==\n");
         }
 
+        // Reset VM
+        reset();
+
         /*
-        * Local variables for the active call frame
-        * kept in sync with active call frame during CALL, RETURN
+        * These local variables represent the currently active(executing) call frame
+        * So, the `CallFrame` object in the call frames stack is out of sync.
+        * So, it is kept in sync when a new call frame gets pushed (during CALL, CREATE_OBJECT)
         */
         var b = bcode;
         var code = b.instrs;
@@ -55,6 +38,10 @@ class VirtualMachine {
         var nonLocalsStartIndex: int = 0;
         var baseStartIndex: int = 0;
         var loc: FileRange;
+        var associatedFunc: FunctionProfileMetadata = TopLevel.metadata;
+
+        // Setup top level frame and bytecode to execute
+        callFrames.push(CallFrame.new(b, pc, localsStartIndex, nonLocalsStartIndex, baseStartIndex, associatedFunc));
 
         var dispatchStartTime : int = System.ticksUs(); 
         var opExecTime : int;
@@ -70,7 +57,7 @@ class VirtualMachine {
                     // build full stack trace
                     callFrames.pop();
                     while (!callFrames.empty()){
-                        currentCallFrame = callFrames.pop();
+                        def currentCallFrame = callFrames.pop();
                         exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
                     }
 		            result = Result.Exn(exn);
@@ -81,12 +68,12 @@ class VirtualMachine {
                     def p = handlers.pop();
                     // build stack trace until the handlers call frame
                     while (callFrames.top > p.2){
-                        currentCallFrame = callFrames.pop();
+                        def currentCallFrame = callFrames.pop();
                         if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
                         isTopFrame = false;
                     }
 
-                    currentCallFrame = callFrames.peek();
+                    def currentCallFrame = callFrames.peek();
                     // If we actually popped frames to get here, log the handler's frame as well.
                     // If isOriginalFrame is still true, the exception was caught locally, so we skip it.
                     if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
@@ -102,7 +89,7 @@ class VirtualMachine {
                     localsStartIndex = currentCallFrame.localsStartIndex; 
                     nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
                     baseStartIndex = currentCallFrame.baseStartIndex;
-                    loc = currentCallFrame.loc;
+                    associatedFunc = currentCallFrame.associatedFunc;
 
 		            result = Result.Uncomputed;
                 }
@@ -124,7 +111,9 @@ class VirtualMachine {
                 System.puts("    stack:\n");
                 for (i < stack.top) {
                     System.puts("    ");
-                    System.puts(stack.elems[i].display());
+                    def element = stack.elems[i];
+                    if (element == null) System.puts("NULL");
+                    else System.puts(element.display());
                     System.ln();
                 }
                 System.puts("    exn loc stack:\n");
@@ -146,14 +135,14 @@ class VirtualMachine {
                     }
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                         dispatchStartTime = System.ticksUs();
                     }
                 }
                 LOAD_CONST => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -172,7 +161,7 @@ class VirtualMachine {
                 LOAD_GLOBAL => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -192,7 +181,7 @@ class VirtualMachine {
                                 rewriteBytecode(code, pc - 4, Opcode.LOAD_GLOBAL_BY_INDEX, global_index);
                             }
                         }
-                        Nothing => throw(Exceptions.unboundGlobal(id));
+                        Nothing => throw(Exceptions.unboundGlobal(id), associatedFunc.label, loc);
                     }
 
                     if (CiceroOptions.profileDynamicBytecode) {
@@ -206,7 +195,7 @@ class VirtualMachine {
                 LOAD_GLOBAL_BY_INDEX => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -226,7 +215,7 @@ class VirtualMachine {
                 LOAD_LOCAL => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -234,7 +223,7 @@ class VirtualMachine {
 
                     def local = stack.elems[localsStartIndex + operand];
                     if (local == null)
-                        throw(Exceptions.unboundLocal(b.locals[operand]));
+                        throw(Exceptions.unboundLocal(b.locals[operand]), associatedFunc.label, loc);
                     else
                         stack.push(local);
 
@@ -249,7 +238,7 @@ class VirtualMachine {
                 LOAD_LOCAL_SAFE => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -268,7 +257,7 @@ class VirtualMachine {
                 LOAD_NONLOCAL => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -294,7 +283,7 @@ class VirtualMachine {
                 STORE_GLOBAL => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -322,7 +311,7 @@ class VirtualMachine {
                 STORE_GLOBAL_BY_INDEX => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -342,7 +331,7 @@ class VirtualMachine {
                 STORE_LOCAL => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -361,7 +350,7 @@ class VirtualMachine {
                 JUMP => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -380,7 +369,7 @@ class VirtualMachine {
                 JUMP_IF_FALSE => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -400,7 +389,7 @@ class VirtualMachine {
                 JUMP_IF_TRUE_PEEK => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -424,7 +413,7 @@ class VirtualMachine {
                 JUMP_IF_FALSE_PEEK => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -448,14 +437,14 @@ class VirtualMachine {
                 RAISE => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
                     }
 
                     def top = stack.pop();
-                    assertType(ClassObjects.classStr, top);
+                    assertType(ClassObjects.classStr, top, associatedFunc.label, loc);
                     if (isExn()) {
                         if (CiceroOptions.profileDynamicBytecode) {
                             opExecTime = System.ticksUs() - opExecTime;
@@ -467,7 +456,7 @@ class VirtualMachine {
                         continue;
                     }
 
-                    throw(StrObject.!(top).str);
+                    throw(StrObject.!(top).str, associatedFunc.label, loc);
 
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs() - opExecTime;
@@ -480,14 +469,14 @@ class VirtualMachine {
                 ASSERT_FUNC => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
                     }
 
                     def top = stack.peek();
-                    assertType(ClassObjects.classFunc, top);
+                    assertType(ClassObjects.classFunc, top, associatedFunc.label, loc);
 
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs() - opExecTime;
@@ -500,7 +489,7 @@ class VirtualMachine {
                 CALL => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -511,7 +500,7 @@ class VirtualMachine {
                     def params = fv.params;
 
                     // arity check
-                    assertArity(params.length, operand);
+                    assertArity(params.length, operand, associatedFunc.label, loc);
                     if (isExn()) {
                         if (CiceroOptions.profileDynamicBytecode) {
                             opExecTime = System.ticksUs() - opExecTime;
@@ -526,20 +515,18 @@ class VirtualMachine {
                     match (fv.code.code){
                         Bytecode => {
                             // update the ip in the caller frame!
-                            callFrames.elems[callFrames.top - 1].ip = pc;
-                            callFrames.elems[callFrames.top - 1].loc = loc;
-                            if (CiceroOptions.profileDynamicOpcodePair){
-                                callFrames.elems[callFrames.top - 1].lastInstr = currentCallFrame.lastInstr;
-                            }
+                            saveFrame(pc, loc);
 
+                            // Update all the local variables to represent the new executing callee frame
 			                def bytecode = Code.Bytecode.!(fv.code.code).bytecode;
-                            // sync local variables for the new executing callee frame
                             b = bytecode;
                             code = b.instrs;
                             pc = 0;
                             baseStartIndex = fvBaseStartIndex;
                             localsStartIndex = fvBaseStartIndex + 1;
                             nonLocalsStartIndex = localsStartIndex + bytecode.locals.length;
+                            associatedFunc = fv.metadata;
+                            loc = b.sourceMap[0];
                             
                             // grow stack (if needed for remaining local variables)
                             stack.resize(nonLocalsStartIndex);
@@ -567,8 +554,7 @@ class VirtualMachine {
                             }
 
                             // push the new frame
-                            callFrames.push(CallFrame.new(b, pc, localsStartIndex, nonLocalsStartIndex, fvBaseStartIndex, fv.metadata));
-                            currentCallFrame = callFrames.peek();
+                            callFrames.push(CallFrame.new(b, pc, localsStartIndex, nonLocalsStartIndex, fvBaseStartIndex, associatedFunc));
                         }
                         _ => {
 
@@ -631,12 +617,12 @@ class VirtualMachine {
                                     ProfileFunctionCalls.profileFunctionObjectCall(fv.uid, fv.metadata.label, inclusiveExecutionTime, inclusiveExecutionTime);
                                 }
                                 if (CiceroOptions.profileCallerCalleePairs) {
-                                    ProfileCallerCalleePairs.profilePair(currentCallFrame.associatedFunc, fv.metadata, inclusiveExecutionTime);
+                                    ProfileCallerCalleePairs.profilePair(associatedFunc, fv.metadata, inclusiveExecutionTime);
                                 }
                             }
 
                             if (frame.isExn()) {
-                                rethrow(frame.getExn());
+                                rethrow(frame.getExn(), associatedFunc.label, loc);
 
                                 if (CiceroOptions.profileDynamicBytecode) {
                                     opExecTime = System.ticksUs() - opExecTime;
@@ -662,7 +648,7 @@ class VirtualMachine {
                 TRY => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -681,7 +667,7 @@ class VirtualMachine {
                 CATCH => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -701,7 +687,7 @@ class VirtualMachine {
                 POP => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -720,7 +706,7 @@ class VirtualMachine {
                 DUPE => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -740,7 +726,7 @@ class VirtualMachine {
                 SWAP => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -763,14 +749,14 @@ class VirtualMachine {
                 CREATE_CLASS => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
                     }
 
                     def superclass = stack.pop();
-                    assertType(ClassObjects.classClass, superclass);
+                    assertType(ClassObjects.classClass, superclass, associatedFunc.label, loc);
                     if (isExn()) {
                         if (CiceroOptions.profileDynamicBytecode) {
                             opExecTime = System.ticksUs() - opExecTime;
@@ -793,114 +779,106 @@ class VirtualMachine {
                         dispatchStartTime = System.ticksUs();
                     }
                 }
-        //         CREATE_OBJECT => {
-        //             if (CiceroOptions.profileDynamicOpcodePair){
-        //                 def dispatchEndTime = System.ticksUs();
-        //                 ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
-        //             }
-        //             if (CiceroOptions.profileDynamicBytecode) {
-        //                 opExecTime = System.ticksUs();
-        //             }
+                CREATE_OBJECT => {
+                    if (CiceroOptions.profileDynamicOpcodePair){
+                        def dispatchEndTime = System.ticksUs();
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                    }
+                    if (CiceroOptions.profileDynamicBytecode) {
+                        opExecTime = System.ticksUs();
+                    }
 
-        //             def top = stack.pop();
-        //             assertType(ClassObjects.classClass, top);
-        //             if (isExn()) {
-        //                 if (CiceroOptions.profileDynamicBytecode) {
-        //                     opExecTime = System.ticksUs() - opExecTime;
-        //                     ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
-        //                 }
-        //                 if (CiceroOptions.profileDynamicOpcodePair){
-        //                     dispatchStartTime = System.ticksUs();
-        //                 }
-        //                 continue;
-        //             }
+                    def top = stack.pop();
+                    assertType(ClassObjects.classClass, top, associatedFunc.label, loc);
+                    if (isExn()) {
+                        if (CiceroOptions.profileDynamicBytecode) {
+                            opExecTime = System.ticksUs() - opExecTime;
+                            ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+                        }
+                        if (CiceroOptions.profileDynamicOpcodePair){
+                            dispatchStartTime = System.ticksUs();
+                        }
+                        continue;
+                    }
 
-        //             // duplicated code
-        //             def clsObj = ClassObject.!(top);
-        //             def obj = Objects.newObject(clsObj);
+                    // duplicated code
+                    def clsObj = ClassObject.!(top);
+                    def obj = Objects.newObject(clsObj);
 
-        //             def classes: Vector<ClassObject> = Vector.new();
-        //             for (cls = clsObj; cls != null; cls = cls.superclass)
-        //                 classes.put(cls);
+                    def classes: Vector<ClassObject> = Vector.new();
+                    for (cls = clsObj; cls != null; cls = cls.superclass)
+                        classes.put(cls);
                 
-        //             // initialization order is from base class downwards, which
-        //             // may involve reinitializing some fields
-        //             for (cls in classes.reverse().extract()) {
-        //                 // initialize fields
-        //                 for (field in cls.classFields) {
-        //                     def name = field.0, expr = field.1;
+                    // initialization order is from base class downwards, which
+                    // may involve reinitializing some fields
+                    def classInitFOs : Vector<FuncObject> = Vector.new();
+                    def args = [("self", obj)];
+                    for (cls in classes.reverse().extract()) {
+                        // call initializer (initialize fields as well)
+                        if (cls.init != null) {
+                            def initFn = cls.init;
+                            match (initFn.code.code) {
+                                Bytecode => classInitFOs.put(initFn);
+                                _ => {
+                                    // create new frames here!
+                                    def frame = FrameObjects.newFrame(null, Strings.format1("%s.init", cls.name), initFn.code, args, []);
 
-        //                     // XXX hackfix
-        //                     if (expr == null) continue;
-        //                     // create new frames here!
-        //                     def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, [], []);
+                                    if (CiceroOptions.profileDynamicBytecode) {
+                                        opExecTime = System.ticksUs() - opExecTime;
+                                        ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
+                                    }
 
-        //                     if (CiceroOptions.profileDynamicBytecode) {
-        //                         opExecTime = System.ticksUs() - opExecTime;
-        //                         ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
-        //                     }
+                                    frame.eval();
 
-        //                     if ((CiceroOptions.profileJumpOutcomes || CiceroOptions.profileCallerCalleePairs || CiceroOptions.profileInlineCaching) && BytecodeFrame.?(frame)) {
-        //                         // treat the new frame as if the field expr is being evaluated in the current frame for caller-callee data
-        //                         currentCallFrame.associatedFunc = currentCallFrame.associatedFunc;
-        //                     }
+                                    if (CiceroOptions.profileDynamicBytecode) {
+                                        opExecTime = System.ticksUs();
+                                    }
 
-        //                     frame.eval();
+                                    if (frame.isExn()) {
+                                        rethrow(frame.getExn(), associatedFunc.label, loc);
+                                        continue;
+                                    }
+                                }
+                            }
 
-        //                     if (CiceroOptions.profileDynamicBytecode) {
-        //                         opExecTime = System.ticksUs();
-        //                     }
+                        } 
+                    }
+                    stack.push(obj);
 
-        //                     if (frame.isExn()) {
-        //                         rethrow(frame.getExn());
-        //                         continue;
-        //                     }
-        //                     obj.setField(name, frame.getValue());
-        //                 }
-        //                 // call initializer
-        //                 if (cls.init != null) {
-        //                     def args = [("self", obj)];
-        //                     def code = cls.init;
+                    // setup new `InitCallFrame` if init bytecode objects to execute
+                    if (classInitFOs.length > 0){
+                        // save current caller state
+                        saveFrame(pc, loc);
 
-        //                     // create new frames here!
-        //                     def frame = newFrame(Strings.format1("%s.init", cls.name), code, args, []);
+                        // sync local variables for the new executing init-callee frame
+			            def initFO = classInitFOs[0];
+			            def bytecode = Code.Bytecode.!(initFO.code.code).bytecode;
+                        b = bytecode;
+                        code = b.instrs;
+                        pc = 0;
+                        baseStartIndex = stack.top - 1; // `self` is on the stack
+                        localsStartIndex = baseStartIndex;
+                        nonLocalsStartIndex = localsStartIndex + bytecode.locals.length; // classes don't capture nonlocals.
+                        associatedFunc = initFO.metadata;
+                        
+                        // grow stack (if needed for remaining local variables)
+                        stack.resize(nonLocalsStartIndex);
 
-        //                     if (CiceroOptions.profileDynamicBytecode) {
-        //                         opExecTime = System.ticksUs() - opExecTime;
-        //                         ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
-        //                     }
+                        callFrames.push(InitCallFrame.new(b, classInitFOs.extract(), baseStartIndex, initFO.metadata));
+                    }
 
-        //                     if ((CiceroOptions.profileJumpOutcomes || CiceroOptions.profileCallerCalleePairs || CiceroOptions.profileInlineCaching) && BytecodeFrame.?(frame)) {
-        //                         // treat the new frame as if the initializer expr is being evaluated in the current frame for caller-callee data
-        //                         BytecodeFrame.!(frame).currentCallFrame.associatedFunc = currentCallFrame.associatedFunc;
-        //                     }
-
-        //                     frame.eval();
-
-        //                     if (CiceroOptions.profileDynamicBytecode) {
-        //                         opExecTime = System.ticksUs();
-        //                     }
-
-        //                     if (frame.isExn()) {
-        //                         rethrow(frame.getExn());
-        //                         continue;
-        //                     }
-        //                 } 
-        //             }
-        //             stack.push(obj);
-
-        //             if (CiceroOptions.profileDynamicBytecode) {
-        //                 opExecTime = System.ticksUs() - opExecTime;
-        //                 ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
-        //             }
-        //             if (CiceroOptions.profileDynamicOpcodePair){
-        //                 dispatchStartTime = System.ticksUs();
-        //             }
-        //         }
+                    if (CiceroOptions.profileDynamicBytecode) {
+                        opExecTime = System.ticksUs() - opExecTime;
+                        ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+                    }
+                    if (CiceroOptions.profileDynamicOpcodePair){
+                        dispatchStartTime = System.ticksUs();
+                    }
+                }
                 LOAD_FIELD => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -918,14 +896,14 @@ class VirtualMachine {
                             Uncached => {
                                 // cache miss
                                 def v = obj.getField(field);
-                                if (v == null) throw(Exceptions.missingField(obj, field));
+                                if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                 else {
                                     stack.push(v);
                                     // transition to monomorphic state(initial cached state)
                                     b.cache[idx] = CacheState.Monomorphic(cls, obj.getIndex(field));
                                 }
 
-                                if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, true);
+                                if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
                             }
                             Monomorphic(cachedClass, cachedIndex) => {
                                 if (cachedClass == cls) {
@@ -934,7 +912,7 @@ class VirtualMachine {
                                         // if not yet initialized, must treat as cache miss
                                         stack.push(obj.getField(field));
                                         // don't transition state
-                                        if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, false);
+                                        if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
                                     } else {
                                         // cache hit
                                         stack.push(res);
@@ -943,7 +921,7 @@ class VirtualMachine {
                                 } else {
                                     // cache miss
                                     def v = obj.getField(field);
-                                    if (v == null) throw(Exceptions.missingField(obj, field));
+                                    if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                     else {
                                         stack.push(v);
 
@@ -955,7 +933,7 @@ class VirtualMachine {
                                         b.cache[idx] = CacheState.Polymorphic(picArray);
                                     }
 
-                                    if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, true);
+                                    if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
                                 }
                             }
                             Polymorphic(values)=> {
@@ -970,7 +948,7 @@ class VirtualMachine {
                                             stack.push(obj.getField(field));
                                             // don't transition state
                                             if (CiceroOptions.profileInlineCaching) {
-                                                ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, false);
+                                                ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
                                             }
                                         } else {
                                             // cache hit
@@ -986,14 +964,14 @@ class VirtualMachine {
                                     } else if (cachedClass == null) {
                                         // cache miss
                                         def v = obj.getField(field);
-                                        if (v == null) throw(Exceptions.missingField(obj, field));
+                                        if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                         else {
                                             stack.push(v);
                                             values[i] = (cls, obj.getIndex(field));
                                         }
 
                                         if (CiceroOptions.profileInlineCaching) {
-                                            ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, true);
+                                            ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
                                         }
 
                                         needToChangeState = false;
@@ -1003,7 +981,7 @@ class VirtualMachine {
                                 
                                 if (needToChangeState){
                                     def v = obj.getField(field);
-                                    if (v == null) throw(Exceptions.missingField(obj, field));
+                                    if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                     else {
                                         stack.push(v);
                                         // transition to megamorphic state
@@ -1011,23 +989,23 @@ class VirtualMachine {
                                     }
 
                                     if (CiceroOptions.profileInlineCaching) {
-                                        ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, true);
+                                        ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
                                     }
                                 }
                             }
                             Megamorphic => {
                                 // perform expensive lookup
                                 def v = obj.getField(field);
-                                if (v == null) throw(Exceptions.missingField(obj, field));
+                                if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                 else stack.push(v);
 
                                 // treat every megamorphic state cache lookup as a cache miss
-                                if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, false);
+                                if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
                             }
                         }
                     } else {
                         def v = obj.getField(field);
-                        if (v == null) throw(Exceptions.missingField(obj, field));
+                        if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                         else stack.push(v);
                     }
 
@@ -1042,7 +1020,7 @@ class VirtualMachine {
                 STORE_FIELD => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -1063,12 +1041,12 @@ class VirtualMachine {
                         match (cache){
                             Uncached => {
                                 /* cache miss */
-                                if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
+                                if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                 else {
                                     // transition to monomorphic
                                     b.cache[idx] = CacheState.Monomorphic(cls, obj.getIndex(field));
 
-                                    if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, true);
+                                    if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
                                 }
                             }
                             Monomorphic(cachedClass, cachedIndex) => {
@@ -1081,7 +1059,7 @@ class VirtualMachine {
                                 } else {
                                     /* cache miss */
                                     if (!obj.setField(field, val)) {
-                                        throw(Exceptions.missingField(obj, field));
+                                        throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                     } else {
                                         // Transition to Polymorphic state
                                         // store newly seen class, and also previously cached class
@@ -1090,7 +1068,7 @@ class VirtualMachine {
                                         picArray[1] = (cachedClass, cachedIndex);
                                         b.cache[idx] = CacheState.Polymorphic(picArray);
 
-                                        if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, true);
+                                        if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
                                     }
                                 }
                             }
@@ -1109,36 +1087,36 @@ class VirtualMachine {
                                     } else if (cachedClass == null) {
                                         needToChangeState = false;
 
-                                        if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
+                                        if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                         else {
                                             values[i] = (cls, obj.getIndex(field));
-                                            if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, true);
+                                            if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
                                         }
                                         break;
                                     }
                                 }
                                 
                                 if (needToChangeState){
-                                    if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
+                                    if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                     else {
                                         b.cache[idx] = CacheState.Megamorphic;
                                         if (CiceroOptions.profileInlineCaching) {
-                                            ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, true);
+                                            ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
                                         }
                                     }
                                 }
                             }
                             Megamorphic => {
                                 // perform expensive method call
-                                if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
+                                if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                                 else {
                                     // treat every megamorphic state cache lookup as a cache miss
-                                    if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, currentCallFrame.associatedFunc, false);
+                                    if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
                                 }
                             }
                         }
                     } else {
-                        if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field));
+                        if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
                     }
 
                     if (CiceroOptions.profileDynamicBytecode) {
@@ -1152,7 +1130,7 @@ class VirtualMachine {
                 CREATE_LIST => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -1180,7 +1158,7 @@ class VirtualMachine {
                 CREATE_FUNC => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
@@ -1214,40 +1192,83 @@ class VirtualMachine {
                 RETURN => {
                     if (CiceroOptions.profileDynamicOpcodePair){
                         def dispatchEndTime = System.ticksUs();
-                        ProfileDynamicOpcodePair.profile(currentCallFrame.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+                        ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
                     }
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs();
                     }
 
-                    // return value will be on top of the stack
-                    // put the return value as the base of the current call frame
-                    def returnValue = stack.pop();
-                    stack.elems[baseStartIndex] = returnValue;
-                    stack.resize(baseStartIndex + 1);
+                    def currentCallFrame = callFrames.peek();
+                    if (InitCallFrame.?(currentCallFrame)){
+                        def initCallFrame = InitCallFrame.!(currentCallFrame);
+                        def newIndex = initCallFrame.currentIndex + 1;
+                        if (newIndex < initCallFrame.initFOs.length){
+                            // reuse the same existing init call frame (no need to pop frame)
 
-                    // finished with the current call frame. pop it and set the executing frame to the caller frame.
-                    callFrames.pop();
+                            def initFO = initCallFrame.initFOs[newIndex];
+                            // no need to pop the call frame
+                            // update all necessary local variables
+			                def bytecode = Code.Bytecode.!(initFO.code.code).bytecode;
+                            b = bytecode;
+                            code = b.instrs;
+                            pc = 0;
+                            nonLocalsStartIndex = localsStartIndex + bytecode.locals.length; // classes don't capture nonlocals.
+                            associatedFunc = initFO.metadata;
+                            loc = b.sourceMap[0];
 
-                    if (callFrames.empty()){
-                        // return from top-level code
-                        result = Result.Return(returnValue);
-                        if (CiceroOptions.profileDynamicBytecode) {
-                            opExecTime = System.ticksUs() - opExecTime;
-                            ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+                            // grow stack (if needed for remaining local variables)
+                            stack.resize(nonLocalsStartIndex);
+
+                            // update the current init FO index
+                            InitCallFrame.!(callFrames.elems[callFrames.top -1]).currentIndex = newIndex;
+                            updateInitFrame(b, pc, associatedFunc, loc);
+                        } else {
+                            // done with init frames
+                            callFrames.pop();
+                            stack.resize(baseStartIndex + 1);
+
+                            def currentCallFrame = callFrames.peek();
+                            
+                            // Sync the local variables relevant to the currently executing frame
+                            b = currentCallFrame.b;
+                            code = b.instrs;
+                            pc = currentCallFrame.ip;
+                            localsStartIndex = currentCallFrame.localsStartIndex;
+                            nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
+                            baseStartIndex = currentCallFrame.baseStartIndex;
+                            associatedFunc = currentCallFrame.associatedFunc;
                         }
-                        return null;
                     } else {
-                        currentCallFrame = callFrames.peek();
-                        
-                        // Sync the local variables relevant to the currently executing frame
-                        b = currentCallFrame.b;
-                        code = b.instrs;
-                        pc = currentCallFrame.ip;
-                        localsStartIndex = currentCallFrame.localsStartIndex;
-                        nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
-                        baseStartIndex = currentCallFrame.baseStartIndex;
-                        loc = currentCallFrame.loc;
+                        // return value will be on top of the stack
+                        // put the return value as the base of the current call frame
+                        def returnValue = stack.pop();
+                        stack.elems[baseStartIndex] = returnValue;
+                        stack.resize(baseStartIndex + 1);
+
+                        // finished with the current call frame. pop it and set the executing frame to the caller frame.
+                        callFrames.pop();
+
+                        if (callFrames.empty()){
+                            // return from top-level code
+                            result = Result.Return(returnValue);
+                            if (CiceroOptions.profileDynamicBytecode) {
+                                opExecTime = System.ticksUs() - opExecTime;
+                                ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+                            }
+                            return null;
+                        } else {
+                            def currentCallFrame = callFrames.peek();
+                            
+                            // Sync the local variables relevant to the currently executing frame
+                            b = currentCallFrame.b;
+                            code = b.instrs;
+                            pc = currentCallFrame.ip;
+                            localsStartIndex = currentCallFrame.localsStartIndex;
+                            nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
+                            baseStartIndex = currentCallFrame.baseStartIndex;
+                            loc = currentCallFrame.loc;
+                            associatedFunc = currentCallFrame.associatedFunc;
+                        }
                     }
 
                     if (CiceroOptions.profileDynamicBytecode) {
@@ -1255,18 +1276,19 @@ class VirtualMachine {
                         ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
                     }
                 }
-                _ => System.error("eval error", "unsupported opcode");
+                // _ => System.error("eval error", "unsupported opcode");
             }
             if (CiceroOptions.profileJumpOutcomes) {
                 match (opcode) {
                     JUMP, JUMP_IF_FALSE, JUMP_IF_TRUE_PEEK, JUMP_IF_FALSE_PEEK => {
                         def jump_taken = opcode_pc != (pc - 4);
-                        ProfileJumpOutcomes.profileJump(b, opcode_pc, opcode.name, jump_taken, currentCallFrame.associatedFunc);
+                        ProfileJumpOutcomes.profileJump(b, opcode_pc, opcode.name, jump_taken, associatedFunc);
                     }
                     _ => {}
                 }
             }
-            currentCallFrame.lastInstr = Maybe.Just(opcode);
+            // SUPREME: TODO: NOT ACCURATE when a new function gets called
+            lastInstr = Maybe.Just(opcode);
         }
 
         if (CiceroOptions.sanityChecks && stack.empty()) System.error("eval error", "stack is empty");
@@ -1279,6 +1301,23 @@ class VirtualMachine {
         handlers.clear();
         stack.clear();
         result = Result.Uncomputed;
+    }
+
+    /* Call frame related helper methods */
+    def saveFrame(pc: int, loc: FileRange){
+        // update the ip in the caller frame!
+        def i = callFrames.top - 1;
+        callFrames.elems[i].ip = pc;
+        callFrames.elems[i].loc = loc;
+    }
+
+    def updateInitFrame(b: Bytecode, pc: int, associatedFunc: FunctionProfileMetadata, loc: FileRange){
+        def i = callFrames.top - 1;
+        // `bytecode`, `associatedFunc` are also necessary to save during init calls since we reuse the call frame
+        callFrames.elems[i].b = b; 
+        callFrames.elems[i].associatedFunc = associatedFunc;
+        // TODO? -> not necessary to save yet since init don't capture nonlocals, but potentially might need to in the future if classes capture nonlocals
+        saveFrame(pc, loc);
     }
 
 	/* Exception helper methods */
@@ -1295,23 +1334,23 @@ class VirtualMachine {
 		return null;
 	}
 
-	def assertArity(argc: int, vals: int) {
+	def assertArity(argc: int, vals: int, label: string, loc: FileRange) {
 		if (vals != argc)
-			throw(Exceptions.arityMismatch(argc, vals));
+			throw(Exceptions.arityMismatch(argc, vals), label, loc);
 	}
 
-	def rethrow(exn: ExnObject) {
-		exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+	def rethrow(exn: ExnObject, label: string, loc: FileRange) {
+		exn.stacktrace.put((label, loc));
 		result = Result.Exn(exn);
 	}
 
-	def assertType(exp: ClassObject, val: Object) {
+	def assertType(exp: ClassObject, val: Object, label: string, loc: FileRange) {
 		if (!val.instanceOf(exp))
-			throw(Exceptions.typeMismatch(exp, val));
+			throw(Exceptions.typeMismatch(exp, val), label, loc);
 	}
 
-	def throw(msg: string) {
-		result = Result.Exn(ExnObjects.fromStrObject(StrObjects.fromString(msg), currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+	def throw(msg: string, label: string, loc: FileRange) {
+		result = Result.Exn(ExnObjects.fromStrObject(StrObjects.fromString(msg), label, loc));
 	}
 
     /* Generic bytecode rewriting function */
