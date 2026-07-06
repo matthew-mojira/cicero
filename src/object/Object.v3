@@ -94,25 +94,22 @@ class Object {
  		for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
 			classes.put(clazz);
 		}
-		/* Figure out how much space needs to be allocated for fields. */
+		/* Install the field default values (computed at class creation)
+		 * and allocate method slots. The walk is base-down, so a field
+		 * redeclared in a subclass overwrites the superclass's default.
+		 * After this loop the object is fully initialized: every non-method
+		 * slot holds its default value before any `init` code runs.
+		 */
 		for (clazz in classes.reverse().copy()) {
 			for (field in clazz.classFields) {
-				fields.storeKey(field.0, null);
+				fields.storeKey(field.0, field.1);
 			}
 			// methods are not initialized but a slot is allocated
 			for (method in clazz.classMethods) {
 				fields.storeKey(method.id, null);
 			}
 		}
-		/* Initialization sets classes, allocates space for fields, and
-		 * initializes methods. Setting the fields are done later. 
-		 * Non-method fields
-		 * are eagerly initialized by the runtime for user-defined classes.
-		 * No built-in class makes use of non-method fields, but maybe this
-		 * could change if we expose *primitive* fields which are also
-		 * Cicero objects.
-		 */
-		
+
 		// Methods are initialized when class is initialized
 		if (!CiceroOptions.useLazyMethods) {
 			for (clazz in classes.copy()) {

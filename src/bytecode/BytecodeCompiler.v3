@@ -5,7 +5,7 @@ class BytecodeCompiler {
 
 	def params:     Array<string>; // XXX used by analysis only
 	def strings:    Vector<string> = Vector.new();
-	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
+	def classholes: Vector<(int, (ClassObject, Array<Object>) -> ClassObject)> = Vector.new();
 	def funcholes:  Vector<ASTData.Func> = Vector.new();
 	def constants:  Vector<Object> = Vector.new();
 	def locals:     Vector<string> = Vector.new();
@@ -185,12 +185,8 @@ class BytecodeCompiler {
 				writeInstrWithOperand(loc, Opcode.STORE_FIELD, addString(id));
 			}
 			Class(id, superclass, init, fields, methods) => {
-				// there are subcodes which are getting compiled here
 				match (superclass) {
-					Nothing => {
-						def idx = constants.length;
-						writeInstrWithOperand(loc, Opcode.LOAD_CONST, addConstant(ClassObjects.classBase));
-					}
+					Nothing => writeInstrWithOperand(loc, Opcode.LOAD_CONST, addConstant(ClassObjects.classBase));
 					Just(expr) => compileAST(expr);
 				}
 				var init2: CodeObject;
@@ -201,10 +197,15 @@ class BytecodeCompiler {
 						init2 = code;
 					}
 				}
-				// XXX compiling subcode
-				for (field in fields) field.1.compile([]);
-				//                                   XXX
-				def idx = addClasshole(ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc)));
+				/* Field default values are computed at class creation:
+				 * the expressions are compiled inline and their values
+				 * sit on the stack above the superclass. */
+				def fieldNames = Array<string>.new(fields.length);
+				for (i < fields.length) {
+					fieldNames[i] = fields[i].0;
+					compileAST(fields[i].1);
+				}
+				def idx = addClasshole(fields.length, ClassObjects.classhole(id, init2, fieldNames, Arrays.map(methods, funcToFunc)));
 				writeInstrWithOperand(loc, Opcode.CREATE_CLASS, idx);
 			}
 			New(obj) => {
@@ -267,9 +268,9 @@ class BytecodeCompiler {
 		return idx;
 	}
 
-	def addClasshole(clazz: ClassObject -> ClassObject) -> int {
+	def addClasshole(fieldCount: int, clazz: (ClassObject, Array<Object>) -> ClassObject) -> int {
 		def idx = classholes.length;
-		classholes.put(clazz);
+		classholes.put((fieldCount, clazz));
 		return idx;
 	}
 

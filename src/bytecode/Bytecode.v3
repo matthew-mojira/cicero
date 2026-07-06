@@ -23,10 +23,11 @@ class Bytecode(instrs:     Array<byte>,
 		/* String pool is used for lookups by name (e.g. globals) */
                 stringPool: Array<string>,
                 constPool:  Array<Object>,
-		/* This is a function which takes the superclass object and
-		 * creates a new class object with respect to that
+		/* Each entry is the number of field default values CREATE_CLASS
+		 * pops from the stack, paired with a function that takes the
+		 * superclass object and those values and creates the class object
 		 */
-                classPool:  Array<ClassObject -> ClassObject>,
+                classPool:  Array<(int, (ClassObject, Array<Object>) -> ClassObject)>,
 		/* This is the AST-level information for the function, and not
 		 * function objects. At runtime, the VM will need to use some
 		 * information to capture free variables before creating the

@@ -342,7 +342,7 @@ class Parser extends TextReader {
 					}
 					CLASS => {
 						def name = readIdentifier();
-						def fields: Vector<(string, CodeObject)> = Vector.new();
+						def fields: Vector<(string, AST)> = Vector.new();
 						def methods: Vector<ASTData.Func> = Vector.new();
 						var init: Maybe<CodeObject> = Maybe.Nothing;
 						var superclass: Maybe<AST> = Maybe.Nothing;
@@ -374,9 +374,7 @@ class Parser extends TextReader {
 								}
 								FIELD => {
 									def fieldName = readIdentifier();
-									def fieldInit = readCode(["self"]).0; // XXX ignoring .1
-									
-									fields.put(fieldName, CodeObjects.fromAST(fieldInit));
+									fields.put(fieldName, readExpr());
 								}
 								METHOD => {
 									req1('(');

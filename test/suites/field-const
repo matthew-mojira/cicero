@@ -1,0 +1,170 @@
+(class C
+  (field a { (println "init-a") 42 })
+)
+--
+"init-a"
+=> <class 'C'>
+==
+; field default is computed once, at class creation, and shared
+(set x (new C))
+(set y (new C))
+(println (+ x.a y.a))
+--
+=> <object>
+=> <object>
+84
+=> ()
+--
+; a mutable default value is shared by all instances
+(class L (field xs [1 2]))
+(set l1 (new L))
+(set l2 (new L))
+((get-field put l1.xs) 3)
+(println l2.xs)
+--
+=> <class 'L'>
+=> <object>
+=> <object>
+=> [1, 2, 3]
+[1, 2, 3]
+=> ()
+--
+; the field expression is an ordinary expression in the enclosing scope
+(func (mk n) (class D (field v n)))
+(set d (new (mk 7)))
+(println d.v)
+--
+=> <func 'mk'>
+=> <object>
+7
+=> ()
+--
+; an exception in a field expression fails class creation, catchably,
+; and the class name is not bound
+(try (class E (field q (raise "boom"))) e (try E e2 (println "unbound")))
+--
+"unbound"
+=> ()
+--
+; field values are installed at allocation, so a base init observes
+; derived fields through an overridden method
+(class A
+  (init (println (self.get-v)))
+  (method (get-v) 0))
+(class B
+  (extends A)
+  (field v 5)
+  (method (get-v) self.v))
+(set b (new B))
+--
+=> <class 'A'>
+=> <class 'B'>
+5
+=> <object>
+--
+; a redeclared field takes the derived default, visible to the base init
+(class F1 (field x 1) (init (println self.x)))
+(class F2 (extends F1) (field x 2))
+(set f (new F2))
+(println f.x)
+--
+=> <class 'F1'>
+=> <class 'F2'>
+2
+=> <object>
+2
+=> ()
+--
+; a field expression cannot see 'self' -- it's just an unbound global here
+(try (class G (field bad self)) e (try G e2 (println "unbound")))
+--
+"unbound"
+=> ()
+--
+; a field expression cannot see other fields of the same class either
+(try (class H (field p 1) (field q p)) e (try H e2 (println "unbound")))
+--
+"unbound"
+=> ()
+--
+; field defaults are evaluated in declaration order; a superclass's fields
+; are computed when the superclass itself is created, before the subclass
+; is even defined
+(println "before-M")
+(class M
+  (field m1 { (println "M.m1") 1 })
+  (field m2 { (println "M.m2") 2 }))
+(class N
+  (extends M)
+  (field n1 { (println "N.n1") 3 }))
+--
+"before-M"
+=> ()
+"M.m1"
+"M.m2"
+=> <class 'M'>
+"N.n1"
+=> <class 'N'>
+--
+; field default evaluation follows textual order among class members,
+; independent of methods/init interleaved between them (init itself only
+; runs later, at 'new')
+(class O
+  (field o1 { (println "O.o1") 1 })
+  (method (noop) 0)
+  (init (println "O.init"))
+  (field o2 { (println "O.o2") 2 }))
+--
+"O.o1"
+"O.o2"
+=> <class 'O'>
+--
+; if a later field's default raises, earlier fields' side effects have
+; already happened, but the class is never bound
+(try (class S
+  (field s1 { (println "S.s1") 1 })
+  (field s2 (raise "boom"))
+  (field s3 { (println "S.s3") 3 })) e (try S e2 (println "unbound")))
+--
+"S.s1"
+"unbound"
+=> ()
+--
+; set-field replaces only the target instance's slot; other instances
+; still see the original shared default value
+(class Q (field xs [10 20]))
+(set q1 (new Q))
+(set q2 (new Q))
+(set-field xs q1 [99])
+(println q1.xs)
+(println q2.xs)
+--
+=> <class 'Q'>
+=> <object>
+=> <object>
+=> [99]
+[99]
+=> ()
+[10, 20]
+=> ()
+--
+; shared reference identity: two instances of a class share the very same
+; nested object as their field default, not just an equal one -- mutating
+; it through one instance is visible through the other
+(class Cell (field val 0))
+(class Holder (field cell (new Cell)))
+(set h1 (new Holder))
+(set h2 (new Holder))
+(= h1.cell h2.cell)
+(set-field val h1.cell 42)
+(println h2.cell.val)
+--
+=> <class 'Cell'>
+=> <class 'Holder'>
+=> <object>
+=> <object>
+=> true
+=> 42
+42
+=> ()
+--

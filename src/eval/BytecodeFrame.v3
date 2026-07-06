@@ -301,12 +301,18 @@ class BytecodeFrame extends FrameObject {
 				}
 				// objects
 				CREATE_CLASS => {
+					def classhole = classholes[operand];
+					def count = classhole.0, make = classhole.1;
+
+					// field default values, in reverse order on the stack
+					def values = Array<Object>.new(count);
+					for (i < count) values[count - i - 1] = stack.pop();
+
 					def superclass = stack.pop();
 					assertType(ClassObjects.classClass, superclass);
 					if (isExn()) continue;
 
-					def classhole = classholes[operand];
-					stack.push(classhole(ClassObject.!(superclass)));
+					stack.push(make(ClassObject.!(superclass), values));
 				}
 				CREATE_OBJECT => {
 					def top = stack.pop();
@@ -321,38 +327,23 @@ class BytecodeFrame extends FrameObject {
 					for (cls = clsObj; cls != null; cls = cls.superclass)
 						classes.put(cls);
 				
-					// initialization order is from base class downwards, which
-					// may involve reinitializing some fields
+					// field values were installed at allocation; run the
+					// initializers from the base class downwards
 					for (cls in classes.reverse().extract()) {
-						// initialize fields
-						for (field in cls.classFields) {
-							def name = field.0, expr = field.1;
+						if (cls.init == null) continue;
 
-							// XXX hackfix
-							if (expr == null) continue;
-							// create new frames here!
-							def frame = newFrame(Strings.format2("%s.%s", cls.name, name), expr, [], []);
-							frame.eval();
-							if (frame.isExn()) {
-								rethrow(frame.getExn());
-								continue;
-							}
-							obj.setField(name, frame.getValue());
+						def args = [("self", obj)];
+						def code = cls.init;
+
+						// create new frames here!
+						def frame = newFrame(Strings.format1("%s.init", cls.name), code, args, []);
+						frame.eval();
+						if (frame.isExn()) {
+							rethrow(frame.getExn());
+							break;
 						}
-						// call initializer
-						if (cls.init != null) {
-							def args = [("self", obj)];
-							def code = cls.init;
-
-							// create new frames here!
-							def frame = newFrame(Strings.format1("%s.init", cls.name), code, args, []);
-							frame.eval();
-							if (frame.isExn()) {
-								rethrow(frame.getExn());
-								continue;
-							}
-						} 
 					}
+					if (isExn()) continue;
 					stack.push(obj);
 				}
 				LOAD_FIELD => {

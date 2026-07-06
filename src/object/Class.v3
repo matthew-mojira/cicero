@@ -8,8 +8,11 @@ class ClassObject(
 		superclass: ClassObject,  // XXX: base class has superclass == null
 		/* CodeObject to evaluate after all fields are initialized */
 		init: CodeObject,
-		/* List of fields by name and initializer */
-		classFields: Array<(string, CodeObject)>, 
+		/* List of fields by name and default value. The values are
+		 * computed once, when the class is created; object creation
+		 * installs them into the instance's slots.
+		 */
+		classFields: Array<(string, Object)>,
 		/* Note that the class methods are functions. The function
 		 * contains the name of the class. When an object is created,
 		 * the object is bound to this function to create the (bound)
@@ -45,6 +48,12 @@ class ClassObject(
 	def c_display() -> Result {
 		return Result.OK(StrObjects.fromString(display()));
 	}
+}
+
+def makeClass(name: string, init: CodeObject, fieldNames: Array<string>, classMethods: Array<FuncObject>, superclass: ClassObject, values: Array<Object>) -> ClassObject {
+	def fields = Array<(string, Object)>.new(fieldNames.length);
+	for (i < fieldNames.length) fields[i] = (fieldNames[i], values[i]);
+	return ClassObject.new(name, superclass, init, fields, classMethods);
 }
 
 /* Arrays for the list of types of parameters to the method. These are
@@ -213,10 +222,11 @@ component ClassObjects {
 
 
 	/* Returns the function which creates class objects when given the
-	 * superclass object.
+	 * superclass object and the field default values (computed at class
+	 * creation, in the same order as {fieldNames}).
 	 */
-	def classhole(name: string, init: CodeObject, classFields: Array<(string, CodeObject)>, classMethods: Array<FuncObject>) -> (ClassObject -> ClassObject) {
-		return ClassObject.new(name, _, init, classFields, classMethods);
+	def classhole(name: string, init: CodeObject, fieldNames: Array<string>, classMethods: Array<FuncObject>) -> ((ClassObject, Array<Object>) -> ClassObject) {
+		return makeClass(name, init, fieldNames, classMethods, _, _);
 	}
 
 	new() {

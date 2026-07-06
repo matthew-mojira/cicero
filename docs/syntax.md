@@ -146,8 +146,15 @@ identifier `x` may be written in any order. Any clause may be omitted, so an
 
 Evaluates `c` and throws an exception if it does not evaluate to a class
 object. If the `extends` clause is omitted, then the class is considered a
-subclass of the base class. Creates a class object and binds it to `x` in the
-local scope. The value of the entire expression is also this class object.
+subclass of the base class. Then each field expression `ei` is evaluated, in
+order. The `ei`s are ordinary expressions in the enclosing scope, and their
+values become the default values for the fields: they are computed once, when
+the class is created, and shared by every instance. (In particular, a mutable
+default value such as a list is shared across instances. Fields whose value
+must be computed per instance should be set in `init`, which is the only
+per-instance code.) An exception raised by an `ei` fails the class creation.
+Creates a class object and binds it to `x` in the local scope. The value of
+the entire expression is also this class object.
 
 ### `new`
 
@@ -158,12 +165,14 @@ local scope. The value of the entire expression is also this class object.
 `e` must evaluate to a class. Instantiates an object of that class. The
 instantiation process works as follows:
 
-For each superclassclass from the class of `e` to the base class:
-* for each field `xi` not already bound, `ei` is evaluated in a new scope and 
-  `xi` is set to that value. The `ei` expression may not see other fields or
-  the object `self`.
-* the expression `i` in the `init` clause is evaluated in a new scope. It may
-  see the fields of the object through `self`.
+* The object is allocated with every field set to its default value (the
+  values computed when the classes were created). If a subclass redeclares a
+  field of a superclass, the subclass's default wins. After this step the
+  object is fully initialized.
+* For each class from the base class down to the class of `e`, the expression
+  `i` in its `init` clause is evaluated in a new scope. It may see the fields
+  of the object through `self` — including fields of subclasses further down
+  the chain, since all defaults are installed before any `init` runs.
 * Nothing happens yet with methods. See comments for `get-field` down below.
 
 The value of the entire expression is the newly created object.
