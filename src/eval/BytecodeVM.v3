@@ -28,8 +28,8 @@ class VirtualMachine {
 
         /*
         * These local variables represent the currently active(executing) call frame
-        * So, the `CallFrame` object in the call frames stack is out of sync.
-        * So, it is kept in sync when a new call frame gets pushed (during CALL, CREATE_OBJECT)
+        * The `CallFrame` object in the top of the call frames stack is out of sync.
+        * So, this `CallFrame` object is synced when a new call frame gets pushed (during CALL, CREATE_OBJECT)
         */
         var b = bcode;
         var code = b.instrs;
@@ -41,9 +41,10 @@ class VirtualMachine {
         var associatedFunc: FunctionProfileMetadata = TopLevel.metadata;
 
         // Setup top level frame and bytecode to execute
-        callFrames.push(CallFrame.new(b, pc, localsStartIndex, nonLocalsStartIndex, baseStartIndex, associatedFunc));
+        callFrames.push(CallFrame.new(b, 0, 0, 0, 0, associatedFunc));
 
-        var dispatchStartTime : int = System.ticksUs(); 
+        var dispatchStartTime : int;
+        if (CiceroOptions.profileDynamicOpcodePair) dispatchStartTime = System.ticksUs();
         var opExecTime : int;
         while (pc < code.length || isExn()) {
             if (CiceroOptions.sanityChecks)
@@ -54,7 +55,7 @@ class VirtualMachine {
             if (isExn()) {
                 def exn = getExn();
                 if (handlers.empty()) {
-                    // build full stack trace
+                    // build full exception stack trace
                     callFrames.pop();
                     while (!callFrames.empty()){
                         def currentCallFrame = callFrames.pop();
@@ -118,9 +119,9 @@ class VirtualMachine {
                 }
                 System.puts("    exn loc stack:\n");
                 for (i < handlers.top) {
+                    def h = handlers.elems[i];
                     System.puts("    ");
-                    // SUPREME: TODO ( show handler call Frame stack as well)
-                    System.puts(Strings.format2("=> %d (%d)", handlers.elems[i].0, handlers.elems[i].1));
+                    System.puts(Strings.format3("Frame depth %d => %d (%d)", h.2, h.0, h.1));
                     System.ln();
                 }
                 System.puts("--\n");
@@ -317,8 +318,7 @@ class VirtualMachine {
                         opExecTime = System.ticksUs();
                     }
 
-                    def top = stack.pop();
-                    Globals.storeGlobalByIndex(operand, top);
+                    Globals.storeGlobalByIndex(operand, stack.pop());
 
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs() - opExecTime;
@@ -534,6 +534,7 @@ class VirtualMachine {
                             if (fv.instanceOf(ClassObjects.classMethod)) {
                                 stack.elems[baseStartIndex] = MethodObject.!(fv).obj;
                                 localsStartIndex--;
+                                // TODO: If methods capture nonlocals, then => nonLocalsStartIndex--; stack.top--;
                             }
                             // push nonlocals on the stack
                             for (i < bytecode.nonlocals.length) {
@@ -1243,13 +1244,15 @@ class VirtualMachine {
                         opExecTime = System.ticksUs();
                     }
 
-                    // sanity check make sure currentCallFrame is initCallFrame
-                    def initCallFrame = InitCallFrame.!(callFrames.peek());
+                    def initCallFrame = InitCallFrame.!(callFrames.peek()); // cast will succed because only init clauses can emit `RETURN_INIT`
                     def newIndex = initCallFrame.currentIndex + 1;
                     if (newIndex < initCallFrame.initFOs.length){
                         def initFO = initCallFrame.initFOs[newIndex];
-                        // no need to pop the call frame
-                        // update all necessary local variables
+                        /* no need to pop the call frame as we want to reuse it
+                        * However, we need update all necessary local variables and the call frame object
+                        * The actions we take should be the equivalent of popping the current top frame,
+                        * and pushing the new frame for the subclass init clause.
+                        */
                         def bytecode = Code.Bytecode.!(initFO.code.code).bytecode;
                         b = bytecode;
                         code = b.instrs;
@@ -1272,6 +1275,8 @@ class VirtualMachine {
                         // done with init frames
                         callFrames.pop();
                         stack.resize(baseStartIndex + 1);
+
+                        if (CiceroOptions.sanityChecks && callFrames.empty()) System.error("eval error", "call frames is empty after init clause executed");
 
                         def currentCallFrame = callFrames.peek();
                         
