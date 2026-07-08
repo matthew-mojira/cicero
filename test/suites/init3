@@ -1,0 +1,310 @@
+; Test local variable accesses during init (with inheritance)
+(class A
+    (field x 0)
+    (init
+    {
+        (set a 1)
+        (set b 2)
+        (set c (+ a b))
+        (set-field x self c)
+    })
+)
+
+(class B (extends A)
+    (field y 0)
+    (init
+    {
+        (set d 10)
+        (set-field y self (+ d self.x))
+    })
+)
+
+(class C (extends B)
+    (field z 0)
+    (init
+    {
+        (set e 100)
+        (set f 200)
+        (set g 400)
+        (set h (+ e f))
+        (set-field z self (+ h g))
+    })
+)
+
+(class D
+    (field val 0)
+    (init {
+        ; Large local footprint
+        (set a 100)
+        (set b 200)
+        (set c 300)
+        (set d 400)
+        (set e 500)
+        (set val (+ a (+ b (+ c (+ d e))))) ; z = 1500
+        (set-field val self val)
+    })
+)
+
+(class E
+    (extends D)
+    (field finalVal 0)
+    (init {
+        (set-field finalVal self (+ self.val 55)) ; finalVal = 1500 + 55 = 1555
+    })
+)
+
+{
+
+    (class RollerRoot
+        (field r 0)
+        (init {
+            ; 2 extra locals: length = 3
+            (set x 10)
+            (set y 20)
+            (set-field r self (+ x y)) ; r = 30
+        })
+    )
+
+    (class RollerMiddle
+        (extends RollerRoot)
+        (field m 0)
+        (init {
+            ; 0 extra locals: length = 1 (Shrinks stack)
+            (set-field m self (+ self.r 5)) ; m = 35
+        })
+    )
+
+    (class RollerMiddle2 (extends RollerMiddle))
+    (class RollerMiddle3 (extends RollerMiddle2))
+
+    (class RollerLeaf
+        (extends RollerMiddle3)
+        (field l 0)
+        (init {
+            ; 4 extra locals: length = 5 (Expands stack out again)
+            (set a 1)
+            (set b 2)
+            (set c 3)
+            (set d (+ (+ a b) c)) ; d = 6
+            (set-field l self (+ self.m d)) ; l = 35 + 6 = 41
+        })
+    )
+}
+{
+    (class StackSmall
+        (field val1 0)
+        (init
+            (set-field val1 self 10)
+        )
+    )
+
+    (class StackLarge
+        (extends StackSmall)
+        (field val2 0)
+        (init {
+            (set a (+ 1 2))      ; a = 3
+            (set b (+ a 5))      ; b = 8
+            (set c (+ b 7))      ; c = 15
+            (set d (+ c 9))      ; d = 24
+            (set e (+ d 11))     ; e = 35
+            (set-field val2 self e)
+        })
+    )
+
+    (class StackGhost1
+        (extends StackLarge)
+    )
+    
+    (class StackGhost2
+        (field val1 {
+            (set x 0)
+            (set y (+ x 1))
+            (set z (+ y 2))
+            (+ self.val1 z)
+        })
+        (extends StackGhost1)
+    )
+
+    (class StackLarger
+        (extends StackGhost2)
+        
+        (field val3 {
+            (set x 11)
+            (func (fib n) (if (n.= 0) 0
+                (if (n.= 1) 1
+                    (+ (fib (n.- 1)) (fib (n.- 2)))
+                )
+            )
+            )
+            (set y (fib 14))
+            (+ y x)
+        })
+        
+        (field val4 {
+            (set f_tmp1 50)
+            (set f_tmp2 100)
+            (+ f_tmp1 f_tmp2) ; 150
+        })
+
+        (init {
+            (set a (+ self.val2 1))  ; a = 35 + 1 = 36
+            (set b (+ a 2))          ; b = 38
+            (set c (+ b 3))          ; c = 41
+            (set d (+ c 4))          ; d = 45
+            (set e (+ d 5))          ; e = 50
+            (set f (+ e 6))          ; f = 56
+            (set g (+ f 7))          ; g = 63
+            (set-field val3 self (+ g self.val3))  ; val3 = 451
+        })
+    )
+
+    (class StackSmaller
+        (extends StackLarger)
+        (field finalVal 0)
+        (init {
+            (set finalTmp (+ self.val3 self.val4)) ; 451 + 150 = 601
+            (set-field finalVal self finalTmp)
+        })
+    )
+}
+--
+=> <class 'A'>
+=> <class 'B'>
+=> <class 'C'>
+=> <class 'D'>
+=> <class 'E'>
+=> <class 'RollerLeaf'>
+=> <class 'StackSmaller'>
+==
+(set obj (new A))
+obj.x
+--
+=> <object>
+=> 3
+--
+(set obj (new B))
+obj.x
+obj.y
+--
+=> <object>
+=> 3
+=> 13
+--
+(set obj (new C))
+obj.x
+obj.y
+obj.z
+--
+=> <object>
+=> 3
+=> 13
+=> 700
+--
+(set obj (new D))
+obj.val
+--
+=> <object>
+=> 1500
+--
+(set obj (new E))
+obj.finalVal
+--
+=> <object>
+=> 1555
+--
+(set obj (new RollerRoot))
+obj.r
+--
+=> <object>
+=> 30
+--
+(set obj (new RollerMiddle))
+obj.r
+obj.m
+--
+=> <object>
+=> 30
+=> 35
+--
+(set obj (new RollerMiddle2))
+obj.r
+obj.m
+--
+=> <object>
+=> 30
+=> 35
+--
+(set obj (new RollerMiddle3))
+obj.r
+obj.m
+--
+=> <object>
+=> 30
+=> 35
+--
+(set obj (new RollerLeaf))
+obj.r
+obj.m
+obj.l
+--
+=> <object>
+=> 30
+=> 35
+=> 41
+--
+(set obj (new StackSmall))
+obj.val1
+--
+=> <object>
+=> 10
+--
+(set obj (new StackLarge))
+obj.val1
+obj.val2
+--
+=> <object>
+=> 10
+=> 35
+--
+(set obj (new StackGhost1))
+obj.val1
+obj.val2
+--
+=> <object>
+=> 10
+=> 35
+--
+(set obj (new StackGhost2))
+obj.val1
+obj.val2
+--
+=> <object>
+=> 13
+=> 35
+--
+(set obj (new StackLarger))
+obj.val1
+obj.val2
+obj.val3
+obj.val4
+--
+=> <object>
+=> 13
+=> 35
+=> 451
+=> 150
+--
+(set obj (new StackSmaller))
+obj.val1
+obj.val2
+obj.val3
+obj.val4
+obj.finalVal
+--
+=> <object>
+=> 13
+=> 35
+=> 451
+=> 150
+=> 601
+--

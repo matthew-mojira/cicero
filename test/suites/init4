@@ -1,0 +1,165 @@
+; Recursive function
+(func (list_sum list index) {
+    (if (>= index (list.length)) 0 {
+        (set value (list.get index))
+        (+ value (list_sum list (+ index 1)))
+    })
+})
+
+; Class A that uses recursive function inside the init clause
+(class A
+    (field valuesA [20 30 50 10 7])
+    (field resultA 0)
+    (init {
+        (set sum-value (list_sum self.valuesA 0)) 
+        (set-field resultA self sum-value)
+    })
+)
+
+(class B (extends A))
+(class C (extends B)
+    (field resultB 0)
+    (field valuesB {
+        (set list [ 1 10 100 1000 ])
+        (set-field resultB self (list_sum list 0))
+        list
+    })
+)
+
+{
+    (class SubBase
+        (field base-num 5)
+    )
+
+    (class SubInner
+        (extends SubBase)
+        (field inner-num 0)
+        (field inner-values [2 20 200 1000])
+        (field inner-values-sum 0)
+        (init {
+            (set x 20)
+            (set-field inner-num self (+ self.base-num x)) ; 25
+            (set-field inner-values-sum self (list_sum self.inner-values 0)) ; 1222
+        })
+    )
+
+    (func (deep-factory-call) {
+        (set x (new SubInner)) ; Returns initialized SubInner instance
+        (return x)
+    })
+
+    ; --- Hierarchy Branch A (Main execution chain) ---
+    (class GrandRoot
+        (field root-marker 100)
+    )
+
+    (class GrandParent
+        (extends GrandRoot)
+        (field nested-payload ())
+        (init {
+            (set local-p1 1)
+            ; Interrupts Branch A's RETURN_INIT loop to execute Branch B's entire object life cycle
+            (set-field nested-payload self (deep-factory-call))
+        })
+    )
+
+    (class GrandChild
+        (extends GrandParent)
+        (field child-marker 0)
+        (field nested-payload2 ())
+        (init {
+            (set local-c1 50)
+            (set-field nested-payload2 self (deep-factory-call))
+            (set p2 self.nested-payload2)
+            (set-field inner-num p2 "25")
+            (set-field child-marker self (+ self.root-marker local-c1)) ; 150
+        })
+    )
+}
+--
+=> <func 'list_sum'>
+=> <class 'A'>
+=> <class 'B'>
+=> <class 'C'>
+=> <class 'GrandChild'>
+==
+(set obj (new A))
+obj.valuesA
+obj.resultA
+--
+=> <object>
+=> [20, 30, 50, 10, 7]
+=> 117
+--
+(set obj (new B))
+obj.valuesA
+obj.resultA
+--
+=> <object>
+=> [20, 30, 50, 10, 7]
+=> 117
+--
+(set obj (new C))
+obj.valuesA
+obj.resultA
+obj.valuesB
+obj.resultB
+--
+=> <object>
+=> [20, 30, 50, 10, 7]
+=> 117
+=> [1, 10, 100, 1000]
+=> 1111
+--
+(set obj (deep-factory-call))
+obj.base-num
+obj.inner-num
+obj.inner-values
+obj.inner-values-sum
+--
+=> <object>
+=> 5
+=> 25
+=> [2, 20, 200, 1000]
+=> 1222
+--
+(set obj (new GrandParent))
+(set inner-obj obj.nested-payload)
+inner-obj.base-num
+inner-obj.inner-num
+inner-obj.inner-values
+inner-obj.inner-values-sum
+--
+=> <object>
+=> <object>
+=> 5
+=> 25
+=> [2, 20, 200, 1000]
+=> 1222
+--
+(set obj (new GrandChild))
+obj.child-marker
+(set inner-obj1 obj.nested-payload)
+(set inner-obj2 obj.nested-payload2)
+inner-obj2.base-num
+inner-obj2.inner-num
+inner-obj2.inner-values
+inner-obj2.inner-values-sum
+inner-obj1.base-num
+inner-obj1.inner-num
+inner-obj1.inner-values
+inner-obj1.inner-values-sum
+--
+=> <object>
+=> 150
+=> <object>
+=> <object>
+=> 5
+=> "25"
+=> [2, 20, 200, 1000]
+=> 1222
+=> 5
+=> 25
+=> [2, 20, 200, 1000]
+=> 1222
+--
