@@ -115,15 +115,15 @@ csv_file_name(){
 }
 
 run_hyperfine(){
-    # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file, $6: target
+    # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file, $6: target, $7: opt level
     cd $BENCH_DIR
 
     if ! $HYPERFINE --style none --warmup $WARMUP_RUNS --runs "$1" \
         "$2 -suppress-output=true -tier=$3 $4" \
         --export-csv "$5" >> "$T/run.log" 2>&1
     then
-        echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3), skipping" >> "$T/run.log"
-        echo "##-fail: $4 (tier=$3) for $6"
+        echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3) for $6 -O$7, skipping" >> "$T/run.log"
+        echo "##-fail: $4 (tier=$3) for $6 -O$7"
         return 0
     else
         echo "##-ok"
@@ -202,7 +202,7 @@ printf "bench "
             for tier in $BENCH_TIERS; do
                 BINARY=$(binary_path "$o_level" "$target")
                 CSV_FILE=$(csv_file_name "empty" $tier $o_level $target)
-                run_with_lock run_hyperfine 50 "$BINARY" "$tier" "$T/empty.co" "$CSV_FILE" "$target"
+                run_with_lock run_hyperfine 50 "$BINARY" "$tier" "$T/empty.co" "$CSV_FILE" "$target" "$o_level"
             done
         done
     done
@@ -213,7 +213,7 @@ printf "bench "
                 for tier in $BENCH_TIERS; do
                     BINARY=$(binary_path "$o_level" "$target")
                     CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
-                    run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target"
+                    run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target" "$o_level"
                 done
             done
         done
