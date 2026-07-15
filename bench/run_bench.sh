@@ -123,7 +123,7 @@ run_hyperfine(){
         --export-csv "$5" >> "$T/run.log" 2>&1
     then
         echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3), skipping" >> "$T/run.log"
-        echo "##-fail"
+        echo "##-fail: $4 (tier=$3) for $6"
         return 0
     else
         echo "##-ok"
@@ -158,7 +158,7 @@ build_opt_level(){
             > "$opt_bin_dir/build-$target.log" 2>&1
         then
             echo "[WARN] build failed for $target at -O$o_level, see $opt_bin_dir/build-$target.log" >> "$T/build.log"
-            echo "##-fail"
+            echo "##-fail: $target -O$o_level"
         else
             echo "##-ok"
         fi
