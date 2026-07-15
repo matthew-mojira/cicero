@@ -126,35 +126,14 @@ run_hyperfine(){
 # Export the function so background subshells can see it
 export -f run_hyperfine
 
-# Runs all benchmarks (across all targets and tiers) for a given virgil
-# compiler optimization level, against binaries in a given bin directory.
-run_benchmarks(){
-    # $1: opt level, $2: bin dir for this opt level's binaries
-    local o_level=$1
-    local bin_dir=$2
-
-    for target in $BENCH_TARGETS; do
-        if [ "$target" = "wasm-wave" ]; then
-            BINARY=$bin_dir/cicero.wasm
-        else
-            BINARY=$bin_dir/cicero.$target
-        fi
-
-        for tier in $BENCH_TIERS; do
-            # base time builtin with empty file
-            CSV_FILE=$(csv_file_name "empty" $tier $o_level $target)
-            $HYPERFINE --style none --warmup $WARMUP_RUNS --runs 50 "$BINARY -suppress-output=true -tier=$tier $T/empty.co" --export-csv $CSV_FILE 2>&1
-
-            # run the benchmarks
-            while IFS=',' read -r benchmark files runs; do
-                CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
-                # run async
-                run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target"
-            done < <(tail -n +2 "$BENCH_CONFIG")
-        done
-    done
-
-    wait
+binary_path(){
+    # $1: opt level, $2: target
+    local bin_dir=$T/bin-opt$1
+    if [ "$2" = "wasm-wave" ]; then
+        echo "$bin_dir/cicero.wasm"
+    else
+        echo "$bin_dir/cicero.$2"
+    fi
 }
 
 # Builds cicero for every requested target at a given Virgil optimization
@@ -186,10 +165,31 @@ done
 wait
 echo "Completed building all optimization levels"
 
-echo "Running benchmarks for all optimization levels in parallel: $BENCH_OPT_LEVELS"
-for o_level in $BENCH_OPT_LEVELS; do
-    run_benchmarks "$o_level" "$T/bin-opt$o_level" &
+echo "Dispatching benchmarks (order: benchmark -> target -> opt -> tier)"
+
+# Baseline empty-file timing, dispatched up front so it doesn't block benchmark rows.
+for target in $BENCH_TARGETS; do
+    for o_level in $BENCH_OPT_LEVELS; do
+        for tier in $BENCH_TIERS; do
+            BINARY=$(binary_path "$o_level" "$target")
+            CSV_FILE=$(csv_file_name "empty" $tier $o_level $target)
+            run_with_lock run_hyperfine 50 "$BINARY" "$tier" "$T/empty.co" "$CSV_FILE" "$target"
+        done
+    done
 done
+
+while IFS=',' read -r benchmark files runs; do
+    for target in $BENCH_TARGETS; do
+        for o_level in $BENCH_OPT_LEVELS; do
+            for tier in $BENCH_TIERS; do
+                BINARY=$(binary_path "$o_level" "$target")
+                CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
+                run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target"
+            done
+        done
+    done
+done < <(tail -n +2 "$BENCH_CONFIG")
+
 wait
 echo "Completed running all benchmarks"
 
