@@ -169,18 +169,19 @@ def main():
                          f"{entry.max:.6f}"]
                     )
 
-    # Write Markdown
+    # Write Markdown and CSV, both as a timestamped copy and as a
+    # "latest" copy that gets overwritten each run for easy lookup.
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    file_name = f"{OUTPUR_PATH_FOR_MD}/benchmark-results-{date}.md"
-    with open(file_name, "w") as f:
-        f.write("\n".join(output))
+    md_text = "\n".join(output)
+    for md_name in (f"benchmark-results-{date}.md", "benchmark-results-latest.md"):
+        with open(f"{OUTPUR_PATH_FOR_MD}/{md_name}", "w") as f:
+            f.write(md_text)
 
-    # Write raw results CSV: one row per (target, opt, tier, benchmark)
-    csv_file_name = f"{OUTPUR_PATH_FOR_MD}/benchmark-results-{date}.csv"
-    with open(csv_file_name, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(csv_header)
-        writer.writerows(csv_rows)
+    for csv_name in (f"benchmark-results-{date}.csv", "benchmark-results-latest.csv"):
+        with open(f"{OUTPUR_PATH_FOR_MD}/{csv_name}", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(csv_header)
+            writer.writerows(csv_rows)
 
 
 if __name__ == "__main__":
