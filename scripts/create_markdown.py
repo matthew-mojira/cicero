@@ -11,14 +11,14 @@ PATH_TO_CSV_FILES = sys.argv[1]
 OUTPUR_PATH_FOR_MD = sys.argv[2]
 BENCH_CONFIG = sys.argv[3] if len(sys.argv) > 3 else "Unknown"
 
-# pattern: benchmark-tier{tier}-opt{opt}[-mode{mode}]-{target}.csv
-# e.g. deltablue-tier0-opt2-jvm.csv, sieve-tier1-opt2-modejit-wasm-wave.csv
-# The mode segment only appears for wasm-wave (Wizard's execution modes);
-# every other target has an implicit mode of "none".
-CSV_FILE_NAME = re.compile(r"(\w+)-tier(\d+)-opt(\d+)-(?:mode(\w+)-)?(.*)\.csv")
+# pattern: benchmark-tier{tier}-opt{opt}[-wopt{wopt}-mode{mode}]-{target}.csv
+# e.g. deltablue-tier0-opt2-jvm.csv, sieve-tier1-opt2-wopt2-modejit-wasm-wave.csv
+# The wopt (wasm-opt level)/mode segments only appear for wasm-wave (always
+# together); every other target has implicit wopt/mode of "none".
+CSV_FILE_NAME = re.compile(r"(\w+)-tier(\d+)-opt(\d+)-(?:wopt(\w+)-mode(\w+)-)?(.*)\.csv")
 DATA = defaultdict(
     lambda: defaultdict(dict)
-)  # (benchmark, target, mode) -> opt -> tier -> Runtime mean + other info
+)  # (benchmark, target, mode, wopt) -> opt -> tier -> Runtime mean + other info
 
 
 class BenchmarkData:
@@ -67,9 +67,10 @@ def main():
         csv_file_path = os.path.join(PATH_TO_CSV_FILES, entry)
         if os.path.isfile(csv_file_path) and csv_file_path.endswith(".csv"):
             match = CSV_FILE_NAME.match(os.path.basename(csv_file_path))
-            bench, tier, opt, mode, target = match.groups()
+            bench, tier, opt, wopt, mode, target = match.groups()
             mode = mode if mode is not None else "none"
-            DATA[(bench, target, mode)][int(opt)][int(tier)] = get_csv_data(csv_file_path)
+            wopt = wopt if wopt is not None else "none"
+            DATA[(bench, target, mode, wopt)][int(opt)][int(tier)] = get_csv_data(csv_file_path)
 
     output = []
     # Collect all unique tiers, opts, targets, and benchmarks
@@ -82,30 +83,33 @@ def main():
         }
     )
     all_opts = sorted({opt for _, tdata in DATA.items() for opt in tdata})
-    all_targets = sorted({target for _, target, _ in DATA.keys()})
-    all_benchmarks = sorted({bench for bench, _, _ in DATA.keys()})
+    all_targets = sorted({target for _, target, _, _ in DATA.keys()})
+    all_benchmarks = sorted({bench for bench, _, _, _ in DATA.keys()})
 
-    # Organize data by target -> opt -> [mode ->] benchmark -> tier
+    # Organize data by target -> opt -> [wopt/mode ->] benchmark -> tier
     for target in all_targets:
         output.append(f"# {target}\n")
 
-        # Modes only vary for wasm-wave; every other target has the single
-        # implicit mode "none", in which case we don't bother annotating it.
-        modes_for_target = sorted({m for b, t, m in DATA.keys() if t == target})
-        single_mode = modes_for_target == ["none"]
+        # wopt (wasm-opt level) and mode only vary for wasm-wave; every other
+        # target has the single implicit ("none", "none") pair, in which case
+        # we don't bother annotating it.
+        variants_for_target = sorted({
+            (w, m) for b, t, m, w in DATA.keys() if t == target
+        })
+        single_variant = variants_for_target == [("none", "none")]
 
         for opt in all_opts:
-            for mode in modes_for_target:
-                if single_mode:
+            for wopt, mode in variants_for_target:
+                if single_variant:
                     output.append(f"## -O{opt}\n")
                 else:
-                    output.append(f"## -O{opt} (mode={mode})\n")
+                    output.append(f"## -O{opt} (wasm-opt=-O{wopt}, mode={mode})\n")
 
                 # Calculate column widths for alignment
-                # First, collect all data for this target/opt/mode combination
+                # First, collect all data for this target/opt/wopt/mode combination
                 table_data = []
                 for bench in all_benchmarks:
-                    key = (bench, target, mode)
+                    key = (bench, target, mode, wopt)
                     if key in DATA:
                         row = [bench]
                         opt_data = DATA[key]
@@ -163,24 +167,28 @@ def main():
                 runs = benchmark_config[bench]["runs"]
                 output.append(f"| {bench} | `{files}` | {runs} |")
 
-    # Build raw results CSV rows: one row per (target, mode, opt, tier, benchmark)
-    # `mode` is Wizard's execution mode, and only applies to wasm-wave; blank
-    # for every other target.
-    csv_header = ["target", "mode", "opt", "tier", "benchmark", "mean_ms", "stddev_ms",
-                  "median_ms", "user_ms", "system_ms", "min_ms", "max_ms"]
+    # Build raw results CSV rows: one row per (target, wopt, mode, opt, tier, benchmark)
+    # `wopt` (wasm-opt level) and `mode` (Wizard's execution mode) only apply
+    # to wasm-wave; blank for every other target.
+    csv_header = ["target", "wasm_opt_level", "mode", "opt", "tier", "benchmark",
+                  "mean_ms", "stddev_ms", "median_ms", "user_ms", "system_ms",
+                  "min_ms", "max_ms"]
     csv_rows = []
     for target in all_targets:
-        modes_for_target = sorted({m for b, t, m in DATA.keys() if t == target})
-        for mode in modes_for_target:
+        variants_for_target = sorted({
+            (w, m) for b, t, m, w in DATA.keys() if t == target
+        })
+        for wopt, mode in variants_for_target:
+            wopt_label = "" if wopt == "none" else wopt
             mode_label = "" if mode == "none" else mode
             for opt in all_opts:
                 for tier in all_tiers:
                     for bench in all_benchmarks:
-                        entry = DATA.get((bench, target, mode), {}).get(opt, {}).get(tier)
+                        entry = DATA.get((bench, target, mode, wopt), {}).get(opt, {}).get(tier)
                         if entry is None:
                             continue
                         csv_rows.append(
-                            [target, mode_label, opt, tier, bench,
+                            [target, wopt_label, mode_label, opt, tier, bench,
                              f"{entry.mean:.6f}", f"{entry.stddev:.6f}",
                              f"{entry.median:.6f}", f"{entry.user:.6f}",
                              f"{entry.system:.6f}", f"{entry.min:.6f}",

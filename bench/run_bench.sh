@@ -38,12 +38,24 @@ if [[ " $BENCH_TARGETS " == *" wasm-wave "* ]]; then
         echo "Wizard engine (wizeng) not found in \$PATH, and \$WIZENG not set"
         exit 1
     fi
+
+    WASM_OPT=${WASM_OPT:=$(which wasm-opt)}
+    if [ ! -x "$WASM_OPT" ]; then
+        echo "Binaryen's wasm-opt not found in \$PATH, and \$WASM_OPT not set"
+        exit 1
+    fi
 fi
 
 # Wizard's execution modes (see `wizeng --help`), only meaningful for the
 # wasm-wave target. Ignored for every other target.
 if [ "$BENCH_WIZENG_MODES" = "" ]; then
     BENCH_WIZENG_MODES="int"
+fi
+
+# wasm-opt (Binaryen) optimization levels (0-4), applied to the wasm-wave
+# binary ahead of time as an extra build step. Only meaningful for wasm-wave.
+if [ "$BENCH_WASM_OPT_LEVELS" = "" ]; then
+    BENCH_WASM_OPT_LEVELS="0"
 fi
 
 if [ "$BENCH_TIERS" = "" ]; then
@@ -124,17 +136,21 @@ csv_file_name(){
     _benchmark=$1
     _tier=$2
     _opt=$3
-    _mode=$4
-    _target=$5
-    if [ "$_mode" = "none" ]; then
+    _wopt=$4
+    _mode=$5
+    _target=$6
+    # wopt and mode are always either both "none" (every non-wasm-wave
+    # target) or both a real value (wasm-wave), so a single combined suffix
+    # is enough - no need to handle them appearing independently.
+    if [ "$_wopt" = "none" ] && [ "$_mode" = "none" ]; then
         echo "$T/$_benchmark-tier$_tier-opt$_opt-$_target.csv"
     else
-        echo "$T/$_benchmark-tier$_tier-opt$_opt-mode$_mode-$_target.csv"
+        echo "$T/$_benchmark-tier$_tier-opt$_opt-wopt$_wopt-mode$_mode-$_target.csv"
     fi
 }
 
 run_hyperfine(){
-    # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file, $6: target, $7: opt level, $8: mode
+    # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file, $6: target, $7: opt level, $8: mode, $9: wasm-opt level
     cd $BENCH_DIR
 
     local cmd
@@ -148,8 +164,8 @@ run_hyperfine(){
         "$cmd" \
         --export-csv "$5" >> "$T/run.log" 2>&1
     then
-        echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3) for $6 -O$7 mode=$8, skipping" >> "$T/run.log"
-        echo "##-fail: $4 (tier=$3) for $6 -O$7 mode=$8"
+        echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3) for $6 -O$7 wopt=$9 mode=$8, skipping" >> "$T/run.log"
+        echo "##-fail: $4 (tier=$3) for $6 -O$7 wopt=$9 mode=$8"
         return 0
     else
         echo "##-ok"
@@ -161,10 +177,10 @@ run_hyperfine(){
 export -f run_hyperfine
 
 binary_path(){
-    # $1: opt level, $2: target
+    # $1: opt level, $2: target, $3: wasm-opt level (wasm-wave only)
     local bin_dir=$T/bin-opt$1
     if [ "$2" = "wasm-wave" ]; then
-        echo "$bin_dir/cicero.wasm"
+        echo "$bin_dir/cicero-wopt$3.wasm"
     else
         echo "$bin_dir/cicero.$2"
     fi
@@ -175,6 +191,16 @@ modes_for_target(){
     # other target gets a single pseudo-mode "none".
     if [ "$1" = "wasm-wave" ]; then
         echo "$BENCH_WIZENG_MODES"
+    else
+        echo "none"
+    fi
+}
+
+wasm_opt_levels_for_target(){
+    # $1: target. wasm-opt levels only apply to wasm-wave; every other
+    # target gets a single pseudo-level "none".
+    if [ "$1" = "wasm-wave" ]; then
+        echo "$BENCH_WASM_OPT_LEVELS"
     else
         echo "none"
     fi
@@ -195,8 +221,28 @@ build_opt_level(){
         then
             echo "[WARN] build failed for $target at -O$o_level, see $opt_bin_dir/build-$target.log" >> "$T/build.log"
             echo "##-fail: $target -O$o_level"
-        else
-            echo "##-ok"
+            continue
+        fi
+        echo "##-ok"
+
+        # wasm-opt post-processes the compiled wasm-wave binary into one
+        # variant per requested wasm-opt level; these flags are mandatory
+        # regardless of optimization level.
+        if [ "$target" = "wasm-wave" ]; then
+            for wopt in $(wasm_opt_levels_for_target "$target"); do
+                if ! "$WASM_OPT" -O$wopt -all \
+                    --skip-pass=duplicate-function-elimination \
+                    --skip-pass=remove-unused-module-elements \
+                    --preserve-type-order \
+                    "$opt_bin_dir/cicero.wasm" -o "$opt_bin_dir/cicero-wopt$wopt.wasm" \
+                    > "$opt_bin_dir/wasm-opt-$wopt.log" 2>&1
+                then
+                    echo "[WARN] wasm-opt failed for -O$o_level wopt=$wopt, see $opt_bin_dir/wasm-opt-$wopt.log" >> "$T/build.log"
+                    echo "##-fail: wasm-wave -O$o_level wopt=$wopt"
+                else
+                    echo "##-ok"
+                fi
+            done
         fi
     done
 }
@@ -206,7 +252,14 @@ cd "$REPO_ROOT"
 
 NUM_TARGETS=$(echo $BENCH_TARGETS | wc -w)
 NUM_OPTS=$(echo $BENCH_OPT_LEVELS | wc -w)
-TOTAL_BUILDS=$(( NUM_TARGETS * NUM_OPTS ))
+
+# One compile job per (target, opt level), plus one wasm-opt job per
+# (wasm-opt level, opt level) for wasm-wave.
+NUM_WASM_OPT_LEVELS=0
+if [[ " $BENCH_TARGETS " == *" wasm-wave "* ]]; then
+    NUM_WASM_OPT_LEVELS=$(echo $BENCH_WASM_OPT_LEVELS | wc -w)
+fi
+TOTAL_BUILDS=$(( NUM_TARGETS * NUM_OPTS + NUM_WASM_OPT_LEVELS * NUM_OPTS ))
 
 echo "Building optimization levels in parallel: $BENCH_OPT_LEVELS"
 printf "build "
@@ -219,17 +272,20 @@ printf "build "
 } | $PROGRESS
 echo "Completed building all optimization levels (see $T/build.log for details)"
 
-echo "Dispatching benchmarks (order: benchmark -> target -> opt -> mode -> tier)"
+echo "Dispatching benchmarks (order: benchmark -> target -> opt -> wopt -> mode -> tier)"
 
 NUM_ROWS=$(tail -n +2 "$BENCH_CONFIG" | wc -l)
 NUM_TIERS=$(echo $BENCH_TIERS | wc -w)
 
 # Total per-(target) variant count, summed across targets: 1 for every
-# non-wasm-wave target, len(BENCH_WIZENG_MODES) for wasm-wave.
+# non-wasm-wave target, len(BENCH_WASM_OPT_LEVELS)*len(BENCH_WIZENG_MODES)
+# for wasm-wave.
 TOTAL_VARIANTS=0
 for target in $BENCH_TARGETS; do
-    for mode in $(modes_for_target "$target"); do
-        TOTAL_VARIANTS=$((TOTAL_VARIANTS + 1))
+    for wopt in $(wasm_opt_levels_for_target "$target"); do
+        for mode in $(modes_for_target "$target"); do
+            TOTAL_VARIANTS=$((TOTAL_VARIANTS + 1))
+        done
     done
 done
 TOTAL_JOBS=$(( (NUM_ROWS + 1) * TOTAL_VARIANTS * NUM_OPTS * NUM_TIERS ))
@@ -244,11 +300,13 @@ printf "bench "
     # Baseline empty-file timing, dispatched up front so it doesn't block benchmark rows.
     for target in $BENCH_TARGETS; do
         for o_level in $BENCH_OPT_LEVELS; do
-            for mode in $(modes_for_target "$target"); do
-                for tier in $BENCH_TIERS; do
-                    BINARY=$(binary_path "$o_level" "$target")
-                    CSV_FILE=$(csv_file_name "empty" $tier $o_level $mode $target)
-                    run_with_lock run_hyperfine 50 "$BINARY" "$tier" "$T/empty.co" "$CSV_FILE" "$target" "$o_level" "$mode"
+            for wopt in $(wasm_opt_levels_for_target "$target"); do
+                for mode in $(modes_for_target "$target"); do
+                    for tier in $BENCH_TIERS; do
+                        BINARY=$(binary_path "$o_level" "$target" "$wopt")
+                        CSV_FILE=$(csv_file_name "empty" $tier $o_level $wopt $mode $target)
+                        run_with_lock run_hyperfine 50 "$BINARY" "$tier" "$T/empty.co" "$CSV_FILE" "$target" "$o_level" "$mode" "$wopt"
+                    done
                 done
             done
         done
@@ -257,11 +315,13 @@ printf "bench "
     while IFS=',' read -r benchmark files runs; do
         for target in $BENCH_TARGETS; do
             for o_level in $BENCH_OPT_LEVELS; do
-                for mode in $(modes_for_target "$target"); do
-                    for tier in $BENCH_TIERS; do
-                        BINARY=$(binary_path "$o_level" "$target")
-                        CSV_FILE=$(csv_file_name $benchmark $tier $o_level $mode $target)
-                        run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target" "$o_level" "$mode"
+                for wopt in $(wasm_opt_levels_for_target "$target"); do
+                    for mode in $(modes_for_target "$target"); do
+                        for tier in $BENCH_TIERS; do
+                            BINARY=$(binary_path "$o_level" "$target" "$wopt")
+                            CSV_FILE=$(csv_file_name $benchmark $tier $o_level $wopt $mode $target)
+                            run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target" "$o_level" "$mode" "$wopt"
+                        done
                     done
                 done
             done
