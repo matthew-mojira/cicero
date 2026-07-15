@@ -1,0 +1,3 @@
+Line Number,Bytecode ID,Instruction Index,Function Identifier,Function Label,Instruction,Jumps taken,Jumps not taken
+19,38,80,0,repl,JUMP_IF_FALSE_PEEK,1,1000000
+19,38,224,0,repl,JUMP,1000000,0

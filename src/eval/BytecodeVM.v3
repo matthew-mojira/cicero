@@ -43,6 +43,11 @@ class VirtualMachine {
         // Setup top level frame and bytecode to execute
         callFrames.push(CallFrame.new(b, 0, 0, 0, 0, associatedFunc));
 
+        if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+            def startTime = System.ticksUs();
+            Profiling.callDataFrames.push(ProfileCallFrameData.new(FuncObjects.mainProgramId, startTime));
+        }
+
         var dispatchStartTime : int;
         if (CiceroOptions.profileDynamicOpcodePair) dispatchStartTime = System.ticksUs();
         var opExecTime : int;
@@ -72,6 +77,12 @@ class VirtualMachine {
                         def currentCallFrame = callFrames.pop();
                         if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
                         isTopFrame = false;
+
+                        if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+                            def endTime = System.ticksUs();
+                            // for profiling purposes, treat exception popping call frames as returning from them
+                            ProfilingHelpers.handleProfilingDuringReturn(endTime, callFrames.peek().associatedFunc, currentCallFrame.associatedFunc);
+                        }
                     }
 
                     def currentCallFrame = callFrames.peek();
@@ -556,6 +567,11 @@ class VirtualMachine {
 
                             // push the new frame
                             callFrames.push(CallFrame.new(b, pc, localsStartIndex, nonLocalsStartIndex, fvBaseStartIndex, associatedFunc));
+
+                            if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+                                def startTime = System.ticksUs();
+                                Profiling.callDataFrames.push(ProfileCallFrameData.new(fv.uid, startTime));
+                            }
                         }
                         _ => {
 
@@ -588,7 +604,7 @@ class VirtualMachine {
                             }
 
                             // create new frame
-                            // SUPREME: TODO: SETUP CORRECT FRAME OBJECT
+                            // SUPREME: TODO: SETUP CORRECT PREVIOUS FRAME OBJECT (if frame is accessible)
                             def frame = FrameObjects.newFrame(null, fv.id, fv.code, argv, fv.nonlocals);
 
                             var startTime: int;
@@ -611,6 +627,8 @@ class VirtualMachine {
 
                             if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
                                 def inclusiveExecutionTime: int = System.ticksUs() - startTime; // in microseconds
+                                Profiling.callDataFrames.elems[Profiling.callDataFrames.top - 1].totalCalleeTime += inclusiveExecutionTime;
+
                                 if (CiceroOptions.profileFunctionCalls) {
                                     ProfileFunctionCalls.profileFunctionCall(fv.metadata, inclusiveExecutionTime, inclusiveExecutionTime);
                                 }
@@ -814,6 +832,7 @@ class VirtualMachine {
                     // may involve reinitializing some fields
                     def classInitFOs : Vector<FuncObject> = Vector.new();
                     def args = [("self", obj)];
+                    var initFailed: bool = false;
                     for (cls in classes.reverse().extract()) {
                         // call initializer (initialize fields as well)
                         if (cls.init != null) {
@@ -829,43 +848,71 @@ class VirtualMachine {
                                         ProfileBytecode.profileDynamicExecutionTime(opcode.tag, opExecTime);
                                     }
 
+                                    var startTime: int;
+                                    if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+                                        startTime = System.ticksUs();
+                                    }
+
                                     frame.eval();
 
                                     if (CiceroOptions.profileDynamicBytecode) {
                                         opExecTime = System.ticksUs();
                                     }
 
+                                    if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+                                        def inclusiveExecutionTime: int = System.ticksUs() - startTime; // in microseconds
+                                        Profiling.callDataFrames.elems[Profiling.callDataFrames.top - 1].totalCalleeTime += inclusiveExecutionTime;
+
+                                        if (CiceroOptions.profileFunctionCalls) {
+                                            ProfileFunctionCalls.profileFunctionCall(initFn.metadata, inclusiveExecutionTime, inclusiveExecutionTime);
+                                        }
+                                        if (CiceroOptions.profileFuncObjectCalls) {
+                                            ProfileFunctionCalls.profileFunctionObjectCall(initFn.uid, initFn.metadata.label, inclusiveExecutionTime, inclusiveExecutionTime);
+                                        }
+                                        if (CiceroOptions.profileCallerCalleePairs) {
+                                            ProfileCallerCalleePairs.profilePair(associatedFunc, initFn.metadata, inclusiveExecutionTime);
+                                        }
+                                    }
+
                                     if (frame.isExn()) {
                                         rethrow(frame.getExn(), associatedFunc.label, loc);
-                                        continue;
+                                        initFailed = true;
+                                        break;
                                     }
                                 }
                             }
 
                         } 
                     }
-                    stack.push(obj);
+                    if (!initFailed){
+                        stack.push(obj);
 
-                    // setup new `InitCallFrame` if init bytecode objects to execute
-                    if (classInitFOs.length > 0){
-                        // save current caller state
-                        saveFrame(pc, loc);
+                        // setup new `InitCallFrame` if init bytecode objects to execute
+                        if (classInitFOs.length > 0){
+                            // save current caller state
+                            saveFrame(pc, loc);
 
-                        // sync local variables for the new executing init-callee frame
-			            def initFO = classInitFOs[0];
-			            def bytecode = Code.Bytecode.!(initFO.code.code).bytecode;
-                        b = bytecode;
-                        code = b.instrs;
-                        pc = 0;
-                        baseStartIndex = stack.top - 1; // `self` is on the stack
-                        localsStartIndex = baseStartIndex;
-                        nonLocalsStartIndex = localsStartIndex + bytecode.locals.length; // classes don't capture nonlocals.
-                        associatedFunc = initFO.metadata;
-                        
-                        // grow stack (if needed for remaining local variables)
-                        stack.resize(nonLocalsStartIndex);
+                            // sync local variables for the new executing init-callee frame
+                            def initFO = classInitFOs[0];
+                            def bytecode = Code.Bytecode.!(initFO.code.code).bytecode;
+                            b = bytecode;
+                            code = b.instrs;
+                            pc = 0;
+                            baseStartIndex = stack.top - 1; // `self` is on the stack
+                            localsStartIndex = baseStartIndex;
+                            nonLocalsStartIndex = localsStartIndex + bytecode.locals.length; // classes don't capture nonlocals.
+                            associatedFunc = initFO.metadata;
+                            
+                            // grow stack (if needed for remaining local variables)
+                            stack.resize(nonLocalsStartIndex);
 
-                        callFrames.push(InitCallFrame.new(b, classInitFOs.extract(), baseStartIndex, initFO.metadata));
+                            callFrames.push(InitCallFrame.new(b, classInitFOs.extract(), baseStartIndex, initFO.metadata));
+
+                            if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+                                def startTime = System.ticksUs();
+                                Profiling.callDataFrames.push(ProfileCallFrameData.new(initFO.uid, startTime));
+                            }
+                        }
                     }
 
                     if (CiceroOptions.profileDynamicBytecode) {
@@ -1206,11 +1253,16 @@ class VirtualMachine {
                     stack.resize(baseStartIndex + 1);
 
                     // finished with the current call frame. pop it and set the executing frame to the caller frame.
-                    callFrames.pop();
+                    def oldFrame = callFrames.pop();
 
                     if (callFrames.empty()){
                         // return from top-level code
                         result = Result.Return(returnValue);
+
+                        if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls) {
+                            def endTime = System.ticksUs();
+                            ProfilingHelpers.handleProfilingDuringReturn(endTime, null, associatedFunc);
+                        }
                         if (CiceroOptions.profileDynamicBytecode) {
                             opExecTime = System.ticksUs() - opExecTime;
                             ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
@@ -1228,11 +1280,19 @@ class VirtualMachine {
                         baseStartIndex = currentCallFrame.baseStartIndex;
                         loc = currentCallFrame.loc;
                         associatedFunc = currentCallFrame.associatedFunc;
+
+                        if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+                            def endTime = System.ticksUs();
+                            ProfilingHelpers.handleProfilingDuringReturn(endTime, associatedFunc, oldFrame.associatedFunc);
+                        }
                     }
 
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs() - opExecTime;
                         ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+                    }
+                    if (CiceroOptions.profileDynamicOpcodePair){
+                        dispatchStartTime = System.ticksUs();
                     }
                 }
                 RETURN_INIT => {
@@ -1247,6 +1307,7 @@ class VirtualMachine {
                     def initCallFrame = InitCallFrame.!(callFrames.peek()); // cast will succed because only init clauses can emit `RETURN_INIT`
                     def newIndex = initCallFrame.currentIndex + 1;
                     if (newIndex < initCallFrame.initFOs.length){
+                        def oldAssociatedFunc = associatedFunc;
                         def initFO = initCallFrame.initFOs[newIndex];
                         /* no need to pop the call frame as we want to reuse it
                         * However, we need update all necessary local variables and the call frame object
@@ -1270,10 +1331,17 @@ class VirtualMachine {
                         // reuse the same existing init call frame (no need to pop frame)
                         // but update the contents of the frame
                         updateInitFrame(b, pc, associatedFunc, loc);
+
+                        if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+                            def endTime = System.ticksUs();
+                            ProfilingHelpers.handleProfilingDuringReturn(endTime, callFrames.elems[callFrames.top -2].associatedFunc, oldAssociatedFunc);
+                            def startTime = System.ticksUs();
+                            Profiling.callDataFrames.push(ProfileCallFrameData.new(initFO.uid, startTime));
+                        }
                     } else {
                         // treat like a normal `RETURN` instruction
                         // done with init frames
-                        callFrames.pop();
+                        def oldFrame = callFrames.pop();
                         stack.resize(baseStartIndex + 1);
 
                         if (CiceroOptions.sanityChecks && callFrames.empty()) System.error("eval error", "call frames is empty after init clause executed");
@@ -1289,11 +1357,19 @@ class VirtualMachine {
                         baseStartIndex = currentCallFrame.baseStartIndex;
                         loc = currentCallFrame.loc;
                         associatedFunc = currentCallFrame.associatedFunc;
+
+                        if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+                            def endTime = System.ticksUs();
+                            ProfilingHelpers.handleProfilingDuringReturn(endTime, associatedFunc, oldFrame.associatedFunc);
+                        }
                     }
 
                     if (CiceroOptions.profileDynamicBytecode) {
                         opExecTime = System.ticksUs() - opExecTime;
                         ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
+                    }
+                    if (CiceroOptions.profileDynamicOpcodePair){
+                        dispatchStartTime = System.ticksUs();
                     }
                 }
                 // _ => System.error("eval error", "unsupported opcode");
@@ -1307,10 +1383,13 @@ class VirtualMachine {
                     _ => {}
                 }
             }
-            // SUPREME: TODO: NOT ACCURATE when a new function gets called
-            lastInstr = Maybe.Just(opcode);
+            if (CiceroOptions.profileDynamicOpcodePair) lastInstr = Maybe.Just(opcode);
         }
 
+        if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls) {
+            def endTime = System.ticksUs();
+            ProfilingHelpers.handleProfilingDuringReturn(endTime, null, associatedFunc);
+        }
         if (CiceroOptions.sanityChecks && stack.empty()) System.error("eval error", "stack is empty");
         if (CiceroOptions.traceBytecodeEvaluation) System.puts("RETURN\n");
         return stack.pop();

@@ -1,9 +1,3 @@
-class FunctionProfileMetadata {
-    def identifier: int;
-    def label: string;
-    new(identifier, label) {}
-}
-
 // Used during both `profileFunctionCalls` and `profileFuncObjectCalls`
 class ProfiledFuncData #unboxed {
 	def label: string;
@@ -12,6 +6,15 @@ class ProfiledFuncData #unboxed {
 	var exclusiveTime: int; // μs
 
 	new(label, calls, inclusiveTime, exclusiveTime) {}
+}
+
+// This object is stored in the `Profiling.callDataFrames` array stack
+// The relevant call frame object for any `ProfileCallFrameData` object will always be at the same depth in the VM's call frames array stack.
+class ProfileCallFrameData #unboxed {
+	def uid: int;
+	def startTime: int; // μs
+	var totalCalleeTime: int = 0; // μs
+	new(uid, startTime) {}
 }
 
 component ProfileFunctionCalls{

@@ -21,6 +21,7 @@ component Profiling {
 	def dynamicOpcodePairCounts: Array<Array<int>>= ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 	def dynamicOpcodePairDispatchCost: Array<Array<long>>= ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 
+	def callDataFrames: ArrayStack<ProfileCallFrameData> = ArrayStack.new();
 	def funcCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
 	def funcObjectCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
 	/* 
@@ -62,4 +63,26 @@ component ProfilingHelpers {
         }
         return matrix;
     }
+
+	def handleProfilingDuringReturn(endTime: int, callerFunc: FunctionProfileMetadata, calleeFunc: FunctionProfileMetadata){
+		def poppedDataFrame = Profiling.callDataFrames.pop();
+		def inclusiveExecutionTime: int = endTime - poppedDataFrame.startTime;
+		def exclusiveExecutionTime: int = inclusiveExecutionTime - poppedDataFrame.totalCalleeTime;
+
+		if (callerFunc != null){
+			if (CiceroOptions.profileCallerCalleePairs) {
+				ProfileCallerCalleePairs.profilePair(callerFunc, calleeFunc, inclusiveExecutionTime);
+			}
+
+			// update `totalCalleeTime`
+			Profiling.callDataFrames.elems[Profiling.callDataFrames.top - 1].totalCalleeTime += inclusiveExecutionTime;
+		}
+
+		if (CiceroOptions.profileFunctionCalls) {
+			ProfileFunctionCalls.profileFunctionCall(calleeFunc, inclusiveExecutionTime, exclusiveExecutionTime);
+		}
+		if (CiceroOptions.profileFuncObjectCalls) {
+			ProfileFunctionCalls.profileFunctionObjectCall(poppedDataFrame.uid, calleeFunc.label, inclusiveExecutionTime, exclusiveExecutionTime);
+		}
+	}
 }

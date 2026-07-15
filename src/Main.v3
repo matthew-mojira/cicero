@@ -211,6 +211,6 @@ def abortCicero(obj: Object) -> int{
 
 component TopLevel {
 	def name: string = "\"repl\"";
-	def metadata : FunctionProfileMetadata = FunctionProfileMetadata.new(FuncObjects.mainProgramId, TopLevel.name);
+	def metadata : FunctionProfileMetadata = FunctionProfileMetadata.new(TopLevel.name, true);
 	var VM : VirtualMachine = null;
 }

@@ -203,7 +203,7 @@ class BytecodeCompiler {
 				match (init) {
 					Nothing => ;
 					Just(fn) => {
-						fn.code.compile(["self"], Strings.format1("%s.init", id), false, true);
+						fn.code.compile(["self"], fn.metadata.label, false, true);
 						init2 = fn;
 					}
 				}

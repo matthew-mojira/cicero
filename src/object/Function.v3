@@ -10,7 +10,8 @@
  * arity is correct. Type-checking is the responsibility of the implementation
  * of that function, still.
  */
-var FuncObjectId : int = 0;
+// "repl" is assigned uid: 0
+var FuncObjectId : int = 1 + FuncObjects.mainProgramId;
 class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject, metadata: FunctionProfileMetadata)  extends Object {
 	// FuncObject unique id
 	def uid: int = FuncObjectId++;
@@ -34,6 +35,16 @@ class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Ob
 	}
 }
 
+class FunctionProfileMetadata {
+    var identifier: int;
+    var label: string;
+    new(label: string, isTopLevel: bool) {
+		this.label = label;
+		if (isTopLevel) this.identifier = FuncObjects.mainProgramId;
+		else this.identifier = FuncObjects.identifier_id++;
+	}
+}
+
 component FuncObjects {
 
 	// Each func/method AST during **parsing** as well as
@@ -51,7 +62,7 @@ component FuncObjects {
 	/* Create a function defined with Virgil code */
 	def fromVirgil(id: string, classname: string, params: Array<string>, fn: Range<Object> -> Result) -> FuncObject {
 		// Each function object created from virgil is given its own unique `identifier_id`
-		def metadata = FunctionProfileMetadata.new(FuncObjects.identifier_id++, Strings.format2("%s.%s", classname, id));
+		def metadata = FunctionProfileMetadata.new(Strings.format2("%s.%s", classname, id), false);
 		return newFO(id, params, [], CodeObjects.fromVirgil(fn), metadata);
 	}
 
@@ -108,7 +119,7 @@ component FuncObjects {
 		return newFO(id, params, _, code, metadata);
 	}
 
-	def initFail: FuncObject = FuncObjects.newFO("init", ["self"], [], CodeObjects.virgilFail, FunctionProfileMetadata.new(FuncObjects.identifier_id++, "init"));
+	def initFail: FuncObject = FuncObjects.newFO("init", ["self"], [], CodeObjects.virgilFail, FunctionProfileMetadata.new("init", false));
 }
 
 def callMethod0<T>(args: Range<Object>, method: T -> Result) -> Result {

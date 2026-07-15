@@ -28,5 +28,6 @@ CREATE_FUNC, 17
 POP, 19
 DUPE, 32
 SWAP, 0
-RETURN, 0
-# Total static bytecodes: 385
+RETURN, 23
+RETURN_INIT, 0
+# Total static bytecodes: 408

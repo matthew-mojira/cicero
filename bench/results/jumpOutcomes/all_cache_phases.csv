@@ -1,0 +1,8 @@
+Line Number,Bytecode ID,Instruction Index,Function Identifier,Function Label,Instruction,Jumps taken,Jumps not taken
+30,39,36,106,stress-test,JUMP_IF_FALSE_PEEK,4,960000
+30,39,336,106,stress-test,JUMP,960000,0
+54,40,232,107,check-benchmark-result,JUMP,10,0
+54,40,64,107,check-benchmark-result,JUMP_IF_FALSE_PEEK,4,10
+56,40,104,107,check-benchmark-result,JUMP_IF_FALSE_PEEK,0,10
+57,40,132,107,check-benchmark-result,JUMP_IF_FALSE_PEEK,0,10
+57,40,160,107,check-benchmark-result,JUMP_IF_FALSE_PEEK,0,10
