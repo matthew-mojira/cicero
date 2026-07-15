@@ -20,11 +20,14 @@ DATA = defaultdict(
 
 
 class BenchmarkData:
-    def __init__(self, mean, stddev, user, system):
+    def __init__(self, mean, stddev, median, user, system, min_, max_):
         self.mean = float(mean) * 1000
         self.stddev = float(stddev) * 1000
+        self.median = float(median) * 1000
         self.user = float(user) * 1000
         self.system = float(system) * 1000
+        self.min = float(min_) * 1000
+        self.max = float(max_) * 1000
 
     def __repr__(self):
         return f"Data: {self.mean}"
@@ -37,8 +40,11 @@ def get_csv_data(path: str) -> BenchmarkData:
             return BenchmarkData(
                 row["mean"],
                 row["stddev"],
+                row["median"],
                 row["user"],
                 row["system"],
+                row["min"],
+                row["max"],
             )
 
 
@@ -144,11 +150,37 @@ def main():
                 runs = benchmark_config[bench]["runs"]
                 output.append(f"| {bench} | `{files}` | {runs} |")
 
+    # Build raw results CSV rows: one row per (target, opt, tier, benchmark)
+    csv_header = ["target", "opt", "tier", "benchmark", "mean_ms", "stddev_ms",
+                  "median_ms", "user_ms", "system_ms", "min_ms", "max_ms"]
+    csv_rows = []
+    for target in all_targets:
+        for opt in all_opts:
+            for tier in all_tiers:
+                for bench in all_benchmarks:
+                    entry = DATA.get((bench, target), {}).get(opt, {}).get(tier)
+                    if entry is None:
+                        continue
+                    csv_rows.append(
+                        [target, opt, tier, bench,
+                         f"{entry.mean:.6f}", f"{entry.stddev:.6f}",
+                         f"{entry.median:.6f}", f"{entry.user:.6f}",
+                         f"{entry.system:.6f}", f"{entry.min:.6f}",
+                         f"{entry.max:.6f}"]
+                    )
+
     # Write Markdown
     date = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     file_name = f"{OUTPUR_PATH_FOR_MD}/benchmark-results-{date}.md"
     with open(file_name, "w") as f:
         f.write("\n".join(output))
+
+    # Write raw results CSV: one row per (target, opt, tier, benchmark)
+    csv_file_name = f"{OUTPUR_PATH_FOR_MD}/benchmark-results-{date}.csv"
+    with open(csv_file_name, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(csv_header)
+        writer.writerows(csv_rows)
 
 
 if __name__ == "__main__":
