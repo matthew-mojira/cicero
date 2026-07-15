@@ -20,6 +20,14 @@ if [ ! -x "$PYTHON3" ]; then
     exit 1
 fi
 
+PROGRESS_BIN=${PROGRESS_BIN:=$(which progress)}
+if [ ! -x "$PROGRESS_BIN" ]; then
+    echo "Virgil's progress utility not found in \$PATH, and \$PROGRESS_BIN not set"
+    exit 1
+fi
+PROGRESS_ARGS=${PROGRESS_ARGS:="ti"}
+PROGRESS="$PROGRESS_BIN $PROGRESS_ARGS"
+
 if [ "$BENCH_TARGETS" = "" ]; then
     BENCH_TARGETS="x86-64-linux"
 fi
@@ -110,15 +118,15 @@ run_hyperfine(){
     # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file, $6: target
     cd $BENCH_DIR
 
-    echo "Running: $4 (tier=$3) for $6"
     if ! $HYPERFINE --style none --warmup $WARMUP_RUNS --runs "$1" \
         "$2 -suppress-output=true -tier=$3 $4" \
-        --export-csv "$5" 2>&1
+        --export-csv "$5" >> "$T/run.log" 2>&1
     then
-        echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3), skipping"
+        echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3), skipping" >> "$T/run.log"
+        echo "##-fail"
         return 0
     else
-        echo "Done: $4 (tier=$3) for $6"
+        echo "##-ok"
         return 0
     fi
 }
@@ -146,11 +154,13 @@ build_opt_level(){
     mkdir -p "$opt_bin_dir"
 
     for target in $BENCH_TARGETS; do
-        echo "Building $target at -O$o_level"
         if ! OUTPUT_DIR="$opt_bin_dir" V3C_OPTS="-O$o_level" "$REPO_ROOT/build.sh" cicero "$target" \
             > "$opt_bin_dir/build-$target.log" 2>&1
         then
-            echo "[WARN] build failed for $target at -O$o_level, see $opt_bin_dir/build-$target.log"
+            echo "[WARN] build failed for $target at -O$o_level, see $opt_bin_dir/build-$target.log" >> "$T/build.log"
+            echo "##-fail"
+        else
+            echo "##-ok"
         fi
     done
 }
@@ -158,39 +168,59 @@ export -f build_opt_level
 
 cd "$REPO_ROOT"
 
+NUM_TARGETS=$(echo $BENCH_TARGETS | wc -w)
+NUM_OPTS=$(echo $BENCH_OPT_LEVELS | wc -w)
+TOTAL_BUILDS=$(( NUM_TARGETS * NUM_OPTS ))
+
 echo "Building optimization levels in parallel: $BENCH_OPT_LEVELS"
-for o_level in $BENCH_OPT_LEVELS; do
-    build_opt_level "$o_level" &
-done
-wait
-echo "Completed building all optimization levels"
+printf "build "
+{
+    echo "##>$TOTAL_BUILDS"
+    for o_level in $BENCH_OPT_LEVELS; do
+        build_opt_level "$o_level" &
+    done
+    wait
+} | $PROGRESS
+echo "Completed building all optimization levels (see $T/build.log for details)"
 
 echo "Dispatching benchmarks (order: benchmark -> target -> opt -> tier)"
 
-# Baseline empty-file timing, dispatched up front so it doesn't block benchmark rows.
-for target in $BENCH_TARGETS; do
-    for o_level in $BENCH_OPT_LEVELS; do
-        for tier in $BENCH_TIERS; do
-            BINARY=$(binary_path "$o_level" "$target")
-            CSV_FILE=$(csv_file_name "empty" $tier $o_level $target)
-            run_with_lock run_hyperfine 50 "$BINARY" "$tier" "$T/empty.co" "$CSV_FILE" "$target"
-        done
-    done
-done
+NUM_ROWS=$(tail -n +2 "$BENCH_CONFIG" | wc -l)
+NUM_TIERS=$(echo $BENCH_TIERS | wc -w)
+TOTAL_JOBS=$(( (NUM_ROWS + 1) * NUM_TARGETS * NUM_OPTS * NUM_TIERS ))
 
-while IFS=',' read -r benchmark files runs; do
+# Same pattern test_core.sh uses (print_testing; run_tests | $PROGRESS): print
+# a plain label first, then pipe the dispatch group's "##-ok"/"##-fail" lines
+# into `progress` so it renders a live running count.
+printf "bench "
+{
+    echo "##>$TOTAL_JOBS"
+
+    # Baseline empty-file timing, dispatched up front so it doesn't block benchmark rows.
     for target in $BENCH_TARGETS; do
         for o_level in $BENCH_OPT_LEVELS; do
             for tier in $BENCH_TIERS; do
                 BINARY=$(binary_path "$o_level" "$target")
-                CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
-                run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target"
+                CSV_FILE=$(csv_file_name "empty" $tier $o_level $target)
+                run_with_lock run_hyperfine 50 "$BINARY" "$tier" "$T/empty.co" "$CSV_FILE" "$target"
             done
         done
     done
-done < <(tail -n +2 "$BENCH_CONFIG")
 
-wait
-echo "Completed running all benchmarks"
+    while IFS=',' read -r benchmark files runs; do
+        for target in $BENCH_TARGETS; do
+            for o_level in $BENCH_OPT_LEVELS; do
+                for tier in $BENCH_TIERS; do
+                    BINARY=$(binary_path "$o_level" "$target")
+                    CSV_FILE=$(csv_file_name $benchmark $tier $o_level $target)
+                    run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target"
+                done
+            done
+        done
+    done < <(tail -n +2 "$BENCH_CONFIG")
+
+    wait
+} | $PROGRESS
+echo "Completed running all benchmarks (see $T/run.log for details)"
 
 $PYTHON3 $BENCH_DIR/../scripts/create_markdown.py $T $BENCH_DIR/results $BENCH_CONFIG
