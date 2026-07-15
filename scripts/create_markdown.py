@@ -11,12 +11,14 @@ PATH_TO_CSV_FILES = sys.argv[1]
 OUTPUR_PATH_FOR_MD = sys.argv[2]
 BENCH_CONFIG = sys.argv[3] if len(sys.argv) > 3 else "Unknown"
 
-# pattern: benchmark-tier{tier}-opt{opt}-{target}.csv
-# e.g. deltablue-tier0-opt2-jvm.csv
-CSV_FILE_NAME = re.compile(r"(\w+)-tier(\d+)-opt(\d+)-(.*)\.csv")
+# pattern: benchmark-tier{tier}-opt{opt}[-mode{mode}]-{target}.csv
+# e.g. deltablue-tier0-opt2-jvm.csv, sieve-tier1-opt2-modejit-wasm-wave.csv
+# The mode segment only appears for wasm-wave (Wizard's execution modes);
+# every other target has an implicit mode of "none".
+CSV_FILE_NAME = re.compile(r"(\w+)-tier(\d+)-opt(\d+)-(?:mode(\w+)-)?(.*)\.csv")
 DATA = defaultdict(
     lambda: defaultdict(dict)
-)  # (benchmark, target) -> opt -> tier -> Runtime mean + other info
+)  # (benchmark, target, mode) -> opt -> tier -> Runtime mean + other info
 
 
 class BenchmarkData:
@@ -65,8 +67,9 @@ def main():
         csv_file_path = os.path.join(PATH_TO_CSV_FILES, entry)
         if os.path.isfile(csv_file_path) and csv_file_path.endswith(".csv"):
             match = CSV_FILE_NAME.match(os.path.basename(csv_file_path))
-            bench, tier, opt, target = match.groups()
-            DATA[(bench, target)][int(opt)][int(tier)] = get_csv_data(csv_file_path)
+            bench, tier, opt, mode, target = match.groups()
+            mode = mode if mode is not None else "none"
+            DATA[(bench, target, mode)][int(opt)][int(tier)] = get_csv_data(csv_file_path)
 
     output = []
     # Collect all unique tiers, opts, targets, and benchmarks
@@ -79,58 +82,68 @@ def main():
         }
     )
     all_opts = sorted({opt for _, tdata in DATA.items() for opt in tdata})
-    all_targets = sorted({target for _, target in DATA.keys()})
-    all_benchmarks = sorted({bench for bench, _ in DATA.keys()})
+    all_targets = sorted({target for _, target, _ in DATA.keys()})
+    all_benchmarks = sorted({bench for bench, _, _ in DATA.keys()})
 
-    # Organize data by target -> opt -> benchmark -> tier
+    # Organize data by target -> opt -> [mode ->] benchmark -> tier
     for target in all_targets:
         output.append(f"# {target}\n")
 
+        # Modes only vary for wasm-wave; every other target has the single
+        # implicit mode "none", in which case we don't bother annotating it.
+        modes_for_target = sorted({m for b, t, m in DATA.keys() if t == target})
+        single_mode = modes_for_target == ["none"]
+
         for opt in all_opts:
-            output.append(f"## -O{opt}\n")
+            for mode in modes_for_target:
+                if single_mode:
+                    output.append(f"## -O{opt}\n")
+                else:
+                    output.append(f"## -O{opt} (mode={mode})\n")
 
-            # Calculate column widths for alignment
-            # First, collect all data for this target/opt combination
-            table_data = []
-            for bench in all_benchmarks:
-                if (bench, target) in DATA:
-                    row = [bench]
-                    opt_data = DATA[(bench, target)]
-                    for tier in all_tiers:
-                        entry = opt_data.get(opt, {}).get(tier)
-                        if entry:
-                            cell = f"{entry.mean:.2f}ms"
-                        else:
-                            cell = "–"
-                        row.append(cell)
-                    table_data.append(row)
+                # Calculate column widths for alignment
+                # First, collect all data for this target/opt/mode combination
+                table_data = []
+                for bench in all_benchmarks:
+                    key = (bench, target, mode)
+                    if key in DATA:
+                        row = [bench]
+                        opt_data = DATA[key]
+                        for tier in all_tiers:
+                            entry = opt_data.get(opt, {}).get(tier)
+                            if entry:
+                                cell = f"{entry.mean:.2f}ms"
+                            else:
+                                cell = "–"
+                            row.append(cell)
+                        table_data.append(row)
 
-            # Calculate max width for each column
-            col_widths = [len("Benchmark")]  # Start with header width
-            for tier in all_tiers:
-                col_widths.append(len(f"tier{tier}"))
+                # Calculate max width for each column
+                col_widths = [len("Benchmark")]  # Start with header width
+                for tier in all_tiers:
+                    col_widths.append(len(f"tier{tier}"))
 
-            for row in table_data:
-                for i, cell in enumerate(row):
-                    col_widths[i] = max(col_widths[i], len(cell))
+                for row in table_data:
+                    for i, cell in enumerate(row):
+                        col_widths[i] = max(col_widths[i], len(cell))
 
-            # Create table header with padding
-            header_cells = ["Benchmark"] + [f"tier{t}" for t in all_tiers]
-            header = "| " + " | ".join(header_cells[i].ljust(col_widths[i]) for i in range(len(header_cells))) + " |"
+                # Create table header with padding
+                header_cells = ["Benchmark"] + [f"tier{t}" for t in all_tiers]
+                header = "| " + " | ".join(header_cells[i].ljust(col_widths[i]) for i in range(len(header_cells))) + " |"
 
-            # Left align first column (benchmark), right align remaining columns (times)
-            sep = "|:" + "-" * (col_widths[0] + 1) + "|" + "|".join("-" * (col_widths[i] + 1) + ":" for i in range(1, len(col_widths)))
+                # Left align first column (benchmark), right align remaining columns (times)
+                sep = "|:" + "-" * (col_widths[0] + 1) + "|" + "|".join("-" * (col_widths[i] + 1) + ":" for i in range(1, len(col_widths)))
 
-            output.append(header)
-            output.append(sep)
+                output.append(header)
+                output.append(sep)
 
-            # Create rows with padding
-            for row in table_data:
-                formatted_row = [row[0].ljust(col_widths[0])]  # Left align benchmark name
-                for i in range(1, len(row)):
-                    formatted_row.append(row[i].rjust(col_widths[i]))  # Right align times
-                output.append("| " + " | ".join(formatted_row) + " |")
-            output.append("\n")
+                # Create rows with padding
+                for row in table_data:
+                    formatted_row = [row[0].ljust(col_widths[0])]  # Left align benchmark name
+                    for i in range(1, len(row)):
+                        formatted_row.append(row[i].rjust(col_widths[i]))  # Right align times
+                    output.append("| " + " | ".join(formatted_row) + " |")
+                output.append("\n")
 
     # Add configuration section
     output.append("---\n")
@@ -150,24 +163,29 @@ def main():
                 runs = benchmark_config[bench]["runs"]
                 output.append(f"| {bench} | `{files}` | {runs} |")
 
-    # Build raw results CSV rows: one row per (target, opt, tier, benchmark)
-    csv_header = ["target", "opt", "tier", "benchmark", "mean_ms", "stddev_ms",
+    # Build raw results CSV rows: one row per (target, mode, opt, tier, benchmark)
+    # `mode` is Wizard's execution mode, and only applies to wasm-wave; blank
+    # for every other target.
+    csv_header = ["target", "mode", "opt", "tier", "benchmark", "mean_ms", "stddev_ms",
                   "median_ms", "user_ms", "system_ms", "min_ms", "max_ms"]
     csv_rows = []
     for target in all_targets:
-        for opt in all_opts:
-            for tier in all_tiers:
-                for bench in all_benchmarks:
-                    entry = DATA.get((bench, target), {}).get(opt, {}).get(tier)
-                    if entry is None:
-                        continue
-                    csv_rows.append(
-                        [target, opt, tier, bench,
-                         f"{entry.mean:.6f}", f"{entry.stddev:.6f}",
-                         f"{entry.median:.6f}", f"{entry.user:.6f}",
-                         f"{entry.system:.6f}", f"{entry.min:.6f}",
-                         f"{entry.max:.6f}"]
-                    )
+        modes_for_target = sorted({m for b, t, m in DATA.keys() if t == target})
+        for mode in modes_for_target:
+            mode_label = "" if mode == "none" else mode
+            for opt in all_opts:
+                for tier in all_tiers:
+                    for bench in all_benchmarks:
+                        entry = DATA.get((bench, target, mode), {}).get(opt, {}).get(tier)
+                        if entry is None:
+                            continue
+                        csv_rows.append(
+                            [target, mode_label, opt, tier, bench,
+                             f"{entry.mean:.6f}", f"{entry.stddev:.6f}",
+                             f"{entry.median:.6f}", f"{entry.user:.6f}",
+                             f"{entry.system:.6f}", f"{entry.min:.6f}",
+                             f"{entry.max:.6f}"]
+                        )
 
     # Write Markdown and CSV, both as a timestamped copy and as a
     # "latest" copy that gets overwritten each run for easy lookup.
