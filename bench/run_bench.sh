@@ -55,7 +55,7 @@ BENCH_DIR=$SCRIPT_LOC
 SOM_DIR=$(cd $BENCH_DIR/som && pwd)
 MICRO_DIR=$(cd $BENCH_DIR/micro && pwd)
 MACRO_DIR=$(cd $BENCH_DIR/macro && pwd)
-BIN_DIR=$(cd $BENCH_DIR/../bin && pwd)
+REPO_ROOT=$(cd $BENCH_DIR/.. && pwd)
 
 if [ "$BENCH_CONFIG" = "" ]; then
     BENCH_CONFIG="$BENCH_DIR/run_bench.config.csv"
@@ -126,13 +126,18 @@ run_hyperfine(){
 # Export the function so background subshells can see it
 export -f run_hyperfine
 
-# Runs all benchmarks(across all targets and tiers) for a given virgil compiler optimization level
+# Runs all benchmarks (across all targets and tiers) for a given virgil
+# compiler optimization level, against binaries in a given bin directory.
 run_benchmarks(){
+    # $1: opt level, $2: bin dir for this opt level's binaries
+    local o_level=$1
+    local bin_dir=$2
+
     for target in $BENCH_TARGETS; do
         if [ "$target" = "wasm-wave" ]; then
-            BINARY=$BIN_DIR/cicero.wasm
+            BINARY=$bin_dir/cicero.wasm
         else
-            BINARY=$BIN_DIR/cicero.$target
+            BINARY=$bin_dir/cicero.$target
         fi
 
         for tier in $BENCH_TIERS; do
@@ -148,18 +153,44 @@ run_benchmarks(){
             done < <(tail -n +2 "$BENCH_CONFIG")
         done
     done
+
+    wait
 }
 
-for o_level in $BENCH_OPT_LEVELS
-do
-    export V3C_OPTS="-O$o_level"
-    # Build birectory
-    cd $BIN_DIR/..
-    # Build cicero for the new optimization level
-    make -B
-    echo "Virgil Optimization Level: $V3C_OPTS"
-    run_benchmarks
-    wait
-    echo "Completed running all benchmarks for $V3C_OPTS"
+# Builds cicero for every requested target at a given Virgil optimization
+# level, into its own bin directory so opt levels don't clobber each other
+# and can be built/benchmarked in parallel.
+build_opt_level(){
+    # $1: opt level
+    local o_level=$1
+    local opt_bin_dir=$T/bin-opt$o_level
+    mkdir -p "$opt_bin_dir"
+
+    for target in $BENCH_TARGETS; do
+        echo "Building $target at -O$o_level"
+        if ! OUTPUT_DIR="$opt_bin_dir" V3C_OPTS="-O$o_level" "$REPO_ROOT/build.sh" cicero "$target" \
+            > "$opt_bin_dir/build-$target.log" 2>&1
+        then
+            echo "[WARN] build failed for $target at -O$o_level, see $opt_bin_dir/build-$target.log"
+        fi
+    done
+}
+export -f build_opt_level
+
+cd "$REPO_ROOT"
+
+echo "Building optimization levels in parallel: $BENCH_OPT_LEVELS"
+for o_level in $BENCH_OPT_LEVELS; do
+    build_opt_level "$o_level" &
 done
+wait
+echo "Completed building all optimization levels"
+
+echo "Running benchmarks for all optimization levels in parallel: $BENCH_OPT_LEVELS"
+for o_level in $BENCH_OPT_LEVELS; do
+    run_benchmarks "$o_level" "$T/bin-opt$o_level" &
+done
+wait
+echo "Completed running all benchmarks"
+
 $PYTHON3 $BENCH_DIR/../scripts/create_markdown.py $T $BENCH_DIR/results $BENCH_CONFIG
