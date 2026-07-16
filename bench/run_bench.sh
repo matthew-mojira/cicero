@@ -155,7 +155,7 @@ run_hyperfine(){
 
     local cmd
     if [ "$6" = "wasm-wave" ]; then
-        cmd="$WIZENG $WIZENG_OPTIONS --mode=$8 $2 -suppress-output=true -tier=$3 $4"
+        cmd="$WIZENG $WIZENG_OPTIONS --stack-size=64M --mode=$8 $2 -suppress-output=true -tier=$3 $4"
     else
         cmd="$2 -suppress-output=true -tier=$3 $4"
     fi
