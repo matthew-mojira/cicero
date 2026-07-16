@@ -1,0 +1,9 @@
+# Execution time is the total time spent inside the callee
+caller identifier id,caller label,callee identifier id,callee label,calls,execution time(μs),execution time(μs)_std
+0,repl,87,+,1000000,2739222.6,10610.336154206545
+0,repl,92,=,1,5.3,0.47016234598162726
+0,repl,94,<,1000001,4257803.75,16987.18725787794
+0,repl,104,A.init,1,7.65,1.1367080817685318
+87,+,48,int.+,1000000,679817.15,3639.1646420717484
+92,=,53,int.=,1,2.5,0.5129891760425769
+94,<,54,int.<,1000001,677283.85,5631.005138610057
