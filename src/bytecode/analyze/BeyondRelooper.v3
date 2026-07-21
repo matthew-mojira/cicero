@@ -48,10 +48,55 @@ class BeyondRelooper(g: CFGraph) {
 	def doTree(tree: BasicBlock, ctx: List<ContainingSyntax>, fallThrough: BasicBlock) -> WasmStructure {
 		def mergeChildren = Lists.fromArray(Arrays.filter(tree.sortedDomChildren, isStructuralMergeChild));
 		if (tree.isLoopHead) {
-			return WasmStructure.Loop(nodeWithin(tree, mergeChildren, List.new(ContainingSyntax.LoopHeadedBy(tree), ctx), fallThrough));
+			def loopCtx = List.new(ContainingSyntax.LoopHeadedBy(tree), ctx);
+			// A loop's exit continuation (its follow node) must be emitted AFTER the
+			// loop, not inlined into the exit arm: otherwise operand-stack values
+			// that were live before the loop sit below the loop's base and are
+			// unreachable from the continuation (e.g. `(f (while ...))` — f is pushed
+			// before the loop and used after). The dominator tree alone places the
+			// follow under the in-loop exit block, so extract it explicitly. Restricted
+			// to a non-merge follow so it never also appears in a mergeChildren list.
+			def follow = computeLoopFollow(tree);
+			if (follow != null && follow != fallThrough) {
+				def body = nodeWithin(tree, mergeChildren, loopCtx, follow);
+				return WasmStructure.Seq(WasmStructure.Loop(body), doTree(follow, ctx, fallThrough));
+			}
+			return WasmStructure.Loop(nodeWithin(tree, mergeChildren, loopCtx, fallThrough));
 		} else {
 			return nodeWithin(tree, mergeChildren, ctx, fallThrough);
 		}
+	}
+
+	// The follow node of a loop: the single block outside the loop that an exit
+	// edge targets. Returns null if there is no such block (e.g. all exits are
+	// returns) or more than one distinct one, or if it is a merge node (a merge is
+	// already placed via the merge-child mechanism, and excluding it here keeps the
+	// two paths from double-emitting). Loop body = head + everything that can reach
+	// a back-edge source without passing through the head (natural loop).
+	def computeLoopFollow(loopHead: BasicBlock) -> BasicBlock {
+		def body = HashSet<BasicBlock>.new(BasicBlock.hash, BasicBlock.==);
+		body.add(loopHead);
+		def worklist: Stack<BasicBlock> = ArrayStack.new();
+		for (p in loopHead.predecessors.toArray()) {
+			if (p.reversePostorder >= loopHead.reversePostorder) worklist.push(p); // back-edge source
+		}
+		while (!worklist.empty()) {
+			def n = worklist.pop();
+			if (body.contains(n)) continue;
+			body.add(n);
+			for (q in n.predecessors.toArray()) worklist.push(q);
+		}
+		var follow: BasicBlock;
+		for (b in body.toArray()) {
+			for (s in b.successors()) {
+				if (body.contains(s)) continue;
+				if (s == returnSentinel || s == exceptionSentinel) continue;
+				if (follow == null) follow = s;
+				else if (follow != s) return null; // multiple distinct exits: bail
+			}
+		}
+		if (follow != null && follow.isMerge) return null;
+		return follow;
 	}
 
 	def isStructuralMergeChild(b: BasicBlock) -> bool {

@@ -43,6 +43,13 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 				boundaries[pc + i24.view(operand)] = true;
 				boundaries[pc] = true;
 			}
+			if (opcode == Opcode.RETURN) {
+				// RETURN is terminal (no successors): end its block here so the
+				// relooper sees TerminalFlow and emits a return. Anything the
+				// bytecode emitted after it (e.g. an if's dead skip-JUMP) becomes a
+				// separate, unreachable block that the relooper never visits.
+				boundaries[pc] = true;
+			}
 			if (!ignoreExceptions && opcode.exception) {
 				boundaries[handlerStk.peek()] = true; // XXX duplicate set many, many times
 				handlerLoc[pc] = handlerStk.peek();
