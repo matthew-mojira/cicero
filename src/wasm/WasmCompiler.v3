@@ -29,6 +29,11 @@ def CALL_FUNC9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc9));
 def PUSH_ARG:   u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.pushArg));
 def POP_ARG:    u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.popArg));
 def CALL_FUNC_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRest));
+// Bytecode-tier variants: extras arrive in xargs reversed (operands are all on the
+// Wasm stack and PUSH_ARG'd rightmost-first), so these pop xargs forward. See WasmRuntime.
+def CALL_FUNC_REST_REV:   u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRestRev));
+def CREATE_FUNC_REST_REV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFuncRestRev));
+def CREATE_LIST_REST_REV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRestRev));
 
 def GET_RESULT: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getResult));
 def SET_RESULT: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.setResult));
@@ -63,7 +68,7 @@ def CREATE_LIST8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8
 def CREATE_LIST9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9));
 def CREATE_LIST_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRest));
 
-def compileFromTier1 = true;
+def compileFromTier1 = false;
 
 class WasmCompiler {
 	// TODO need extra information about parameters and locals
@@ -132,6 +137,19 @@ class WasmCompiler {
 			// the AST tier below.
 			withBlock<void, int>(fun {
 				handlerStack.push(blockDepth);
+
+				// initialize extra parameters (beyond 9) from WasmRuntime.xargs, same
+				// as the AST branch below: WasmFrame.eval pushed them left-to-right, so
+				// pop in reverse to fill the tail parameter locals first. Params are the
+				// leading bytecode locals, at wasm local 1+i (slot 0 is <receiver>).
+				if (params.length > 9) {
+					for (i = params.length - 1; i >= 9; i--) {
+						emitCall(POP_ARG);
+						wasm.putb(WasmOp.SET_LOCAL.opcode);
+						wasm.put_uleb32(u32.view(1 + i));
+					}
+				}
+
 				compileWasmStructure(br.output);
 				handlerStack.pop();
 			});
@@ -389,10 +407,14 @@ class WasmCompiler {
 						}
 						emitInterpretResult(); // excBool: true -> GET_RESULT(exn) + br handler; else GET_RESULT(value)
 					} else {
-						// same xargs-ordering complication as CREATE_LIST/CREATE_FUNC's
-						// >9 cases: args 9..N-1 are already stacked with N-1 on top, but
-						// PUSH_ARG needs them fed in forward order. Needs a scratch buffer.
-						System.error("compile error", "tier1->Wasm: CALL with >9 arguments unsupported");
+						// stack: [fn, a0..a_{N-1}] (a_{N-1} on top). Move the top N-9 args
+						// into xargs (rightmost-first); CALL_FUNC_REST_REV pops them forward.
+						// Leaves [fn, a0..a8] + numRest for the call.
+						for (i < operand - 9) emitCall(PUSH_ARG);
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand - 9);
+						emitCall(CALL_FUNC_REST_REV);
+						emitInterpretResult();
 					}
 				}
 				JUMP => /* no implementation */ ;
@@ -483,10 +505,13 @@ class WasmCompiler {
 							9 => wasm.put_uleb32(CREATE_LIST9);
 						}
 					} else {
-						// elements are already on the stack with none of them routed through
-						// PUSH_ARG; reproducing CREATE_LIST_REST's xargs ordering for >9 elements
-						// needs a scratch buffer to reverse them first. Not yet implemented.
-						System.error("compile error", "tier1->Wasm: CREATE_LIST with >9 elements unsupported");
+						// stack: [e0..e_{N-1}] (e_{N-1} on top). Move the top N-9 elements
+						// into xargs (rightmost-first); CREATE_LIST_REST_REV pops them forward.
+						// Leaves [e0..e8] + numRest.
+						for (i < operand - 9) emitCall(PUSH_ARG);
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand - 9);
+						emitCall(CREATE_LIST_REST_REV);
 					}
 				}
 				CREATE_FUNC => {
@@ -522,8 +547,24 @@ class WasmCompiler {
 							9 => emitCall(CREATE_FUNC9);
 						}
 					} else {
-						// same xargs-ordering complication as CREATE_LIST/CALL's >9 cases
-						System.error("compile error", "tier1->Wasm: CREATE_FUNC with >9 nonlocals unsupported");
+						// stack: [nl0..nl_{M-1}] (nl_{M-1} on top). Move the top M-9 nonlocals
+						// into xargs (rightmost-first); CREATE_FUNC_REST_REV pops them forward.
+						for (i < nonlocalCount - 9) emitCall(PUSH_ARG);
+						// then thread the funchole index under the remaining 9 (as the <=9 case),
+						// buffering nl0..nl8 through argScratch.
+						for (i = 8; i >= 0; i--) {
+							wasm.putb(WasmOp.SET_LOCAL.opcode);
+							wasm.put_uleb32(argScratch[i]);
+						}
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);
+						for (i < 9) {
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.put_uleb32(argScratch[i]);
+						}
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(nonlocalCount - 9);
+						emitCall(CREATE_FUNC_REST_REV);
 					}
 				}
 				POP => {
