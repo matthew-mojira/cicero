@@ -68,15 +68,16 @@ class WasmFrame extends FrameObject {
 			Func8(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 			Func9(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 			FuncN(f) => {
-				if (CiceroOptions.sanityChecks && !WasmRuntime.xargs.empty()) {
-					System.puts("internal error: WasmRuntime.xargs.length > 0");
-					System.error("internal error", "WasmRuntime.xargs.length > 0");
-				}
-
+				// baseDepth, not empty(): an outer call's pending rest-args may be under ours.
+				def baseDepth = WasmRuntime.xargs.top;
 				def numRest = args.length - 9;
 				for (i < numRest)
 					WasmRuntime.xargs.push(WasmRuntime.alloc(args[9 + i].1));
 				exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+				if (CiceroOptions.sanityChecks && WasmRuntime.xargs.top != baseDepth) {
+					System.puts("internal error: WasmRuntime.xargs did not return to its pre-call depth\n");
+					System.error("internal error", "WasmRuntime.xargs did not return to its pre-call depth");
+				}
 			}
 		}
 		if (exn) {

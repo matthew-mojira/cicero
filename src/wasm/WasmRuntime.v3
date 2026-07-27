@@ -11,7 +11,7 @@ component WasmRuntime {
 	var classholes: Array<ClassObject -> ClassObject>;
 	var objects: Vector<Object>;
 	var result: int;
-	var xargs: Stack<int> = ArrayStack.new();
+	var xargs: ArrayStack<int> = ArrayStack.new(); // ArrayStack so `.top` gives a depth mark for reentrant calls
 
 	def pushArg(idx: int) => xargs.push(idx);
 	def popArg() -> int => xargs.pop();
@@ -102,18 +102,7 @@ component WasmRuntime {
 		args[6] = o6;
 		args[7] = o7;
 		args[8] = o8;
-		// xargs were pushed in left-to-right order; pop in reverse to fill the tail
-		for (i = numRest - 1; i >= 0; i--) {
-			if (CiceroOptions.sanityChecks && WasmRuntime.xargs.empty()) {
-				System.puts("internal error: WasmRuntime.xargs.length = 0");
-				System.error("internal error", "WasmRuntime.xargs.length = 0");
-			}
-			args[9 + i] = xargs.pop();
-		}
-		if (CiceroOptions.sanityChecks && !WasmRuntime.xargs.empty()) {
-			System.puts("internal error: WasmRuntime.xargs.length > 0");
-			System.error("internal error", "WasmRuntime.xargs.length > 0");
-		}
+		popRestReverse(args, numRest);
 		return callFuncN(func, args);
 	}
 
@@ -124,17 +113,38 @@ component WasmRuntime {
 	// extras in reverse. Pop them forward to restore left-to-right order. The
 	// callFuncRestRev/createListRestRev/createFuncRestRev entries below mirror their
 	// non-Rev counterparts but drain xargs this way.
+	//
+	// baseDepth, not empty(): xargs is shared across reentrant calls (a >9-arg
+	// call can be nested in another's rest-args), so an outer call's items may
+	// still be under ours.
 	def popRestForward(args: Array<int>, numRest: int) {
+		def baseDepth = xargs.top - numRest;
 		for (i < numRest) {
-			if (CiceroOptions.sanityChecks && WasmRuntime.xargs.empty()) {
-				System.puts("internal error: WasmRuntime.xargs.length = 0");
-				System.error("internal error", "WasmRuntime.xargs.length = 0");
+			if (CiceroOptions.sanityChecks && xargs.top <= baseDepth) {
+				System.puts("internal error: WasmRuntime.xargs underflowed this call's own arguments\n");
+				System.error("internal error", "WasmRuntime.xargs underflowed this call's own arguments");
 			}
 			args[9 + i] = xargs.pop();
 		}
-		if (CiceroOptions.sanityChecks && !WasmRuntime.xargs.empty()) {
-			System.puts("internal error: WasmRuntime.xargs.length > 0");
-			System.error("internal error", "WasmRuntime.xargs.length > 0");
+		if (CiceroOptions.sanityChecks && xargs.top != baseDepth) {
+			System.puts("internal error: WasmRuntime.xargs did not return to its pre-call depth\n");
+			System.error("internal error", "WasmRuntime.xargs did not return to its pre-call depth");
+		}
+	}
+
+	// Like popRestForward but pops in reverse, for the AST tier's callFuncRest/createFuncRest/createListRest.
+	def popRestReverse(args: Array<int>, numRest: int) {
+		def baseDepth = xargs.top - numRest;
+		for (i = numRest - 1; i >= 0; i--) {
+			if (CiceroOptions.sanityChecks && xargs.top <= baseDepth) {
+				System.puts("internal error: WasmRuntime.xargs underflowed this call's own arguments\n");
+				System.error("internal error", "WasmRuntime.xargs underflowed this call's own arguments");
+			}
+			args[9 + i] = xargs.pop();
+		}
+		if (CiceroOptions.sanityChecks && xargs.top != baseDepth) {
+			System.puts("internal error: WasmRuntime.xargs did not return to its pre-call depth\n");
+			System.error("internal error", "WasmRuntime.xargs did not return to its pre-call depth");
 		}
 	}
 
@@ -219,18 +229,7 @@ component WasmRuntime {
 		args[6] = o6;
 		args[7] = o7;
 		args[8] = o8;
-		// xargs were pushed in left-to-right order; pop in reverse to fill the tail
-		for (i = numRest - 1; i >= 0; i--) {
-			if (CiceroOptions.sanityChecks && WasmRuntime.xargs.empty()) {
-				System.puts("internal error: WasmRuntime.xargs.length = 0");
-				System.error("internal error", "WasmRuntime.xargs.length = 0");
-			}
-			args[9 + i] = xargs.pop();
-		}
-		if (CiceroOptions.sanityChecks && !WasmRuntime.xargs.empty()) {
-			System.puts("internal error: WasmRuntime.xargs.length > 0");
-			System.error("internal error", "WasmRuntime.xargs.length > 0");
-		}
+		popRestReverse(args, numRest);
 		return createFuncN(funchole, args);
 	}
 
@@ -353,18 +352,7 @@ component WasmRuntime {
 		args[6] = o6;
 		args[7] = o7;
 		args[8] = o8;
-		// xargs were pushed in left-to-right order; pop in reverse to fill the tail
-		for (i = numRest - 1; i >= 0; i--) {
-			if (CiceroOptions.sanityChecks && WasmRuntime.xargs.empty()) {
-				System.puts("internal error: WasmRuntime.xargs.length = 0");
-				System.error("internal error", "WasmRuntime.xargs.length = 0");
-			}
-			args[9 + i] = xargs.pop();
-		}
-		if (CiceroOptions.sanityChecks && !WasmRuntime.xargs.empty()) {
-			System.puts("internal error: WasmRuntime.xargs.length > 0");
-			System.error("internal error", "WasmRuntime.xargs.length > 0");
-		}
+		popRestReverse(args, numRest);
 		return alloc(ListObjects.fromArray(Arrays.map(args, objects.[])));
 		/* append list-sort map */
 	}
