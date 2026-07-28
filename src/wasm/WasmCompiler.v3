@@ -70,8 +70,6 @@ def CREATE_LIST8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8
 def CREATE_LIST9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9));
 def CREATE_LIST_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRest));
 
-def compileFromTier1 = false;
-
 class WasmCompiler {
 	// TODO need extra information about parameters and locals
 	// TODO get better wasm code generator (use Aeneas?)
@@ -102,7 +100,7 @@ class WasmCompiler {
 		def hole = wasm.skip_leb32();
 		wasm.putb(0x7F);    // i32
 
-		if (compileFromTier1) {
+		if (CiceroOptions.compileFromTier1) {
 			ciceroBytecode = BytecodeCompiler.new(ast, params).extract();
 			if (CiceroOptions.optimizeBytecode) {
 				ciceroBytecode.optimize();
@@ -374,7 +372,7 @@ class WasmCompiler {
 					emitDecref(); // passthrough, see STORE_GLOBAL
 				}
 				STORE_LOCAL => {
-					if (WasmRuntime.useRefcounting) {
+					if (CiceroOptions.useRefcounting) {
 						wasm.putb(WasmOp.GET_LOCAL.opcode);
 						wasm.put_uleb32(u32.!(operand + 1)); // fetch old occupant to release
 						emitDecrefGap();
@@ -434,7 +432,7 @@ class WasmCompiler {
 					// bytecode pops unconditionally; the boolean IS the condition,
 					// nothing to preserve. Dup+swap+decref releases cond's own
 					// reference once IS_TRUE has peeked it.
-					if (WasmRuntime.useRefcounting) {
+					if (CiceroOptions.useRefcounting) {
 						wasmDup();
 						emitCall(IS_TRUE);
 						wasmSwap();
@@ -448,7 +446,7 @@ class WasmCompiler {
 					wasmDup();
 					emitIncref();
 					emitCall(IS_FALSE);
-					if (WasmRuntime.useRefcounting) {
+					if (CiceroOptions.useRefcounting) {
 						wasmSwap();
 						emitDecrefPeek();
 						wasmSwap();
@@ -458,7 +456,7 @@ class WasmCompiler {
 					wasmDup();
 					emitIncref();
 					emitCall(IS_TRUE);
-					if (WasmRuntime.useRefcounting) {
+					if (CiceroOptions.useRefcounting) {
 						wasmSwap();
 						emitDecrefPeek();
 						wasmSwap();
@@ -748,7 +746,7 @@ class WasmCompiler {
 			// field present: orig forwarded as the result; pay the peek-debt, and
 			// release the now-unneeded scratch1 stash (nothing uses it again).
 			emitDecrefPeek();
-			if (WasmRuntime.useRefcounting) {
+			if (CiceroOptions.useRefcounting) {
 				wasm.putb(WasmOp.GET_LOCAL.opcode);
 				wasm.put_uleb32(scratch1);
 				emitDecrefGap();
@@ -820,7 +818,7 @@ class WasmCompiler {
 		wasm.put_uleb32(refScratch);
 	}
 	def emitIncref() {
-		if (!WasmRuntime.useRefcounting) return;
+		if (!CiceroOptions.useRefcounting) return;
 		refDup();
 		emitCall(INCREF);
 	}
@@ -828,19 +826,19 @@ class WasmCompiler {
 	// value. DECREF and DROP have identical stack effect, so this substitution is
 	// stack-neutral whether refcounting is on or off.
 	def emitDecref() {
-		if (WasmRuntime.useRefcounting) emitCall(DECREF);
+		if (CiceroOptions.useRefcounting) emitCall(DECREF);
 		else wasm.putb(WasmOp.DROP.opcode);
 	}
 	// [idx] -> []: new decref at a site with no existing DROP (a "gap" fix). Only
 	// emits when refcounting is on, since nothing dropped this value before either.
 	def emitDecrefGap() {
-		if (WasmRuntime.useRefcounting) emitCall(DECREF);
+		if (CiceroOptions.useRefcounting) emitCall(DECREF);
 	}
 	// [idx] -> [idx]: pay off a predicate's borrowed-copy debt without consuming
 	// the value (predicates like IS_NULL/IS_TRUE read a duped copy but don't
 	// decref it). No-op when refcounting is off.
 	def emitDecrefPeek() {
-		if (!WasmRuntime.useRefcounting) return;
+		if (!CiceroOptions.useRefcounting) return;
 		refDup();
 		emitCall(DECREF);
 	}
@@ -920,7 +918,7 @@ class WasmCompiler {
  				Local => {
 					compileAST(val);
 					def slot = addLocal(id);
-					if (WasmRuntime.useRefcounting) {
+					if (CiceroOptions.useRefcounting) {
 						wasm.putb(WasmOp.GET_LOCAL.opcode);
 						wasm.put_uleb32(slot); // fetch old occupant to release
 						emitDecrefGap();
@@ -1013,7 +1011,7 @@ class WasmCompiler {
 				// no value to preserve past branch selection - unlike And/Or/Cond,
 				// this doesn't feed the taken branch. Dup+swap+decref releases
 				// cond's own reference once IS_TRUE has peeked it.
-				if (WasmRuntime.useRefcounting) {
+				if (CiceroOptions.useRefcounting) {
 					wasmDup();
 					emitCall(IS_TRUE);
 					wasmSwap();
@@ -1043,7 +1041,7 @@ class WasmCompiler {
 							// of this block as its <void,int> result, so only its
 							// peeked copy is released. Case matches (falls through):
 							// both copies are released - cond is unused in body.
-							if (WasmRuntime.useRefcounting) {
+							if (CiceroOptions.useRefcounting) {
 								wasmSwap();
 								emitDecrefPeek();
 								wasmSwap();
@@ -1086,7 +1084,7 @@ class WasmCompiler {
 					match (mode.data) {
 						Local => {
 							def slot = addLocal(id);
-							if (WasmRuntime.useRefcounting) {
+							if (CiceroOptions.useRefcounting) {
 								wasm.putb(WasmOp.GET_LOCAL.opcode);
 								wasm.put_uleb32(slot); // fetch old occupant to release
 								emitDecrefGap();
@@ -1159,7 +1157,7 @@ class WasmCompiler {
 						// <void,int> result, so its peeked copy is released but cond
 						// itself stays alive. Continue (falls through): both copies
 						// are released - cond is unused in the loop body.
-						if (WasmRuntime.useRefcounting) {
+						if (CiceroOptions.useRefcounting) {
 							wasmSwap();
 							emitDecrefPeek();
 							wasmSwap();

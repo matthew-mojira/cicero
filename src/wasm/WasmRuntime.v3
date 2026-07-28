@@ -2,8 +2,6 @@
 def traceRuntime = true;
 
 component WasmRuntime {
-	def useRefcounting = true; // gates decref()/emitIncref()/emitDecref(); see WasmCompiler.v3
-
 	/* this are not stacks, since Frame will be responsible for
 	 * restoring this state
 	 */
@@ -26,7 +24,7 @@ component WasmRuntime {
 		refcounts[idx] = refcounts[idx] + 1;
 	}
 	def decref(idx: int) {
-		if (!useRefcounting) return;
+		if (!CiceroOptions.useRefcounting) return;
 		if (idx == 0 || idx < constPoolLen) return;
 		if (CiceroOptions.sanityChecks && refcounts[idx] <= 0)
 			System.error("internal error", "WasmRuntime.decref underflow");
@@ -408,7 +406,7 @@ component WasmRuntime {
 	def alloc(obj: Object) -> int {
 		if (obj == null) return 0;
 
-		if (useRefcounting && !freelist.empty()) {
+		if (CiceroOptions.useRefcounting && !freelist.empty()) {
 			def idx = freelist.pop();
 			if (CiceroOptions.sanityChecks && (idx < constPoolLen || objects[idx] != null))
 				System.error("internal error", "WasmRuntime.alloc: corrupt freelist entry");

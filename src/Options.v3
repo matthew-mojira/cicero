@@ -10,6 +10,10 @@ component CiceroOptions {
 	def optimizeBytecode: bool = true;
 	def useOptimizedGlobals: bool = true;
 
+	/* wasm backend */
+	def compileFromTier1 = false; // true: bytecode-derived compile path; false: AST-direct
+	def useRefcounting = true;    // reference-count WasmRuntime.objects handles
+
 	/* tracing */
 	def traceFunctionCalls = false;
 	def traceBytecodeCompilation = false;
