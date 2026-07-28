@@ -58,6 +58,32 @@ if [ "$BENCH_WASM_OPT_LEVELS" = "" ]; then
     BENCH_WASM_OPT_LEVELS="0"
 fi
 
+# WasmRuntime.useRefcounting compile-time flag (values: "on off"). Only
+# meaningful for wasm-wave; requires its own build per value via v3c's
+# -redef-field, since it's a `def`, not a runtime option.
+if [ "$BENCH_REFCOUNT" = "" ]; then
+    BENCH_REFCOUNT="on"
+fi
+
+# WasmCompiler.compileFromTier1 compile-time flag (values: "ast bytecode"),
+# selecting the AST-direct vs bytecode-derived Wasm compile path. Only
+# meaningful for wasm-wave; also requires its own build per value.
+if [ "$BENCH_COMPILE_PATH" = "" ]; then
+    BENCH_COMPILE_PATH="ast"
+fi
+
+# Wizard's --fast-functions runtime flag (values: "on off"). Only meaningful
+# for wasm-wave.
+if [ "$BENCH_FAST_FUNCTIONS" = "" ]; then
+    BENCH_FAST_FUNCTIONS="off"
+fi
+
+# Wizard's --fast-inline-max-depth, applied only when fast-functions is on
+# (meaningless otherwise, so it's never swept for an "off" run).
+if [ "$BENCH_FAST_INLINE_DEPTH" = "" ]; then
+    BENCH_FAST_INLINE_DEPTH="0"
+fi
+
 if [ "$BENCH_TIERS" = "" ]; then
     BENCH_TIERS="0 1"
 fi
@@ -139,23 +165,35 @@ csv_file_name(){
     _wopt=$4
     _mode=$5
     _target=$6
-    # wopt and mode are always either both "none" (every non-wasm-wave
-    # target) or both a real value (wasm-wave), so a single combined suffix
-    # is enough - no need to handle them appearing independently.
+    _rc=$7
+    _cp=$8
+    _ff=$9
+    _fid=${10}
+    # wopt/mode/rc/cp/ff/fid are always either all "none" (every non-wasm-wave
+    # target) or all real values (wasm-wave), so a single combined suffix is
+    # enough - no need to handle them appearing independently.
     if [ "$_wopt" = "none" ] && [ "$_mode" = "none" ]; then
         echo "$T/$_benchmark-tier$_tier-opt$_opt-$_target.csv"
     else
-        echo "$T/$_benchmark-tier$_tier-opt$_opt-wopt$_wopt-mode$_mode-$_target.csv"
+        echo "$T/$_benchmark-tier$_tier-opt$_opt-wopt$_wopt-mode$_mode-rc$_rc-cp$_cp-ff$_ff-fid$_fid-$_target.csv"
     fi
 }
 
 run_hyperfine(){
-    # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file, $6: target, $7: opt level, $8: mode, $9: wasm-opt level
+    # $1: runs, $2: BINARY, $3: tier, $4: files, $5: csv_file, $6: target,
+    # $7: opt level, $8: mode, $9: wasm-opt level, $10: fast-functions,
+    # $11: fast-inline-max-depth
     cd $BENCH_DIR
+    local ff=${10}
+    local fid=${11}
 
     local cmd
     if [ "$6" = "wasm-wave" ]; then
-        cmd="$WIZENG $WIZENG_OPTIONS --stack-size=64M --mode=$8 $2 -suppress-output=true -tier=$3 $4"
+        local fast_opts=""
+        if [ "$ff" = "on" ]; then
+            fast_opts="--fast-functions=true --fast-inline-max-depth=$fid"
+        fi
+        cmd="$WIZENG $WIZENG_OPTIONS --stack-size=64M --mode=$8 $fast_opts $2 -suppress-output=true -tier=$3 $4"
     else
         cmd="$2 -suppress-output=true -tier=$3 $4"
     fi
@@ -164,8 +202,8 @@ run_hyperfine(){
         "$cmd" \
         --export-csv "$5" >> "$T/run.log" 2>&1
     then
-        echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3) for $6 -O$7 wopt=$9 mode=$8, skipping" >> "$T/run.log"
-        echo "##-fail: $4 (tier=$3) for $6 -O$7 wopt=$9 mode=$8"
+        echo "[WARN] hyperfine benchmark failed for: $4 (tier=$3) for $6 -O$7 wopt=$9 mode=$8 ff=$ff fid=$fid, skipping" >> "$T/run.log"
+        echo "##-fail: $4 (tier=$3) for $6 -O$7 wopt=$9 mode=$8 ff=$ff fid=$fid"
         return 0
     else
         echo "##-ok"
@@ -177,10 +215,11 @@ run_hyperfine(){
 export -f run_hyperfine
 
 binary_path(){
-    # $1: opt level, $2: target, $3: wasm-opt level (wasm-wave only)
+    # $1: opt level, $2: target, $3: wasm-opt level, $4: refcount, $5: compile
+    # path (wasm-wave only)
     local bin_dir=$T/bin-opt$1
     if [ "$2" = "wasm-wave" ]; then
-        echo "$bin_dir/cicero-wopt$3.wasm"
+        echo "$bin_dir/wasm-rc$4-cp$5/cicero-wopt$3.wasm"
     else
         echo "$bin_dir/cicero.$2"
     fi
@@ -206,6 +245,61 @@ wasm_opt_levels_for_target(){
     fi
 }
 
+refcount_levels_for_target(){
+    # $1: target. useRefcounting only applies to wasm-wave; every other
+    # target gets a single pseudo-value "none".
+    if [ "$1" = "wasm-wave" ]; then
+        echo "$BENCH_REFCOUNT"
+    else
+        echo "none"
+    fi
+}
+
+compile_paths_for_target(){
+    # $1: target. compileFromTier1 only applies to wasm-wave; every other
+    # target gets a single pseudo-value "none".
+    if [ "$1" = "wasm-wave" ]; then
+        echo "$BENCH_COMPILE_PATH"
+    else
+        echo "none"
+    fi
+}
+
+# Builds the -redef-field argument for a given (refcount, compile path) pair.
+# $1: refcount ("on"/"off"/"none"), $2: compile path ("ast"/"bytecode"/"none").
+redef_field_args(){
+    local fields=""
+    case "$1" in
+        on)  fields="WasmRuntime.useRefcounting=true" ;;
+        off) fields="WasmRuntime.useRefcounting=false" ;;
+    esac
+    case "$2" in
+        ast)      fields="$fields${fields:+,}WasmCompiler.compileFromTier1=false" ;;
+        bytecode) fields="$fields${fields:+,}WasmCompiler.compileFromTier1=true" ;;
+    esac
+    if [ -n "$fields" ]; then echo "-redef-field=$fields"; fi
+}
+
+# Emits "fastfunctions:depth" pairs for a target. Every non-wasm-wave target
+# gets the single pseudo-pair "none:none". wasm-wave gets "off:0" once per
+# "off" in BENCH_FAST_FUNCTIONS (the depth sweep is meaningless without fast
+# functions enabled) plus "on:$d" for every requested depth.
+fast_variants_for_target(){
+    if [ "$1" != "wasm-wave" ]; then
+        echo "none:none"
+        return
+    fi
+    for ff in $BENCH_FAST_FUNCTIONS; do
+        if [ "$ff" = "off" ]; then
+            echo "off:0"
+        else
+            for d in $BENCH_FAST_INLINE_DEPTH; do
+                echo "on:$d"
+            done
+        fi
+    done
+}
+
 # Builds cicero for every requested target at a given Virgil optimization
 # level, into its own bin directory so opt levels don't clobber each other
 # and can be built/benchmarked in parallel.
@@ -216,33 +310,53 @@ build_opt_level(){
     mkdir -p "$opt_bin_dir"
 
     for target in $BENCH_TARGETS; do
-        if ! OUTPUT_DIR="$opt_bin_dir" V3C_OPTS="-O$o_level" "$REPO_ROOT/build.sh" cicero "$target" \
-            > "$opt_bin_dir/build-$target.log" 2>&1
-        then
-            echo "[WARN] build failed for $target at -O$o_level, see $opt_bin_dir/build-$target.log" >> "$T/build.log"
-            echo "##-fail: $target -O$o_level"
-            continue
-        fi
-        echo "##-ok"
-
-        # wasm-opt post-processes the compiled wasm-wave binary into one
-        # variant per requested wasm-opt level; these flags are mandatory
-        # regardless of optimization level.
         if [ "$target" = "wasm-wave" ]; then
-            for wopt in $(wasm_opt_levels_for_target "$target"); do
-                if ! "$WASM_OPT" -O$wopt -all \
-                    --skip-pass=duplicate-function-elimination \
-                    --skip-pass=remove-unused-module-elements \
-                    --preserve-type-order \
-                    "$opt_bin_dir/cicero.wasm" -o "$opt_bin_dir/cicero-wopt$wopt.wasm" \
-                    > "$opt_bin_dir/wasm-opt-$wopt.log" 2>&1
-                then
-                    echo "[WARN] wasm-opt failed for -O$o_level wopt=$wopt, see $opt_bin_dir/wasm-opt-$wopt.log" >> "$T/build.log"
-                    echo "##-fail: wasm-wave -O$o_level wopt=$wopt"
-                else
+            # useRefcounting/compileFromTier1 are compile-time `def`s, not
+            # runtime flags, so each (refcount, compile path) pair needs its
+            # own build, via v3c's -redef-field.
+            for rc in $(refcount_levels_for_target "$target"); do
+                for cp in $(compile_paths_for_target "$target"); do
+                    local variant_dir="$opt_bin_dir/wasm-rc$rc-cp$cp"
+                    mkdir -p "$variant_dir"
+                    local redef=$(redef_field_args "$rc" "$cp")
+
+                    if ! OUTPUT_DIR="$variant_dir" V3C_OPTS="-O$o_level $redef" "$REPO_ROOT/build.sh" cicero "$target" \
+                        > "$variant_dir/build-$target.log" 2>&1
+                    then
+                        echo "[WARN] build failed for $target rc=$rc cp=$cp at -O$o_level, see $variant_dir/build-$target.log" >> "$T/build.log"
+                        echo "##-fail: $target rc=$rc cp=$cp -O$o_level"
+                        continue
+                    fi
                     echo "##-ok"
-                fi
+
+                    # wasm-opt post-processes the compiled wasm-wave binary
+                    # into one variant per requested wasm-opt level; these
+                    # flags are mandatory regardless of optimization level.
+                    for wopt in $(wasm_opt_levels_for_target "$target"); do
+                        if ! "$WASM_OPT" -O$wopt -all \
+                            --skip-pass=duplicate-function-elimination \
+                            --skip-pass=remove-unused-module-elements \
+                            --preserve-type-order \
+                            "$variant_dir/cicero.wasm" -o "$variant_dir/cicero-wopt$wopt.wasm" \
+                            > "$variant_dir/wasm-opt-$wopt.log" 2>&1
+                        then
+                            echo "[WARN] wasm-opt failed for -O$o_level rc=$rc cp=$cp wopt=$wopt, see $variant_dir/wasm-opt-$wopt.log" >> "$T/build.log"
+                            echo "##-fail: wasm-wave -O$o_level rc=$rc cp=$cp wopt=$wopt"
+                        else
+                            echo "##-ok"
+                        fi
+                    done
+                done
             done
+        else
+            if ! OUTPUT_DIR="$opt_bin_dir" V3C_OPTS="-O$o_level" "$REPO_ROOT/build.sh" cicero "$target" \
+                > "$opt_bin_dir/build-$target.log" 2>&1
+            then
+                echo "[WARN] build failed for $target at -O$o_level, see $opt_bin_dir/build-$target.log" >> "$T/build.log"
+                echo "##-fail: $target -O$o_level"
+                continue
+            fi
+            echo "##-ok"
         fi
     done
 }
@@ -253,13 +367,20 @@ cd "$REPO_ROOT"
 NUM_TARGETS=$(echo $BENCH_TARGETS | wc -w)
 NUM_OPTS=$(echo $BENCH_OPT_LEVELS | wc -w)
 
-# One compile job per (target, opt level), plus one wasm-opt job per
-# (wasm-opt level, opt level) for wasm-wave.
+# One compile job per (target, opt level) - except wasm-wave, which needs one
+# per (refcount, compile path, opt level) since those are compile-time `def`s
+# - plus one wasm-opt job per (wasm-opt level, refcount, compile path, opt
+# level) for wasm-wave.
+NUM_WASM_VARIANTS=1
 NUM_WASM_OPT_LEVELS=0
+HAS_WASM=0
 if [[ " $BENCH_TARGETS " == *" wasm-wave "* ]]; then
+    HAS_WASM=1
+    NUM_WASM_VARIANTS=$(( $(echo $BENCH_REFCOUNT | wc -w) * $(echo $BENCH_COMPILE_PATH | wc -w) ))
     NUM_WASM_OPT_LEVELS=$(echo $BENCH_WASM_OPT_LEVELS | wc -w)
 fi
-TOTAL_BUILDS=$(( NUM_TARGETS * NUM_OPTS + NUM_WASM_OPT_LEVELS * NUM_OPTS ))
+TOTAL_BUILDS=$(( (NUM_TARGETS - HAS_WASM + HAS_WASM * NUM_WASM_VARIANTS) * NUM_OPTS \
+    + HAS_WASM * NUM_WASM_VARIANTS * NUM_WASM_OPT_LEVELS * NUM_OPTS ))
 
 echo "Building optimization levels in parallel: $BENCH_OPT_LEVELS"
 printf "build "
@@ -272,19 +393,26 @@ printf "build "
 } | $PROGRESS
 echo "Completed building all optimization levels (see $T/build.log for details)"
 
-echo "Dispatching benchmarks (order: benchmark -> target -> opt -> wopt -> mode -> tier)"
+echo "Dispatching benchmarks (order: benchmark -> target -> opt -> rc -> cp -> wopt -> mode -> fast -> tier)"
 
 NUM_ROWS=$(tail -n +2 "$BENCH_CONFIG" | wc -l)
 NUM_TIERS=$(echo $BENCH_TIERS | wc -w)
 
 # Total per-(target) variant count, summed across targets: 1 for every
-# non-wasm-wave target, len(BENCH_WASM_OPT_LEVELS)*len(BENCH_WIZENG_MODES)
+# non-wasm-wave target, len(BENCH_REFCOUNT)*len(BENCH_COMPILE_PATH)*
+# len(BENCH_WASM_OPT_LEVELS)*len(BENCH_WIZENG_MODES)*(fast variant count)
 # for wasm-wave.
 TOTAL_VARIANTS=0
 for target in $BENCH_TARGETS; do
-    for wopt in $(wasm_opt_levels_for_target "$target"); do
-        for mode in $(modes_for_target "$target"); do
-            TOTAL_VARIANTS=$((TOTAL_VARIANTS + 1))
+    for rc in $(refcount_levels_for_target "$target"); do
+        for cp in $(compile_paths_for_target "$target"); do
+            for wopt in $(wasm_opt_levels_for_target "$target"); do
+                for mode in $(modes_for_target "$target"); do
+                    for fast in $(fast_variants_for_target "$target"); do
+                        TOTAL_VARIANTS=$((TOTAL_VARIANTS + 1))
+                    done
+                done
+            done
         done
     done
 done
@@ -300,12 +428,20 @@ printf "bench "
     # Baseline empty-file timing, dispatched up front so it doesn't block benchmark rows.
     for target in $BENCH_TARGETS; do
         for o_level in $BENCH_OPT_LEVELS; do
-            for wopt in $(wasm_opt_levels_for_target "$target"); do
-                for mode in $(modes_for_target "$target"); do
-                    for tier in $BENCH_TIERS; do
-                        BINARY=$(binary_path "$o_level" "$target" "$wopt")
-                        CSV_FILE=$(csv_file_name "empty" $tier $o_level $wopt $mode $target)
-                        run_with_lock run_hyperfine 50 "$BINARY" "$tier" "$T/empty.co" "$CSV_FILE" "$target" "$o_level" "$mode" "$wopt"
+            for rc in $(refcount_levels_for_target "$target"); do
+                for cp in $(compile_paths_for_target "$target"); do
+                    for wopt in $(wasm_opt_levels_for_target "$target"); do
+                        for mode in $(modes_for_target "$target"); do
+                            for fast in $(fast_variants_for_target "$target"); do
+                                ff=${fast%%:*}
+                                fid=${fast##*:}
+                                for tier in $BENCH_TIERS; do
+                                    BINARY=$(binary_path "$o_level" "$target" "$wopt" "$rc" "$cp")
+                                    CSV_FILE=$(csv_file_name "empty" $tier $o_level $wopt $mode $target $rc $cp $ff $fid)
+                                    run_with_lock run_hyperfine 50 "$BINARY" "$tier" "$T/empty.co" "$CSV_FILE" "$target" "$o_level" "$mode" "$wopt" "$ff" "$fid"
+                                done
+                            done
+                        done
                     done
                 done
             done
@@ -315,12 +451,20 @@ printf "bench "
     while IFS=',' read -r benchmark files runs; do
         for target in $BENCH_TARGETS; do
             for o_level in $BENCH_OPT_LEVELS; do
-                for wopt in $(wasm_opt_levels_for_target "$target"); do
-                    for mode in $(modes_for_target "$target"); do
-                        for tier in $BENCH_TIERS; do
-                            BINARY=$(binary_path "$o_level" "$target" "$wopt")
-                            CSV_FILE=$(csv_file_name $benchmark $tier $o_level $wopt $mode $target)
-                            run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target" "$o_level" "$mode" "$wopt"
+                for rc in $(refcount_levels_for_target "$target"); do
+                    for cp in $(compile_paths_for_target "$target"); do
+                        for wopt in $(wasm_opt_levels_for_target "$target"); do
+                            for mode in $(modes_for_target "$target"); do
+                                for fast in $(fast_variants_for_target "$target"); do
+                                    ff=${fast%%:*}
+                                    fid=${fast##*:}
+                                    for tier in $BENCH_TIERS; do
+                                        BINARY=$(binary_path "$o_level" "$target" "$wopt" "$rc" "$cp")
+                                        CSV_FILE=$(csv_file_name $benchmark $tier $o_level $wopt $mode $target $rc $cp $ff $fid)
+                                        run_with_lock run_hyperfine "$runs" "$BINARY" "$tier" "$files" "$CSV_FILE" "$target" "$o_level" "$mode" "$wopt" "$ff" "$fid"
+                                    done
+                                done
+                            done
                         done
                     done
                 done

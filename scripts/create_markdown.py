@@ -11,14 +11,18 @@ PATH_TO_CSV_FILES = sys.argv[1]
 OUTPUR_PATH_FOR_MD = sys.argv[2]
 BENCH_CONFIG = sys.argv[3] if len(sys.argv) > 3 else "Unknown"
 
-# pattern: benchmark-tier{tier}-opt{opt}[-wopt{wopt}-mode{mode}]-{target}.csv
-# e.g. deltablue-tier0-opt2-jvm.csv, sieve-tier1-opt2-wopt2-modejit-wasm-wave.csv
-# The wopt (wasm-opt level)/mode segments only appear for wasm-wave (always
-# together); every other target has implicit wopt/mode of "none".
-CSV_FILE_NAME = re.compile(r"(\w+)-tier(\d+)-opt(\d+)-(?:wopt(\w+)-mode(\w+)-)?(.*)\.csv")
+# pattern: benchmark-tier{tier}-opt{opt}[-wopt{wopt}-mode{mode}-rc{rc}-cp{cp}-ff{ff}-fid{fid}]-{target}.csv
+# e.g. deltablue-tier0-opt2-jvm.csv,
+#      sieve-tier1-opt2-wopt2-modejit-rcon-cpast-ffoff-fid0-wasm-wave.csv
+# The wopt (wasm-opt level)/mode/rc (refcount)/cp (compile path)/ff
+# (fast-functions)/fid (fast-inline-depth) segments only appear for wasm-wave
+# (always all together); every other target has them all implicitly "none".
+CSV_FILE_NAME = re.compile(
+    r"(\w+)-tier(\d+)-opt(\d+)-(?:wopt(\w+)-mode(\w+)-rc(\w+)-cp(\w+)-ff(\w+)-fid(\w+)-)?(.*)\.csv"
+)
 DATA = defaultdict(
     lambda: defaultdict(dict)
-)  # (benchmark, target, mode, wopt) -> opt -> tier -> Runtime mean + other info
+)  # (benchmark, target, mode, wopt, rc, cp, ff, fid) -> opt -> tier -> Runtime mean + other info
 
 
 class BenchmarkData:
@@ -67,10 +71,14 @@ def main():
         csv_file_path = os.path.join(PATH_TO_CSV_FILES, entry)
         if os.path.isfile(csv_file_path) and csv_file_path.endswith(".csv"):
             match = CSV_FILE_NAME.match(os.path.basename(csv_file_path))
-            bench, tier, opt, wopt, mode, target = match.groups()
+            bench, tier, opt, wopt, mode, rc, cp, ff, fid, target = match.groups()
             mode = mode if mode is not None else "none"
             wopt = wopt if wopt is not None else "none"
-            DATA[(bench, target, mode, wopt)][int(opt)][int(tier)] = get_csv_data(csv_file_path)
+            rc = rc if rc is not None else "none"
+            cp = cp if cp is not None else "none"
+            ff = ff if ff is not None else "none"
+            fid = fid if fid is not None else "none"
+            DATA[(bench, target, mode, wopt, rc, cp, ff, fid)][int(opt)][int(tier)] = get_csv_data(csv_file_path)
 
     output = []
     # Collect all unique tiers, opts, targets, and benchmarks
@@ -83,33 +91,40 @@ def main():
         }
     )
     all_opts = sorted({opt for _, tdata in DATA.items() for opt in tdata})
-    all_targets = sorted({target for _, target, _, _ in DATA.keys()})
-    all_benchmarks = sorted({bench for bench, _, _, _ in DATA.keys()})
+    all_targets = sorted({target for _, target, *_ in DATA.keys()})
+    all_benchmarks = sorted({bench for bench, *_ in DATA.keys()})
 
-    # Organize data by target -> opt -> [wopt/mode ->] benchmark -> tier
+    # Organize data by target -> opt -> [wopt/mode/rc/cp/ff/fid ->] benchmark -> tier
     for target in all_targets:
         output.append(f"# {target}\n")
 
-        # wopt (wasm-opt level) and mode only vary for wasm-wave; every other
-        # target has the single implicit ("none", "none") pair, in which case
-        # we don't bother annotating it.
+        # wopt (wasm-opt level), mode, rc (refcount), cp (compile path), ff
+        # (fast-functions), and fid (fast-inline-depth) only vary for
+        # wasm-wave; every other target has the single implicit all-"none"
+        # tuple, in which case we don't bother annotating it.
         variants_for_target = sorted({
-            (w, m) for b, t, m, w in DATA.keys() if t == target
+            (w, m, rc, cp, ff, fid) for b, t, m, w, rc, cp, ff, fid in DATA.keys() if t == target
         })
-        single_variant = variants_for_target == [("none", "none")]
+        single_variant = variants_for_target == [("none", "none", "none", "none", "none", "none")]
 
         for opt in all_opts:
-            for wopt, mode in variants_for_target:
+            for wopt, mode, rc, cp, ff, fid in variants_for_target:
                 if single_variant:
                     output.append(f"## -O{opt}\n")
                 else:
-                    output.append(f"## -O{opt} (wasm-opt=-O{wopt}, mode={mode})\n")
+                    fast_label = f", fast-functions={ff}" if ff not in ("none", "off") else ""
+                    if fast_label:
+                        fast_label += f" (max-depth={fid})"
+                    output.append(
+                        f"## -O{opt} (wasm-opt=-O{wopt}, mode={mode}, refcount={rc}, "
+                        f"compile-path={cp}{fast_label})\n"
+                    )
 
                 # Calculate column widths for alignment
-                # First, collect all data for this target/opt/wopt/mode combination
+                # First, collect all data for this target/opt/wopt/mode/rc/cp/ff/fid combination
                 table_data = []
                 for bench in all_benchmarks:
-                    key = (bench, target, mode, wopt)
+                    key = (bench, target, mode, wopt, rc, cp, ff, fid)
                     if key in DATA:
                         row = [bench]
                         opt_data = DATA[key]
@@ -157,6 +172,19 @@ def main():
     output.append(f"* `BENCH_TIERS`: {', '.join(str(t) for t in all_tiers)}\n")
     output.append(f"* `BENCH_OPT_LEVELS`: {', '.join(str(o) for o in all_opts)}\n")
 
+    all_rc = sorted({rc for *_, rc, _, _, _ in DATA.keys()} - {"none"})
+    all_cp = sorted({cp for *_, cp, _, _ in DATA.keys()} - {"none"})
+    all_ff = sorted({ff for *_, ff, _ in DATA.keys()} - {"none"})
+    all_fid = sorted({fid for *_, fid in DATA.keys()} - {"none"})
+    if all_rc:
+        output.append(f"* `BENCH_REFCOUNT`: {', '.join(all_rc)}\n")
+    if all_cp:
+        output.append(f"* `BENCH_COMPILE_PATH`: {', '.join(all_cp)}\n")
+    if all_ff:
+        output.append(f"* `BENCH_FAST_FUNCTIONS`: {', '.join(all_ff)}\n")
+    if all_fid:
+        output.append(f"* `BENCH_FAST_INLINE_DEPTH`: {', '.join(all_fid)}\n")
+
     if benchmark_config:
         output.append(f"\n## Benchmark Runs (`{BENCH_CONFIG}`)\n")
         output.append("| Benchmark | Files | Runs |")
@@ -167,28 +195,36 @@ def main():
                 runs = benchmark_config[bench]["runs"]
                 output.append(f"| {bench} | `{files}` | {runs} |")
 
-    # Build raw results CSV rows: one row per (target, wopt, mode, opt, tier, benchmark)
-    # `wopt` (wasm-opt level) and `mode` (Wizard's execution mode) only apply
-    # to wasm-wave; blank for every other target.
-    csv_header = ["target", "wasm_opt_level", "mode", "opt", "tier", "benchmark",
+    # Build raw results CSV rows: one row per (target, wopt, mode, rc, cp, ff,
+    # fid, opt, tier, benchmark). `wopt` (wasm-opt level), `mode` (Wizard's
+    # execution mode), `rc` (useRefcounting), `cp` (compile path), `ff`
+    # (fast-functions), and `fid` (fast-inline-max-depth) only apply to
+    # wasm-wave; blank for every other target.
+    csv_header = ["target", "wasm_opt_level", "mode", "refcount", "compile_path",
+                  "fast_functions", "fast_inline_depth", "opt", "tier", "benchmark",
                   "mean_ms", "stddev_ms", "median_ms", "user_ms", "system_ms",
                   "min_ms", "max_ms"]
     csv_rows = []
     for target in all_targets:
         variants_for_target = sorted({
-            (w, m) for b, t, m, w in DATA.keys() if t == target
+            (w, m, rc, cp, ff, fid) for b, t, m, w, rc, cp, ff, fid in DATA.keys() if t == target
         })
-        for wopt, mode in variants_for_target:
+        for wopt, mode, rc, cp, ff, fid in variants_for_target:
             wopt_label = "" if wopt == "none" else wopt
             mode_label = "" if mode == "none" else mode
+            rc_label = "" if rc == "none" else rc
+            cp_label = "" if cp == "none" else cp
+            ff_label = "" if ff == "none" else ff
+            fid_label = "" if fid == "none" else fid
             for opt in all_opts:
                 for tier in all_tiers:
                     for bench in all_benchmarks:
-                        entry = DATA.get((bench, target, mode, wopt), {}).get(opt, {}).get(tier)
+                        entry = DATA.get((bench, target, mode, wopt, rc, cp, ff, fid), {}).get(opt, {}).get(tier)
                         if entry is None:
                             continue
                         csv_rows.append(
-                            [target, wopt_label, mode_label, opt, tier, bench,
+                            [target, wopt_label, mode_label, rc_label, cp_label,
+                             ff_label, fid_label, opt, tier, bench,
                              f"{entry.mean:.6f}", f"{entry.stddev:.6f}",
                              f"{entry.median:.6f}", f"{entry.user:.6f}",
                              f"{entry.system:.6f}", f"{entry.min:.6f}",

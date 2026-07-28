@@ -16,6 +16,11 @@ fi
 PROGRESS_ARGS=${PROGRESS_ARGS:="tti"}
 PROGRESS="progress $PROGRESS_ARGS"
 
+# wizeng's default --stack-size (512K) is too small for cicero's interpreter,
+# especially tier0's natively-recursive tree-walker; runs otherwise trap with
+# STACK_OVERFLOW regardless of Virgil optimization level.
+WIZENG_OPTIONS=${WIZENG_OPTIONS:="--stack-size=64m"}
+
 ### Utility for printing a testing line
 function print_testing() {
     ARG=$1
