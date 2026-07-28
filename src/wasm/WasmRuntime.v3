@@ -2,6 +2,8 @@
 def traceRuntime = true;
 
 component WasmRuntime {
+	def useRefcounting = true; // gates decref()/emitIncref()/emitDecref(); see WasmCompiler.v3
+
 	/* this are not stacks, since Frame will be responsible for
 	 * restoring this state
 	 */
@@ -10,11 +12,30 @@ component WasmRuntime {
 	var funcholes: Array<ASTData.Func>;
 	var classholes: Array<ClassObject -> ClassObject>;
 	var objects: Vector<Object>;
+	var refcounts: Vector<int>;                        // parallel to objects
+	var freelist: ArrayStack<int> = ArrayStack.new();   // reusable objects[] indices
+	var constPoolLen: int;                              // objects[0 .. constPoolLen) exempt from refcounting
 	var result: int;
 	var xargs: ArrayStack<int> = ArrayStack.new(); // ArrayStack so `.top` gives a depth mark for reentrant calls
 
 	def pushArg(idx: int) => xargs.push(idx);
 	def popArg() -> int => xargs.pop();
+
+	def incref(idx: int) {
+		if (idx == 0 || idx < constPoolLen) return;
+		refcounts[idx] = refcounts[idx] + 1;
+	}
+	def decref(idx: int) {
+		if (!useRefcounting) return;
+		if (idx == 0 || idx < constPoolLen) return;
+		if (CiceroOptions.sanityChecks && refcounts[idx] <= 0)
+			System.error("internal error", "WasmRuntime.decref underflow");
+		refcounts[idx] = refcounts[idx] - 1;
+		if (refcounts[idx] == 0) {
+			objects[idx] = null; // let Virgil's own GC reclaim it
+			freelist.push(idx);
+		}
+	}
 
 	/* assume null object = 0 in objects */
 
@@ -61,11 +82,14 @@ component WasmRuntime {
 		def exp = objects[expIdx];
 		def msg = Exceptions.typeMismatch(ClassObject.!(exp), act);
 		def exn = ExnObjects.fromWasm(msg);
+		decref(actIdx);
+		decref(expIdx);
 		return alloc(exn);
 	}
 	def raiseString(strIdx: int) -> int {
 		def str = objects[strIdx];
 		def exn = ExnObjects.fromWasm(StrObject.!(str).str);
+		decref(strIdx);
 		return alloc(exn);
 	}
 	def raiseMissingField(objIdx: int, strIdx: int) -> int {
@@ -73,6 +97,7 @@ component WasmRuntime {
 		def str = strings[strIdx];
 		def msg = Exceptions.missingField(obj, str);
 		def exn = ExnObjects.fromWasm(msg);
+		decref(objIdx);
 		return alloc(exn);
 	}
 
@@ -180,6 +205,9 @@ component WasmRuntime {
 			}
 		}
 
+		decref(fvIdx);
+		for (i < args.length) decref(args[i]);
+
 		if (args.length != params.length) {
 			def obj = ExnObjects.fromWasm(Exceptions.arityMismatch(params.length, args.length));
 			result = alloc(obj);
@@ -252,7 +280,9 @@ component WasmRuntime {
 			if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
 				nonlocals[i] = (funchole.id, fn);
 			} else {
-				nonlocals[i] = (funchole.nonlocals[i], objects[nonlocalArgs[j++]]);
+				def nlIdx = nonlocalArgs[j++];
+				nonlocals[i] = (funchole.nonlocals[i], objects[nlIdx]);
+				decref(nlIdx);
 			}
 		}
 
@@ -263,13 +293,16 @@ component WasmRuntime {
 		def obj = objects[objIdx];
 		def str = strings[strIdx];
 		def field = obj.getField(str);
+		decref(objIdx);
 		return alloc(field);
 	}
 	def setField(objIdx: int, strIdx: int, valIdx: int) -> int {
 		def obj = objects[objIdx];
 		def str = strings[strIdx];
 		def val = objects[valIdx];
-		return if(obj.setField(str, val), valIdx, alloc(null));
+		def r = if(obj.setField(str, val), valIdx, alloc(null));
+		decref(objIdx); // valIdx is a passthrough (returned unchanged on success), not decref'd here
+		return r;
 	}
 	def createClass(superIdx: int, classholeIdx: int) -> bool { /* returns if exception */
 		def o = objects[superIdx];
@@ -277,16 +310,19 @@ component WasmRuntime {
 
 		if (!o.instanceOf(ClassObjects.classClass)) {
 			def exn = ExnObjects.fromWasm(Exceptions.typeMismatch(ClassObjects.classClass, o));
+			decref(superIdx);
 			result = alloc(exn);
 			return true;
 		}
 
 		def superclass = ClassObject.!(o);
+		decref(superIdx);
 		result = alloc(classhole(superclass));
 		return false;
 	}
 	def createObject(clsIdx: int) -> bool { /* returns if exception */
 		def clsObj = ClassObject.!(objects[clsIdx]); // already asserted previously
+		decref(clsIdx);
 		def parentFr = WasmRuntime.frame;
 		def obj = Objects.newObject(clsObj);
 
@@ -331,16 +367,21 @@ component WasmRuntime {
 	}
 
 	/* lists */
-	def createList0()  => alloc(ListObjects.fromArray([]));
-	def createList1(o0: int) => alloc(ListObjects.fromArray(Arrays.map([o0], objects.[])));
-	def createList2(o0: int, o1: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1], objects.[])));
-	def createList3(o0: int, o1: int, o2: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2], objects.[])));
-	def createList4(o0: int, o1: int, o2: int, o3: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3], objects.[])));
-	def createList5(o0: int, o1: int, o2: int, o3: int, o4: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4], objects.[])));
-	def createList6(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5], objects.[])));
-	def createList7(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6], objects.[])));
-	def createList8(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7], objects.[])));
-	def createList9(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => alloc(ListObjects.fromArray(Arrays.map([o0, o1, o2, o3, o4, o5, o6, o7, o8], objects.[])));
+	def createListN(elems: Array<int>) -> int {
+		def r = alloc(ListObjects.fromArray(Arrays.map(elems, objects.[])));
+		for (e in elems) decref(e);
+		return r;
+	}
+	def createList0()  => createListN([]);
+	def createList1(o0: int) => createListN([o0]);
+	def createList2(o0: int, o1: int) => createListN([o0, o1]);
+	def createList3(o0: int, o1: int, o2: int) => createListN([o0, o1, o2]);
+	def createList4(o0: int, o1: int, o2: int, o3: int) => createListN([o0, o1, o2, o3]);
+	def createList5(o0: int, o1: int, o2: int, o3: int, o4: int) => createListN([o0, o1, o2, o3, o4]);
+	def createList6(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => createListN([o0, o1, o2, o3, o4, o5]);
+	def createList7(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => createListN([o0, o1, o2, o3, o4, o5, o6]);
+	def createList8(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => createListN([o0, o1, o2, o3, o4, o5, o6, o7]);
+	def createList9(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => createListN([o0, o1, o2, o3, o4, o5, o6, o7, o8]);
 	def createListRest(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
 		def args = Array<int>.new(9 + numRest);
 		args[0] = o0;
@@ -353,8 +394,7 @@ component WasmRuntime {
 		args[7] = o7;
 		args[8] = o8;
 		popRestReverse(args, numRest);
-		return alloc(ListObjects.fromArray(Arrays.map(args, objects.[])));
-		/* append list-sort map */
+		return createListN(args);
 	}
 
 	def createListRestRev(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
@@ -362,18 +402,29 @@ component WasmRuntime {
 		args[0] = o0; args[1] = o1; args[2] = o2; args[3] = o3; args[4] = o4;
 		args[5] = o5; args[6] = o6; args[7] = o7; args[8] = o8;
 		popRestForward(args, numRest);
-		return alloc(ListObjects.fromArray(Arrays.map(args, objects.[])));
+		return createListN(args);
 	}
 
 	def alloc(obj: Object) -> int {
 		if (obj == null) return 0;
 
+		if (useRefcounting && !freelist.empty()) {
+			def idx = freelist.pop();
+			if (CiceroOptions.sanityChecks && (idx < constPoolLen || objects[idx] != null))
+				System.error("internal error", "WasmRuntime.alloc: corrupt freelist entry");
+			objects[idx] = obj;
+			refcounts[idx] = 1;
+			return idx;
+		}
 		def idx = objects.length;
 		objects.put(obj);
+		refcounts.put(1);
 		return idx;
 	}
 }
 
+export "fast:incref"           = WasmRuntime.incref;
+export "fast:decref"           = WasmRuntime.decref;
 export "fast:is_null"          = WasmRuntime.isNull;
 export "fast:is_not_null"      = WasmRuntime.isNotNull;
 export "fast:is_true"          = WasmRuntime.isTrue;

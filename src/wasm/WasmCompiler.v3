@@ -1,4 +1,6 @@
 /* RUNTIME DEFINITIONS */
+def INCREF: u32        = u32.view(CiWasmTarget.functionId(WasmRuntime.incref));
+def DECREF: u32        = u32.view(CiWasmTarget.functionId(WasmRuntime.decref));
 def IS_NULL: u32       = u32.view(CiWasmTarget.functionId(WasmRuntime.isNull));
 def IS_NOT_NULL: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.isNotNull));
 def GET_GLOBAL: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobal));
@@ -77,6 +79,7 @@ class WasmCompiler {
 	def params: Array<string>;
 	def var scratch0: u32;
 	def var scratch1: u32;
+	def var refScratch: u32; // dedicated to emitIncref/emitDecref*'s own dup; never shared with scratch0/scratch1
 	def argScratch: Array<u32> = Array.new(9); // reorder buffer for <=9-arity RTS calls
 
 	def var ciceroBytecode: Bytecode;
@@ -112,6 +115,7 @@ class WasmCompiler {
 			funcholes.puta(ciceroBytecode.funcPool);
 
 			scratch1 = addLocal("<scratch1>"); // appended last; doesn't shift the offsets above
+			refScratch = addLocal("<refScratch>");
 			for (i < 9) argScratch[i] = addLocal(Strings.format1("<arg%d>", i));
 
 
@@ -161,6 +165,7 @@ class WasmCompiler {
 		} else {
 			Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
 			scratch1 = addLocal("<scratch>");
+			refScratch = addLocal("<refScratch>");
 
 			// FUNCTION BODY
 			withBlock<void, int>(fun {
@@ -324,19 +329,21 @@ class WasmCompiler {
 				LOAD_LOCAL => {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.put_uleb32(u32.!(operand + 1)); // locals[0] is <receiver>
+					emitIncref();
 					emitRaiseIfNull(Exceptions.unboundLocal(ciceroBytecode.locals[operand]));
 				}
 				LOAD_LOCAL_SAFE => {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.put_uleb32(u32.!(operand + 1)); // locals[0] is <receiver>
+					emitIncref();
 				}
 				LOAD_FIELD => {
 					wasm.putb(WasmOp.TEE_LOCAL.opcode);
 					wasm.put_uleb32(scratch1);          // stash obj for the error path; [obj]
+					emitIncref();
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(operand);            // [obj, fieldStrIdx]
 					emitCall(GET_FIELD);                  // [fieldValueOrNull]
-					wasmDup();                            // [fieldValueOrNull, fieldValueOrNull]
 					emitAssertField(ciceroBytecode.stringPool[operand]); // null -> br handler; else [fieldValue]
 				}
 				LOAD_NONLOCAL => {
@@ -354,7 +361,7 @@ class WasmCompiler {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.put_uleb32(scratch0);
 					emitCall(SET_GLOBAL);
-					wasm.putb(WasmOp.DROP.opcode); // bytecode's STORE_GLOBAL doesn't push anything back
+					emitDecref(); // setGlobal is a passthrough (returns objIdx unchanged); bytecode's STORE_GLOBAL doesn't push anything back
 				}
 				STORE_GLOBAL_BY_INDEX => {
 					wasm.putb(WasmOp.SET_LOCAL.opcode);
@@ -364,9 +371,14 @@ class WasmCompiler {
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.put_uleb32(scratch0);
 					emitCall(SET_GLOBAL_BY_INDEX);
-					wasm.putb(WasmOp.DROP.opcode);
+					emitDecref(); // passthrough, see STORE_GLOBAL
 				}
 				STORE_LOCAL => {
+					if (WasmRuntime.useRefcounting) {
+						wasm.putb(WasmOp.GET_LOCAL.opcode);
+						wasm.put_uleb32(u32.!(operand + 1)); // fetch old occupant to release
+						emitDecrefGap();
+					}
 					wasm.putb(WasmOp.SET_LOCAL.opcode);
 					wasm.put_uleb32(u32.!(operand + 1)); // locals[0] is <receiver>
 				}
@@ -378,14 +390,14 @@ class WasmCompiler {
 					wasm.put_uleb32(scratch1);          // pop obj; [..., val_orig]
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.put_uleb32(scratch1);          // [..., val_orig, obj]
+					emitIncref();
 					wasm.putb(WasmOp.I32_CONST.opcode);
 					wasm.put_sleb32(operand);            // [..., val_orig, obj, fieldStrIdx]
 					wasm.putb(WasmOp.GET_LOCAL.opcode);
 					wasm.put_uleb32(scratch0);          // [..., val_orig, obj, fieldStrIdx, val]
 					emitCall(SET_FIELD);                  // [..., val_orig, setFieldResult]
-					wasmDup();                            // [..., val_orig, setFieldResult, setFieldResult]
 					emitAssertField(ciceroBytecode.stringPool[operand]); // null -> br handler; else [..., val_orig, setFieldResult]
-					wasm.putb(WasmOp.DROP.opcode);        // bytecode STORE_FIELD nets one value (val_orig from DUPE 1); [..., val_orig]
+					emitDecref();        // setFieldResult aliases val_orig (via DUPE 1); nets one value: [..., val_orig]
 				}
 				CALL => {
 					// fn and args are already on the stack in the order ASSERT_FUNC's
@@ -419,15 +431,38 @@ class WasmCompiler {
 				}
 				JUMP => /* no implementation */ ;
 				JUMP_IF_FALSE => {
-					emitCall(IS_TRUE); // bytecode pops unconditionally; flag IS the condition, no value to preserve
+					// bytecode pops unconditionally; the boolean IS the condition,
+					// nothing to preserve. Dup+swap+decref releases cond's own
+					// reference once IS_TRUE has peeked it.
+					if (WasmRuntime.useRefcounting) {
+						wasmDup();
+						emitCall(IS_TRUE);
+						wasmSwap();
+						emitDecref();
+					} else {
+						emitCall(IS_TRUE);
+					}
 				}
 				JUMP_IF_TRUE_PEEK => {
+					// peek: value rides along unchanged either way, so it must survive.
 					wasmDup();
-					emitCall(IS_FALSE); // peek: value rides along unchanged either way
+					emitIncref();
+					emitCall(IS_FALSE);
+					if (WasmRuntime.useRefcounting) {
+						wasmSwap();
+						emitDecrefPeek();
+						wasmSwap();
+					}
 				}
 				JUMP_IF_FALSE_PEEK => {
 					wasmDup();
-					emitCall(IS_TRUE); // peek: value rides along unchanged either way
+					emitIncref();
+					emitCall(IS_TRUE);
+					if (WasmRuntime.useRefcounting) {
+						wasmSwap();
+						emitDecrefPeek();
+						wasmSwap();
+					}
 				}
 				RAISE => {
 					// build the exn from the value on top (a string raises it directly;
@@ -568,12 +603,12 @@ class WasmCompiler {
 					}
 				}
 				POP => {
-					for (i < operand) wasm.putb(WasmOp.DROP.opcode);
+					for (i < operand) emitDecref();
 				}
 				DUPE => {
 					// only depths 0 (VarSet) and 1 (SetField) are ever emitted by BytecodeCompiler
 					match (operand) {
-						0 => wasmDup();
+						0 => { wasmDup(); emitIncref(); }
 						1 => {
 							// [..., a, b] -> [..., a, b, a]
 							wasm.putb(WasmOp.SET_LOCAL.opcode);
@@ -586,6 +621,7 @@ class WasmCompiler {
 							wasm.put_uleb32(scratch0); // [..., a, b]
 							wasm.putb(WasmOp.GET_LOCAL.opcode);
 							wasm.put_uleb32(scratch1); // [..., a, b, a]
+							emitIncref();
 						}
 						_ => System.error("compile error", "tier1->Wasm: DUPE at unsupported depth");
 					}
@@ -689,32 +725,65 @@ class WasmCompiler {
 		wasm.put_sleb32(addString(str));
 	}
 
-	// assert field present in object
+	// assert field present in object. Callers stash the object handle in scratch1
+	// before calling this (for the error-message path); this owns that stash's
+	// release on the success path, and its own internal peek/predicate debt.
 	def emitAssertField(field: string) {
+		wasmDup();
+		emitIncref();
 		emitCall(IS_NULL);
-		withIf<int, int>(fun {
+		withIfElse<int, int>(fun {
+			// missing field: orig is always index 0 here (GET_FIELD/SET_FIELD's
+			// null sentinel), so its decref is always a no-op either way - leave
+			// the bare DROP rather than substitute emitDecref for it.
+			emitDecrefPeek();
 			wasm.putb(WasmOp.DROP.opcode);
 			wasm.putb(WasmOp.GET_LOCAL.opcode);
 			wasm.put_uleb32(scratch1);
+			emitIncref(); // new duplication of the stash; raiseMissingField decrefs it internally
 			emitPushString(field);
 			emitCall(RAISE_FIELD);
 			emitJumpToExnHandler();
+		}, /* else */ fun {
+			// field present: orig forwarded as the result; pay the peek-debt, and
+			// release the now-unneeded scratch1 stash (nothing uses it again).
+			emitDecrefPeek();
+			if (WasmRuntime.useRefcounting) {
+				wasm.putb(WasmOp.GET_LOCAL.opcode);
+				wasm.put_uleb32(scratch1);
+				emitDecrefGap();
+			}
 		});
 	}
 
 	def emitRaiseIfNull(exn: string) {
 		wasmDup();
+		emitIncref();
 		emitCall(IS_NULL);
-		withIf<int, int>(fun {
+		withIfElse<int, int>(fun {
+			// null: orig is replaced by a fresh exn; pay the peek-debt, then dispose of orig.
+			emitDecrefPeek();
+			emitDecrefGap();
 			emitPushConst(ExnObjects.fromWasm(exn));
 			emitJumpToExnHandler();
+		}, /* else */ fun {
+			// not-null: orig is forwarded as the result; only the peek-debt is owed.
+			emitDecrefPeek();
 		});
 	}
 
 	def emitAssertType(isFunc: u32, expectedClass: Object) {
 		wasmDup();
+		emitIncref();
 		emitCall(isFunc);
-		withIfFalse<int, int>(fun {
+		withIfElse<int, int>(fun {
+			// right type: orig forwarded as the result; only the peek-debt is owed.
+			emitDecrefPeek();
+		}, /* else */ fun {
+			// wrong type: orig is passed to RAISE_TYPE as the actual-type argument
+			// (raiseTypeException decrefs it internally) - only this predicate's
+			// own peek-debt needs paying here, orig itself must survive to be used.
+			emitDecrefPeek();
 			emitPushConst(expectedClass);
 			emitCall(RAISE_TYPE);
 			emitJumpToExnHandler();
@@ -738,6 +807,42 @@ class WasmCompiler {
 	def emitCall(funcId: u32) {
 		wasm.putb(WasmOp.CALL.opcode);
 		wasm.put_uleb32(funcId);
+	}
+
+	// [idx] -> [idx]: peek. No-op when refcounting is off.
+	// Dup via refScratch, never scratch0/scratch1 - those are frequently live
+	// with values these helpers must not clobber (e.g. STORE_FIELD holds
+	// val_dupe in scratch0 while incref'ing obj in the same opcode).
+	def refDup() {
+		wasm.putb(WasmOp.TEE_LOCAL.opcode);
+		wasm.put_uleb32(refScratch);
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(refScratch);
+	}
+	def emitIncref() {
+		if (!WasmRuntime.useRefcounting) return;
+		refDup();
+		emitCall(INCREF);
+	}
+	// [idx] -> []: replaces an existing DROP at a site that already dropped this
+	// value. DECREF and DROP have identical stack effect, so this substitution is
+	// stack-neutral whether refcounting is on or off.
+	def emitDecref() {
+		if (WasmRuntime.useRefcounting) emitCall(DECREF);
+		else wasm.putb(WasmOp.DROP.opcode);
+	}
+	// [idx] -> []: new decref at a site with no existing DROP (a "gap" fix). Only
+	// emits when refcounting is on, since nothing dropped this value before either.
+	def emitDecrefGap() {
+		if (WasmRuntime.useRefcounting) emitCall(DECREF);
+	}
+	// [idx] -> [idx]: pay off a predicate's borrowed-copy debt without consuming
+	// the value (predicates like IS_NULL/IS_TRUE read a duped copy but don't
+	// decref it). No-op when refcounting is off.
+	def emitDecrefPeek() {
+		if (!WasmRuntime.useRefcounting) return;
+		refDup();
+		emitCall(DECREF);
 	}
 
 	def wasmDup() {
@@ -796,6 +901,7 @@ class WasmCompiler {
   				Local    => {
  					wasm.putb(WasmOp.GET_LOCAL.opcode);
  					wasm.put_uleb32(addLocal(id));
+					emitIncref();
 
 					emitRaiseIfNull(Exceptions.unboundLocal(id));
  				}
@@ -813,8 +919,15 @@ class WasmCompiler {
  			VarSet(id, mode, val) => match (mode.data) {
  				Local => {
 					compileAST(val);
+					def slot = addLocal(id);
+					if (WasmRuntime.useRefcounting) {
+						wasm.putb(WasmOp.GET_LOCAL.opcode);
+						wasm.put_uleb32(slot); // fetch old occupant to release
+						emitDecrefGap();
+					}
  					wasm.putb(WasmOp.TEE_LOCAL.opcode);
- 					wasm.put_uleb32(addLocal(id));
+ 					wasm.put_uleb32(slot);
+					emitIncref();
  				}
  				Global => {
 					emitPushString(id);
@@ -826,23 +939,36 @@ class WasmCompiler {
  			And(left, right) => {
  				compileAST(left);
 				wasmDup();
+				emitIncref();
 
 				emitCall(IS_TRUE);
 
-				withIf<int, int>(fun {
-					wasm.putb(WasmOp.DROP.opcode);
+				withIfElse<int, int>(fun {
+					// left is truthy: right replaces it as the result; pay the
+					// peek-debt then fully dispose of left (emitDecref always
+					// consumes, unlike emitDecrefGap, since this falls through
+					// normally rather than ending in a branch).
+					emitDecrefPeek();
+					emitDecref();
 					compileAST(right);
+				}, /* else */ fun {
+					// left is falsy: forwarded as the result; pay only the peek-debt.
+					emitDecrefPeek();
 				});
  			}
  			Or(left, right) => {
 				compileAST(left);
 				wasmDup();
+				emitIncref();
 
 				emitCall(IS_FALSE);
 
-				withIf<int, int>(fun {
-					wasm.putb(WasmOp.DROP.opcode);
+				withIfElse<int, int>(fun {
+					emitDecrefPeek();
+					emitDecref();
 					compileAST(right);
+				}, /* else */ fun {
+					emitDecrefPeek();
 				});
  			}
  			Apply(tgt, args) => {
@@ -884,7 +1010,17 @@ class WasmCompiler {
 			}
  			If(cond, left, right) => {
 				compileAST(cond);
-				emitCall(IS_TRUE);
+				// no value to preserve past branch selection - unlike And/Or/Cond,
+				// this doesn't feed the taken branch. Dup+swap+decref releases
+				// cond's own reference once IS_TRUE has peeked it.
+				if (WasmRuntime.useRefcounting) {
+					wasmDup();
+					emitCall(IS_TRUE);
+					wasmSwap();
+					emitDecref();
+				} else {
+					emitCall(IS_TRUE);
+				}
 				withIfElse<void, int>(fun {
 					compileAST(left);
 				}, /* else */ fun {
@@ -898,12 +1034,24 @@ class WasmCompiler {
 						def body = c.1;
 						withBlock<void, int>(fun {
 							compileAST(cond);
-							
+
 							wasmDup();
+							emitIncref();
 							emitCall(IS_FALSE);
+
+							// case doesn't match (BR_IF taken): cond is forwarded out
+							// of this block as its <void,int> result, so only its
+							// peeked copy is released. Case matches (falls through):
+							// both copies are released - cond is unused in body.
+							if (WasmRuntime.useRefcounting) {
+								wasmSwap();
+								emitDecrefPeek();
+								wasmSwap();
+							}
 
 							wasm.putb(WasmOp.BR_IF.opcode);
 							wasm.put_uleb32(0); // next case
+							emitDecrefGap();
 							compileAST(body);
 							wasm.putb(WasmOp.BR.opcode);
 							wasm.put_uleb32(1); // done
@@ -937,8 +1085,14 @@ class WasmCompiler {
 
 					match (mode.data) {
 						Local => {
+							def slot = addLocal(id);
+							if (WasmRuntime.useRefcounting) {
+								wasm.putb(WasmOp.GET_LOCAL.opcode);
+								wasm.put_uleb32(slot); // fetch old occupant to release
+								emitDecrefGap();
+							}
 							wasm.putb(WasmOp.SET_LOCAL.opcode);
-							wasm.put_uleb32(addLocal(id));
+							wasm.put_uleb32(slot);
 						}
 						Global => {
 							wasm.putb(WasmOp.SET_LOCAL.opcode);
@@ -947,7 +1101,7 @@ class WasmCompiler {
 							wasm.putb(WasmOp.GET_LOCAL.opcode);
 							wasm.put_uleb32(scratch0);
 							emitCall(SET_GLOBAL);
-							wasm.putb(WasmOp.DROP.opcode);
+							emitDecref(); // setGlobal is a passthrough; discard its returned handle
 						}
 						Nonlocal => System.error("compile error", "illegal case on catch: Nonlocal");
 					}
@@ -969,6 +1123,7 @@ class WasmCompiler {
  					// this variable will be captured!
  					wasm.putb(WasmOp.GET_LOCAL.opcode);
  					wasm.put_uleb32(addLocal(nonlocal));
+					emitIncref();
 					emitRaiseIfNull(Exceptions.unboundLocal(nonlocal));
 					nonlocalCount++;
 					if (nonlocalCount > 9) emitCall(PUSH_ARG);
@@ -997,11 +1152,25 @@ class WasmCompiler {
 					withLoop<void, int>(fun {
 						compileAST(cond);
 						wasmDup();
+						emitIncref();
 						emitCall(IS_FALSE);
+
+						// exit (BR_IF taken): cond is forwarded out as the loop's
+						// <void,int> result, so its peeked copy is released but cond
+						// itself stays alive. Continue (falls through): both copies
+						// are released - cond is unused in the loop body.
+						if (WasmRuntime.useRefcounting) {
+							wasmSwap();
+							emitDecrefPeek();
+							wasmSwap();
+						}
+
 						wasm.putb(WasmOp.BR_IF.opcode);
 						wasm.put_uleb32(1); // exit loop
+						emitDecrefGap();
 
 						compileAST(body);
+						emitDecrefGap(); // body's value is discarded every iteration
 						wasm.putb(WasmOp.BR.opcode);
 						wasm.put_uleb32(0); // back to top of loop
 					});
@@ -1010,32 +1179,39 @@ class WasmCompiler {
  			Begin(exprs) => {
 				for (i < exprs.length - 1) {
 					compileAST(exprs[i]);
- 					wasm.putb(WasmOp.DROP.opcode);
+ 					emitDecref();
 				}
 				compileAST(exprs[exprs.length - 1]);
-				
+
 			}
  			GetField(field, obj) => {
 				compileAST(obj);
-				
+
 				wasm.putb(WasmOp.TEE_LOCAL.opcode);
 				wasm.put_uleb32(scratch1); // stash object
+				emitIncref();
 				emitPushString(field);
 				emitCall(GET_FIELD);
-				wasmDup();
 
 				emitAssertField(field);
 			}
  			SetField(field, obj, val) => {
+				// Compile obj and val fully before stashing anything - val may
+				// itself contain a nested GetField/SetField that reuses scratch1,
+				// which would clobber this stash if it were taken before val is compiled.
 				compileAST(obj);
+				compileAST(val);
+				wasm.putb(WasmOp.SET_LOCAL.opcode);
+				wasm.put_uleb32(scratch0); // stash val
 				wasm.putb(WasmOp.TEE_LOCAL.opcode);
 				wasm.put_uleb32(scratch1); // stash object
+				emitIncref();
 
 				emitPushString(field);
-				compileAST(val);
+				wasm.putb(WasmOp.GET_LOCAL.opcode);
+				wasm.put_uleb32(scratch0); // reload val
 				emitCall(SET_FIELD);
-				wasmDup();
-				
+
 				emitAssertField(field);
 			}
  			Class(id, superclass, init, fields, methods) => {

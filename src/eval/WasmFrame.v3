@@ -35,6 +35,9 @@ class WasmFrame extends FrameObject {
 		def oldFuncholes  = WasmRuntime.funcholes;
 		def oldClassholes = WasmRuntime.classholes;
 		def oldObjects    = WasmRuntime.objects;
+		def oldRefcounts  = WasmRuntime.refcounts;
+		def oldFreelist   = WasmRuntime.freelist;
+		def oldConstPoolLen = WasmRuntime.constPoolLen;
 		def oldResult     = WasmRuntime.result;
 
 		WasmRuntime.frame      = this;
@@ -42,6 +45,9 @@ class WasmFrame extends FrameObject {
 		WasmRuntime.funcholes  = wasm.funcPool;
 		WasmRuntime.classholes = wasm.classPool;
 		WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
+		WasmRuntime.refcounts  = Vectors.ofN(Array<int>.new(wasm.constPool.length));
+		WasmRuntime.freelist   = ArrayStack.new();
+		WasmRuntime.constPoolLen = wasm.constPool.length;
 		WasmRuntime.result     = 0;
 
 		var arg0: int = if(args.length > 0, WasmRuntime.alloc(args[0].1));
@@ -92,6 +98,9 @@ class WasmFrame extends FrameObject {
 		WasmRuntime.funcholes  = oldFuncholes;
 		WasmRuntime.classholes = oldClassholes;
 		WasmRuntime.objects    = oldObjects;
+		WasmRuntime.refcounts  = oldRefcounts;
+		WasmRuntime.freelist   = oldFreelist;
+		WasmRuntime.constPoolLen = oldConstPoolLen;
 		WasmRuntime.result     = oldResult;
 	}
 
@@ -103,6 +112,9 @@ class WasmFrame extends FrameObject {
 		WasmRuntime.funcholes  = wasm.funcPool;
 		WasmRuntime.classholes = wasm.classPool;
 		WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
+		WasmRuntime.refcounts  = Vectors.ofN(Array<int>.new(wasm.constPool.length));
+		WasmRuntime.freelist   = ArrayStack.new();
+		WasmRuntime.constPoolLen = wasm.constPool.length;
 		match (wasm.f) {
 			Func0(f) => {
 				def exn = f();
