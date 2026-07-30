@@ -34,7 +34,12 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 					}
 					code = Code.Bytecode(bytecode);
 				}
-				2 => code = Code.Wasm(WasmCompiler.new(ast, params).compile());
+				2 => {
+					var wc: WasmCompiler;
+					if (CiceroOptions.compileFromTier1) wc = WasmBytecodeCompiler.new(ast, params);
+					else wc = WasmASTCompiler.new(ast, params);
+					code = Code.Wasm(wc.compile());
+				}
 				_ => System.error("compile error", "attempting to compile on interpreter tier");
 			}
 		}

@@ -5,8 +5,11 @@ component WasmRuntime {
 	var funcholes: Array<ASTData.Func>;
 	var classholes: Array<ClassObject -> ClassObject>;
 	var objects: Vector<Object>;
+	var refcounts: Vector<int>;
+	var freelist: ArrayStack<int>;
+	var constPoolLen: int;
 	var result: int;
-	var xargs: Stack<int>;
+	var xargs: ArrayStack<int>;
 
 	def isNull(idx: int) -> bool;
 	def isTrue(idx: int)  -> bool;
