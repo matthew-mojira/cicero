@@ -2,25 +2,25 @@
  * startup.
  */
 enum Builtin(id: string, val: Object) {
-	TRUE    ("true",     BoolObjects.trueObject),
-	FALSE   ("false",    BoolObjects.falseObject),
- 	BASE    ("base",     ClassObjects.classBase),
- 	BOOL    ("bool",     ClassObjects.classBool),
- 	CHAR    ("char",     ClassObjects.classChar),
- 	CLASS   ("class",    ClassObjects.classClass),
-	CODE    ("code",     ClassObjects.classCode),
-	DOUBLE  ("double",   ClassObjects.classDouble),
-	EXN     ("exn",      ClassObjects.classExn),
- 	FRAME   ("frame",    ClassObjects.classFrame),
- 	FUNC    ("func",     ClassObjects.classFunc),
- 	INT     ("int",      ClassObjects.classInt),
- 	LIST    ("list",     ClassObjects.classList),
- 	MAP     ("map",      ClassObjects.classMap),
- 	METHOD  ("method",   ClassObjects.classMethod),
- 	UNIT    ("unit",     ClassObjects.classUnit),
- 	STR     ("str",      ClassObjects.classStr),
- 	NEW_MAP ("new-map",  FuncObjects.fromVirgil("new-map", "new-map", [], newMap)),
-	PUTS    ("puts",     FuncObjects.fromVirgil("puts", "puts", ["o"], puts))
+	TRUE    ("true",	BoolObjects.trueObject),
+	FALSE   ("false",	BoolObjects.falseObject),
+ 	BASE    ("base",	ClassObjects.classBase),
+ 	BOOL    ("bool",	ClassObjects.classBool),
+ 	CHAR    ("char",	ClassObjects.classChar),
+ 	CLASS   ("class",	ClassObjects.classClass),
+	CODE    ("code",	ClassObjects.classCode),
+	DOUBLE  ("double",	ClassObjects.classDouble),
+	EXN     ("exn",		ClassObjects.classExn),
+ 	FRAME   ("frame",	ClassObjects.classFrame),
+ 	FUNC    ("func",	ClassObjects.classFunc),
+ 	INT     ("int",		ClassObjects.classInt),
+ 	LIST    ("list",	ClassObjects.classList),
+ 	MAP     ("map",		ClassObjects.classMap),
+ 	METHOD  ("method",	ClassObjects.classMethod),
+ 	UNIT    ("unit",	ClassObjects.classUnit),
+ 	STR     ("str",		ClassObjects.classStr),
+ 	NEW_MAP ("new-map",	FuncObjects.fromVirgil("new-map", "new-map", [], newMap)),
+	PUTS    ("puts",	FuncObjects.fromVirgil("puts", "puts", ["o"], puts))
 }
 
 /* Virgil function definitions for Cicero function objects */

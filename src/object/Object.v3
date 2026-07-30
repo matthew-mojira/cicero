@@ -75,14 +75,14 @@ class Object {
  	 		x: ClassObject  => cls = ClassObjects.classClass;
 	 		x: CodeObject   => cls = ClassObjects.classCode;
 	 		x: DoubleObject => cls = ClassObjects.classDouble;
-	 		x: ExnObject    => cls = ClassObjects.classExn;
+	 		x: ExnObject	=> cls = ClassObjects.classExn;
  	 		x: FrameObject  => cls = ClassObjects.classFrame;
  	 		x: FuncObject   => cls = ClassObjects.classFunc;
- 	 		x: IntObject    => cls = ClassObjects.classInt;
+ 	 		x: IntObject	=> cls = ClassObjects.classInt;
  	 		x: ListObject   => cls = ClassObjects.classList;
- 	 		x: MapObject    => cls = ClassObjects.classMap;
+ 	 		x: MapObject	=> cls = ClassObjects.classMap;
  	 		x: UnitObject   => cls = ClassObjects.classUnit;
- 	 		x: StrObject    => cls = ClassObjects.classStr;
+ 	 		x: StrObject	=> cls = ClassObjects.classStr;
 		}
 
 		// sanity check

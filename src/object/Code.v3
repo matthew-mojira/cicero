@@ -54,7 +54,7 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 	def co_disassemble() -> Result {
 		match (code) {
 			Bytecode => return Result.OK(StrObjects.fromString(Code.Bytecode.!(code).bytecode.display()));
-			_        => return Result.Exn(ExnObjects.fromVirgil("co.disassemble", "code object has not been compiled to bytecode"));
+			_	 => return Result.Exn(ExnObjects.fromVirgil("co.disassemble", "code object has not been compiled to bytecode"));
 		}
 	}
 }
@@ -68,8 +68,8 @@ component CodeObjects {
 	 * fully finishes booting and confirms we are running in TIER 1, it will 
 	 * loop through this vector and compile them all at once.
 	 */
-	var MaybeCompileLater: Vector<ASTData.Func> = Vector.new();
-	def CompileUncompiledCodeObject(fn: ASTData.Func){
+	var maybeCompileLater: Vector<ASTData.Func> = Vector.new();
+	def compileUncompiledCodeObject(fn: ASTData.Func) {
 		fn.body.compile(fn.params, fn.metadata.label, false, false);
 	}
 

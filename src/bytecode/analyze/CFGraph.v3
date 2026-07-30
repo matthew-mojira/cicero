@@ -65,7 +65,7 @@ class CFGraph(bytecode: Bytecode) {
 			def lastOp = Opcodes.map[block.bytes[block.bytes.length - 4]];
 			def lastPc = block.startPc + block.bytes.length;
 			
-			if (lastOp.fallthrough)	{
+			if (lastOp.fallthrough) {
 				block.successors.add(basicBlocks[map[lastPc]]);
 				basicBlocks[map[lastPc]].predecessors.add(block);
 			}
@@ -129,7 +129,7 @@ class CFGraph(bytecode: Bytecode) {
 	def computeImmediateDominator() {
 		for (i < basicBlocks.length) {
 			def block = basicBlocks[i];
-			if (block == head){
+			if (block == head) {
 				block.immDom = null;
 				continue;
 			}

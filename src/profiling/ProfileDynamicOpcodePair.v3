@@ -1,28 +1,28 @@
-component ProfileDynamicOpcodePair{
+component ProfileDynamicOpcodePair {
 
-    def profile(maybeOpOne: Maybe<Opcode>, opTwo: Opcode, dispatchCost: long){
-        match (maybeOpOne) {
-            Nothing => {}
-            Just(opOne) => {
-                Profiling.dynamicOpcodePairCounts[opOne.tag][opTwo.tag]++;
-                Profiling.dynamicOpcodePairDispatchCost[opOne.tag][opTwo.tag] += dispatchCost;
-            }
-        }
-    }
+	def profile(maybeOpOne: Maybe<Opcode>, opTwo: Opcode, dispatchCost: long) {
+		match (maybeOpOne) {
+			Nothing => {}
+			Just(opOne) => {
+				Profiling.dynamicOpcodePairCounts[opOne.tag][opTwo.tag]++;
+				Profiling.dynamicOpcodePairDispatchCost[opOne.tag][opTwo.tag] += dispatchCost;
+			}
+		}
+	}
 
-    def printStats(){
-        System.puts("# Omitting opcode pairs executed zero times\n");
-        System.puts("# Opcode pairs are only tracked if they are in the same bytecode frame\n");
-        System.puts("opcode, next opcode, counts, total dispatch cost(μs)\n");
-        for (row=0; row < Opcodes.numOpcodes; row++){
-            for (col=0; col < Opcodes.numOpcodes; col++){
-                def counts : int = Profiling.dynamicOpcodePairCounts[row][col];
-                def dispatchCost : long = Profiling.dynamicOpcodePairDispatchCost[row][col];
-                if (counts != 0){
-                    System.puts(Strings.format2("%s, %s, ", Opcodes.map[row].name, Opcodes.map[col].name));
-                    System.puts(Strings.format2("%d, %s\n", counts, ProfilingHelpers.longToString(dispatchCost)));
-                }
-            }
-        }
-    }
+	def printStats() {
+		System.puts("# Omitting opcode pairs executed zero times\n");
+		System.puts("# Opcode pairs are only tracked if they are in the same bytecode frame\n");
+		System.puts("opcode, next opcode, counts, total dispatch cost(μs)\n");
+		for (row=0; row < Opcodes.numOpcodes; row++) {
+			for (col=0; col < Opcodes.numOpcodes; col++) {
+				def counts: int = Profiling.dynamicOpcodePairCounts[row][col];
+				def dispatchCost: long = Profiling.dynamicOpcodePairDispatchCost[row][col];
+				if (counts != 0) {
+					System.puts(Strings.format2("%s, %s, ", Opcodes.map[row].name, Opcodes.map[col].name));
+					System.puts(Strings.format2("%d, %s\n", counts, ProfilingHelpers.longToString(dispatchCost)));
+				}
+			}
+		}
+	}
 }

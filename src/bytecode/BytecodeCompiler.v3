@@ -1,15 +1,15 @@
 /* The bytecode compiler translates an AST into bytecode.
  */
 class BytecodeCompiler {
-	def writer:     DataWriter     = DataWriter.new();
+	def writer:	DataWriter	= DataWriter.new();
 
-	def params:     Array<string>; // XXX used by analysis only
-	def strings:    Vector<string> = Vector.new();
+	def params:	Array<string>; // XXX used by analysis only
+	def strings:	Vector<string>	= Vector.new();
 	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
 	def funcholes:  Vector<ASTData.Func> = Vector.new();
-	def constants:  Vector<Object> = Vector.new();
-	def locals:     Vector<string> = Vector.new();
-	def nonlocals:  Vector<string> = Vector.new();
+	def constants:  Vector<Object>	= Vector.new();
+	def locals:	Vector<string>	= Vector.new();
+	def nonlocals:  Vector<string>	= Vector.new();
 
 	/* most recently compiled (written) instruction */
 	var recentInstr: Maybe<Opcode> = Maybe.Nothing;
@@ -129,7 +129,7 @@ class BytecodeCompiler {
 				code.compile(params, metadata.label, false, false);
 			
 				for (i < nonlocals.length) {
-					def nonlocal : string = nonlocals[i];
+					def nonlocal: string = nonlocals[i];
 					if (Strings.equal(nonlocal, id))
 						// the function itself is captured, but not loaded to a local
 						continue;
@@ -199,16 +199,14 @@ class BytecodeCompiler {
 					}
 					Just(expr) => compileAST(expr);
 				}
-				var init2: FuncObject;
 				match (init) {
 					Nothing => ;
 					Just(fn) => {
 						fn.code.compile(["self"], fn.metadata.label, false, true);
-						init2 = fn;
 					}
 				}
 				//                                   XXX
-				def idx = addClasshole(ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc)));
+				def idx = addClasshole(ClassObjects.classhole(id, if (init.isJust(), init.fromJust(), null), fields, Arrays.map(methods, funcToFunc)));
 				writeInstrWithOperand(loc, Opcode.CREATE_CLASS, idx);
 			}
 			New(obj) => {

@@ -14,32 +14,32 @@ layout Instruction {
 }
 
 /* Each bytecode object created is assigned a unique id */
-var current_bytecode_id : int = 0;
+var current_bytecode_id: int = 0;
 
 /* The bytecode object, which contains the instructions (as bytes) and all the
  * locals and pools that the instructions will reference
  */
-class Bytecode(instrs:     Array<byte>, 
-		locals:     Array<string>,
-		nonlocals:  Array<string>,
-		params:     Array<string>, // XXX used by analysis only
+class Bytecode(instrs:		Array<byte>, 
+		locals:		Array<string>,
+		nonlocals:	Array<string>,
+		params:		Array<string>, // XXX used by analysis only
 		/* String pool is used for lookups by name (e.g. globals) */
-                stringPool: Array<string>,
-                constPool:  Array<Object>,
+		stringPool: Array<string>,
+		constPool:  Array<Object>,
 		/* This is a function which takes the superclass object and
 		 * creates a new class object with respect to that
 		 */
-                classPool:  Array<ClassObject -> ClassObject>,
+		classPool:  Array<ClassObject -> ClassObject>,
 		/* This is the AST-level information for the function, and not
 		 * function objects. At runtime, the VM will need to use some
 		 * information to capture free variables before creating the
 		 * actual function object.
 		 */
-                funcPool:   Array<ASTData.Func>,
+		funcPool:   Array<ASTData.Func>,
 		/* Instructions are 4-byte aligned, so take pc >> 2 to find the
 		 * source location of an instruction.
 		 */
-                sourceMap:  Array<FileRange>)
+		sourceMap:  Array<FileRange>)
 {
 	var id: int;
 	def var cache: Array<CacheState>;
@@ -75,10 +75,10 @@ class Bytecode(instrs:     Array<byte>,
 		def bc = instrs;
 		var pc = 0;
 		while (pc < bc.length) {
-			def bc      = Ref<Instruction>.at(bc, pc);
-			def opcode  = bc.opcode;
-			def operand = bc.operand;
-			def loc = sourceMap[pc >> 2];
+			def bc		= Ref<Instruction>.at(bc, pc);
+			def opcode	= bc.opcode;
+			def operand	= bc.operand;
+			def loc		= sourceMap[pc >> 2];
 
 			str.put3("+%d: %s %d", pc, opcode.name, operand);
 			if (loc != null) str.put2(" (%d:%d)", loc.beginLine, loc.beginColumn);

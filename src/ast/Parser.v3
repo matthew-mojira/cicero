@@ -44,12 +44,12 @@ component ParseOption {
 	// TODO add allowEmptyBegin
 }
 
-def missingCloseParentheses: string      = "expected closing parentheses but reached end of file";
-def duplicatedParameter: string          = "parameter redefined";
-def duplicatedFieldMethod: string        = "field/method redefined";
-def duplicatedExtends: string            = "extends clause defined";
-def duplicatedInit: string               = "init clause defined";
-def returnUsedInsideFieldOrInit: string  = "return expression not allowed inside field/init";
+def missingCloseParentheses: string	= "expected closing parentheses but reached end of file";
+def duplicatedParameter: string		= "parameter redefined";
+def duplicatedFieldMethod: string	= "field/method redefined";
+def duplicatedExtends: string		= "extends clause defined";
+def duplicatedInit: string		= "init clause defined";
+def returnUsedInsideFieldOrInit: string	= "return expression not allowed inside field/init";
 
 class Vars {
 	def referencedVars: HashMap<string, Box<AccessMode>> = Strings.newMap();
@@ -57,7 +57,7 @@ class Vars {
 }
 
 class Parser extends TextReader {
-	private def exprs: Vector<CodeObject>          = Vector.new();
+	private def exprs: Vector<CodeObject> = Vector.new();
 
 	new(fileName: string, data: string) super(fileName, data) {
 		skipWs = skipWhitespaceAndComments;
@@ -78,7 +78,7 @@ class Parser extends TextReader {
 	// all global-set/gets use this to reduce allocations. Don't mutate this
 	def global:   Box<AccessMode> = Box.new(AccessMode.Global);
 
-	                                             /* AST,  globals (which may be nonlocals) */
+							/* AST,  globals (which may be nonlocals) */
 	private def readCode(locals: Array<string>) -> (AST, Array<(string, Box<AccessMode>)>) {
 		def top = Vars.new();
 		for (local in locals) {
@@ -436,8 +436,8 @@ class Parser extends TextReader {
 						def b = bindLocal(name);
 						def range = FileRange.new(fileName, startLine, startColumn, line, column);
 						
-						def initFO : Maybe<FuncObject> = setupInitFuncObject(name, fields, init);
-						def fieldNames : Array<string> = Array.new(fields.length);
+						def initFO: Maybe<FuncObject> = setupInitFuncObject(name, fields, init);
+						def fieldNames: Array<string> = Array.new(fields.length);
 						for (i < fields.length) fieldNames[i] = fields[i].0;
 
 						// XXX creating CodeObject here
@@ -482,7 +482,7 @@ class Parser extends TextReader {
 						}
 						
 						if (!returnExprAllowed) 
-						    fail(returnUsedInsideFieldOrInit);// XXX fail but keep parsing
+							fail(returnUsedInsideFieldOrInit);// XXX fail but keep parsing
 
 						return AST.new(ASTData.Return(value),
 							FileRange.new(fileName, startLine, startColumn, line, column));
@@ -543,7 +543,7 @@ class Parser extends TextReader {
 				return AST.new(ASTData.Lit(StrObjects.getStrObject(str)),
 					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
-			'\'' =>{
+			'\'' => {
 				def char = readChar();
 				return AST.new(ASTData.Lit(CharObjects.fromByte(char)),
 					FileRange.new(fileName, startLine, startColumn, line, column));
@@ -559,18 +559,18 @@ class Parser extends TextReader {
 				// Number (integer or double)
 				if ((strs.length == 1 || strs.length == 2)
 					&& (str.length > 0)
-					&& ((str[0] >= '0' && str[0] <= '9') || ((str[0] == '-') && (str.length > 1)))){
+					&& ((str[0] >= '0' && str[0] <= '9') || ((str[0] == '-') && (str.length > 1)))) {
 
 					def string_value = if(strs.length ==1, strs[0], Arrays.concat(Arrays.concat(strs[0], ['.']), strs[1]));
 
 					def np = NumberParser.new(string_value);
-					if (np.parse()){
+					if (np.parse()) {
 						// TODO: Handle big integers and floats
 						if (np.is_float) {
 							// double
 							var fval = NumberParserValue.Float.!(np.val);
 							var dval = DoubleParserHelper.f64(fval.sign, fval.exp, fval.mantissa);
-							if (string_value.length == np.pos){
+							if (string_value.length == np.pos) {
 								expr = AST.new(ASTData.Lit(DoubleObjects.fromDouble(dval)), range);
 								strIndex = 2;
 							} else {
@@ -578,20 +578,20 @@ class Parser extends TextReader {
 								def rounded_long = long.!(dval); // explicit because value must be the same
 								expr = AST.new(ASTData.Lit(IntObjects.fromLong(rounded_long)), range);
 							}
-						} else if (string_value.length == np.pos){
+						} else if (string_value.length == np.pos) {
 							// integer
 							var ival = NumberParserValue.Int.!(np.val).v;
 							expr = AST.new(ASTData.Lit(IntObjects.fromLong(long.view(ival))), range);
 
-						} else{
+						} else {
 							fail("error parsing number literal");
 							return null;
 						}
-					} else{
+					} else {
 						failRel(-(np.pos + 1), "error parsing number literal");
 						return null;
 					}
-				} else{
+				} else {
 					// VarGet: local or global?
 					var b: Box<AccessMode>;
 
@@ -691,7 +691,7 @@ class Parser extends TextReader {
 		return Maybe.Nothing;
 	}
 	
-	def setupInitFuncObject(className: string, fields: Vector<(string, AST)>, init: Maybe<AST>) -> Maybe<FuncObject>{
+	def setupInitFuncObject(className: string, fields: Vector<(string, AST)>, init: Maybe<AST>) -> Maybe<FuncObject> {
 		/*
 		(class A
 			(field x expr1)
@@ -720,7 +720,7 @@ class Parser extends TextReader {
 		var maxEndColumn: int = -1;
 
 		var initBodyASTsSize: int = fields.length;
-		match (init){
+		match (init) {
 			Just(v) => initBodyASTsSize++;
 			_ => {}
 		}
@@ -728,7 +728,7 @@ class Parser extends TextReader {
 		
 		// re-"parse" the field expressions so that they become part of the init body
 		// treat as if the user did ->  (set-field fieldName self fieldExpr) inside the init body
-		for (i < fields.length){
+		for (i < fields.length) {
 			def field: (string, AST) = fields[i];
 			def loc = field.1.loc;
 			initBodyASTs[i] = (
@@ -764,7 +764,7 @@ class Parser extends TextReader {
 			}
 			Nothing => {}
 		}
-		if (Arrays.length(initBodyASTs) > 0){
+		if (Arrays.length(initBodyASTs) > 0) {
 			def loc = FileRange.new(fileName, minBeginLine, minBeginColumn, maxEndLine, maxEndColumn);
 			def initBody = AST.new(ASTData.Begin(initBodyASTs), loc);
 			def code =  CodeObjects.fromAST(initBody);

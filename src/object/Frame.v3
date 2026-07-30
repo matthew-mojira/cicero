@@ -19,17 +19,17 @@ class FrameObject extends Object {
 	// retrieving results, but check first!
 	def getValue() -> Object {
 		match (result) {
-			v: Result.OK     => return v.value;
+			v: Result.OK	 => return v.value;
 			v: Result.Return => return v.value;
-			_ => System.error("internal error", "FrameObject.getValue: received non-value result");
+			_ 		 => System.error("internal error", "FrameObject.getValue: received non-value result");
 		}
 		return null;
 	}
 
 	def getExn() -> ExnObject {
 		match (result) {
-			e: Result.Exn    => return e.exn;
-			_ => System.error("internal error", "FrameObject.getExn: received non-exn result");
+			e: Result.Exn	=> return e.exn;
+			_ 		=> System.error("internal error", "FrameObject.getExn: received non-exn result");
 		}
 		return null;
 	}
@@ -119,7 +119,7 @@ component FrameObjects {
 		var frame: FrameObject;
 		match (code.code) {
 			Virgil   => frame = VirgilFrame.new(prev, code, args);
-			AST      => frame = ASTFrame.new(prev, code, args, nonlocals);
+			AST	 => frame = ASTFrame.new(prev, code, args, nonlocals);
 			Bytecode => frame = BytecodeFrame.new(prev, code, args, nonlocals);
 		}
 		frame.name = name;

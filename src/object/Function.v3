@@ -11,10 +11,10 @@
  * of that function, still.
  */
 // "repl" is assigned uid: 0
-var FuncObjectId : int = 1 + FuncObjects.mainProgramId;
+var funcObjectId: int = 1 + FuncObjects.mainProgramId;
 class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Object)>, code: CodeObject, metadata: FunctionProfileMetadata)  extends Object {
 	// FuncObject unique id
-	def uid: int = FuncObjectId++;
+	def uid: int = funcObjectId++;
 
 	def display() => if(id.length == 0, "<lambda>", Strings.format1("<func '%s'>", id));
 	def isTrue()  -> bool   { return true; }
@@ -36,9 +36,9 @@ class FuncObject(id: string, params: Array<string>, nonlocals: Array<(string, Ob
 }
 
 class FunctionProfileMetadata {
-    var identifier: int;
-    var label: string;
-    new(label: string, isTopLevel: bool) {
+	var identifier: int;
+	var label: string;
+	new(label: string, isTopLevel: bool) {
 		this.label = label;
 		if (isTopLevel) this.identifier = FuncObjects.mainProgramId;
 		else this.identifier = FuncObjects.identifier_id++;
@@ -103,7 +103,7 @@ component FuncObjects {
 			 * because command-line arguments haven't been properly parsed yet when this runs,
 			 * the compilation for the code object, if we are in TIER 1, is delayed.
 			*/
-			CodeObjects.MaybeCompileLater.put(fn);
+			CodeObjects.maybeCompileLater.put(fn);
 
 			return newFO(id, Arrays.deleteAt(fn.params, 0), [], fn.body, fn.metadata);
 		} else {

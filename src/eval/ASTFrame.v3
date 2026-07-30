@@ -44,7 +44,7 @@ class ASTFrame extends FrameObject {
 					}
 				}
 				Global => {
-					match (Globals.loadGlobal(id)){
+					match (Globals.loadGlobal(id)) {
 						// `v` is a tuple -> (Object, int)
 						Just(v) => value = v.0;
 						Nothing => {
@@ -320,7 +320,7 @@ class ASTFrame extends FrameObject {
 					// call initializer (initializes fields as well)
 					if (cls.init != null) {
 						def args = [("self", obj)];
-						def fv : FuncObject = cls.init;
+						def fv: FuncObject = cls.init;
 
 						// create new frames here!
 						def frame = newFrame(Strings.format1("%s.init", cls.name), fv.code, args, []);

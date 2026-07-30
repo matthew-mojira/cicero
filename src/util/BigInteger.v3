@@ -688,7 +688,7 @@ class BigInteger(mag: Array<int>, signum: int) {
 	/* Returns -1, 0, or 1 if {this} BigInteger is numerically less than, equal to,
 	 * or greater than {val}, respectively.
 	 */
-	def compareTo(val: BigInteger) -> int{
+	def compareTo(val: BigInteger) -> int {
 		if (signum == val.signum) {
 			match (signum) {
 				 1 => return compareMagnitude(val);
