@@ -1,5 +1,4 @@
 # Omitting opcode pairs executed zero times
-# Opcode pairs are only tracked if they are in the same bytecode frame
 opcode,next opcode,counts,total dispatch cost(ticks),total dispatch cost(ticks)_std,total dispatch cost(μs),total dispatch cost(μs)_std
 ASSERT_FUNC,CALL,613781,51881177.1,473282.3164610376,19215.25077777778,175.28974683742135
 ASSERT_FUNC,LOAD_CONST,296034,16884042.0,112764.26809756218,6253.348888888889,41.76454373983784

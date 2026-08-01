@@ -11,42 +11,51 @@ class ProfiledInlineCacheData #unboxed {
 }
 
 component ProfileInlineCache {
+	/* 
+	 	Note: Each bytecode object has its own set of bytecode instrs. So, we need to keep track for all bytecode objects.
+		The key is a combination of the bytecode object id (int: 32 bit) 
+			and the instruction index (int as well) where inline caching is performed, currently LOAD_FIELD
+		So, key: long = (bytecode.id << 32) | instr_index;
+	*/
+	def hitMissCounts: HashMap<long, ProfiledInlineCacheData> = HashMap.new(int.view<long>, long.==);
 
 	def profileCacheHit(b: Bytecode, instrIndex: int) {
 		def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);
 		// The key will always exist because a new ProfiledInlineCacheData instance gets created on initial bytecode execution which will be a miss
-		var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+		var data: ProfiledInlineCacheData = ProfileInlineCache.hitMissCounts[key];
 		data.hits++; // increase hits
 	}
 
 	def profileCacheMiss(b: Bytecode, instrIndex: int, op_name: string, funcMetadata: FunctionProfileMetadata, incrementClassesSeen: bool) {
 		def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);
-		if (Profiling.inlineCacheHitMissCounts.has(key)) {
-			var data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+		if (ProfileInlineCache.hitMissCounts.has(key)) {
+			var data: ProfiledInlineCacheData = ProfileInlineCache.hitMissCounts[key];
 			data.misses++; // increase misses
 			if (incrementClassesSeen) data.classesSeen++; // increment classes seen
 		} else {
 			def ln = b.sourceMap[instrIndex >> 2].beginLine;
-			Profiling.inlineCacheHitMissCounts[key] = ProfiledInlineCacheData.new(op_name, ln, 0, 1, funcMetadata, 1);
+			ProfileInlineCache.hitMissCounts[key] = ProfiledInlineCacheData.new(op_name, ln, 0, 1, funcMetadata, 1);
 		}
 	}
 
 	def printCacheStats() {
-		System.puts("Line Number, Bytecode ID, Instruction Index, Function identifier, Function label, Instruction, Hits, Misses, Classes seen\n");
-		for (list = Maps.keyList(Profiling.inlineCacheHitMissCounts); list != null; list = list.tail) {
+		def sb = StringBuilder.new();
+		sb.puts("Line Number, Bytecode ID, Instruction Index, Function identifier, Function label, Instruction, Hits, Misses, Classes seen\n");
+		for (list = Maps.keyList(ProfileInlineCache.hitMissCounts); list != null; list = list.tail) {
 			def key: long = list.head;
 			def bytecodeObjectId: int = int.!(key >> 32);
 			def instrIndex: int = int.!(key & 0x00000000FFFFFFFF);
-			def data: ProfiledInlineCacheData = Profiling.inlineCacheHitMissCounts[key];
+			def data: ProfiledInlineCacheData = ProfileInlineCache.hitMissCounts[key];
 
-			System.puts(Strings.format3("%d, %d, %d, ", data.lineNumber, bytecodeObjectId, instrIndex));
-			System.puts(Strings.format2("%d, %s, ", data.associatedFunc.identifier, data.associatedFunc.label));
-			System.puts(Strings.format3("%s, %d, %d, ", data.instruction, data.hits, data.misses));
-			System.puts(
+			sb.put3("%d, %d, %d, ", data.lineNumber, bytecodeObjectId, instrIndex);
+			sb.put2("%d, %s, ", data.associatedFunc.identifier, data.associatedFunc.label);
+			sb.put3("%s, %d, %d, ", data.instruction, data.hits, data.misses);
+			sb.puts(
 				if (data.classesSeen > InlineCache.picLimit,
 					Strings.format1(">= %d\n", data.classesSeen),
 					Strings.format1("%d\n", data.classesSeen))
 			);
 		}
+		System.puts(sb.extract());
 	}
 }

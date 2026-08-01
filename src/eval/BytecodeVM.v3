@@ -45,7 +45,7 @@ class VirtualMachine {
 
 		if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 			def startTime = System.ticksUs();
-			Profiling.callDataFrames.push(ProfileCallFrameData.new(FuncObjects.mainProgramId, startTime));
+			ProfilingHelpers.callDataFrames.push(ProfileCallFrameData.new(FuncObjects.mainProgramId, startTime));
 		}
 
 		var dispatchStartTime: int;
@@ -120,18 +120,18 @@ class VirtualMachine {
 
 			if (CiceroOptions.traceBytecodeEvaluation) {
 				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, bytecode.operand));
-				System.puts("	stack:\n");
+				System.puts("    stack:\n");
 				for (i < stack.top) {
-					System.puts("	");
+					System.puts("    ");
 					def element = stack.elems[i];
 					if (element == null) System.puts("NULL");
 					else System.puts(element.display());
 					System.ln();
 				}
-				System.puts("	exn loc stack:\n");
+				System.puts("    exn loc stack:\n");
 				for (i < handlers.top) {
 					def h = handlers.elems[i];
-					System.puts("	");
+					System.puts("    ");
 					System.puts(Strings.format3("Frame depth %d => %d (%d)", h.2, h.0, h.1));
 					System.ln();
 				}
@@ -570,7 +570,7 @@ class VirtualMachine {
 
 							if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 								def startTime = System.ticksUs();
-								Profiling.callDataFrames.push(ProfileCallFrameData.new(fv.uid, startTime));
+								ProfilingHelpers.callDataFrames.push(ProfileCallFrameData.new(fv.uid, startTime));
 							}
 						}
 						_ => {
@@ -627,7 +627,7 @@ class VirtualMachine {
 
 							if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 								def inclusiveExecutionTime: int = System.ticksUs() - startTime; // in microseconds
-								Profiling.callDataFrames.elems[Profiling.callDataFrames.top - 1].totalCalleeTime += inclusiveExecutionTime;
+								ProfilingHelpers.callDataFrames.elems[ProfilingHelpers.callDataFrames.top - 1].totalCalleeTime += inclusiveExecutionTime;
 
 								if (CiceroOptions.profileFunctionCalls) {
 									ProfileFunctionCalls.profileFunctionCall(fv.metadata, inclusiveExecutionTime, inclusiveExecutionTime);
@@ -861,7 +861,7 @@ class VirtualMachine {
 
 									if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 										def inclusiveExecutionTime: int = System.ticksUs() - startTime; // in microseconds
-										Profiling.callDataFrames.elems[Profiling.callDataFrames.top - 1].totalCalleeTime += inclusiveExecutionTime;
+										ProfilingHelpers.callDataFrames.elems[ProfilingHelpers.callDataFrames.top - 1].totalCalleeTime += inclusiveExecutionTime;
 
 										if (CiceroOptions.profileFunctionCalls) {
 											ProfileFunctionCalls.profileFunctionCall(initFn.metadata, inclusiveExecutionTime, inclusiveExecutionTime);
@@ -910,7 +910,7 @@ class VirtualMachine {
 
 							if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 								def startTime = System.ticksUs();
-								Profiling.callDataFrames.push(ProfileCallFrameData.new(initFO.uid, startTime));
+								ProfilingHelpers.callDataFrames.push(ProfileCallFrameData.new(initFO.uid, startTime));
 							}
 						}
 					}
@@ -1336,7 +1336,7 @@ class VirtualMachine {
 							def endTime = System.ticksUs();
 							ProfilingHelpers.handleProfilingDuringReturn(endTime, callFrames.elems[callFrames.top -2].associatedFunc, oldAssociatedFunc);
 							def startTime = System.ticksUs();
-							Profiling.callDataFrames.push(ProfileCallFrameData.new(initFO.uid, startTime));
+							ProfilingHelpers.callDataFrames.push(ProfileCallFrameData.new(initFO.uid, startTime));
 						}
 					} else {
 						// treat like a normal `RETURN` instruction

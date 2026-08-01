@@ -9,31 +9,38 @@ class ProfiledCallerCalleeData #unboxed {
 }
 
 component ProfileCallerCalleePairs {
+	/* 
+	 	Each user defined function/method as well as built in function/methods are given an unique identifier id before run time.
+		key: long = (caller.identifier_id << 32) | callee.identifier_id;
+	*/
+	def data: HashMap<long, ProfiledCallerCalleeData> = HashMap.new(int.view<long>, long.==);
 
 	def profilePair(caller: FunctionProfileMetadata, callee: FunctionProfileMetadata, time: int) {
 		def key: long = ProfilingHelpers.constructLong(caller.identifier, callee.identifier);
-		if (Profiling.callerCalleeData.has(key)) {
-			def data: ProfiledCallerCalleeData = Profiling.callerCalleeData[key];
+		if (ProfileCallerCalleePairs.data.has(key)) {
+			def data: ProfiledCallerCalleeData = ProfileCallerCalleePairs.data[key];
 			data.counts += 1; // increment calls
 			data.time += time;
 		} else {
-			Profiling.callerCalleeData[key] = ProfiledCallerCalleeData.new(caller.label, callee.label, 1, time);
+			ProfileCallerCalleePairs.data[key] = ProfiledCallerCalleeData.new(caller.label, callee.label, 1, time);
 		}
 	}
 
 	def printStats() {
-		System.puts("# Execution time is the total time spent inside the callee\n");
-		System.puts("caller identifier id, caller label, callee identifier id, callee label, calls, execution time(μs)\n");
-		for (list = Maps.keyList(Profiling.callerCalleeData); list != null; list = list.tail) {
+		def sb = StringBuilder.new();
+		sb.puts("# Execution time is the total time spent inside the callee\n");
+		sb.puts("caller identifier id, caller label, callee identifier id, callee label, calls, execution time(μs)\n");
+		for (list = Maps.keyList(ProfileCallerCalleePairs.data); list != null; list = list.tail) {
 			def key: long = list.head;
 			def callerIdentifierId: int = int.!(key >> 32);
 			def calleeIdentifierId: int = int.!(key & 0x00000000FFFFFFFF);
 			
-			def data: ProfiledCallerCalleeData = Profiling.callerCalleeData[key];
+			def data: ProfiledCallerCalleeData = ProfileCallerCalleePairs.data[key];
 
-			System.puts(Strings.format2("%d, %s, ", callerIdentifierId, data.callerLabel));
-			System.puts(Strings.format2("%d, %s, ", calleeIdentifierId, data.calleeLabel));
-			System.puts(Strings.format2("%d, %d\n", data.counts, data.time));
+			sb.put2("%d, %s, ", callerIdentifierId, data.callerLabel);
+			sb.put2("%d, %s, ", calleeIdentifierId, data.calleeLabel);
+			sb.put2("%d, %d\n", data.counts, data.time);
 		}
+		System.puts(sb.extract());
 	}
 }

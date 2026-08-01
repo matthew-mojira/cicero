@@ -5,23 +5,27 @@ class CompilationTimeData {
 }
 
 component ProfileCompilationTimes {
+	// bytecode id is the index
+	def data: Vector<CompilationTimeData> = Vector.new();
 
 	def profile(bytecodeId: int, label: string, compilationTime: int) {
-		Profiling.compilationTimes[bytecodeId] = CompilationTimeData.new(label, compilationTime);
+		ProfileCompilationTimes.data.put(CompilationTimeData.new(label, compilationTime));
+
+		if (CiceroOptions.sanityChecks && (ProfileCompilationTimes.data.length != (bytecodeId + 1)))
+			System.error("compiler profiling error", "`bytecode_id` should count up sequentially");
 	}
 
 	def printStats() {
-		System.puts(Strings.format1(
+		def sb = StringBuilder.new();
+		sb.put1(
 			"# Code label is the function/method name. Exceptions: if it is the top-level code, it is \"repl\", classes field and init have their labels as well\n",
-			TopLevel.name));
-		var replTotalCompilationTime = 0L;
-		System.puts("Bytecode ID, Label, Inclusive Compilation Time(μs)\n");
-		for (list = Maps.keyList(Profiling.compilationTimes); list != null; list = list.tail) {
-			def bytecodeId: int = list.head;
-			def data: CompilationTimeData = Profiling.compilationTimes[bytecodeId];
-			System.puts(Strings.format3("%d, %s, %d\n", bytecodeId, data.label, data.time));
-			
-			if (data.label == TopLevel.name) replTotalCompilationTime += data.time;
+			TopLevel.name);
+		sb.puts("Bytecode ID, Label, Inclusive Compilation Time(μs)\n");
+		
+		for (bytecodeId = 0; bytecodeId < ProfileCompilationTimes.data.length; bytecodeId++) {
+			def data: CompilationTimeData = ProfileCompilationTimes.data[bytecodeId];
+			sb.put3("%d, %s, %d\n", bytecodeId, data.label, data.time);
 		}
+		System.puts(sb.extract());
 	}
 }

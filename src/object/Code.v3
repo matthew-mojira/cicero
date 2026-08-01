@@ -29,15 +29,15 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 				}
 
 				def bytecode = BytecodeCompiler.new(ast, params, isTopLevel, isInit).extract();
+				if (CiceroOptions.optimizeBytecode) {
+					bytecode.optimize();
+				}
 
 				if (CiceroOptions.profileCompilationTimes) {
 					def endTime = System.ticksUs();
 					ProfileCompilationTimes.profile(bytecode.id, label, endTime - startTime);
 				}
 
-				if (CiceroOptions.optimizeBytecode) {
-					bytecode.optimize();
-				}
 				code = Code.Bytecode(bytecode);
 			}
 		}
