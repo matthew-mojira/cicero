@@ -17,7 +17,7 @@ component ProfileInlineCache {
 			and the instruction index (int as well) where inline caching is performed, currently LOAD_FIELD
 		So, key: long = (bytecode.id << 32) | instr_index;
 	*/
-	def hitMissCounts: HashMap<long, ProfiledInlineCacheData> = HashMap.new(int.view<long>, long.==);
+	def hitMissCounts: HashMap<long, ProfiledInlineCacheData> = HashMap.new(ProfilingHelpers.computeHash, long.==);
 
 	def profileCacheHit(b: Bytecode, instrIndex: int) {
 		def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);

@@ -13,7 +13,7 @@ component ProfileJumpOutcomes {
 	/* 
 		key: long = (bytecode.id << 32) | instr_index;
 	*/
-	def jumpOpcodeOutcomes: HashMap<long, ProfiledJumpData> = HashMap.new(int.view<long>, long.==);
+	def jumpOpcodeOutcomes: HashMap<long, ProfiledJumpData> = HashMap.new(ProfilingHelpers.computeHash, long.==);
 
 	def profileJump(b: Bytecode, instrIndex: int, op_name: string, jump_taken: bool, funcMetadata: FunctionProfileMetadata) {
 		def key: long = ProfilingHelpers.constructLong(b.id, instrIndex);

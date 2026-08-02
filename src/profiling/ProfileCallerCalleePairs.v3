@@ -13,7 +13,7 @@ component ProfileCallerCalleePairs {
 	 	Each user defined function/method as well as built in function/methods are given an unique identifier id before run time.
 		key: long = (caller.identifier_id << 32) | callee.identifier_id;
 	*/
-	def data: HashMap<long, ProfiledCallerCalleeData> = HashMap.new(int.view<long>, long.==);
+	def data: HashMap<long, ProfiledCallerCalleeData> = HashMap.new(ProfilingHelpers.computeHash, long.==);
 
 	def profilePair(caller: FunctionProfileMetadata, callee: FunctionProfileMetadata, time: int) {
 		def key: long = ProfilingHelpers.constructLong(caller.identifier, callee.identifier);

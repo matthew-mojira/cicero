@@ -2,11 +2,25 @@ component ProfilingHelpers {
 
 	/* Used by function calls profiler, func object calls profiler, caller-callee pairs profiler */
 	def callDataFrames: ArrayStack<ProfileCallFrameData> = ArrayStack.new();
+
 	/* 
-		Combines two ints to form a long
+		Combines two ints to form a long which is used as a key in a hash-map
 	*/
 	def constructLong(one: int, two: int) -> long {
 		return long.!(one) << 32 | long.!(two);
+	}
+
+	/*
+		The key packs two 32-bit ints into a 64-bit long (see `ProfilingHelpers.constructLong` function)
+
+		Hashing a `long` by truncating it to an `int` would ignore the upper 32 bits.
+		Instead, we combine the lower 16 bits of each component.
+		For the current profiling workload (benchmarks), each component fits within 16 bits, making this collision-free.
+	*/
+	def computeHash(key: long) -> int {
+		def keyOne16 = key & 0xFFFF;
+    		def keyTwo16 = key & 0xFFFF00000000;
+    		return int.!((keyTwo16 >> 16) | keyOne16);
 	}
 
 	def longToString(value: long) -> string {
