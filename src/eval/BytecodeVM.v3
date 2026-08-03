@@ -539,14 +539,15 @@ class VirtualMachine {
 							associatedFunc = fv.metadata;
 							loc = b.sourceMap[0];
 							
-							// grow stack (if needed for remaining local variables)
-							stack.resize(nonLocalsStartIndex);
-
 							if (fv.instanceOf(ClassObjects.classMethod)) {
 								stack.elems[baseStartIndex] = MethodObject.!(fv).obj;
 								localsStartIndex--;
-								// TODO: If methods capture nonlocals, then => nonLocalsStartIndex--; stack.top--;
+								nonLocalsStartIndex--;
 							}
+
+							// grow stack (if needed for remaining local variables)
+							stack.resize(nonLocalsStartIndex);
+
 							// push nonlocals on the stack
 							for (i < bytecode.nonlocals.length) {
 								def id: string = bytecode.nonlocals[i];
@@ -564,6 +565,10 @@ class VirtualMachine {
 									System.error("eval error", "unable to unify nonlocal arguments");
 								}
 							}
+
+							// clear slots for uninitialized locals
+							for (i = baseStartIndex + operand + 1; i < nonLocalsStartIndex; i++)
+								stack.elems[i] = null;
 
 							// push the new frame
 							callFrames.push(CallFrame.new(b, pc, localsStartIndex, nonLocalsStartIndex, fvBaseStartIndex, associatedFunc));
@@ -905,6 +910,10 @@ class VirtualMachine {
 							
 							// grow stack (if needed for remaining local variables)
 							stack.resize(nonLocalsStartIndex);
+
+							// clear slots for uninitialized locals
+							for (i = baseStartIndex + 1; i < nonLocalsStartIndex; i++)
+								stack.elems[i] = null;
 
 							callFrames.push(InitCallFrame.new(b, classInitFOs.extract(), baseStartIndex, initFO.metadata));
 
@@ -1324,6 +1333,10 @@ class VirtualMachine {
 
 						// grow stack (if needed for remaining local variables)
 						stack.resize(nonLocalsStartIndex);
+
+						// clear slots for uninitialized locals
+						for (i = baseStartIndex + 1; i < nonLocalsStartIndex; i++)
+							stack.elems[i] = null;
 
 						// update the current init FO index
 						InitCallFrame.!(callFrames.elems[callFrames.top -1]).currentIndex = newIndex;
