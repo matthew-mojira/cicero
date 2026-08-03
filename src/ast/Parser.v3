@@ -61,6 +61,7 @@ class Parser extends TextReader {
 
 	new(fileName: string, data: string) super(fileName, data) {
 		skipWs = skipWhitespaceAndComments;
+		returnExprAllowedStack.push(true);
 
 		skipWs(this);
 		while (pos < limit) {
@@ -73,7 +74,7 @@ class Parser extends TextReader {
 		}
 	}
 
-	var returnExprAllowed = true;
+	var returnExprAllowedStack: ArrayStack<bool> = ArrayStack.new();
 	def varStack: ArrayStack<Vars> = ArrayStack.new();
 	// all global-set/gets use this to reduce allocations. Don't mutate this
 	def global:   Box<AccessMode> = Box.new(AccessMode.Global);
@@ -246,7 +247,10 @@ class Parser extends TextReader {
 						}
 						
 						// body expression
+						returnExprAllowedStack.push(true);
 						def ret = readCode(params.copy());
+						returnExprAllowedStack.pop();
+
 						def body = ret.0, prev = ret.1;
 						req1(')');
 
@@ -407,9 +411,9 @@ class Parser extends TextReader {
 										// XXX fail but keep parsing
 									}
 
-									returnExprAllowed = false;
+									returnExprAllowedStack.push(false);
 									def initAST = readCode(["self"]).0;
-									returnExprAllowed = true;
+									returnExprAllowedStack.pop();
 
 									// We don't add `initAST` to the `initASTs` vector yet
 									// because `initAST` needs to be executed AFTER the set-field ASTs are executed
@@ -418,9 +422,9 @@ class Parser extends TextReader {
 								FIELD => {
 									def fieldName = readIdentifier();
 
-									returnExprAllowed = false;
+									returnExprAllowedStack.push(false);
 									def fieldExpr = readCode(["self"]).0; // XXX ignoring .1
-									returnExprAllowed = true;
+									returnExprAllowedStack.pop();
 
 									if (fieldExpr != null) {
 										initASTs.put(AST.new(
@@ -447,7 +451,9 @@ class Parser extends TextReader {
 											return null;
 										}
 									}
+									returnExprAllowedStack.push(true);
 									def methodBody = readCode(methodParams.copy()).0; // XXX ignoring .1
+									returnExprAllowedStack.pop();
 
 									def metadata = FunctionProfileMetadata.new(Strings.format2("%s.%s", name, methodName), false);
 									// XXX creating CodeObject here
@@ -540,7 +546,7 @@ class Parser extends TextReader {
 							req1(')');
 						}
 						
-						if (!returnExprAllowed) 
+						if (!returnExprAllowedStack.peek()) 
 							fail(returnUsedInsideFieldOrInit);// XXX fail but keep parsing
 
 						return AST.new(ASTData.Return(value),

@@ -1,0 +1,131 @@
+==
+(class A
+    (field a (func (f) (return 999)))
+)
+(set a (new A))
+(a.a)
+--
+=> <class 'A'>
+=> <object>
+=> 999
+--
+(class B
+    (field b ())
+    (init {
+        (func (f) (return 'b'))
+        (set-field b self (f))
+    })
+)
+(set b (new B))
+b.b
+--
+=> <class 'B'>
+=> <object>
+=> 'b'
+--
+(func (wrapperOne)
+    (return
+        (class C
+            (field c (func (f1) (func (f2) (return 1))))
+        )
+    )
+)
+(set x (new (wrapperOne)))
+(set c (x.c))
+(c)
+--
+=> <func 'wrapperOne'>
+=> <object>
+=> <func 'f2'>
+=> 1
+--
+(func (wrapperTwo)
+    (class D
+        (field d ())
+        (init {
+            (func (f) (return 111))
+            (set-field d self (f))
+        })
+    )
+)
+(set d (new (wrapperTwo)))
+d.d
+--
+=> <func 'wrapperTwo'>
+=> <object>
+=> 111
+--
+(class E
+    (method (f)
+        (return 1)
+    )
+)
+--
+=> <class 'E'>
+--
+(class F
+    (method (m)
+        (func (f)
+            (return 1)
+        )
+    )
+)
+--
+=> <class 'F'>
+--
+(class G
+    (method (m) {
+        (class H
+            (field h (func (f) (return 1)))
+        )
+    })
+)
+(set g (new G))
+(set h (new (g.m)))
+(h.h)
+--
+=> <class 'G'>
+=> <object>
+=> <object>
+=> 1
+--
+(class I
+    (method (m)
+        (return
+            (class J
+                (field j ())
+                (init {
+                    (func (f) (return 1))
+                    (set-field j self f)
+                })
+            )
+        )
+    )
+)
+(set i (new I))
+(set j (new (i.m)))
+(j.j)
+--
+=> <class 'I'>
+=> <object>
+=> <object>
+=> 1
+--
+(class K
+    (field k
+        (class L
+            (method (m)
+                (return 1)
+            )
+        )
+    )
+)
+(set k (new K))
+(set l (new k.k))
+(l.m)
+--
+=> <class 'K'>
+=> <object>
+=> <object>
+=> 1
+--
