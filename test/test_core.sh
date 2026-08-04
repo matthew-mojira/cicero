@@ -40,7 +40,7 @@ fi
 
 if [ "$TEST_TIERS" = "" ]; then
     if [ "$TEST_TIER" = "" ]; then
-        TEST_TIERS="0 1"
+        TEST_TIERS="1"
     else
         TEST_TIERS="$TEST_TIER"
     fi

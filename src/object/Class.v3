@@ -144,9 +144,6 @@ component ClassObjects {
 			[FuncObjects.fromVirgilMethod0("display",	"exn",   ExnObject.e_display),
 			 FuncObjects.fromVirgilMethod0("stacktrace",	"exn",   ExnObject.e_stacktrace)
 			]);
-	def classFrame = ClassObject.new("frame", classBase, FuncObjects.initFail, [],
-			[FuncObjects.fromVirgilMethod0("display", "frame", FrameObject.fr_display)
-			]);
 	def classFunc = ClassObject.new("func", classBase, 
 			FuncObjects.initFail,
 			[],

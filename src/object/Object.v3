@@ -76,7 +76,6 @@ class Object {
 	 		x: CodeObject   => cls = ClassObjects.classCode;
 	 		x: DoubleObject => cls = ClassObjects.classDouble;
 	 		x: ExnObject	=> cls = ClassObjects.classExn;
- 	 		x: FrameObject  => cls = ClassObjects.classFrame;
  	 		x: FuncObject   => cls = ClassObjects.classFunc;
  	 		x: IntObject	=> cls = ClassObjects.classInt;
  	 		x: ListObject   => cls = ClassObjects.classList;

@@ -1,7 +1,0 @@
-component Snd {
-
-	def snd<A, B>(p: (A, B)) -> B {
-		return p.1;
-	}
-
-}
