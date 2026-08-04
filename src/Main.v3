@@ -16,18 +16,13 @@ def main(args: Array<string>) -> int {
 	}
 
 	def tier = CLOptions.TIER.get();
-	if (tier < 0 || tier > 1) {
+	if (tier != 1) {
 		System.error("argument error", Strings.format1("unrecognized tier: %d", tier));
 		return 1;
-	} else if (tier == 1) {
-		// Compile deferred code objects now that the execution tier is known to be bytecode(TIER=1).
-		CodeObjects.maybeCompileLater.apply(CodeObjects.compileUncompiledCodeObject);
-		TopLevel.VM = VirtualMachine.new();
 	}
-	CodeObjects.maybeCompileLater.clear();
 
-	def frame = FrameObjects.newTopFrame();
-	loadCore(frame);
+	loadVM();
+	loadCore();
 
 	def FAILURE = if(CLOptions.FUZZING.get(), 0, 1);
 	
@@ -43,12 +38,12 @@ def main(args: Array<string>) -> int {
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
 				// compile to tier1 bytecode
-				if (CLOptions.TIER.get() > 0) expr.compile([], TopLevel.name, true, false);
+				expr.compile([], TopLevel.name, true, false);
 
 				if (!CLOptions.DO_NOT_EVALUATE.get()) {
 					// evaluate
-					frame.evalCode(expr);
-					match (frame.result) {
+					TopLevel.VM.eval(expr);
+					match (TopLevel.VM.result) {
 						Exn(exn) => {
 							exn.print();
 							return FAILURE;
@@ -90,14 +85,13 @@ def main(args: Array<string>) -> int {
 
 				for (expr in exprs) {
 					// compile to tier1 bytecode
-					if (CLOptions.TIER.get() > 0) expr.compile([], TopLevel.name, true, false);
+					expr.compile([], TopLevel.name, true, false);
 
 					// evaluate
-					frame.evalCode(expr);
-					match (frame.result) {
+					TopLevel.VM.eval(expr);
+					match (TopLevel.VM.result) {
 						Exn(exn) => {
 							exn.print();
-							frame.resetExn();
 						}
 						OK(val)		=> System.puts(Strings.format1("=> %s\n", val.display()));
 						Return(val)	=> return abortCicero(val);
@@ -168,14 +162,19 @@ def main(args: Array<string>) -> int {
 	return 0;
 }
 
-def loadCore(frame: FrameObject) {
+def loadVM() {
+	TopLevel.VM = VirtualMachine.new();
+	for (builtin in Builtin.set.all) {
+		Globals.storeGlobal(builtin.id, builtin.val);
+	}
+}
+
+def loadCore() {
 	def reader = Parser.new("core", CiceroTexts.core);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
- 		if (CLOptions.TIER.get() > 0) {
- 			expr.compile([], TopLevel.name, true, false);
-		}
-		frame.evalCode(expr);
+ 		expr.compile([], TopLevel.name, true, false);
+		TopLevel.VM.eval(expr);
 	}
 }
 

@@ -102,41 +102,13 @@ component FrameObjects {
 	 * Code (AST, bytecode, etc.)
 	 */
 	def newFrame(prev: FrameObject, name: string, code: CodeObject, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> FrameObject {
-		if (CiceroOptions.traceFunctionCalls) {
-			System.puts(name);
-			System.puts("(");
-			for (i < args.length) {
-				def arg = args[i];
-				System.puts(arg.0);
-				System.puts(" = ");
-				System.puts(arg.1.display());
-				if (i < args.length - 1)
-					System.puts(", ");
-			}
-			System.puts(")\n");
-		}
-
 		var frame: FrameObject;
 		match (code.code) {
 			Virgil   => frame = VirgilFrame.new(prev, code, args);
 			AST	 => frame = ASTFrame.new(prev, code, args, nonlocals);
-			Bytecode => frame = BytecodeFrame.new(prev, code, args, nonlocals);
+			Bytecode => {}
 		}
 		frame.name = name;
-		return frame;
-	}
-	/* Frame used to evaluate top-level code. */
-	def newTopFrame() -> FrameObject {
-		var frame: FrameObject;
-		if (CLOptions.TIER.get() > 0) {
-			frame = BytecodeFrame.new(null, null, null, null);
-		} else {
-			frame = ASTFrame.new(null, null, null, null);
-		}
-		for (builtin in Builtin.set.all) {
-			Globals.storeGlobal(builtin.id, builtin.val);
-		}
-		frame.name = "repl";
 		return frame;
 	}
 }

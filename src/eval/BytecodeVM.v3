@@ -16,7 +16,8 @@ class VirtualMachine {
 	var result: Result;
 	var lastInstr: Maybe<Opcode> = Maybe.Nothing;
 
-	def eval(bcode: Bytecode) -> Object {
+	def eval(code: CodeObject) {
+		def bcode = Code.Bytecode.!(code.code).bytecode;
 		if (CiceroOptions.traceBytecodeEvaluation) {
 			System.puts("Evaluating bytecode:\n");
 			bcode.inspect();
@@ -66,9 +67,9 @@ class VirtualMachine {
 						def currentCallFrame = callFrames.pop();
 						exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
 					}
-					result = Result.Exn(exn);
 					if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
-					return null;
+					result = Result.Exn(exn);
+					return;
 				} else {
 					var isTopFrame = true; // Flag to prevent duplicating the stacktrace for the current frame that threw the exception 
 					def p = handlers.pop();
@@ -577,40 +578,30 @@ class VirtualMachine {
 								def startTime = System.ticksUs();
 								ProfilingHelpers.callDataFrames.push(ProfileCallFrameData.new(fv.uid, startTime));
 							}
+							if (CiceroOptions.traceFunctionCalls) {
+								var args: Array<Object> = Array.new(operand);
+								def argsStartIndex: int = if (fv.instanceOf(ClassObjects.classMethod), localsStartIndex + 1, localsStartIndex);
+								for (i < operand) args[i] = stack.elems[argsStartIndex + i];
+								def argv: Array<(string, Object)> = FuncObjects.bindArguments(fv, args);
+								TraceFunctionCalls.trace(fv.metadata.label, argv);
+							}
 						}
 						_ => {
 
-							var args: Vector<Object> = Vector.new();
+							var args: Array<Object> = Array.new(operand);
 							for (i < operand) {
-								args.put(stack.pop());
+								args[args.length - 1 - i] = stack.pop();
 							}
-							args.reverse(); // XXX reverse can be expensive, should do arithmetic on index instead
 
 							stack.pop(); // pop `funcObject`
 
 							// evaluate argument values
-							var argv: Array<(string, Object)>;
+							def argv: Array<(string, Object)> = FuncObjects.bindArguments(fv, args);
 
-							if (fv.instanceOf(ClassObjects.classMethod)) {
-								argv = Array.new(args.length + 1);
-								for (i < args.length) {
-									def arg = args[i];
-									if (i < params.length) // avoid out of bounds but don't raise exception
-										argv[i + 1] = (params[i], arg);
-								}
-								argv[0] = ("self", MethodObject.!(fv).obj);
-							} else {
-								argv = Array.new(args.length);
-								for (i < args.length) {
-									def arg = args[i];
-									if (i < params.length) // avoid out of bounds but don't raise exception
-										argv[i] = (params[i], arg);
-								}
-							}
-
-							// create new frame
-							// SUPREME: TODO: SETUP CORRECT PREVIOUS FRAME OBJECT (if frame is accessible)
 							def frame = FrameObjects.newFrame(null, fv.id, fv.code, argv, fv.nonlocals);
+							if (CiceroOptions.traceFunctionCalls) {
+								TraceFunctionCalls.trace(fv.metadata.label, argv);
+							}
 
 							var startTime: int;
 
@@ -847,6 +838,9 @@ class VirtualMachine {
 								_ => {
 									// create new frames here!
 									def frame = FrameObjects.newFrame(null, Strings.format1("%s.init", cls.name), initFn.code, args, []);
+									if (CiceroOptions.traceFunctionCalls) {
+										TraceFunctionCalls.trace(initFn.metadata.label, args);
+									}
 
 									if (CiceroOptions.profileDynamicBytecode) {
 										opExecTime = System.ticksUs() - opExecTime;
@@ -920,6 +914,9 @@ class VirtualMachine {
 							if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 								def startTime = System.ticksUs();
 								ProfilingHelpers.callDataFrames.push(ProfileCallFrameData.new(initFO.uid, startTime));
+							}
+							if (CiceroOptions.traceFunctionCalls) {
+								TraceFunctionCalls.trace(associatedFunc.label, args);
 							}
 						}
 					}
@@ -1276,7 +1273,7 @@ class VirtualMachine {
 							opExecTime = System.ticksUs() - opExecTime;
 							ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
 						}
-						return null;
+						return;
 					} else {
 						def currentCallFrame = callFrames.peek();
 						
@@ -1351,6 +1348,9 @@ class VirtualMachine {
 							def startTime = System.ticksUs();
 							ProfilingHelpers.callDataFrames.push(ProfileCallFrameData.new(initFO.uid, startTime));
 						}
+						if (CiceroOptions.traceFunctionCalls) {
+							TraceFunctionCalls.trace(associatedFunc.label, [("self", stack.elems[localsStartIndex])]);
+						}
 					} else {
 						// treat like a normal `RETURN` instruction
 						// done with init frames
@@ -1405,7 +1405,8 @@ class VirtualMachine {
 		}
 		if (CiceroOptions.sanityChecks && stack.empty()) System.error("eval error", "stack is empty");
 		if (CiceroOptions.traceBytecodeEvaluation) System.puts("RETURN\n");
-		return stack.pop();
+		result = Result.OK(stack.pop());
+		return;
 	}
 
 	def reset() {
@@ -1416,6 +1417,7 @@ class VirtualMachine {
 	}
 
 	/* Call frame related helper methods */
+
 	def saveFrame(pc: int, loc: FileRange) {
 		// update the ip in the caller frame!
 		def i = callFrames.top - 1;
