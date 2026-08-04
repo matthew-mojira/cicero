@@ -13,7 +13,6 @@ All values are objects.
   * `code`
   * `double`
   * `exn`
-  * `frame`
   * `func`
     * `method`
   * `int`
@@ -82,7 +81,7 @@ Here is how the easy things evaluate:
 Some values are provided as variables in the global environment. They are
 
 * `true` and `false`
-* `base`, `bool`, `char`, `class`, `code`, `double`, `exn`, `frame`, `func`, `int`, 
+* `base`, `bool`, `char`, `class`, `code`, `double`, `exn`, `func`, `int`, 
   `list`, `map`, `method`, `unit`, `str` referring to those classes (note
   that `func` is overloaded for the syntactic function declaration)
 
@@ -140,7 +139,7 @@ You can define custom classes like this:
     (set-field value self (+ self.value 1))
   )
 )
-=> <class>
+=> <class 'Counter'>
 ```
 
 This evaluates to a Class value, which allows it to be instantiated with `new`

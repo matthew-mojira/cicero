@@ -55,7 +55,7 @@ def main(args: Array<string>) -> int {
 						// `return` at a top-level is the equivalent of aborting cicero completely.
 						Return(val) => return abortCicero(val);
 						_ => {
-							System.error("eval error", "frame did not give result");
+							System.error("eval error", "Interpreter did not give result");
 							return 1;
 						}
 					}
@@ -95,7 +95,7 @@ def main(args: Array<string>) -> int {
 						}
 						OK(val)		=> System.puts(Strings.format1("=> %s\n", val.display()));
 						Return(val)	=> return abortCicero(val);
-						_		=> System.error("eval error", "frame did not give result");
+						_		=> System.error("eval error", "Interpreter did not give result");
 					}
 				}
 			} else {

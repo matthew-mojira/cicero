@@ -85,13 +85,6 @@ Methods:
 * `(e.display)`: returns a string representation of the object
 * `(e.stacktrace)`: returns the stacktrace as a list of strings
 
-## frame
-
-Wrapper for a frame of execution.
-
-Methods:
-* `(fr.display)`: returns a string representation of the object
-
 ## func
 
 Represents a callable function.
