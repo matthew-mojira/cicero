@@ -61,6 +61,16 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 
 component CodeObjects {
 
+	/*
+        * Holds ASTData.Func whose compilation is delayed.
+        * Once the VM finishes booting, it will 
+        * loop through this vector and compile them all at once.
+        */
+       	def compileLater: Vector<ASTData.Func> = Vector.new();
+       	def compileUncompiledCodeObject(fn: ASTData.Func) {
+        	fn.body.compile(fn.params, fn.metadata.label, false, false);
+       	}
+
 	/* Create a CodeObject from a Virgil function */
 	def fromVirgil(func: Range<Object> -> Result) -> CodeObject {
 		def code = CodeObject.new(null); // XXX null

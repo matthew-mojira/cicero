@@ -98,7 +98,7 @@ component FuncObjects {
 		if (reader.ok) {
 			def code = reader.getExprs()[0]; // XXX only use first read item
 			def fn = ASTData.Func.!(Code.AST.!(code.code).ast.data);
-			fn.body.compile(fn.params, fn.metadata.label, false, false);
+			CodeObjects.compileLater.put(fn);
 
 			return newFO(id, Arrays.deleteAt(fn.params, 0), [], fn.body, fn.metadata);
 		} else {

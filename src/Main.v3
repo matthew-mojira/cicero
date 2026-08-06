@@ -167,6 +167,8 @@ def loadVM() {
 	for (builtin in Builtin.set.all) {
 		Globals.storeGlobal(builtin.id, builtin.val);
 	}
+	CodeObjects.compileLater.apply(CodeObjects.compileUncompiledCodeObject);
+	CodeObjects.compileLater.clear();
 }
 
 def loadCore() {
