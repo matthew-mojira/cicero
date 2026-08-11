@@ -13,6 +13,7 @@ component CiceroOptions {
 	/* wasm backend */
 	def compileFromTier1 = false; // true: bytecode-derived compile path; false: AST-direct
 	def useRefcounting = true;    // reference-count WasmRuntime.objects handles
+	def useShadowStack = true;   // true: WasmShadowStackCompiler - raw pointers + a Virgil shadow stack instead of WasmRuntime.objects indices. Requires compileFromTier1-style bytecode derivation (bytecode-only, no AST-direct equivalent).
 
 	/* tracing */
 	def traceFunctionCalls = false;

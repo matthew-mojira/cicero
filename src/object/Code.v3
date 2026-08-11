@@ -36,7 +36,8 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 				}
 				2 => {
 					var wc: WasmCompiler;
-					if (CiceroOptions.compileFromTier1) wc = WasmBytecodeCompiler.new(ast, params);
+					if (CiceroOptions.useShadowStack) wc = WasmShadowStackCompiler.new(ast, params);
+					else if (CiceroOptions.compileFromTier1) wc = WasmBytecodeCompiler.new(ast, params);
 					else wc = WasmASTCompiler.new(ast, params);
 					code = Code.Wasm(wc.compile());
 				}

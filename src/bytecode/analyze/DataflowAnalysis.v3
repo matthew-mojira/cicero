@@ -1,6 +1,50 @@
+def traceKildall = false;
+
 class DataflowAnalysis<S> {
 	private new() {}
 	def runAnalysis(cfg: CFGraph) -> HashMap<BasicBlock, S>;
 	def initialState(cfg: CFGraph) -> S;
 	def processResults(cfg: CFGraph, result: HashMap<BasicBlock, S>) -> void;
+
+	// Shared Kildall worklist engine for both ForwardFlowAnalysis and
+	// BackwardFlowAnalysis - direction is entirely captured by `seeds`/
+	// `flow`/`neighbors` (entryNodes/forwardFlow/successors for forward,
+	// exitNodes/backwardFlow/predecessors for backward). `states[nb]` is
+	// compared against the raw propagated `edgeState`, not the joined
+	// result, matching both analyses' original behavior (join only decides
+	// the *new* stored value, not whether to re-enqueue).
+	def runKildall(cfg: CFGraph, seeds: Array<BasicBlock>, bottom: S, initial: S,
+	               flow: (BasicBlock, S) -> S, neighbors: BasicBlock -> Array<BasicBlock>,
+	               join: (S, S) -> S, eq: (S, S) -> bool) -> HashMap<BasicBlock, S> {
+		def worklist: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+		def states: HashMap<BasicBlock, S> = HashMap.new(BasicBlock.hash, BasicBlock.==);
+
+		for (i < cfg.basicBlocks.length) {
+			def bb = cfg.basicBlocks[i];
+			states[bb] = bottom;
+			worklist.add(bb);
+		}
+		for (bb in seeds) states[bb] = initial;
+
+		if (traceKildall) System.puts("START ANALYSIS!!\n");
+
+		while (worklist.size() > 0) {
+			def bb = worklist.pop();
+			if (traceKildall) System.puts(Strings.format1("Working on: %d\n", bb.startPc));
+
+			def edgeState = flow(bb, states[bb]);
+			for (nb in neighbors(bb)) {
+				if (traceKildall) System.puts(Strings.format1("  neighbor: %d", nb.startPc));
+
+				def newState = join(states[nb], edgeState);
+				if (!eq(states[nb], edgeState)) {
+					if (traceKildall) System.puts("...UPDATE!");
+					states[nb] = newState;
+					worklist.add(nb);
+				}
+				if (traceKildall) System.ln();
+			}
+		}
+		return states;
+	}
 }

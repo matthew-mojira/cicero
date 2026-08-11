@@ -14,3 +14,7 @@ class WasmBytecodeCompiler extends WasmCompiler {
 class WasmASTCompiler extends WasmCompiler {
 	new(ast: AST, params: Array<string>) super() {}
 }
+
+class WasmShadowStackCompiler extends WasmCompiler {
+	new(ast: AST, params: Array<string>) super() {}
+}

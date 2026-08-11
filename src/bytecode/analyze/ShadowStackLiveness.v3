@@ -1,0 +1,110 @@
+// Backward liveness over bytecode locals, for CiceroOptions.useShadowStack
+// (WasmShadowStackCompiler). Unlike UninitializedLocalAccess's 4-point lattice
+// (which needs to distinguish "don't know yet" from "definitely safe/unsafe"),
+// liveness only needs a plain boolean per local: live-out is the union (OR) of
+// what's live-in at each successor, which is already idempotent and monotonic
+// without a separate Top/Bot.
+//
+// Usage mirrors UninitializedLocalAnalysis (see Bytecode.v3):
+//   def liveness = ShadowStackLivenessAnalysis.new();
+//   def result = liveness.runAnalysis(cfg);
+//   liveness.processResults(cfg, result);
+//   liveness.isLiveAfter(pc, localIdx)  // query, by absolute pc
+//
+// Run once per function, before any compileRegion bytecode-slicing for
+// try/catch - results are keyed by absolute pc (block.startPc + offset), so
+// WasmShadowStackCompiler's region-local pc translation (regionOffset) still
+// resolves correctly against these results.
+class LiveState(cfg: CFGraph) {
+	def locals: Array<bool> = Array.new(cfg.bytecode.locals.length);
+	def [i: int] -> bool => locals[i];
+	def [i: int] = v: bool { locals[i] = v; }
+
+	def join(state: LiveState) -> LiveState {
+		def newState = this.dup();
+		for (i < locals.length) newState.locals[i] = locals[i] || state[i];
+		return newState;
+	}
+	def dup() -> LiveState {
+		def newState = LiveState.new(cfg);
+		Arrays.copy(locals, newState.locals);
+		return newState;
+	}
+	def equals(s: LiveState) => Arrays.equal(locals, s.locals);
+}
+
+class ShadowStackLivenessAnalysis extends BackwardFlowAnalysis<LiveState> {
+	// Live-before set at every instruction, keyed by its absolute pc. Populated
+	// by processResults; queried via isLiveAfter.
+	def liveBefore: HashMap<int, LiveState> = HashMap<int, LiveState>.new(int.!<int>, int.==);
+
+	// Nothing is live after the function has returned or an exception has
+	// escaped uncaught - the exit state is the all-dead bottom state itself.
+	def initialState(cfg: CFGraph) -> LiveState {
+		return LiveState.new(cfg);
+	}
+	def bottomState(cfg: CFGraph) -> LiveState {
+		return LiveState.new(cfg);
+	}
+	def joinStates(state1: LiveState, state2: LiveState) -> LiveState {
+		return state1.join(state2);
+	}
+	def stateEquals(state1: LiveState, state2: LiveState) => state1.equals(state2);
+
+	// Per-instruction backward transfer, scanning a block's bytes from its last
+	// instruction to its first: a STORE_LOCAL kills (whatever was live-out for
+	// that local doesn't matter before the store overwrites it); a
+	// LOAD_LOCAL/LOAD_LOCAL_SAFE uses (marks it live before this point).
+	def backwardFlow(bb: BasicBlock, outputState: LiveState) -> LiveState {
+		def state = outputState.dup();
+		def bytes = Ranges.dup(bb.bytes);
+		for (pc = bytes.length - 4; pc >= 0; pc -= 4) {
+			def instr = Ref<Instruction>.at(bytes, pc);
+			match (instr.opcode) {
+				STORE_LOCAL => state[instr.operand] = false;
+				LOAD_LOCAL => state[instr.operand] = true;
+				LOAD_LOCAL_SAFE => state[instr.operand] = true;
+				_ => ;
+			}
+		}
+		return state;
+	}
+
+	// Re-walks each block backward (same transfer as backwardFlow) to record
+	// the live-before set at every individual instruction's absolute pc, not
+	// just at block boundaries - a livepoint can be mid-block.
+	def processResults(cfg: CFGraph, result: HashMap<BasicBlock, LiveState>) -> void {
+		def blocks: Range<BasicBlock> = Lists.toArray(Maps.keyList(result));
+		for (block in blocks) {
+			var state = result[block]; // live-out for this block
+			def bytes = Ranges.dup(block.bytes);
+			for (pc = bytes.length - 4; pc >= 0; pc -= 4) {
+				def instr = Ref<Instruction>.at(bytes, pc);
+				match (instr.opcode) {
+					STORE_LOCAL => state = withLocal(state, instr.operand, false);
+					LOAD_LOCAL => state = withLocal(state, instr.operand, true);
+					LOAD_LOCAL_SAFE => state = withLocal(state, instr.operand, true);
+					_ => ;
+				}
+				liveBefore[block.startPc + pc] = state;
+			}
+		}
+	}
+
+	private def withLocal(state: LiveState, idx: int, v: bool) -> LiveState {
+		def s = state.dup();
+		s[idx] = v;
+		return s;
+	}
+
+	// Is local {localIdx} read again on some path after the instruction at
+	// absolute pc {atPc} - i.e. does WasmShadowStackCompiler need to protect it
+	// across a livepoint call emitted at {atPc}? Conservative default (live) if
+	// {atPc} is the function's last instruction (no recorded successor state);
+	// callers should not query past the end of a function's bytecode anyway.
+	def isLiveAfter(atPc: int, localIdx: int) -> bool {
+		def state = liveBefore[atPc + 4];
+		if (state == null) return true;
+		return state[localIdx];
+	}
+}

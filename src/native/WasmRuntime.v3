@@ -11,6 +11,13 @@ component WasmRuntime {
 	var result: int;
 	var xargs: ArrayStack<int>;
 
+	// Shadow-stack mode (CiceroOptions.useShadowStack) surface - see
+	// src/wasm/WasmRuntime.v3 for the real implementations.
+	var constsPtr: Array<Object>;
+	var xargsObjs: ArrayStack<Object>;
+	def ptrToObj(ptr: int) -> Object;
+	def objToPtr(obj: Object) -> int;
+
 	def isNull(idx: int) -> bool;
 	def isTrue(idx: int)  -> bool;
 	def isFalse(idx: int) -> bool;

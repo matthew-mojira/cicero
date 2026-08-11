@@ -70,6 +70,80 @@ component WasmFuncIds {
 	def CREATE_LIST8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8));
 	def CREATE_LIST9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9));
 	def CREATE_LIST_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRest));
+
+	// CiceroOptions.useShadowStack (WasmShadowStackCompiler): raw Virgil object
+	// pointers instead of WasmRuntime.objects indices, no refcounting.
+	def SHADOW_ALLOC: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.shadowStackAlloc));
+	def SHADOW_FREE:  u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.shadowStackFree));
+	def SHADOW_SAVE:  u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.shadowStackSave));
+	def SHADOW_LOAD:  u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.shadowStackLoad));
+
+	def GET_CONST_PTR: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.getConstPtr));
+	def PUSH_ARG_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.pushArgPtr));
+	def POP_ARG_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.popArgPtr));
+	def FORCE_GC_TEST: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.forceGCForTest)); // XXX temporary, spike-only
+	def IS_NULL_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.isNullPtr));
+	def IS_NOT_NULL_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.isNotNullPtr));
+	def IS_TRUE_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.isTruePtr));
+	def IS_FALSE_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.isFalsePtr));
+	def IS_FUNC_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.isFuncPtr));
+	def IS_CLASS_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.isClassPtr));
+	def IS_STRING_PTR: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.isStringPtr));
+
+	def GET_GLOBAL_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobalPtr));
+	def GET_GLOBAL_BY_INDEX_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobalByIndexPtr));
+	def GET_NONLOCAL_PTR: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.getNonlocalPtr));
+	def SET_GLOBAL_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.setGlobalPtr));
+	def SET_GLOBAL_BY_INDEX_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.setGlobalByIndexPtr));
+
+	def RAISE_TYPE_PTR: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseTypeExceptionPtr));
+	def RAISE_STRING_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseStringPtr));
+	def RAISE_FIELD_PTR: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseMissingFieldPtr));
+
+	def CALL_FUNC0_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc0Ptr));
+	def CALL_FUNC1_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc1Ptr));
+	def CALL_FUNC2_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc2Ptr));
+	def CALL_FUNC3_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc3Ptr));
+	def CALL_FUNC4_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc4Ptr));
+	def CALL_FUNC5_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc5Ptr));
+	def CALL_FUNC6_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc6Ptr));
+	def CALL_FUNC7_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc7Ptr));
+	def CALL_FUNC8_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc8Ptr));
+	def CALL_FUNC9_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc9Ptr));
+	def CALL_FUNC_REST_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRestPtr));
+	def CALL_FUNC_REST_REV_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRestRevPtr));
+
+	def CREATE_FUNC0_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc0Ptr));
+	def CREATE_FUNC1_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc1Ptr));
+	def CREATE_FUNC2_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc2Ptr));
+	def CREATE_FUNC3_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc3Ptr));
+	def CREATE_FUNC4_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc4Ptr));
+	def CREATE_FUNC5_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc5Ptr));
+	def CREATE_FUNC6_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc6Ptr));
+	def CREATE_FUNC7_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc7Ptr));
+	def CREATE_FUNC8_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc8Ptr));
+	def CREATE_FUNC9_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc9Ptr));
+	def CREATE_FUNC_REST_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.createFuncRestPtr));
+	def CREATE_FUNC_REST_REV_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFuncRestRevPtr));
+
+	def GET_FIELD_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getFieldPtr));
+	def SET_FIELD_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.setFieldPtr));
+
+	def CREATE_CLASS_PTR: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.createClassPtr));
+	def CREATE_OBJECT_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createObjectPtr));
+
+	def CREATE_LIST0_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList0Ptr));
+	def CREATE_LIST1_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList1Ptr));
+	def CREATE_LIST2_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList2Ptr));
+	def CREATE_LIST3_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList3Ptr));
+	def CREATE_LIST4_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList4Ptr));
+	def CREATE_LIST5_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList5Ptr));
+	def CREATE_LIST6_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList6Ptr));
+	def CREATE_LIST7_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList7Ptr));
+	def CREATE_LIST8_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8Ptr));
+	def CREATE_LIST9_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9Ptr));
+	def CREATE_LIST_REST_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRestPtr));
+	def CREATE_LIST_REST_REV_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRestRevPtr));
 }
 
 // Shared emitters/pools/assembly for WasmBytecodeCompiler and WasmASTCompiler; not instantiated directly.

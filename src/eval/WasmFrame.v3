@@ -38,28 +38,39 @@ class WasmFrame extends FrameObject {
 		def oldRefcounts  = WasmRuntime.refcounts;
 		def oldFreelist   = WasmRuntime.freelist;
 		def oldConstPoolLen = WasmRuntime.constPoolLen;
+		def oldConstsPtr  = WasmRuntime.constsPtr;
 		def oldResult     = WasmRuntime.result;
 
 		WasmRuntime.frame      = this;
 		WasmRuntime.strings    = wasm.stringPool;
 		WasmRuntime.funcholes  = wasm.funcPool;
 		WasmRuntime.classholes = wasm.classPool;
-		WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
-		WasmRuntime.refcounts  = Vectors.ofN(Array<int>.new(wasm.constPool.length));
-		WasmRuntime.freelist   = ArrayStack.new();
+		// Shadow-stack mode never touches WasmRuntime.objects/refcounts/freelist
+		// (it passes raw pointers, not objects-vector indices) - skip allocating
+		// them on every single call in that mode; only constsPtr is needed.
+		if (!CiceroOptions.useShadowStack) {
+			WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
+			WasmRuntime.refcounts  = Vectors.ofN(Array<int>.new(wasm.constPool.length));
+			WasmRuntime.freelist   = ArrayStack.new();
+		}
 		WasmRuntime.constPoolLen = wasm.constPool.length;
+		WasmRuntime.constsPtr  = wasm.constPool; // shadow-stack mode only; harmless to set otherwise
 		WasmRuntime.result     = 0;
 
-		var arg0: int = if(args.length > 0, WasmRuntime.alloc(args[0].1));
-		var arg1: int = if(args.length > 1, WasmRuntime.alloc(args[1].1));
-		var arg2: int = if(args.length > 2, WasmRuntime.alloc(args[2].1));
-		var arg3: int = if(args.length > 3, WasmRuntime.alloc(args[3].1));
-		var arg4: int = if(args.length > 4, WasmRuntime.alloc(args[4].1));
-		var arg5: int = if(args.length > 5, WasmRuntime.alloc(args[5].1));
-		var arg6: int = if(args.length > 6, WasmRuntime.alloc(args[6].1));
-		var arg7: int = if(args.length > 7, WasmRuntime.alloc(args[7].1));
-		var arg8: int = if(args.length > 8, WasmRuntime.alloc(args[8].1));
-		var arg9: int = if(args.length > 9, WasmRuntime.alloc(args[9].1));
+		// Shadow-stack mode passes raw pointers (WasmRuntime.objToPtr), not
+		// WasmRuntime.objects indices - CiceroOptions.useShadowStack is a
+		// compile-time constant, so only one side of each `if` here actually
+		// ships in a given build.
+		var arg0: int = if(args.length > 0, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[0].1), WasmRuntime.alloc(args[0].1)));
+		var arg1: int = if(args.length > 1, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[1].1), WasmRuntime.alloc(args[1].1)));
+		var arg2: int = if(args.length > 2, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[2].1), WasmRuntime.alloc(args[2].1)));
+		var arg3: int = if(args.length > 3, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[3].1), WasmRuntime.alloc(args[3].1)));
+		var arg4: int = if(args.length > 4, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[4].1), WasmRuntime.alloc(args[4].1)));
+		var arg5: int = if(args.length > 5, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[5].1), WasmRuntime.alloc(args[5].1)));
+		var arg6: int = if(args.length > 6, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[6].1), WasmRuntime.alloc(args[6].1)));
+		var arg7: int = if(args.length > 7, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[7].1), WasmRuntime.alloc(args[7].1)));
+		var arg8: int = if(args.length > 8, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[8].1), WasmRuntime.alloc(args[8].1)));
+		var arg9: int = if(args.length > 9, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[9].1), WasmRuntime.alloc(args[9].1)));
 
 		var exn: bool;
 		match (wasm.f) {
@@ -74,22 +85,39 @@ class WasmFrame extends FrameObject {
 			Func8(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 			Func9(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 			FuncN(f) => {
+				// >9-param entry point. Shadow-stack mode uses xargsObjs (real,
+				// GC-scanned Objects - args[9+i].1 is already one, no raw-pointer
+				// round-trip needed) instead of xargs (a plain ArrayStack<int>,
+				// unsafe for raw pointers - see xargsObjs's own doc comment).
 				// baseDepth, not empty(): an outer call's pending rest-args may be under ours.
-				def baseDepth = WasmRuntime.xargs.top;
-				def numRest = args.length - 9;
-				for (i < numRest)
-					WasmRuntime.xargs.push(WasmRuntime.alloc(args[9 + i].1));
-				exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-				if (CiceroOptions.sanityChecks && WasmRuntime.xargs.top != baseDepth) {
-					System.puts("internal error: WasmRuntime.xargs did not return to its pre-call depth\n");
-					System.error("internal error", "WasmRuntime.xargs did not return to its pre-call depth");
+				if (CiceroOptions.useShadowStack) {
+					def baseDepth = WasmRuntime.xargsObjs.top;
+					def numRest = args.length - 9;
+					for (i < numRest)
+						WasmRuntime.xargsObjs.push(args[9 + i].1);
+					exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+					if (CiceroOptions.sanityChecks && WasmRuntime.xargsObjs.top != baseDepth) {
+						System.puts("internal error: WasmRuntime.xargsObjs did not return to its pre-call depth\n");
+						System.error("internal error", "WasmRuntime.xargsObjs did not return to its pre-call depth");
+					}
+				} else {
+					def baseDepth = WasmRuntime.xargs.top;
+					def numRest = args.length - 9;
+					for (i < numRest)
+						WasmRuntime.xargs.push(WasmRuntime.alloc(args[9 + i].1));
+					exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+					if (CiceroOptions.sanityChecks && WasmRuntime.xargs.top != baseDepth) {
+						System.puts("internal error: WasmRuntime.xargs did not return to its pre-call depth\n");
+						System.error("internal error", "WasmRuntime.xargs did not return to its pre-call depth");
+					}
 				}
 			}
 		}
+		def resultObj = if(CiceroOptions.useShadowStack, WasmRuntime.ptrToObj(WasmRuntime.result), WasmRuntime.objects[WasmRuntime.result]);
 		if (exn) {
-			result = Result.Exn(ExnObject.!(WasmRuntime.objects[WasmRuntime.result]));
+			result = Result.Exn(ExnObject.!(resultObj));
 		} else {
-			result = Result.OK(WasmRuntime.objects[WasmRuntime.result]);
+			result = Result.OK(resultObj);
 		}
 
 		/* unswap runtime components */
@@ -101,6 +129,7 @@ class WasmFrame extends FrameObject {
 		WasmRuntime.refcounts  = oldRefcounts;
 		WasmRuntime.freelist   = oldFreelist;
 		WasmRuntime.constPoolLen = oldConstPoolLen;
+		WasmRuntime.constsPtr  = oldConstsPtr;
 		WasmRuntime.result     = oldResult;
 	}
 
@@ -111,17 +140,23 @@ class WasmFrame extends FrameObject {
 		WasmRuntime.strings    = wasm.stringPool;
 		WasmRuntime.funcholes  = wasm.funcPool;
 		WasmRuntime.classholes = wasm.classPool;
-		WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
-		WasmRuntime.refcounts  = Vectors.ofN(Array<int>.new(wasm.constPool.length));
-		WasmRuntime.freelist   = ArrayStack.new();
+		// See eval()'s identical comment: shadow-stack mode never touches
+		// objects/refcounts/freelist.
+		if (!CiceroOptions.useShadowStack) {
+			WasmRuntime.objects    = Vectors.ofN(wasm.constPool); // XXX could be destructive? but I don't think so
+			WasmRuntime.refcounts  = Vectors.ofN(Array<int>.new(wasm.constPool.length));
+			WasmRuntime.freelist   = ArrayStack.new();
+		}
 		WasmRuntime.constPoolLen = wasm.constPool.length;
+		WasmRuntime.constsPtr  = wasm.constPool; // shadow-stack mode only; harmless to set otherwise
 		match (wasm.f) {
 			Func0(f) => {
 				def exn = f();
+				def resultObj = if(CiceroOptions.useShadowStack, WasmRuntime.ptrToObj(WasmRuntime.result), WasmRuntime.objects[WasmRuntime.result]);
 				if (exn) {
-					result = Result.Exn(ExnObject.!(WasmRuntime.objects[WasmRuntime.result]));
+					result = Result.Exn(ExnObject.!(resultObj));
 				} else {
-					result = Result.OK(WasmRuntime.objects[WasmRuntime.result]);
+					result = Result.OK(resultObj);
 				}
 				match (result) {
 					OK(o) => return o;
