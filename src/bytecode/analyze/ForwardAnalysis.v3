@@ -29,7 +29,7 @@ class ForwardFlowAnalysis<S> extends DataflowAnalysis<S> {
 			if (traceAnalysis) System.puts(Strings.format1("Working on: %d\n", bb.startPc));
 
 			// TODO consider edge type
-			for (bb2 in bb.successors.toArray()) {
+			for (bb2 in bb.successors()) {
 				if (traceAnalysis) System.puts(Strings.format1("  successor: %d", bb2.startPc));
 
 				def edgeOutput = forwardFlow(bb, inputStates[bb]);

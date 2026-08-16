@@ -5,18 +5,21 @@ def ignoreExceptions = false;
 
 class CFGraph(bytecode: Bytecode) {
 	def var head:    BasicBlock;
+	def var returnSentinel:    BasicBlock; // null bytes; target of implicit (fallthrough) return
+	def var exceptionSentinel: BasicBlock; // null bytes; target of an exception with no active handler
 	def basicBlocks: Vector<BasicBlock> = Vector.new();
 
 	new() {
 		def bc = bytecode.instrs;
-		def boundaries: Array<bool> = Array.new(bc.length + 4);
-		def map: Array<int> = Array.new(bc.length + 4);
+		def exceptionExitPc = bc.length + 4; // sentinel pc: exception escapes uncaught
+		def boundaries: Array<bool> = Array.new(bc.length + 8);
+		def map: Array<int> = Array.new(bc.length + 8);
 		def handlerStk: Stack<int> = ArrayStack.new();
-		def handlerLoc: Array<int> = Array.new(bc.length + 4);
+		def handlerLoc: Array<int> = Array.new(bc.length + 8);
 		if (bc.length > 0)
 			boundaries[0] = true; // entry point
 		if (!ignoreExceptions)
-			handlerStk.push(bc.length); // no handler = exit function
+			handlerStk.push(exceptionExitPc); // no handler = exception escapes the frame
 
 		var pc = 0;
 		while (pc < bc.length) {
@@ -58,30 +61,34 @@ class CFGraph(bytecode: Bytecode) {
 		}
 		map[bc.length] = num;
 		basicBlocks.put(BasicBlock.new(bc[prev ... bc.length], prev));
-		basicBlocks.put(BasicBlock.new(null, bc.length));
+		returnSentinel = BasicBlock.new(null, bc.length); // sentinel: implicit return
+		basicBlocks.put(returnSentinel);
+		map[exceptionExitPc] = num + 1;
+		exceptionSentinel = BasicBlock.new(null, exceptionExitPc); // sentinel: exception escapes uncaught
+		basicBlocks.put(exceptionSentinel);
 
-		for (i < basicBlocks.length - 1) {
+		for (i < basicBlocks.length - 2) {
 			def block = basicBlocks[i];
 			def lastOp = Opcodes.map[block.bytes[block.bytes.length - 4]];
 			def lastPc = block.startPc + block.bytes.length;
 
-			if (lastOp.fallthrough) {
-				block.successors.add(basicBlocks[map[lastPc]]);
-				basicBlocks[map[lastPc]].predecessors.add(block);
+			if (lastOp.fallthrough)	{
+				block.fallthroughSuccessor = basicBlocks[map[lastPc]];
+				block.fallthroughSuccessor.predecessors.add(block);
 			}
 			if (lastOp.jump) {
 				def operand = (u24.!(block.bytes[block.bytes.length - 1]) << 16)
 				            | (u24.!(block.bytes[block.bytes.length - 2]) << 8)
 				            |  u24.!(block.bytes[block.bytes.length - 3]);
 				def target = lastPc + i24.view(operand);
-				block.successors.add(basicBlocks[map[target]]);
-				basicBlocks[map[target]].predecessors.add(block);
+				block.branchSuccessor = basicBlocks[map[target]];
+				block.branchSuccessor.predecessors.add(block);
 			}
 			if (!ignoreExceptions && lastOp.exception) {
 				// get target from its mapping in handlerLoc
 				def target = handlerLoc[lastPc];
-				block.successors.add(basicBlocks[map[target]]);
-				basicBlocks[map[target]].predecessors.add(block);
+				block.branchSuccessor = basicBlocks[map[target]];
+				block.branchSuccessor.predecessors.add(block);
 			}
 		}
 		head = basicBlocks[0];
@@ -156,12 +163,78 @@ class CFGraph(bytecode: Bytecode) {
 		}
 	}
 
+	// head starts at 1, unreachable blocks are -1
+	def computeReversePostorder() {
+		def visited:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+		def postorder: Vector<BasicBlock>  = Vector.new();
+
+		visitReversePostorder(head, visited, postorder);
+
+		def n = postorder.length;
+		for (i < n) {
+			postorder[i].reversePostorder = n - i;
+		}
+	}
+
+	private def visitReversePostorder(b: BasicBlock, visited: HashSet<BasicBlock>, postorder: Vector<BasicBlock>) {
+		if (visited.contains(b)) return;
+		visited.add(b);
+		for (s in b.successors()) {
+			visitReversePostorder(s, visited, postorder);
+		}
+		postorder.put(b);
+	}
+
+	// Builds the immediate dominator (really: dominates) tree and sorts
+	// children in reverse postorder
+	def computeDominatorTree() {
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			if (block == head) continue;
+			if (block.reversePostorder == -1) continue; // unreachable from head
+
+			block.immDom.domChildren.add(block);
+		}
+
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			def arr = block.domChildren.toArray();
+			block.sortedDomChildren = Arrays.sort(arr, 0, arr.length,
+				fun(a: BasicBlock, b: BasicBlock) => a.reversePostorder >= b.reversePostorder);
+		}
+	}
+
+	// computes which nodes are merge nodes (entered by two or more forward edges)
+	def computeMergeNodes() {
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			var forwardPreds = 0;
+			for (p in block.predecessors.toArray()) {
+				if (p.reversePostorder < block.reversePostorder) forwardPreds++;
+			}
+			block.isMerge = forwardPreds >= 2;
+		}
+	}
+
+	// computes which nodes are loop headers (the target of a back edge)
+	def computeLoopHeaders() {
+		for (i < basicBlocks.length) {
+			def block = basicBlocks[i];
+			for (p in block.predecessors.toArray()) {
+				if (p.reversePostorder >= block.reversePostorder) {
+					block.isLoopHead = true;
+					break;
+				}
+			}
+		}
+	}
+
 	def entryNodes() -> Array<BasicBlock> {
 		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.startPc == 0);
 	}
 
 	def exitNodes() -> Array<BasicBlock> {
-		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.successors.size() == 0);
+		 return Arrays.filter(basicBlocks.copy(), fun(bb: BasicBlock) => bb.fallthroughSuccessor == null && bb.branchSuccessor == null);
 	}
 
 	def display() {
@@ -175,11 +248,33 @@ class CFGraph(bytecode: Bytecode) {
 }
 
 class BasicBlock(bytes: Range<byte>, startPc: int) {
-	def successors:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
 	def predecessors: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
 	var dominators:   HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
 
+	// successors
+	var fallthroughSuccessor: BasicBlock;
+	var branchSuccessor: BasicBlock; // jump target, or exception handler
+
+	def successors() -> Array<BasicBlock> {
+		if (fallthroughSuccessor != null && branchSuccessor != null) return [fallthroughSuccessor, branchSuccessor];
+		if (fallthroughSuccessor != null) return [fallthroughSuccessor];
+		if (branchSuccessor != null) return [branchSuccessor];
+		return [];
+	}
+
 	var immDom: BasicBlock;
+
+	var reversePostorder: int = -1;
+	// children of this node in the dominator tree
+	def domChildren: HashSet<BasicBlock> = HashSet.new(BasicBlock.hash, BasicBlock.==);
+	// domChildren sorted by descending reverse Postorder
+	var sortedDomChildren: Array<BasicBlock>;
+	var isMerge: bool;
+	var isLoopHead: bool;
+
+	def isBackward(target: BasicBlock) -> bool {
+		return target.reversePostorder <= reversePostorder;
+	}
 
 	def hash() -> int {
 		return startPc;
@@ -201,7 +296,7 @@ class BasicBlock(bytes: Range<byte>, startPc: int) {
 		if (predecessors.length > 0)
 			System.puts(Strings.format1("%d", predecessors[predecessors.length - 1].startPc));
 		System.puts(Strings.format1("] -> %d ", startPc));
-		def successors = successors.toArray();
+		def successors = successors();
 		match (successors.length) {
 			0 => System.puts("-> []\n");
 			1 => System.puts(Strings.format1("-> [%d]\n", successors[0].startPc));

@@ -1,0 +1,192 @@
+class BeyondRelooper(g: CFGraph) {
+	def var returnSentinel: BasicBlock;
+	def var exceptionSentinel: BasicBlock;
+	def var output: WasmStructure;
+
+	new() {
+		returnSentinel = g.returnSentinel;
+		exceptionSentinel = g.exceptionSentinel;
+	}
+
+	// Top-level entry point: runs the CFGraph precomputation g needs, then
+	// translates from the entry with an empty context. Caches the result in `output`.
+	def structuredControl() {
+		g.computeReversePostorder();
+		g.computeDominators();
+		g.computeImmediateDominator();
+		g.computeDominatorTree();
+		g.computeMergeNodes();
+		g.computeLoopHeaders();
+
+		def outerCtx: List<ContainingSyntax> = List.new(ContainingSyntax.BlockFollowedBy(exceptionSentinel), null);
+		output = WasmStructure.Seq(WasmStructure.Block(doTree(g.head, outerCtx)), WasmStructure.ReturnWithException);
+	}
+
+	def flowLeaving(cfgNode: BasicBlock) -> ControlFlow {
+		def fallthrough = cfgNode.fallthroughSuccessor;
+		def branch = cfgNode.branchSuccessor;
+
+		if (fallthrough != null && branch != null) return ControlFlow.Conditional(fallthrough, branch);
+		if (fallthrough != null) return ControlFlow.Unconditional(fallthrough);
+		if (branch != null) return ControlFlow.Unconditional(branch);
+		return ControlFlow.TerminalFlow;
+	}
+
+	def doTree(tree: BasicBlock, ctx: List<ContainingSyntax>) -> WasmStructure {
+		def codeForX = nodeWithin(tree, Lists.fromArray(Arrays.filter(tree.sortedDomChildren, isStructuralMergeChild)), _);
+		if (tree.isLoopHead) {
+			return WasmStructure.Loop(codeForX(List.new(ContainingSyntax.LoopHeadedBy(tree), ctx)));
+		} else {
+			return codeForX(ctx);
+		}
+	}
+
+	def isStructuralMergeChild(b: BasicBlock) -> bool {
+		return b.isMerge && b != returnSentinel && b != exceptionSentinel;
+	}
+
+	def nodeWithin(node: BasicBlock, arr: List<BasicBlock>, ctx: List<ContainingSyntax>) -> WasmStructure {
+		if (arr == null) { // []
+			def fst = WasmStructure.Actions(node);
+			var snd: WasmStructure;
+			match (flowLeaving(node)) {
+				Unconditional(tgt) => snd = doBranch(node, tgt, ctx);
+				Conditional(fallthrough, branch) => snd = WasmStructure.If(
+						doBranch(node, fallthrough, List.new(ContainingSyntax.IfThenElse, ctx)),
+						doBranch(node, branch, List.new(ContainingSyntax.IfThenElse, ctx)));
+				TerminalFlow => snd = WasmStructure.ReturnWithValue;
+			}
+			return WasmStructure.Seq(fst, snd);
+		} else { // y_n:ys
+			return WasmStructure.Seq(WasmStructure.Block(nodeWithin(node, arr.tail, List.new(ContainingSyntax.BlockFollowedBy(arr.head), ctx))),
+					doTree(arr.head, ctx));
+		}
+	}
+
+	def doBranch(src: BasicBlock, dst: BasicBlock, ctx: List<ContainingSyntax>) -> WasmStructure {
+		if (dst == returnSentinel) return WasmStructure.ReturnWithValue;
+		if (src.isBackward(dst) || dst.isMerge || dst == exceptionSentinel) {
+			return WasmStructure.Br(index(dst, ctx));
+		} else {
+			return doTree(dst, ctx);
+		}
+	}
+
+	def index(block: BasicBlock, ctx: List<ContainingSyntax>) -> int {
+		if (matchesFrame(block, ctx.head)) return 0;
+		return 1 + index(block, ctx.tail);
+	}
+
+	def matchesFrame(block: BasicBlock, frame: ContainingSyntax) -> bool {
+		match (frame) {
+			BlockFollowedBy(l) => return block == l;
+			LoopHeadedBy(l) => return block == l;
+			_ => return false;
+		}
+	}
+
+	// Prints the cached `output` tree. Block/Loop/If/Br/Seq are structured
+	// WasmStructure control flow and print as such; Actions instead carries
+	// the originating BasicBlock, which gets disassembled (using its real
+	// startPc, the same way BasicBlock.display() does) rather than printed
+	// as opaque bytes.
+	def display() {
+		displayAt(output, 0);
+	}
+
+	private def displayAt(w: WasmStructure, indent: int) {
+		match (w) {
+			Block(body) => {
+				printIndent(indent); System.puts("block {\n");
+				displayAt(body, indent + 1);
+				printIndent(indent); System.puts("}\n");
+			}
+			Loop(body) => {
+				printIndent(indent); System.puts("loop {\n");
+				displayAt(body, indent + 1);
+				printIndent(indent); System.puts("}\n");
+			}
+			If(bodyFallthrough, bodyBranch) => {
+				printIndent(indent); System.puts("if {\n");
+				displayAt(bodyFallthrough, indent + 1);
+				printIndent(indent); System.puts("} else {\n");
+				displayAt(bodyBranch, indent + 1);
+				printIndent(indent); System.puts("}\n");
+			}
+			Br(depth) => {
+				printIndent(indent); System.puts(Strings.format1("br %d\n", depth));
+			}
+			ReturnWithValue => {
+				printIndent(indent); System.puts("<return value>\n");
+			}
+			ReturnWithException => {
+				printIndent(indent); System.puts("<return exception>\n");
+			}
+			Actions(actions) => {
+				disassemble(actions, indent);
+			}
+			Seq(fst, snd) => {
+				displayAt(fst, indent);
+				displayAt(snd, indent);
+			}
+		}
+	}
+
+	private def disassemble(block: BasicBlock, indent: int) {
+		def dup = Ranges.dup(block.bytes);
+		var pc = 0;
+		while (pc < dup.length) {
+			def ins = Ref<Instruction>.at(dup, pc);
+			def opcode = ins.opcode;
+			def operand = ins.operand;
+			printIndent(indent);
+			System.puts(Strings.format3("+%d: %s %d\n", block.startPc + pc, opcode.name, operand));
+			pc += 4;
+		}
+	}
+
+	private def printIndent(indent: int) {
+		for (i < indent) System.puts("  ");
+	}
+}
+
+type ControlFlow {
+	// this is basically successor count, but combines multiple actual types
+	// of logic together
+
+	// the following cases
+	// - regular instructions (fallthrough)
+	// - JUMP
+	// - RAISE
+	case Unconditional(tgt: BasicBlock);
+	// covers both real conditional jumps and any instruction with an
+	// exception side effect; the two are disambiguated by mechanism
+	// (fallthrough vs. branch taken) rather than by truthiness, since
+	// "true" doesn't mean anything for the exception case
+	case Conditional(fallthrough: BasicBlock, branch: BasicBlock);
+	// - RETURN only
+	case TerminalFlow;
+}
+
+type WasmStructure {
+	case Block(body: WasmStructure);
+	case Loop(body: WasmStructure);
+	// no cond field: If always follows Actions of the same node in a Seq,
+	// so whatever determines the branch is already shown there.
+	case If(bodyFallthrough: WasmStructure, bodyBranch: WasmStructure);
+	case Br(depth: int);
+	case Actions(actions: BasicBlock);
+	case Seq(fst: WasmStructure, snd: WasmStructure);
+	case ReturnWithValue;
+	case ReturnWithException;
+}
+
+// type Context = [ContainingSyntax]
+// List<ContainingSyntax>
+type ContainingSyntax {
+	case IfThenElse;
+	case LoopHeadedBy(tgt: BasicBlock);
+	case BlockFollowedBy(tgt: BasicBlock);
+}
+
+

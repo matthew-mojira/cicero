@@ -38,6 +38,11 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 					ProfileCompilationTimes.profile(bytecode.id, label, endTime - startTime);
 				}
 
+				if (CiceroOptions.testBeyondRelooper) {
+					def br = BeyondRelooper.new(CFGraph.new(bytecode));
+					br.structuredControl();
+					br.display();
+				}
 				code = Code.Bytecode(bytecode);
 			}
 		}
