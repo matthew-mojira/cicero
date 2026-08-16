@@ -1,13 +1,12 @@
-class VirtualMachine {
-
-	new() {}
+/* There is only one instance of the Virtual Machine, so we use a component instead of a class */
+component VM {
 
 	/* This is a handler stack which stores structure about exceptions:
 	 *   (a, b, c)
 	 *   where
 	 *	 a = absolute pc of handler
 	 *	 b = absolute size of stack (i.e. pop other things until you restore stack state)
-	 *	 c = absolute size of `callFrames` stack (i.e. pop other call frames until you restore the frame state)
+	 *	 c = absolute size of `VM.callFrames` stack (i.e. pop other call frames until you restore the frame state)
 	 */
 	def handlers: ArrayStack<(int, int, int)> = ArrayStack.new();
 	def stack: ArrayStack<Object> = ArrayStack.new();
@@ -25,7 +24,7 @@ class VirtualMachine {
 		}
 
 		// Reset VM
-		reset();
+		VM.reset();
 
 		/* These local variables represent the currently active(executing) call frame
 		 * The `CallFrame` object in the top of the call frames stack is out of sync.
@@ -41,7 +40,7 @@ class VirtualMachine {
 		var associatedFunc: FunctionProfileMetadata = TopLevel.metadata;
 
 		// Setup top level frame and bytecode to execute
-		callFrames.push(CallFrame.new(b, 0, 0, 0, 0, associatedFunc));
+		VM.callFrames.push(CallFrame.new(b, 0, 0, 0, 0, associatedFunc));
 
 		if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 			def startTime = System.ticksUs();
@@ -51,48 +50,48 @@ class VirtualMachine {
 		var dispatchStartTime: int;
 		if (CiceroOptions.profileDynamicOpcodePair) dispatchStartTime = System.ticksUs();
 		var opExecTime: int;
-		while (pc < code.length || isExn()) {
+		while (pc < code.length || VM.isExn()) {
 			if (CiceroOptions.sanityChecks)
 				if ((pc & 0b11) != 0) System.error("eval error", Strings.format1("unaligned pc access: %d", pc));
 
 			// if frame is in an exceptional state, try to handle it!
 			// Should this go after the handlers?
-			if (isExn()) {
-				def exn = getExn();
-				if (handlers.empty()) {
+			if (VM.isExn()) {
+				def exn = VM.getExn();
+				if (VM.handlers.empty()) {
 					// build full exception stack trace
-					callFrames.pop();
-					while (!callFrames.empty()) {
-						def currentCallFrame = callFrames.pop();
+					VM.callFrames.pop();
+					while (!VM.callFrames.empty()) {
+						def currentCallFrame = VM.callFrames.pop();
 						exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
 					}
 					if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
-					result = Result.Exn(exn);
+					VM.result = Result.Exn(exn);
 					return;
 				} else {
 					var isTopFrame = true; // Flag to prevent duplicating the stacktrace for the current frame that threw the exception
-					def p = handlers.pop();
+					def p = VM.handlers.pop();
 					// build stack trace until the handlers call frame
-					while (callFrames.top > p.2) {
-						def currentCallFrame = callFrames.pop();
+					while (VM.callFrames.top > p.2) {
+						def currentCallFrame = VM.callFrames.pop();
 						if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
 						isTopFrame = false;
 
 						if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 							def endTime = System.ticksUs();
 							// for profiling purposes, treat exception popping call frames as returning from them
-							ProfilingHelpers.handleProfilingDuringReturn(endTime, callFrames.peek().associatedFunc, currentCallFrame.associatedFunc);
+							ProfilingHelpers.handleProfilingDuringReturn(endTime, VM.callFrames.peek().associatedFunc, currentCallFrame.associatedFunc);
 						}
 					}
 
-					def currentCallFrame = callFrames.peek();
+					def currentCallFrame = VM.callFrames.peek();
 					// If we actually popped frames to get here, log the handler's frame as well.
 					// If isOriginalFrame is still true, the exception was caught locally, so we skip it.
 					if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
 
-					stack.resize(p.1); // equivalent to `while (stack.top != p.1) stack.pop();`
+					VM.stack.resize(p.1); // equivalent to `while (VM.stack.top != p.1) VM.stack.pop();`
 					// push error value
-					stack.push(exn);
+					VM.stack.push(exn);
 
 					// Restore VM context to the handler
 					pc = p.0;
@@ -103,7 +102,7 @@ class VirtualMachine {
 					baseStartIndex = currentCallFrame.baseStartIndex;
 					associatedFunc = currentCallFrame.associatedFunc;
 
-					result = Result.Uncomputed;
+					VM.result = Result.Uncomputed;
 				}
 			}
 
@@ -121,16 +120,16 @@ class VirtualMachine {
 			if (CiceroOptions.traceBytecodeEvaluation) {
 				System.puts(Strings.format3("  +%d: %s %d\n", pc, opcode.name, bytecode.operand));
 				System.puts("    stack:\n");
-				for (i < stack.top) {
+				for (i < VM.stack.top) {
 					System.puts("    ");
-					def element = stack.elems[i];
+					def element = VM.stack.elems[i];
 					if (element == null) System.puts("NULL");
 					else System.puts(element.display());
 					System.ln();
 				}
 				System.puts("    exn loc stack:\n");
-				for (i < handlers.top) {
-					def h = handlers.elems[i];
+				for (i < VM.handlers.top) {
+					def h = VM.handlers.elems[i];
 					System.puts("    ");
 					System.puts(Strings.format3("Frame depth %d => %d (%d)", h.2, h.0, h.1));
 					System.ln();
@@ -147,20 +146,20 @@ class VirtualMachine {
 					}
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 						dispatchStartTime = System.ticksUs();
 					}
 				}
 				LOAD_CONST => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					stack.push(b.constPool[operand]);
+					VM.stack.push(b.constPool[operand]);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -173,7 +172,7 @@ class VirtualMachine {
 				LOAD_GLOBAL => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
@@ -183,7 +182,7 @@ class VirtualMachine {
 					match (Globals.loadGlobal(id)) {
 						// `v` is a tuple -> (Object, int)
 						Just(v) => {
-							stack.push(v.0);
+							VM.stack.push(v.0);
 
 							if (CiceroOptions.useOptimizedGlobals) {
 								// perform bytecode rewriting to replace `LOAD_GLOBAL` with `LOAD_GLOBAL_BY_INDEX`
@@ -192,7 +191,7 @@ class VirtualMachine {
 								b.rewrite(pc - 4, Opcode.LOAD_GLOBAL_BY_INDEX, global_index);
 							}
 						}
-						Nothing => throw(Exceptions.unboundGlobal(id), associatedFunc.label, loc);
+						Nothing => VM.throw(Exceptions.unboundGlobal(id), associatedFunc.label, loc);
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -206,14 +205,14 @@ class VirtualMachine {
 				LOAD_GLOBAL_BY_INDEX => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
 					def value = Globals.loadGlobalByIndex(operand);
-					stack.push(value);
+					VM.stack.push(value);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -226,17 +225,17 @@ class VirtualMachine {
 				LOAD_LOCAL => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def local = stack.elems[localsStartIndex + operand];
+					def local = VM.stack.elems[localsStartIndex + operand];
 					if (local == null)
-						throw(Exceptions.unboundLocal(b.locals[operand]), associatedFunc.label, loc);
+						VM.throw(Exceptions.unboundLocal(b.locals[operand]), associatedFunc.label, loc);
 					else
-						stack.push(local);
+						VM.stack.push(local);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -249,13 +248,13 @@ class VirtualMachine {
 				LOAD_LOCAL_SAFE => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					stack.push(stack.elems[localsStartIndex + operand]);
+					VM.stack.push(VM.stack.elems[localsStartIndex + operand]);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -268,20 +267,20 @@ class VirtualMachine {
 				LOAD_NONLOCAL => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def nonlocal = stack.elems[nonLocalsStartIndex + operand];
+					def nonlocal = VM.stack.elems[nonLocalsStartIndex + operand];
 
 					if (CiceroOptions.sanityChecks) {
 						if (nonlocal == null) {
 							System.error("eval error", "nonlocal null");
 						}
 					}
-					stack.push(nonlocal);
+					VM.stack.push(nonlocal);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -294,14 +293,14 @@ class VirtualMachine {
 				STORE_GLOBAL => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
 					def id = b.stringPool[operand];
-					def top = stack.pop();
+					def top = VM.stack.pop();
 					// index into the `Globals.values` vector
 					def global_index = Globals.storeGlobal(id, top);
 
@@ -322,13 +321,13 @@ class VirtualMachine {
 				STORE_GLOBAL_BY_INDEX => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					Globals.storeGlobalByIndex(operand, stack.pop());
+					Globals.storeGlobalByIndex(operand, VM.stack.pop());
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -341,13 +340,13 @@ class VirtualMachine {
 				STORE_LOCAL => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					stack.elems[localsStartIndex + operand] = stack.pop();
+					VM.stack.elems[localsStartIndex + operand] = VM.stack.pop();
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -360,7 +359,7 @@ class VirtualMachine {
 				JUMP => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
@@ -379,13 +378,13 @@ class VirtualMachine {
 				JUMP_IF_FALSE => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def top = stack.pop();
+					def top = VM.stack.pop();
 					if (!top.isTrue()) pc += i24.view(operand);
 
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -399,15 +398,15 @@ class VirtualMachine {
 				JUMP_IF_TRUE_PEEK => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def top = stack.peek();
+					def top = VM.stack.peek();
 					if (!top.isTrue()) {
-						stack.pop();
+						VM.stack.pop();
 					} else {
 						pc += i24.view(operand);
 					}
@@ -423,15 +422,15 @@ class VirtualMachine {
 				JUMP_IF_FALSE_PEEK => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def top = stack.peek();
+					def top = VM.stack.peek();
 					if (top.isTrue()) {
-						stack.pop();
+						VM.stack.pop();
 					} else {
 						pc += i24.view(operand);
 					}
@@ -447,15 +446,15 @@ class VirtualMachine {
 				RAISE => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def top = stack.pop();
-					assertType(ClassObjects.classStr, top, associatedFunc.label, loc);
-					if (isExn()) {
+					def top = VM.stack.pop();
+					VM.assertType(ClassObjects.classStr, top, associatedFunc.label, loc);
+					if (VM.isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
 							opExecTime = System.ticksUs() - opExecTime;
 							ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
@@ -466,7 +465,7 @@ class VirtualMachine {
 						continue;
 					}
 
-					throw(StrObject.!(top).str, associatedFunc.label, loc);
+					VM.throw(StrObject.!(top).str, associatedFunc.label, loc);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -479,14 +478,14 @@ class VirtualMachine {
 				ASSERT_FUNC => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def top = stack.peek();
-					assertType(ClassObjects.classFunc, top, associatedFunc.label, loc);
+					def top = VM.stack.peek();
+					VM.assertType(ClassObjects.classFunc, top, associatedFunc.label, loc);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -499,19 +498,19 @@ class VirtualMachine {
 				CALL => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def fvBaseStartIndex = stack.top - operand - 1;
-					def fv = FuncObject.!(stack.elems[fvBaseStartIndex]); // this cast succeeds because of ASSERT_FUNC
+					def fvBaseStartIndex = VM.stack.top - operand - 1;
+					def fv = FuncObject.!(VM.stack.elems[fvBaseStartIndex]); // this cast succeeds because of ASSERT_FUNC
 					def params = fv.params;
 
 					// arity check
-					assertArity(params.length, operand, associatedFunc.label, loc);
-					if (isExn()) {
+					VM.assertArity(params.length, operand, associatedFunc.label, loc);
+					if (VM.isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
 							opExecTime = System.ticksUs() - opExecTime;
 							ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
@@ -525,7 +524,7 @@ class VirtualMachine {
 					match (fv.code.code) {
 						Bytecode => {
 							// update the ip in the caller frame!
-							saveFrame(pc, loc);
+							VM.saveFrame(pc, loc);
 
 							// Update all the local variables to represent the new executing callee frame
 							def bytecode = Code.Bytecode.!(fv.code.code).bytecode;
@@ -539,13 +538,13 @@ class VirtualMachine {
 							loc = b.sourceMap[0];
 
 							if (fv.instanceOf(ClassObjects.classMethod)) {
-								stack.elems[baseStartIndex] = MethodObject.!(fv).obj;
+								VM.stack.elems[baseStartIndex] = MethodObject.!(fv).obj;
 								localsStartIndex--;
 								nonLocalsStartIndex--;
 							}
 
 							// grow stack (if needed for remaining local variables)
-							stack.resize(nonLocalsStartIndex);
+							VM.stack.resize(nonLocalsStartIndex);
 
 							// push nonlocals on the stack
 							for (i < bytecode.nonlocals.length) {
@@ -554,7 +553,7 @@ class VirtualMachine {
 								var found: bool;
 								for (p in fv.nonlocals) {
 									if (Strings.equal(id, p.0)) {
-										stack.push(p.1);
+										VM.stack.push(p.1);
 										found = true;
 										break;
 									}
@@ -567,10 +566,10 @@ class VirtualMachine {
 
 							// clear slots for uninitialized locals
 							for (i = baseStartIndex + operand + 1; i < nonLocalsStartIndex; i++)
-								stack.elems[i] = null;
+								VM.stack.elems[i] = null;
 
 							// push the new frame
-							callFrames.push(CallFrame.new(b, pc, localsStartIndex, nonLocalsStartIndex, fvBaseStartIndex, associatedFunc));
+							VM.callFrames.push(CallFrame.new(b, pc, localsStartIndex, nonLocalsStartIndex, fvBaseStartIndex, associatedFunc));
 
 							if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 								def startTime = System.ticksUs();
@@ -579,7 +578,7 @@ class VirtualMachine {
 							if (CiceroOptions.traceFunctionCalls) {
 								var args: Array<Object> = Array.new(operand);
 								def argsStartIndex: int = if (fv.instanceOf(ClassObjects.classMethod), localsStartIndex + 1, localsStartIndex);
-								for (i < operand) args[i] = stack.elems[argsStartIndex + i];
+								for (i < operand) args[i] = VM.stack.elems[argsStartIndex + i];
 								def argv: Array<(string, Object)> = FuncObjects.bindArguments(fv, args);
 								TraceFunctionCalls.trace(fv.metadata.label, argv);
 							}
@@ -588,10 +587,10 @@ class VirtualMachine {
 
 							var args: Array<Object> = Array.new(operand);
 							for (i < operand) {
-								args[args.length - 1 - i] = stack.pop();
+								args[args.length - 1 - i] = VM.stack.pop();
 							}
 
-							stack.pop(); // pop `funcObject`
+							VM.stack.pop(); // pop `funcObject`
 
 							if (CiceroOptions.traceFunctionCalls) {
 								def argv: Array<(string, Object)> = FuncObjects.bindArguments(fv, args);
@@ -633,7 +632,7 @@ class VirtualMachine {
 							}
 
 							if (Result.Exn.?(resultV)) {
-								rethrow(Result.Exn.!(resultV).exn, associatedFunc.label, loc);
+								VM.rethrow(Result.Exn.!(resultV).exn, associatedFunc.label, loc);
 
 								if (CiceroOptions.profileDynamicBytecode) {
 									opExecTime = System.ticksUs() - opExecTime;
@@ -645,7 +644,7 @@ class VirtualMachine {
 								continue;
 							}
 							// Virgil functions return either `Result.OK` or `Result.Exn`
-							stack.push(Result.OK.!(resultV).value);
+							VM.stack.push(Result.OK.!(resultV).value);
 						}
 						_ => {
 							System.error("internal error", "Unsupported code execution tier");
@@ -662,13 +661,13 @@ class VirtualMachine {
 				TRY => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					handlers.push((pc + operand, stack.top, callFrames.top));
+					VM.handlers.push((pc + operand, VM.stack.top, VM.callFrames.top));
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -681,13 +680,13 @@ class VirtualMachine {
 				CATCH => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					handlers.pop();
+					VM.handlers.pop();
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -701,13 +700,13 @@ class VirtualMachine {
 				POP => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					for (i < operand) stack.pop();
+					for (i < operand) VM.stack.pop();
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -720,14 +719,14 @@ class VirtualMachine {
 				DUPE => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
 					// special path, operand = 0
-					stack.push(stack.elems[stack.top - operand - 1]);
+					VM.stack.push(VM.stack.elems[VM.stack.top - operand - 1]);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -740,16 +739,16 @@ class VirtualMachine {
 				SWAP => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def top = stack.peek();
-					def val = stack.elems[stack.top - operand - 1];
-					stack.elems[stack.top - 1] = val;
-					stack.elems[stack.top - operand - 1] = top;
+					def top = VM.stack.peek();
+					def val = VM.stack.elems[VM.stack.top - operand - 1];
+					VM.stack.elems[VM.stack.top - 1] = val;
+					VM.stack.elems[VM.stack.top - operand - 1] = top;
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -763,15 +762,15 @@ class VirtualMachine {
 				CREATE_CLASS => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def superclass = stack.pop();
-					assertType(ClassObjects.classClass, superclass, associatedFunc.label, loc);
-					if (isExn()) {
+					def superclass = VM.stack.pop();
+					VM.assertType(ClassObjects.classClass, superclass, associatedFunc.label, loc);
+					if (VM.isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
 							opExecTime = System.ticksUs() - opExecTime;
 							ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
@@ -783,7 +782,7 @@ class VirtualMachine {
 					}
 
 					def classhole = b.classPool[operand];
-					stack.push(classhole(ClassObject.!(superclass)));
+					VM.stack.push(classhole(ClassObject.!(superclass)));
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -796,15 +795,15 @@ class VirtualMachine {
 				CREATE_OBJECT => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def top = stack.pop();
-					assertType(ClassObjects.classClass, top, associatedFunc.label, loc);
-					if (isExn()) {
+					def top = VM.stack.pop();
+					VM.assertType(ClassObjects.classClass, top, associatedFunc.label, loc);
+					if (VM.isExn()) {
 						if (CiceroOptions.profileDynamicBytecode) {
 							opExecTime = System.ticksUs() - opExecTime;
 							ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
@@ -872,7 +871,7 @@ class VirtualMachine {
 									}
 
 									if (Result.Exn.?(resultV)) {
-										rethrow(Result.Exn.!(resultV).exn, associatedFunc.label, loc);
+										VM.rethrow(Result.Exn.!(resultV).exn, associatedFunc.label, loc);
 										initFailed = true;
 										break;
 									}
@@ -884,12 +883,12 @@ class VirtualMachine {
 						}
 					}
 					if (!initFailed) {
-						stack.push(obj);
+						VM.stack.push(obj);
 
 						// setup new `InitCallFrame` if init bytecode objects to execute
 						if (classInitFOs.length > 0) {
 							// save current caller state
-							saveFrame(pc, loc);
+							VM.saveFrame(pc, loc);
 
 							// sync local variables for the new executing init-callee frame
 							def initFO = classInitFOs[0];
@@ -897,19 +896,19 @@ class VirtualMachine {
 							b = bytecode;
 							code = b.instrs;
 							pc = 0;
-							baseStartIndex = stack.top - 1; // `self` is on the stack
+							baseStartIndex = VM.stack.top - 1; // `self` is on the stack
 							localsStartIndex = baseStartIndex;
 							nonLocalsStartIndex = localsStartIndex + bytecode.locals.length; // classes don't capture nonlocals.
 							associatedFunc = initFO.metadata;
 
 							// grow stack (if needed for remaining local variables)
-							stack.resize(nonLocalsStartIndex);
+							VM.stack.resize(nonLocalsStartIndex);
 
 							// clear slots for uninitialized locals
 							for (i = baseStartIndex + 1; i < nonLocalsStartIndex; i++)
-								stack.elems[i] = null;
+								VM.stack.elems[i] = null;
 
-							callFrames.push(InitCallFrame.new(b, classInitFOs.extract(), baseStartIndex, initFO.metadata));
+							VM.callFrames.push(InitCallFrame.new(b, classInitFOs.extract(), baseStartIndex, initFO.metadata));
 
 							if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 								def startTime = System.ticksUs();
@@ -932,13 +931,13 @@ class VirtualMachine {
 				LOAD_FIELD => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def obj = stack.pop();
+					def obj = VM.stack.pop();
 					def field = b.stringPool[operand];
 
 					if (CLOptions.CACHE.get()) {
@@ -950,9 +949,9 @@ class VirtualMachine {
 							Uncached => {
 								// cache miss
 								def v = obj.getField(field);
-								if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+								if (v == null) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 								else {
-									stack.push(v);
+									VM.stack.push(v);
 									// transition to monomorphic state(initial cached state)
 									b.cache[idx] = CacheState.Monomorphic(cls, obj.getIndex(field));
 								}
@@ -964,20 +963,20 @@ class VirtualMachine {
 									def res = obj.getFieldByIndex(cachedIndex);
 									if (CiceroOptions.useLazyMethods && res == null) {
 										// if not yet initialized, must treat as cache miss
-										stack.push(obj.getField(field));
+										VM.stack.push(obj.getField(field));
 										// don't transition state
 										if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
 									} else {
 										// cache hit
-										stack.push(res);
+										VM.stack.push(res);
 										if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheHit(b, pc-4);
 									}
 								} else {
 									// cache miss
 									def v = obj.getField(field);
-									if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+									if (v == null) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 									else {
-										stack.push(v);
+										VM.stack.push(v);
 
 										// Transition to Polymorphic state
 										// store newly seen class, and also previously cached class
@@ -999,14 +998,14 @@ class VirtualMachine {
 										def res = obj.getFieldByIndex(cachedIndex);
 										if (CiceroOptions.useLazyMethods && res == null) {
 											// if not yet initialized, must treat as cache miss
-											stack.push(obj.getField(field));
+											VM.stack.push(obj.getField(field));
 											// don't transition state
 											if (CiceroOptions.profileInlineCaching) {
 												ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
 											}
 										} else {
 											// cache hit
-											stack.push(res);
+											VM.stack.push(res);
 											if (CiceroOptions.profileInlineCaching) {
 												ProfileInlineCache.profileCacheHit(b, pc-4);
 											}
@@ -1018,9 +1017,9 @@ class VirtualMachine {
 									} else if (cachedClass == null) {
 										// cache miss
 										def v = obj.getField(field);
-										if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+										if (v == null) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 										else {
-											stack.push(v);
+											VM.stack.push(v);
 											values[i] = (cls, obj.getIndex(field));
 										}
 
@@ -1035,9 +1034,9 @@ class VirtualMachine {
 
 								if (needToChangeState) {
 									def v = obj.getField(field);
-									if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+									if (v == null) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 									else {
-										stack.push(v);
+										VM.stack.push(v);
 										// transition to megamorphic state
 										b.cache[idx] = CacheState.Megamorphic;
 									}
@@ -1050,8 +1049,8 @@ class VirtualMachine {
 							Megamorphic => {
 								// perform expensive lookup
 								def v = obj.getField(field);
-								if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
-								else stack.push(v);
+								if (v == null) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+								else VM.stack.push(v);
 
 								// treat every megamorphic state cache lookup as a cache miss
 								if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
@@ -1059,8 +1058,8 @@ class VirtualMachine {
 						}
 					} else {
 						def v = obj.getField(field);
-						if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
-						else stack.push(v);
+						if (v == null) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+						else VM.stack.push(v);
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -1074,14 +1073,14 @@ class VirtualMachine {
 				STORE_FIELD => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def val = stack.pop();
-					def obj = stack.pop();
+					def val = VM.stack.pop();
+					def obj = VM.stack.pop();
 					def field = b.stringPool[operand];
 
 					if (CLOptions.CACHE.get()) {
@@ -1095,7 +1094,7 @@ class VirtualMachine {
 						match (cache) {
 							Uncached => {
 								/* cache miss */
-								if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+								if (!obj.setField(field, val)) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 								else {
 									// transition to monomorphic
 									b.cache[idx] = CacheState.Monomorphic(cls, obj.getIndex(field));
@@ -1113,7 +1112,7 @@ class VirtualMachine {
 								} else {
 									/* cache miss */
 									if (!obj.setField(field, val)) {
-										throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+										VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 									} else {
 										// Transition to Polymorphic state
 										// store newly seen class, and also previously cached class
@@ -1141,7 +1140,7 @@ class VirtualMachine {
 									} else if (cachedClass == null) {
 										needToChangeState = false;
 
-										if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+										if (!obj.setField(field, val)) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 										else {
 											values[i] = (cls, obj.getIndex(field));
 											if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, true);
@@ -1151,7 +1150,7 @@ class VirtualMachine {
 								}
 
 								if (needToChangeState) {
-									if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+									if (!obj.setField(field, val)) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 									else {
 										b.cache[idx] = CacheState.Megamorphic;
 										if (CiceroOptions.profileInlineCaching) {
@@ -1162,7 +1161,7 @@ class VirtualMachine {
 							}
 							Megamorphic => {
 								// perform expensive method call
-								if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+								if (!obj.setField(field, val)) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 								else {
 									// treat every megamorphic state cache lookup as a cache miss
 									if (CiceroOptions.profileInlineCaching) ProfileInlineCache.profileCacheMiss(b, pc-4, opcode.name, associatedFunc, false);
@@ -1170,7 +1169,7 @@ class VirtualMachine {
 							}
 						}
 					} else {
-						if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
+						if (!obj.setField(field, val)) VM.throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -1184,7 +1183,7 @@ class VirtualMachine {
 				CREATE_LIST => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
@@ -1192,14 +1191,14 @@ class VirtualMachine {
 
 					def values: Vector<Object> = Vector.new();
 					for (i < operand) {
-						values.put(stack.pop());
+						values.put(VM.stack.pop());
 					}
 					values.reverse();
 
 					def obj = ListObject.new();
 					obj.list.puta(values.extract());
 
-					stack.push(obj);
+					VM.stack.push(obj);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -1212,7 +1211,7 @@ class VirtualMachine {
 				CREATE_FUNC => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
@@ -1225,15 +1224,15 @@ class VirtualMachine {
 					def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body, funchole.metadata);
 					for (i = funchole.nonlocals.length - 1; i >= 0; i--) {
 						// if the nonlocal is the function itself (for recursion) then do not
-						// get it from the stack. you already have it!
+						// get it from the stack you already have it!
 						if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
 							nonlocals[i] = (funchole.id, fn);
 						} else {
-							nonlocals[i] = (funchole.nonlocals[i], stack.pop());
+							nonlocals[i] = (funchole.nonlocals[i], VM.stack.pop());
 						}
 					}
 
-					stack.push(fn);
+					VM.stack.push(fn);
 
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
@@ -1246,7 +1245,7 @@ class VirtualMachine {
 				RETURN => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
@@ -1254,16 +1253,16 @@ class VirtualMachine {
 
 					// return value will be on top of the stack
 					// put the return value as the base of the current call frame
-					def returnValue = stack.pop();
-					stack.elems[baseStartIndex] = returnValue;
-					stack.resize(baseStartIndex + 1);
+					def returnValue = VM.stack.pop();
+					VM.stack.elems[baseStartIndex] = returnValue;
+					VM.stack.resize(baseStartIndex + 1);
 
 					// finished with the current call frame. pop it and set the executing frame to the caller frame.
-					def oldFrame = callFrames.pop();
+					def oldFrame = VM.callFrames.pop();
 
-					if (callFrames.empty()) {
+					if (VM.callFrames.empty()) {
 						// return from top-level code
-						result = Result.Return(returnValue);
+						VM.result = Result.Return(returnValue);
 
 						if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls) {
 							def endTime = System.ticksUs();
@@ -1275,7 +1274,7 @@ class VirtualMachine {
 						}
 						return;
 					} else {
-						def currentCallFrame = callFrames.peek();
+						def currentCallFrame = VM.callFrames.peek();
 
 						// Sync the local variables relevant to the currently executing frame
 						b = currentCallFrame.b;
@@ -1304,13 +1303,13 @@ class VirtualMachine {
 				RETURN_INIT => {
 					if (CiceroOptions.profileDynamicOpcodePair) {
 						def dispatchEndTime = System.ticksUs();
-						ProfileDynamicOpcodePair.profile(lastInstr, opcode, dispatchEndTime - dispatchStartTime);
+						ProfileDynamicOpcodePair.profile(VM.lastInstr, opcode, dispatchEndTime - dispatchStartTime);
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs();
 					}
 
-					def initCallFrame = InitCallFrame.!(callFrames.peek()); // cast will succed because only init clauses can emit `RETURN_INIT`
+					def initCallFrame = InitCallFrame.!(VM.callFrames.peek()); // cast will succed because only init clauses can emit `RETURN_INIT`
 					def newIndex = initCallFrame.currentIndex + 1;
 					if (newIndex < initCallFrame.initFOs.length) {
 						def oldAssociatedFunc = associatedFunc;
@@ -1329,37 +1328,37 @@ class VirtualMachine {
 						associatedFunc = initFO.metadata;
 
 						// grow stack (if needed for remaining local variables)
-						stack.resize(nonLocalsStartIndex);
+						VM.stack.resize(nonLocalsStartIndex);
 
 						// clear slots for uninitialized locals
 						for (i = baseStartIndex + 1; i < nonLocalsStartIndex; i++)
-							stack.elems[i] = null;
+							VM.stack.elems[i] = null;
 
 						// update the current init FO index
-						InitCallFrame.!(callFrames.elems[callFrames.top -1]).currentIndex = newIndex;
+						InitCallFrame.!(VM.callFrames.elems[VM.callFrames.top -1]).currentIndex = newIndex;
 
 						// reuse the same existing init call frame (no need to pop frame)
 						// but update the contents of the frame
-						updateInitFrame(b, pc, associatedFunc, loc);
+						VM.updateInitFrame(b, pc, associatedFunc, loc);
 
 						if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 							def endTime = System.ticksUs();
-							ProfilingHelpers.handleProfilingDuringReturn(endTime, callFrames.elems[callFrames.top -2].associatedFunc, oldAssociatedFunc);
+							ProfilingHelpers.handleProfilingDuringReturn(endTime, VM.callFrames.elems[VM.callFrames.top -2].associatedFunc, oldAssociatedFunc);
 							def startTime = System.ticksUs();
 							ProfilingHelpers.callDataFrames.push(ProfileCallFrameData.new(initFO.uid, startTime));
 						}
 						if (CiceroOptions.traceFunctionCalls) {
-							TraceFunctionCalls.trace(associatedFunc.label, [("self", stack.elems[localsStartIndex])]);
+							TraceFunctionCalls.trace(associatedFunc.label, [("self", VM.stack.elems[localsStartIndex])]);
 						}
 					} else {
 						// treat like a normal `RETURN` instruction
 						// done with init frames
-						def oldFrame = callFrames.pop();
-						stack.resize(baseStartIndex + 1);
+						def oldFrame = VM.callFrames.pop();
+						VM.stack.resize(baseStartIndex + 1);
 
-						if (CiceroOptions.sanityChecks && callFrames.empty()) System.error("eval error", "call frames is empty after init clause executed");
+						if (CiceroOptions.sanityChecks && VM.callFrames.empty()) System.error("eval error", "call frames is empty after init clause executed");
 
-						def currentCallFrame = callFrames.peek();
+						def currentCallFrame = VM.callFrames.peek();
 
 						// Sync the local variables relevant to the currently executing frame
 						b = currentCallFrame.b;
@@ -1396,52 +1395,52 @@ class VirtualMachine {
 					_ => {}
 				}
 			}
-			if (CiceroOptions.profileDynamicOpcodePair) lastInstr = Maybe.Just(opcode);
+			if (CiceroOptions.profileDynamicOpcodePair) VM.lastInstr = Maybe.Just(opcode);
 		}
 
 		if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls) {
 			def endTime = System.ticksUs();
 			ProfilingHelpers.handleProfilingDuringReturn(endTime, null, associatedFunc);
 		}
-		if (CiceroOptions.sanityChecks && stack.empty()) System.error("eval error", "stack is empty");
+		if (CiceroOptions.sanityChecks && VM.stack.empty()) System.error("eval error", "stack is empty");
 		if (CiceroOptions.traceBytecodeEvaluation) System.puts("RETURN\n");
-		result = Result.OK(stack.pop());
+		VM.result = Result.OK(VM.stack.pop());
 		return;
 	}
 
 	def reset() {
-		callFrames.clear();
-		handlers.clear();
-		stack.clear();
-		result = Result.Uncomputed;
+		VM.callFrames.clear();
+		VM.handlers.clear();
+		VM.stack.clear();
+		VM.result = Result.Uncomputed;
 	}
 
 	/* Call frame related helper methods */
 
 	def saveFrame(pc: int, loc: FileRange) {
 		// update the ip in the caller frame!
-		def i = callFrames.top - 1;
-		callFrames.elems[i].ip = pc;
-		callFrames.elems[i].loc = loc;
+		def i = VM.callFrames.top - 1;
+		VM.callFrames.elems[i].ip = pc;
+		VM.callFrames.elems[i].loc = loc;
 	}
 
 	def updateInitFrame(b: Bytecode, pc: int, associatedFunc: FunctionProfileMetadata, loc: FileRange) {
-		def i = callFrames.top - 1;
+		def i = VM.callFrames.top - 1;
 		// `bytecode`, `associatedFunc` are also necessary to save during init calls since we reuse the call frame
-		callFrames.elems[i].b = b;
-		callFrames.elems[i].associatedFunc = associatedFunc;
+		VM.callFrames.elems[i].b = b;
+		VM.callFrames.elems[i].associatedFunc = associatedFunc;
 		// TODO? -> not necessary to save yet since init don't capture nonlocals, but potentially might need to in the future if classes capture nonlocals
-		saveFrame(pc, loc);
+		VM.saveFrame(pc, loc);
 	}
 
 	/* Exception helper methods */
 
 	def isExn() -> bool {
-		return Result.Exn.?(result);
+		return Result.Exn.?(VM.result);
 	}
 
 	def getExn() -> ExnObject {
-		match (result) {
+		match (VM.result) {
 			e: Result.Exn	=> return e.exn;
 			_ => System.error("internal error", "FrameObject.getExn: received non-exn result");
 		}
@@ -1450,20 +1449,20 @@ class VirtualMachine {
 
 	def assertArity(argc: int, vals: int, label: string, loc: FileRange) {
 		if (vals != argc)
-			throw(Exceptions.arityMismatch(argc, vals), label, loc);
+			VM.throw(Exceptions.arityMismatch(argc, vals), label, loc);
 	}
 
 	def rethrow(exn: ExnObject, label: string, loc: FileRange) {
 		exn.stacktrace.put((label, loc));
-		result = Result.Exn(exn);
+		VM.result = Result.Exn(exn);
 	}
 
 	def assertType(exp: ClassObject, val: Object, label: string, loc: FileRange) {
 		if (!val.instanceOf(exp))
-			throw(Exceptions.typeMismatch(exp, val), label, loc);
+			VM.throw(Exceptions.typeMismatch(exp, val), label, loc);
 	}
 
 	def throw(msg: string, label: string, loc: FileRange) {
-		result = Result.Exn(ExnObjects.fromStrObject(StrObjects.fromString(msg), label, loc));
+		VM.result = Result.Exn(ExnObjects.fromStrObject(StrObjects.fromString(msg), label, loc));
 	}
 }

@@ -21,7 +21,7 @@ def main(args: Array<string>) -> int {
 		return 1;
 	}
 
-	loadVM();
+	initRuntime();
 	loadCore();
 
 	def FAILURE = if(CLOptions.FUZZING.get(), 0, 1);
@@ -42,8 +42,8 @@ def main(args: Array<string>) -> int {
 
 				if (!CLOptions.DO_NOT_EVALUATE.get()) {
 					// evaluate
-					TopLevel.VM.eval(expr);
-					match (TopLevel.VM.result) {
+					VM.eval(expr);
+					match (VM.result) {
 						Exn(exn) => {
 							exn.print();
 							return FAILURE;
@@ -88,8 +88,8 @@ def main(args: Array<string>) -> int {
 					expr.compile([], TopLevel.name, true, false);
 
 					// evaluate
-					TopLevel.VM.eval(expr);
-					match (TopLevel.VM.result) {
+					VM.eval(expr);
+					match (VM.result) {
 						Exn(exn) => {
 							exn.print();
 						}
@@ -162,8 +162,7 @@ def main(args: Array<string>) -> int {
 	return 0;
 }
 
-def loadVM() {
-	TopLevel.VM = VirtualMachine.new();
+def initRuntime() {
 	for (builtin in Builtin.set.all) {
 		Globals.storeGlobal(builtin.id, builtin.val);
 	}
@@ -175,7 +174,7 @@ def loadCore() {
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
  		expr.compile([], TopLevel.name, true, false);
-		TopLevel.VM.eval(expr);
+		VM.eval(expr);
 	}
 }
 
@@ -212,5 +211,4 @@ def abortCicero(obj: Object) -> int {
 component TopLevel {
 	def name: string = "\"repl\"";
 	def metadata: FunctionProfileMetadata = FunctionProfileMetadata.new(TopLevel.name, true);
-	var VM: VirtualMachine = null;
 }
