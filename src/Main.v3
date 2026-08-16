@@ -25,7 +25,7 @@ def main(args: Array<string>) -> int {
 	loadCore();
 
 	def FAILURE = if(CLOptions.FUZZING.get(), 0, 1);
-	
+
 	// evaluate files (if present)
 	for (filename in files) {
 		// read in file
@@ -49,12 +49,12 @@ def main(args: Array<string>) -> int {
 							return FAILURE;
 						}
 						OK(val) => {
-							if (!CLOptions.SUPPRESS_OUTPUT.get()) 
+							if (!CLOptions.SUPPRESS_OUTPUT.get())
 								System.puts(Strings.format1("=> %s\n", val.display()));
 						}
 						// `return` at a top-level is the equivalent of aborting cicero completely.
 						Return(val) => return abortCicero(val);
-						_ => {
+						Uncomputed => {
 							System.error("eval error", "Interpreter did not give result");
 							return 1;
 						}
@@ -95,7 +95,7 @@ def main(args: Array<string>) -> int {
 						}
 						OK(val)		=> System.puts(Strings.format1("=> %s\n", val.display()));
 						Return(val)	=> return abortCicero(val);
-						_		=> System.error("eval error", "Interpreter did not give result");
+						Uncomputed	=> System.error("eval error", "Interpreter did not give result");
 					}
 				}
 			} else {
@@ -167,8 +167,7 @@ def loadVM() {
 	for (builtin in Builtin.set.all) {
 		Globals.storeGlobal(builtin.id, builtin.val);
 	}
-	CodeObjects.compileLater.apply(CodeObjects.compileUncompiledCodeObject);
-	CodeObjects.compileLater.clear();
+	CodeObjects.compileUncompiledCodeObjects();
 }
 
 def loadCore() {
@@ -194,11 +193,11 @@ def printHelp() {
 }
 
 /* `return` expr at a top-level aborts cicero completely.
-	For the exit code:
-		* integers are converted using % 256
-		* unit () -> returns 0
-		* everything else -> returns 255.
-*/
+ * For the exit code:
+ * - integers are converted using % 256
+ * - unit () -> returns 0
+ * - everything else -> returns 255.
+ */
 def abortCicero(obj: Object) -> int {
 	if (obj.instanceOf(ClassObjects.classUnit)) {
 		return 0;

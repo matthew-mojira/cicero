@@ -11,12 +11,11 @@ class ProfiledInlineCacheData #unboxed {
 }
 
 component ProfileInlineCache {
-	/* 
-	 	Note: Each bytecode object has its own set of bytecode instrs. So, we need to keep track for all bytecode objects.
-		The key is a combination of the bytecode object id (int: 32 bit) 
-			and the instruction index (int as well) where inline caching is performed, currently LOAD_FIELD
-		So, key: long = (bytecode.id << 32) | instr_index;
-	*/
+	/* Note: Each bytecode object has its own set of bytecode instrs. So, we need to keep track for all bytecode objects.
+	 * The key is a combination of the bytecode object id (int: 32 bit)
+	 * and the instruction index (int as well) where inline caching is performed, currently LOAD_FIELD
+	 * So, key: long = (bytecode.id << 32) | instr_index;
+	 */
 	def hitMissCounts: HashMap<long, ProfiledInlineCacheData> = HashMap.new(ProfilingHelpers.computeHash, long.==);
 
 	def profileCacheHit(b: Bytecode, instrIndex: int) {

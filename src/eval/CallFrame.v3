@@ -5,7 +5,7 @@ class CallFrame #unboxed {
 	def localsStartIndex: int;
 	def nonLocalsStartIndex: int;
 	def baseStartIndex: int;
-	
+
 	var associatedFunc: FunctionProfileMetadata; // only changes for `InitCallFrames`
 	var loc: FileRange;
 

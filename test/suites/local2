@@ -28,7 +28,7 @@
 => <object>
 => 30
 --
-(class A 
+(class A
     (field a { (if cond (set y 555) ()) y })
 )
 (setter 999)
@@ -41,7 +41,7 @@
 (class S
     (init (set a 999))
 )
-(class A 
+(class A
     (extends S)
     (field a { (if cond (set y 555) ()) y })
 )

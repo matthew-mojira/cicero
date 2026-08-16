@@ -171,7 +171,7 @@ The value of the entire expression is the newly created object.
 e.x
 ```
 
-Accesses the field `x` of the object evaluated in `e`. If the object contains 
+Accesses the field `x` of the object evaluated in `e`. If the object contains
 the field, then that field value is the value of the entire expression.
 Otherwise, it is an exception.
 

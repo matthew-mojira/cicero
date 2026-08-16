@@ -1,5 +1,4 @@
-/* The bytecode compiler translates an AST into bytecode.
- */
+/* The bytecode compiler translates an AST into bytecode. */
 class BytecodeCompiler {
 	def writer:	DataWriter	= DataWriter.new();
 
@@ -42,14 +41,14 @@ class BytecodeCompiler {
 	 */
 	def extract() -> Bytecode {
 		def bytecode = writer.extract();
-		def b = Bytecode.new(bytecode, 
-				locals.extract(), 
+		def b = Bytecode.new(bytecode,
+				locals.extract(),
 				nonlocals.extract(),
 				params,
-				strings.extract(), 
-				constants.extract(), 
-				classholes.extract(), 
-				funcholes.extract(), 
+				strings.extract(),
+				constants.extract(),
+				classholes.extract(),
+				funcholes.extract(),
 				source.extract());
 		return b;
 	}
@@ -127,7 +126,7 @@ class BytecodeCompiler {
 			Func(id, params, code, nonlocals, metadata) => {
 				// XXX compiling code
 				code.compile(params, metadata.label, false, false);
-			
+
 				for (i < nonlocals.length) {
 					def nonlocal: string = nonlocals[i];
 					if (Strings.equal(nonlocal, id))
@@ -152,7 +151,7 @@ class BytecodeCompiler {
 				def hole2 = writeInstrDeferOperand(loc, Opcode.JUMP);
 
 				fillHole(hole1, writer.pos - hole1 - 4);
-					
+
 				match (b.data) {
 					Local  => writeInstrWithOperand(loc, Opcode.STORE_LOCAL, addLocal(id));
 					Global => writeInstrWithOperand(loc, Opcode.STORE_GLOBAL, addString(id));
@@ -206,7 +205,7 @@ class BytecodeCompiler {
 					}
 				}
 				//                                   XXX
-				def idx = addClasshole(ClassObjects.classhole(id, if (init.isJust(), init.fromJust(), null), fields, Arrays.map(methods, funcToFunc)));
+				def idx = addClasshole(ClassObjects.classhole(id, init.fromMaybe(null), fields, Arrays.map(methods, funcToFunc)));
 				writeInstrWithOperand(loc, Opcode.CREATE_CLASS, idx);
 			}
 			New(obj) => {
@@ -223,11 +222,10 @@ class BytecodeCompiler {
 				writeInstr(loc, Opcode.RETURN);
 			}
 		}
-		
 	}
 
-	/* writer wrappers */	
-	
+	/* writer wrappers */
+
 	def writeInstr(loc: FileRange, op: Opcode) {
 		writeInstrWithOperand(loc, op, 0);
 	}

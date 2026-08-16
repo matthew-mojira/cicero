@@ -30,12 +30,12 @@
         (field f false)
         (field g "thing")
     )
-    
+
     (class B (extends A))
     (class C (extends B))
-    
+
     (set objs [(new A) (new B) (new C)])
-    
+
     (set i 0)
     ; stress test loop
     (while (i.< 999999)
@@ -50,7 +50,7 @@
         obj.e
         obj.f
         obj.g
-        
+
         (set-field x obj (+ obj.x 1)) ; load and store field access
         (set-field y obj (+ obj.y 1)) ; load and store field access
         (set-field z obj (+ obj.z 1)) ; load and store field access

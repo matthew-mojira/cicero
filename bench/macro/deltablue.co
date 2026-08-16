@@ -42,7 +42,7 @@
     (set unsatisfied (self._remove_propagate_from out))
     (unsatisfied.for_each self.incremental_add)
   })
-    
+
   (method (extract_plan_from_constraints constraints){
     (set sources (new Vector))
 
@@ -233,7 +233,7 @@
 
     (set i (i.succ))
   })
-  
+
   (edit_c.destroy_constraint planner)
 })
 
@@ -497,7 +497,7 @@
         (set-field _direction self FORWARD)
         (return self._direction)
       }())
-      
+
       (set-field _direction self ())
       (return self._direction)
     }())
@@ -517,7 +517,7 @@
         (set-field _direction self BACKWARD)
         (return self._direction)
       }())
-      
+
       (set-field _direction self ())
       (return self._direction)
     }())
@@ -526,13 +526,13 @@
       (set-field _direction self FORWARD)
       (return self._direction)
     }())
-    
+
     (set-field _direction self ())
     self._direction ; return
   })
 
   (method (inputs_do fn){
-    (if (= self._direction FORWARD) 
+    (if (= self._direction FORWARD)
       (return (fn self._v1)) ())
     (fn self._v2) ; return
   })

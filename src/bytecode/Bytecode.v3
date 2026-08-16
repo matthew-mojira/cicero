@@ -1,6 +1,6 @@
 /* A Cicero bytecode instruction is four bytes, one byte for the opcode and
  * three for the operand.
- * 
+ *
  * Contrast this approach with CPython bytecode, which is one byte for the
  * opcode and one for the operand. If a bytecode requires a longer operand,
  * there is the EXTENDED_ARG opcode which uses its operand as part of the
@@ -19,7 +19,7 @@ var current_bytecode_id: int = 0;
 /* The bytecode object, which contains the instructions (as bytes) and all the
  * locals and pools that the instructions will reference
  */
-class Bytecode(instrs:		Array<byte>, 
+class Bytecode(instrs:		Array<byte>,
 		locals:		Array<string>,
 		nonlocals:	Array<string>,
 		params:		Array<string>, // XXX used by analysis only
@@ -83,7 +83,7 @@ class Bytecode(instrs:		Array<byte>,
 			str.put3("+%d: %s %d", pc, opcode.name, operand);
 			if (loc != null) str.put2(" (%d:%d)", loc.beginLine, loc.beginColumn);
 			str.ln();
-			
+
 			pc += 4;
 		}
 
@@ -93,5 +93,15 @@ class Bytecode(instrs:		Array<byte>,
 	def inspect() {
 		System.puts(display());
 	}
+
+	/* Generic bytecode rewriting method */
+	def rewrite(op_index: int, new_op: Opcode, operand: int) {
+		// replace opcode
+		instrs[op_index] = new_op.tag;
+
+		// Little endian representation used to store the `operand` in bytecode
+		instrs[op_index + 1] = byte.!(operand & 0xFF);
+		instrs[op_index + 2] = byte.!((operand >> 8) & 0xFF);
+		instrs[op_index + 3] = byte.!((operand >> 16) & 0xFF);
+	}
 }
- 

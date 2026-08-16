@@ -93,10 +93,10 @@ run(){
         else
         BINARY=$BIN/cicero.$target
         fi
-    
+
         for tier in $TEST_TIERS; do
             TEST_TIER=$tier
-        
+
             for suite in $TEST_SUITES; do
 
                 SKIP=1
@@ -117,7 +117,7 @@ run(){
                 if [ "$SKIP" -eq 1 ]; then
                     T=/tmp/$USER/cicero-test/$TYPE/$SUITE
                     U=/tmp/$USER/cicero-test/$target/tier$TEST_TIER/$SUITE
-                
+
                     mkdir -p $U
 
                     print_testing

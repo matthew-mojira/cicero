@@ -120,7 +120,7 @@ For each inline cache site, the profiler records cache hits, misses, and the num
 Profiles calls based on the **static** definition of the function/method.
 
 The profiler relies on `FunctionProfileMetadata`(see `src/object/Function.v3`) to idenfity the "same"(functions with the same identifier id) function/methods.
-		
+
 > [!NOTE]
 > All instances of a closure created from the same function definition share the same identifier id.
 > Likewise, method calls are aggregated by the underlying method definition,

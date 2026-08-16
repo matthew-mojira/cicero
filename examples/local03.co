@@ -1,5 +1,5 @@
 (func (f x) {
-  (if cond 
+  (if cond
     (set y 1)
     10)
   x

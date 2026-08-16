@@ -6,7 +6,7 @@
   (cond
     ((< n 0) (raise "negative number passed to fib-memo"))
     ((< n (values.length)) (values.get n))
-    (true { 
+    (true {
       (values.put (+ (fib-memo (- n 1)) (fib-memo (- n 2))))
       (values.get n)})))
 

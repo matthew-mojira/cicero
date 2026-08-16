@@ -21,7 +21,7 @@ component ProfileCompilationTimes {
 			"# Code label is the function/method name. Exceptions: if it is the top-level code, it is \"repl\", classes field and init have their labels as well\n",
 			TopLevel.name);
 		sb.puts("Bytecode ID, Label, Inclusive Compilation Time(μs)\n");
-		
+
 		for (bytecodeId = 0; bytecodeId < ProfileCompilationTimes.data.length; bytecodeId++) {
 			def data: CompilationTimeData = ProfileCompilationTimes.data[bytecodeId];
 			sb.put3("%d, %s, %d\n", bytecodeId, data.label, data.time);

@@ -1,14 +1,12 @@
 component ProfileDynamicOpcodePair {
 
-	/* 
-		e.g ProfileDynamicOpcodePair.counts[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
-			would track dynamic counts of LOAD_LOCAL followed by LOAD_CONST
-	*/
+	/* e.g ProfileDynamicOpcodePair.counts[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
+	 * would track dynamic counts of LOAD_LOCAL followed by LOAD_CONST
+	 */
 	def counts: Array<Array<int>>= ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
-	/* 
-		e.g ProfileDynamicOpcodePair.dispatchCost[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
-			would track the total dispatch cost from LOAD_LOCAL to LOAD_CONST
-	*/
+	/* e.g ProfileDynamicOpcodePair.dispatchCost[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
+	 * would track the total dispatch cost from LOAD_LOCAL to LOAD_CONST
+	 */
 	def dispatchCost: Array<Array<long>>= ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 
 	def profile(maybeOpOne: Maybe<Opcode>, opTwo: Opcode, dispatchCost: long) {

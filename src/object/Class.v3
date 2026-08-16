@@ -4,12 +4,12 @@
 
 /* Cicero classes. */
 class ClassObject(
-		name: string, 
+		name: string,
 		superclass: ClassObject,  // XXX: base class has superclass == null
 		/* FuncObject that initializes fields as well as evaluates init body after all fields are initialized */
 		init: FuncObject,
 		/* List of fields by name and initializer */
-		classFields: Array<string>, 
+		classFields: Array<string>,
 		/* Note that the class methods are functions. The function
 		 * contains the name of the class. When an object is created,
 		 * the object is bound to this function to create the (bound)
@@ -48,7 +48,7 @@ class ClassObject(
 }
 
 /* Arrays for the list of types of parameters to the method. These are
- * lazily-defined (because the class doesn't exist yet) and initialized 
+ * lazily-defined (because the class doesn't exist yet) and initialized
  * after all the class objects are defined.
  */
 def b:  Array<ClassObject> = Array.new(1);
@@ -63,13 +63,13 @@ def so: Array<ClassObject> = Array.new(2);
 /* The built-in classes.
  *
  * The order of these is alphabetical, which works out fine. Any ordering of
- * the built-in classes must satisfy a topological ordering of the tree 
+ * the built-in classes must satisfy a topological ordering of the tree
  * structure of the class hierarchy.
  *
  * Two notes:
  *
  * Besides base, no other object of a built-in class can be instantiated using
- * `new`. This is accomplished by an `init` CodeObject that will always raise 
+ * `new`. This is accomplished by an `init` CodeObject that will always raise
  * an exception.
  *
  * No built-in classes use fields (besides methods). Note that the underlying
@@ -98,9 +98,9 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod1("get-field",	"base", s,	Object.o_getfield),	// 3
 			 FuncObjects.fromVirgilMethod1("=",		"base", o,	Object.o_eq)		// 4
 			]);
-	def classBool =	ClassObject.new("bool", classBase, 
-			FuncObjects.initFail, 
-			[], 
+	def classBool =	ClassObject.new("bool", classBase,
+			FuncObjects.initFail,
+			[],
 			[FuncObjects.fromVirgilMethod0("display","bool",	BoolObject.b_display),
 			 FuncObjects.fromVirgilMethod0("not",	 "bool",	BoolObject.b_not),
 			 FuncObjects.fromVirgilMethod1("and",	 "bool", b,	BoolObject.b_and),
@@ -112,8 +112,8 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod1("+",	 "char", o,	CharObject.ch_concat)
 			]);
 	def classClass = ClassObject.new("class", classBase,
-			FuncObjects.initFail, 
- 			[], 
+			FuncObjects.initFail,
+ 			[],
  			[FuncObjects.fromVirgilMethod0("display",	"class",	ClassObject.c_display),
  			 FuncObjects.fromVirgilMethod0("superclass",	"class",	ClassObject.c_superclass),
  			 FuncObjects.fromVirgilMethod0("name",		"class",	ClassObject.c_name)
@@ -140,11 +140,11 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod1("<=",		"double",   d,	DoubleObject.do_leq),
 			 FuncObjects.fromVirgilMethod1(">=",		"double",   d,	DoubleObject.do_geq)
 			]);
-	def classExn   = ClassObject.new("exn",   classBase, FuncObjects.initFail, [], 
+	def classExn   = ClassObject.new("exn",   classBase, FuncObjects.initFail, [],
 			[FuncObjects.fromVirgilMethod0("display",	"exn",   ExnObject.e_display),
 			 FuncObjects.fromVirgilMethod0("stacktrace",	"exn",   ExnObject.e_stacktrace)
 			]);
-	def classFunc = ClassObject.new("func", classBase, 
+	def classFunc = ClassObject.new("func", classBase,
 			FuncObjects.initFail,
 			[],
 			[FuncObjects.fromVirgilMethod0("display",	"func",  FuncObject.f_display),
@@ -152,9 +152,9 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod0("params",	"func",  FuncObject.f_params),
 			 FuncObjects.fromVirgilMethod0("code",		"func",  FuncObject.f_code)
 			]);
-	def classInt = ClassObject.new("int", classBase, 
-			FuncObjects.initFail, 
-			[], 
+	def classInt = ClassObject.new("int", classBase,
+			FuncObjects.initFail,
+			[],
 			[FuncObjects.fromVirgilMethod0("display", "int", IntObject.i_display),
 			/* built-in classes can have methods defined in Cicero! */
 			 FuncObjects.fromCiceroMethod ("succ",			CiceroTexts.i_succ),
@@ -178,9 +178,9 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod1(">>",  "int",   i,	IntObject.i_shr),
 			 FuncObjects.fromVirgilMethod1("<<",  "int",   i,	IntObject.i_shl)
 			]);
-	def classList = ClassObject.new("list", classBase, 
-			FuncObjects.initFail, 
-			[], 
+	def classList = ClassObject.new("list", classBase,
+			FuncObjects.initFail,
+			[],
 			[FuncObjects.fromVirgilMethod0("display",	"list",		ListObject.l_display),
 			 FuncObjects.fromCiceroMethod ("=",				CiceroTexts.l_eq),
 			 FuncObjects.fromVirgilMethod1("get",		"list",  i,	ListObject.l_get),
@@ -196,13 +196,13 @@ component ClassObjects {
 			 FuncObjects.fromVirgilMethod0("keys",		"map",		MapObject.p_keys),
 			 FuncObjects.fromVirgilMethod0("values",	"map",		MapObject.p_values),
 			 FuncObjects.fromVirgilMethod0("display",	"map",		MapObject.p_display)]);
-	def classMethod = ClassObject.new("method", classFunc, 
+	def classMethod = ClassObject.new("method", classFunc,
 			FuncObjects.initFail,
-			[], 
+			[],
 			[FuncObjects.fromVirgilMethod0("display", "method",  MethodObject.m_display),
 			 FuncObjects.fromVirgilMethod0("object",  "method",  MethodObject.m_object)
 			]);
-	def classUnit = ClassObject.new("unit", classBase, FuncObjects.initFail, [], 
+	def classUnit = ClassObject.new("unit", classBase, FuncObjects.initFail, [],
 			[FuncObjects.fromVirgilMethod0("display", "unit",  UnitObject.u_display)
 			]);
 	def classStr = ClassObject.new("str", classBase, FuncObjects.initFail, [],

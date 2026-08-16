@@ -73,7 +73,7 @@ Here is how the easy things evaluate:
   - assert `f` is a value of function type
   - evaluate `e2 ... en`
   - do the call
-* Some language features are special. See [syntactic language features](./syntax.md) 
+* Some language features are special. See [syntactic language features](./syntax.md)
   for the list and how they evaluate.
 
 ### Built-ins
@@ -81,11 +81,11 @@ Here is how the easy things evaluate:
 Some values are provided as variables in the global environment. They are
 
 * `true` and `false`
-* `base`, `bool`, `char`, `class`, `code`, `double`, `exn`, `func`, `int`, 
+* `base`, `bool`, `char`, `class`, `code`, `double`, `exn`, `func`, `int`,
   `list`, `map`, `method`, `unit`, `str` referring to those classes (note
   that `func` is overloaded for the syntactic function declaration)
 
-These are not literals but are instead variables defined in the global 
+These are not literals but are instead variables defined in the global
 environment.
 
 ### Core
@@ -98,7 +98,7 @@ It is not intended for the end user to modify this file.
 
 The core utilities are:
 * binary operator wrappers: `+`, `-`, `*`, `/`, `=`, `!=`, `<`, `<=`, `>`,
-  `>=`, `&`, `|`, `^`, which wrap around a more ugly method call. 
+  `>=`, `&`, `|`, `^`, which wrap around a more ugly method call.
   ```
   ((get-field + 1) 2)
   ; can be written more familiarly as
@@ -125,7 +125,7 @@ Values of type
 * char
 
 have one unique instance for each underlying value. The underlying value is
-immutable, but the fields are mutable. This may make things strange if you mess 
+immutable, but the fields are mutable. This may make things strange if you mess
 with the fields.
 
 ## User-defined classes
@@ -151,7 +151,7 @@ A class consists of
 * field and method declarations
   - a field consists of an identifier and an initial value
   - methods are bound to an object which can be accessed through `self`.
-    Note that there isn't an implicit lookup when you reference another field 
+    Note that there isn't an implicit lookup when you reference another field
     (i.e. you must access through `self`). Methods are also fields.
 
 No static members of a class.

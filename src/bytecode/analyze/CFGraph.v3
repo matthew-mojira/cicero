@@ -64,7 +64,7 @@ class CFGraph(bytecode: Bytecode) {
 			def block = basicBlocks[i];
 			def lastOp = Opcodes.map[block.bytes[block.bytes.length - 4]];
 			def lastPc = block.startPc + block.bytes.length;
-			
+
 			if (lastOp.fallthrough) {
 				block.successors.add(basicBlocks[map[lastPc]]);
 				basicBlocks[map[lastPc]].predecessors.add(block);
@@ -115,7 +115,7 @@ class CFGraph(bytecode: Bytecode) {
 					newDoms.retainAll(pred.dominators);
 				}
 
-				newDoms.add(block);				
+				newDoms.add(block);
 
 				if (!newDoms.equalS(block.dominators)) {
 					block.dominators = newDoms;
@@ -152,7 +152,7 @@ class CFGraph(bytecode: Bytecode) {
 					break;
 				}
 			}
-			block.immDom = immDomCand;			
+			block.immDom = immDomCand;
 		}
 	}
 
@@ -170,7 +170,7 @@ class CFGraph(bytecode: Bytecode) {
 		System.ln();
 		for (block in basicBlocks.copy()) {
 			block.display();
-		}		
+		}
 	}
 }
 
@@ -192,7 +192,7 @@ class BasicBlock(bytes: Range<byte>, startPc: int) {
  		} else {
  			System.puts("(=> imm dom: none)\n");
  		}
-		
+
 		def predecessors = predecessors.toArray();
 		System.puts("   [");
 		for (i = 0; i < predecessors.length - 1; i++) {

@@ -1,8 +1,7 @@
 component ProfileStaticOpcodePairCounts {
-	/* 
-		e.g. ProfileStaticOpcodePairCounts.data[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
-			would track static counts of LOAD_LOCAL followed by LOAD_CONST
-	*/
+	/* For e.g. ProfileStaticOpcodePairCounts.data[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
+	 * would track static counts of LOAD_LOCAL followed by LOAD_CONST
+	 */
 	def data: Array<Array<int>> = ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
 
 	def profile(maybeOpOne: Maybe<Opcode>, opTwo: Opcode) {

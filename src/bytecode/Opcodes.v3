@@ -24,7 +24,7 @@ enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
 	TRY			(true, false, false),  // [0] offset from this bytecode of the catch
 	CATCH			(true, false, false),  // [0]
 	ASSERT_FUNC		(true, false, true),   // [1]
-	// Object creation   
+	// Object creation
 	CREATE_OBJECT		(true, false, true),   // [1]
 	CREATE_CLASS		(true, false, true),   // [1] index into the classhole pool
 	CREATE_LIST		(true, false, false),  // [1] how many elements to pull
@@ -40,17 +40,17 @@ enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
 
 /*
  * 00 NOP
- * 01 LOAD_CONST  
- * 02 LOAD_GLOBAL 
+ * 01 LOAD_CONST
+ * 02 LOAD_GLOBAL
  * 03 LOAD_GLOBAL_BY_INDEX
- * 04 LOAD_LOCAL  
+ * 04 LOAD_LOCAL
  * 05 LOAD_LOCAL_SAFE
- * 06 LOAD_FIELD  
+ * 06 LOAD_FIELD
  * 07 LOAD_NONLOCAL
  * 08 STORE_GLOBAL
  * 09 STORE_GLOBAL_BY_INDEX
- * 0A STORE_LOCAL 
- * 0B STORE_FIELD 
+ * 0A STORE_LOCAL
+ * 0B STORE_FIELD
  * 0C CALL
  * 0D JUMP
  * 0E JUMP_IF_FALSE
@@ -59,11 +59,11 @@ enum Opcode(fallthrough: bool, jump: bool, exception: bool) {
  * 11 RAISE
  * 12 TRY
  * 13 CATCH
- * 14 ASSERT_FUNC 
+ * 14 ASSERT_FUNC
  * 15 CREATE_OBJECT
- * 16 CREATE_CLASS 
- * 17 CREATE_LIST  
- * 18 CREATE_FUNC  
+ * 16 CREATE_CLASS
+ * 17 CREATE_LIST
+ * 18 CREATE_FUNC
  * 19 POP
  * 1A DUPE
  * 1B SWAP

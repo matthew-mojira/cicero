@@ -17,7 +17,7 @@
     (class B (extends A))
     (class C (extends B))
     (class D (extends C))
-    
+
     (func (resetxyz obj){
         (set-field x obj 0)
         (set-field y obj 0)
@@ -39,7 +39,7 @@
             obj.e
             obj.f
             obj.g
-            
+
             (set-field x obj (+ obj.x 1)) ; load and store field access
             (set-field y obj (+ obj.y 1)) ; load and store field access
             (set-field z obj (+ obj.z 1)) ; load and store field access
@@ -47,7 +47,7 @@
             (set i (i.+ 1))
         })
     })
-    
+
     (func (check-benchmark-result objs expected){
         (set result true)
         (set i 0)
@@ -62,7 +62,7 @@
         })
         result
     })
-    
+
     (set objs [(new A) (new B) (new C) (new D)])
     (set obj0 (objs.get 0))
     (set obj1 (objs.get 1))

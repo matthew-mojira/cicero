@@ -6,7 +6,7 @@ class CharObject(char: byte) extends Object {
 
 	/* METHODS */
 	def ch_display() => Result.OK(StrObjects.fromString(Strings.format1("%c", char)));
-	
+
 	def ch_concat(obj: Object) -> Result {
 		if (obj.instanceOf(ClassObjects.classStr)) {
 			def str_value = (StrObject.!(obj).str);

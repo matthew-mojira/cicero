@@ -10,9 +10,7 @@ class ProfiledJumpData #unboxed {
 }
 
 component ProfileJumpOutcomes {
-	/* 
-		key: long = (bytecode.id << 32) | instr_index;
-	*/
+	/* key: long = (bytecode.id << 32) | instr_index */
 	def jumpOpcodeOutcomes: HashMap<long, ProfiledJumpData> = HashMap.new(ProfilingHelpers.computeHash, long.==);
 
 	def profileJump(b: Bytecode, instrIndex: int, op_name: string, jump_taken: bool, funcMetadata: FunctionProfileMetadata) {
@@ -40,7 +38,7 @@ component ProfileJumpOutcomes {
 			def bytecodeObjectId: int = int.!(key >> 32);
 			def instrIndex: int = int.!(key & 0x00000000FFFFFFFF);
 			def data: ProfiledJumpData = ProfileJumpOutcomes.jumpOpcodeOutcomes[key];
-			
+
 			sb.put3("%d, %d, %d, ", data.lineNumber, bytecodeObjectId, instrIndex);
 			sb.put2("%d, %s, ", data.associatedFunc.identifier, data.associatedFunc.label);
 			sb.put3("%s, %d, %d\n", data.instruction, data.jumpsTaken, data.jumpsNotTaken);

@@ -1,9 +1,8 @@
 component ProfileBytecode {
 	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
-	/* 
-		`dynamicCounts` tracks op execution counts at runtime.
-		`dynamicOpExecutionTimes` tracks op's total execution runtime cost
-	*/
+	/* `dynamicCounts` tracks op execution counts at runtime.
+	 * `dynamicOpExecutionTimes` tracks op's total execution runtime cost
+	 */
 	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
 	def dynamicOpExecutionTimes: Array<long> = Array.new(Opcodes.numOpcodes);
 

@@ -27,7 +27,7 @@
 
     (if (= depth 1){
       (set size (+ (% (random.next) 10) 1))
-      
+
       ; Build empty array of size `size` with `unit` value as elements
       (set arr [])
       (set i 0)
@@ -48,7 +48,7 @@
       arr ; return arr
      })
    })
-  
+
   (method (verify_result result) (= result 5461))
 )
 }

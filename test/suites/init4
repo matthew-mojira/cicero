@@ -11,7 +11,7 @@
     (field valuesA [20 30 50 10 7])
     (field resultA 0)
     (init {
-        (set sum-value (list_sum self.valuesA 0)) 
+        (set sum-value (list_sum self.valuesA 0))
         (set-field resultA self sum-value)
     })
 )

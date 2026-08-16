@@ -27,11 +27,10 @@ class VirtualMachine {
 		// Reset VM
 		reset();
 
-		/*
-		* These local variables represent the currently active(executing) call frame
-		* The `CallFrame` object in the top of the call frames stack is out of sync.
-		* So, this `CallFrame` object is synced when a new call frame gets pushed (during CALL, CREATE_OBJECT)
-		*/
+		/* These local variables represent the currently active(executing) call frame
+		 * The `CallFrame` object in the top of the call frames stack is out of sync.
+		 * So, this `CallFrame` object is synced when a new call frame gets pushed (during CALL, CREATE_OBJECT)
+		 */
 		var b = bcode;
 		var code = b.instrs;
 		var pc: int = 0;
@@ -71,7 +70,7 @@ class VirtualMachine {
 					result = Result.Exn(exn);
 					return;
 				} else {
-					var isTopFrame = true; // Flag to prevent duplicating the stacktrace for the current frame that threw the exception 
+					var isTopFrame = true; // Flag to prevent duplicating the stacktrace for the current frame that threw the exception
 					def p = handlers.pop();
 					// build stack trace until the handlers call frame
 					while (callFrames.top > p.2) {
@@ -99,7 +98,7 @@ class VirtualMachine {
 					pc = p.0;
 					b = currentCallFrame.b;
 					code = b.instrs;
-					localsStartIndex = currentCallFrame.localsStartIndex; 
+					localsStartIndex = currentCallFrame.localsStartIndex;
 					nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
 					baseStartIndex = currentCallFrame.baseStartIndex;
 					associatedFunc = currentCallFrame.associatedFunc;
@@ -190,8 +189,7 @@ class VirtualMachine {
 								// perform bytecode rewriting to replace `LOAD_GLOBAL` with `LOAD_GLOBAL_BY_INDEX`
 								// `v.1` gives us the index into the `Globals.values` vector
 								def global_index = v.1;
-								// arguments: bytecode array, opcode index to replace, new opcode, index into `Global.values` vector
-								rewriteBytecode(code, pc - 4, Opcode.LOAD_GLOBAL_BY_INDEX, global_index);
+								b.rewrite(pc - 4, Opcode.LOAD_GLOBAL_BY_INDEX, global_index);
 							}
 						}
 						Nothing => throw(Exceptions.unboundGlobal(id), associatedFunc.label, loc);
@@ -216,7 +214,7 @@ class VirtualMachine {
 
 					def value = Globals.loadGlobalByIndex(operand);
 					stack.push(value);
-					
+
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;
 						ProfileBytecode.profileDynamicCountAndExecutionTime(opcode.tag, opExecTime);
@@ -310,7 +308,7 @@ class VirtualMachine {
 					if (CiceroOptions.useOptimizedGlobals) {
 						// perform bytecode rewriting to replace `STORE_GLOBAL` with `STORE_GLOBAL_BY_INDEX`
 						// arguments: bytecode array, opcode index to replace, new opcode, index into `Global.values` vector
-						rewriteBytecode(code, pc - 4, Opcode.STORE_GLOBAL_BY_INDEX, global_index);
+						b.rewrite(pc - 4, Opcode.STORE_GLOBAL_BY_INDEX, global_index);
 					}
 
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -539,7 +537,7 @@ class VirtualMachine {
 							nonLocalsStartIndex = localsStartIndex + bytecode.locals.length;
 							associatedFunc = fv.metadata;
 							loc = b.sourceMap[0];
-							
+
 							if (fv.instanceOf(ClassObjects.classMethod)) {
 								stack.elems[baseStartIndex] = MethodObject.!(fv).obj;
 								localsStartIndex--;
@@ -586,7 +584,7 @@ class VirtualMachine {
 								TraceFunctionCalls.trace(fv.metadata.label, argv);
 							}
 						}
-						_ => {
+						Virgil => {
 
 							var args: Array<Object> = Array.new(operand);
 							for (i < operand) {
@@ -614,7 +612,7 @@ class VirtualMachine {
 							/* Virgil function exeuction */
 							def argv: Array<Object> = if (fv.instanceOf(ClassObjects.classMethod), Arrays.prepend(MethodObject.!(fv).obj, args), args);
 							def resultV: Result = Code.Virgil.!(fv.code.code).fn(argv);
-							
+
 							if (CiceroOptions.profileDynamicBytecode) {
 								opExecTime = System.ticksUs();
 							}
@@ -648,6 +646,9 @@ class VirtualMachine {
 							}
 							// Virgil functions return either `Result.OK` or `Result.Exn`
 							stack.push(Result.OK.!(resultV).value);
+						}
+						_ => {
+							System.error("internal error", "Unsupported code execution tier");
 						}
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -821,7 +822,7 @@ class VirtualMachine {
 					def classes: Vector<ClassObject> = Vector.new();
 					for (cls = clsObj; cls != null; cls = cls.superclass)
 						classes.put(cls);
-				
+
 					// initialization order is from base class downwards, which
 					// may involve reinitializing some fields
 					def classInitFOs: Vector<FuncObject> = Vector.new();
@@ -833,7 +834,7 @@ class VirtualMachine {
 							def initFn = cls.init;
 							match (initFn.code.code) {
 								Bytecode => classInitFOs.put(initFn);
-								_ => {
+								Virgil => {
 									if (CiceroOptions.traceFunctionCalls) {
 										TraceFunctionCalls.trace(initFn.metadata.label, args);
 									}
@@ -876,9 +877,11 @@ class VirtualMachine {
 										break;
 									}
 								}
+								_ => {
+									System.error("internal error", "Unsupported code execution tier");
+								}
 							}
-
-						} 
+						}
 					}
 					if (!initFailed) {
 						stack.push(obj);
@@ -898,7 +901,7 @@ class VirtualMachine {
 							localsStartIndex = baseStartIndex;
 							nonLocalsStartIndex = localsStartIndex + bytecode.locals.length; // classes don't capture nonlocals.
 							associatedFunc = initFO.metadata;
-							
+
 							// grow stack (if needed for remaining local variables)
 							stack.resize(nonLocalsStartIndex);
 
@@ -941,7 +944,7 @@ class VirtualMachine {
 					if (CLOptions.CACHE.get()) {
 						def idx = (pc - 4) >> 2;
 						cache = b.cache[idx];
-						
+
 						def cls: ClassObject = obj.getClass();
 						match (cache) {
 							Uncached => {
@@ -1029,7 +1032,7 @@ class VirtualMachine {
 										break;
 									}
 								}
-								
+
 								if (needToChangeState) {
 									def v = obj.getField(field);
 									if (v == null) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
@@ -1084,7 +1087,7 @@ class VirtualMachine {
 					if (CLOptions.CACHE.get()) {
 						def idx = (pc - 4) >> 2;
 						cache = b.cache[idx];
-						
+
 						def cls: ClassObject = obj.getClass();
 						// obj.initClass() is guaranteed to have executed
 						// So, an index is guaranteed to exist for the field, given that the field exists.
@@ -1146,7 +1149,7 @@ class VirtualMachine {
 										break;
 									}
 								}
-								
+
 								if (needToChangeState) {
 									if (!obj.setField(field, val)) throw(Exceptions.missingField(obj, field), associatedFunc.label, loc);
 									else {
@@ -1273,7 +1276,7 @@ class VirtualMachine {
 						return;
 					} else {
 						def currentCallFrame = callFrames.peek();
-						
+
 						// Sync the local variables relevant to the currently executing frame
 						b = currentCallFrame.b;
 						code = b.instrs;
@@ -1312,11 +1315,11 @@ class VirtualMachine {
 					if (newIndex < initCallFrame.initFOs.length) {
 						def oldAssociatedFunc = associatedFunc;
 						def initFO = initCallFrame.initFOs[newIndex];
-						/* no need to pop the call frame as we want to reuse it
-						* However, we need update all necessary local variables and the call frame object
-						* The actions we take should be the equivalent of popping the current top frame,
-						* and pushing the new frame for the subclass init clause.
-						*/
+						/* There is no need to pop the call frame as we want to reuse it!
+						 * However, we need to update the necessary local vars and the call frame object.
+						 * The actions we take should be the equivalent of popping the current top frame,
+						 * and pushing the new frame for the subclass init clause.
+						 */
 						def bytecode = Code.Bytecode.!(initFO.code.code).bytecode;
 						b = bytecode;
 						code = b.instrs;
@@ -1334,7 +1337,7 @@ class VirtualMachine {
 
 						// update the current init FO index
 						InitCallFrame.!(callFrames.elems[callFrames.top -1]).currentIndex = newIndex;
-						
+
 						// reuse the same existing init call frame (no need to pop frame)
 						// but update the contents of the frame
 						updateInitFrame(b, pc, associatedFunc, loc);
@@ -1357,7 +1360,7 @@ class VirtualMachine {
 						if (CiceroOptions.sanityChecks && callFrames.empty()) System.error("eval error", "call frames is empty after init clause executed");
 
 						def currentCallFrame = callFrames.peek();
-						
+
 						// Sync the local variables relevant to the currently executing frame
 						b = currentCallFrame.b;
 						code = b.instrs;
@@ -1425,7 +1428,7 @@ class VirtualMachine {
 	def updateInitFrame(b: Bytecode, pc: int, associatedFunc: FunctionProfileMetadata, loc: FileRange) {
 		def i = callFrames.top - 1;
 		// `bytecode`, `associatedFunc` are also necessary to save during init calls since we reuse the call frame
-		callFrames.elems[i].b = b; 
+		callFrames.elems[i].b = b;
 		callFrames.elems[i].associatedFunc = associatedFunc;
 		// TODO? -> not necessary to save yet since init don't capture nonlocals, but potentially might need to in the future if classes capture nonlocals
 		saveFrame(pc, loc);
@@ -1462,17 +1465,5 @@ class VirtualMachine {
 
 	def throw(msg: string, label: string, loc: FileRange) {
 		result = Result.Exn(ExnObjects.fromStrObject(StrObjects.fromString(msg), label, loc));
-	}
-
-	/* Generic bytecode rewriting function */
-
-	def rewriteBytecode(code: Array<byte>, op_index: int, new_op: Opcode, operand: int) {
-		// replace opcode
-		code[op_index] = new_op.tag;
-
-		// Little endian representation used to store the `operand` in bytecode
-		code[op_index + 1] = byte.!(operand & 0xFF);
-		code[op_index + 2] = byte.!((operand >> 8) & 0xFF);
-		code[op_index + 3] = byte.!((operand >> 16) & 0xFF);
 	}
 }

@@ -114,7 +114,7 @@
     (class StackGhost1
         (extends StackLarge)
     )
-    
+
     (class StackGhost2
         (field val1 {
             (set x 0)
@@ -127,7 +127,7 @@
 
     (class StackLarger
         (extends StackGhost2)
-        
+
         (field val3 {
             (set x 11)
             (func (fib n) (if (n.= 0) 0
@@ -139,7 +139,7 @@
             (set y (fib 14))
             (+ y x)
         })
-        
+
         (field val4 {
             (set f_tmp1 50)
             (set f_tmp2 100)
