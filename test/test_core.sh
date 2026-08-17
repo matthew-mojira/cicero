@@ -55,6 +55,11 @@ if [ "$TEST_SUITES" = "" ]; then
     fi
 fi
 
+CACHE_FLAG=""
+if [ "$TEST_CACHE" != "" ] && [ "$TEST_TIER" = "1" ]; then
+    CACHE_FLAG="-cache"
+fi
+
 function run_tests() {
     for test_prog in $T/*.co; do
         TEST_PROG="$(basename "$test_prog" .co)"
@@ -62,9 +67,9 @@ function run_tests() {
 
         # run test
 	if [ "$TEST_TARGET" = "wasm-wave" ]; then
-		wizeng $WIZENG_OPTIONS $BINARY -tier=$TEST_TIER $DEPS $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
+		wizeng $WIZENG_OPTIONS $BINARY -tier=$TEST_TIER $CACHE_FLAG $DEPS $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
 	else
-        $BINARY -tier=$TEST_TIER $DEPS $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
+        $BINARY -tier=$TEST_TIER $CACHE_FLAG $DEPS $test_prog > $U/$TEST_PROG.out 2> $U/$TEST_PROG.err
 	fi
         RET=$?
 
