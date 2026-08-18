@@ -57,53 +57,40 @@ component VM {
 			// if frame is in an exceptional state, try to handle it!
 			// Should this go after the handlers?
 			if (VM.isExn()) {
-				def exn = VM.getExn();
-				if (VM.handlers.empty()) {
-					// build full exception stack trace
-					VM.callFrames.pop();
-					while (!VM.callFrames.empty()) {
-						def currentCallFrame = VM.callFrames.pop();
-						exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
-					}
-					if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
-					VM.result = Result.Exn(exn);
-					return;
+				/*                VM.isExn()
+				 *            ┌─────────┴─────────┐
+				 *            ↓                   ↓
+				 *     Exception tables        TRY/CATCH
+				 *     (search + unwind)      (pop handler + unwind)
+				 *            └─────────┬─────────┘
+				 *                      ↓
+				 *              handler CallFrame
+				 *                      ↓
+				 *     shared restoration (resume at handler)
+				 */
+				var currentCallFrame: CallFrame;
+				if (CiceroOptions.useExceptionTables) {
+					// Compile time generated exception tables
+					currentCallFrame = VM.findExceptionHandlerAndUnwind(pc);
+					if (currentCallFrame == null) return;
 				} else {
-					var isTopFrame = true; // Flag to prevent duplicating the stacktrace for the current frame that threw the exception
-					def p = VM.handlers.pop();
-					// build stack trace until the handlers call frame
-					while (VM.callFrames.top > p.2) {
-						def currentCallFrame = VM.callFrames.pop();
-						if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
-						isTopFrame = false;
-
-						if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
-							def endTime = System.ticksUs();
-							// for profiling purposes, treat exception popping call frames as returning from them
-							ProfilingHelpers.handleProfilingDuringReturn(endTime, VM.callFrames.peek().associatedFunc, currentCallFrame.associatedFunc);
-						}
+					// Try/Catch handlers
+					if (!VM.handlers.empty())
+						currentCallFrame = VM.unwindToExceptionHandler(VM.handlers.pop());
+					else {
+						VM.unwindException();
+						return;
 					}
-
-					def currentCallFrame = VM.callFrames.peek();
-					// If we actually popped frames to get here, log the handler's frame as well.
-					// If isOriginalFrame is still true, the exception was caught locally, so we skip it.
-					if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
-
-					VM.stack.resize(p.1); // equivalent to `while (VM.stack.top != p.1) VM.stack.pop();`
-					// push error value
-					VM.stack.push(exn);
-
-					// Restore VM context to the handler
-					pc = p.0;
-					b = currentCallFrame.b;
-					code = b.instrs;
-					localsStartIndex = currentCallFrame.localsStartIndex;
-					nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
-					baseStartIndex = currentCallFrame.baseStartIndex;
-					associatedFunc = currentCallFrame.associatedFunc;
-
-					VM.result = Result.Uncomputed;
 				}
+
+				// shared restoration: restore VM context to the handler
+				pc = currentCallFrame.ip;
+				b = currentCallFrame.b;
+				code = b.instrs;
+				localsStartIndex = currentCallFrame.localsStartIndex;
+				nonLocalsStartIndex = currentCallFrame.nonLocalsStartIndex;
+				baseStartIndex = currentCallFrame.baseStartIndex;
+				associatedFunc = currentCallFrame.associatedFunc;
 			}
 
 			// Fetch
@@ -1464,5 +1451,101 @@ component VM {
 
 	def throw(msg: string, label: string, loc: FileRange) {
 		VM.result = Result.Exn(ExnObjects.fromStrObject(StrObjects.fromString(msg), label, loc));
+	}
+
+	def unwindException() {
+		// build full exception stack trace
+		def exn = VM.getExn();
+		VM.callFrames.pop();
+		while (!VM.callFrames.empty()) {
+			def currentCallFrame = VM.callFrames.pop();
+			exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+		}
+		if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
+		VM.result = Result.Exn(exn);
+		return;
+	}
+
+	def unwindToExceptionHandler(p: (int, int, int)) -> CallFrame {
+		// p.0 = pc of handler, p.1 = stack depth of handler, p.2 = call frame depth of handler
+		def exn = VM.getExn();
+		var isTopFrame = true; // Flag to prevent duplicating the stacktrace for the current frame that threw the exception
+		// build stack trace until the handlers call frame
+		while (VM.callFrames.top > p.2) {
+			def currentCallFrame = VM.callFrames.pop();
+			if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+			isTopFrame = false;
+
+			if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+				def endTime = System.ticksUs();
+				// for profiling purposes, treat exception popping call frames as returning from them
+				ProfilingHelpers.handleProfilingDuringReturn(endTime, VM.callFrames.peek().associatedFunc, currentCallFrame.associatedFunc);
+			}
+		}
+
+		def currentCallFrame = VM.callFrames.peek();
+		currentCallFrame.ip = p.0;
+		// If we actually popped frames to get here, log the handler's frame as well.
+		// If isOriginalFrame is still true, the exception was caught locally, so we skip it.
+		if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+
+		VM.stack.resize(p.1); // equivalent to `while (VM.stack.top != p.1) VM.stack.pop();`
+		// push error value
+		VM.stack.push(exn);
+		// reset VM result state
+		VM.result = Result.Uncomputed;
+		return currentCallFrame;
+	}
+
+	def findExceptionHandlerAndUnwind(pc: int) -> CallFrame {
+		var isTopFrame = true;
+		var exceptionHandlerFound = false;
+		def exn = VM.getExn();
+		var currentCallFrame: CallFrame;
+
+		VM.callFrames.elems[VM.callFrames.top - 1].ip = pc; // update pc for topmost frame since its out of sync
+		while (!VM.callFrames.empty()) {
+			currentCallFrame = VM.callFrames.peek();
+
+			def bc: Bytecode = currentCallFrame.b;
+			for (entry in bc.exnTable) {
+				if (currentCallFrame.ip > entry.0 && currentCallFrame.ip <= entry.1) {
+					// resize stack + update pc to the handler
+					currentCallFrame.ip = entry.1;
+					VM.stack.resize(entry.2 + currentCallFrame.baseStartIndex);
+					VM.stack.push(exn);
+					VM.result = Result.Uncomputed;
+
+					if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+					exceptionHandlerFound = true;
+					break;
+				}
+			}
+
+			if (!exceptionHandlerFound) {
+				// handler not in this frame, unwind it
+				currentCallFrame = VM.callFrames.pop();
+
+				// build stacktrace if not already (skip topmost i.e. the exception throwing frame)
+				if (!isTopFrame) exn.stacktrace.put((currentCallFrame.associatedFunc.label, currentCallFrame.loc));
+				isTopFrame = false;
+
+				if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+					if (!VM.callFrames.empty()) {
+						def endTime = System.ticksUs();
+						// for profiling purposes, treat exception popping call frames as returning from them
+						ProfilingHelpers.handleProfilingDuringReturn(endTime, VM.callFrames.peek().associatedFunc, currentCallFrame.associatedFunc);
+					}
+				}
+			} else break;
+		}
+
+		// Uncaught Exception
+		if (!exceptionHandlerFound) {
+			if (CiceroOptions.traceBytecodeEvaluation) System.puts("returned with exception\n");
+			VM.result = Result.Exn(exn);
+			return null;
+		}
+		return currentCallFrame;
 	}
 }
