@@ -28,7 +28,7 @@ class CFGraph(bytecode: Bytecode) {
 			def operand = ins.operand;
 
 			pc += 4;
-			if (!ignoreExceptions) {
+			if (!ignoreExceptions && !CiceroOptions.useExceptionTables) {
 				match (opcode) {
 					TRY   => handlerStk.push(pc + operand);
 					CATCH => handlerStk.pop();
@@ -41,8 +41,9 @@ class CFGraph(bytecode: Bytecode) {
 				boundaries[pc] = true;
 			}
 			if (!ignoreExceptions && opcode.exception) {
-				boundaries[handlerStk.peek()] = true; // XXX duplicate set many, many times
-				handlerLoc[pc] = handlerStk.peek();
+				def target = if(CiceroOptions.useExceptionTables, findHandlerTarget(pc, exceptionExitPc), handlerStk.peek());
+				boundaries[target] = true; // XXX duplicate set many, many times
+				handlerLoc[pc] = target;
 				boundaries[pc] = true;
 			}
 		}
@@ -92,6 +93,13 @@ class CFGraph(bytecode: Bytecode) {
 			}
 		}
 		head = basicBlocks[0];
+	}
+
+	def findHandlerTarget(pc: int, noHandler: int) -> int {
+		for (entry in bytecode.exnTable) {
+			if (pc > entry.0 && pc <= entry.1) return entry.1;
+		}
+		return noHandler;
 	}
 
 	def computeDominators() {
