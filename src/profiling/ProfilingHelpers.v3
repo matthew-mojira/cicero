@@ -5,7 +5,7 @@ component ProfilingHelpers {
 
 	/* Combines two ints to form a long which is used as a key in a hash-map */
 	def constructLong(one: int, two: int) -> long {
-		return long.!(one) << 32 | long.!(two);
+		return long.!(one) << 32 | (long.!(two) & 0xFFFFFFFF);
 	}
 
 	/* The key packs two 32-bit ints into a 64-bit long (see `ProfilingHelpers.constructLong` function)

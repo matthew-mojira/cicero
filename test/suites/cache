@@ -1,0 +1,13 @@
+(class Box
+  (field v 0)
+  (method (get) self.v)
+)
+(set b (new Box))
+--
+=> <class 'Box'>
+=> <object>
+==
+(b.get)
+--
+=> 0
+--

@@ -1,0 +1,19 @@
+==
+(func (f n) {
+    (try { (raise "boom") } e 2)
+    n
+})
+(f 5)
+--
+=> <func 'f'>
+=> 5
+--
+(func (g n) {
+    (try { (raise "boom") } e [e e])
+    n
+})
+(g 5)
+--
+=> <func 'g'>
+=> 5
+--

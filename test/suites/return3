@@ -129,3 +129,26 @@ d.d
 => <object>
 => 1
 --
+(class M
+    (field m (lambda () (return 999)))
+)
+(set m (new M))
+(m.m)
+--
+=> <class 'M'>
+=> <object>
+=> 999
+--
+(class N
+    (field n ())
+    (init {
+        (set-field n self ((lambda () (return 'n'))))
+    })
+)
+(set n (new N))
+n.n
+--
+=> <class 'N'>
+=> <object>
+=> 'n'
+--

@@ -633,8 +633,8 @@ component VM {
 							// Virgil functions return either `Result.OK` or `Result.Exn`
 							VM.stack.push(Result.OK.!(resultV).value);
 						}
-						_ => {
-							System.error("internal error", "Unsupported code execution tier");
+						AST => {
+							System.error("internal error", "attempted to call a function whose code has not been compiled to bytecode");
 						}
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
@@ -1251,7 +1251,7 @@ component VM {
 						// return from top-level code
 						VM.result = Result.Return(returnValue);
 
-						if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls) {
+						if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 							def endTime = System.ticksUs();
 							ProfilingHelpers.handleProfilingDuringReturn(endTime, null, associatedFunc);
 						}
@@ -1385,7 +1385,7 @@ component VM {
 			if (CiceroOptions.profileDynamicOpcodePair) VM.lastInstr = Maybe.Just(opcode);
 		}
 
-		if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls) {
+		if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
 			def endTime = System.ticksUs();
 			ProfilingHelpers.handleProfilingDuringReturn(endTime, null, associatedFunc);
 		}
@@ -1400,6 +1400,9 @@ component VM {
 		VM.handlers.clear();
 		VM.stack.clear();
 		VM.result = Result.Uncomputed;
+		if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
+			ProfilingHelpers.callDataFrames.clear();
+		}
 	}
 
 	/* Call frame related helper methods */
@@ -1512,7 +1515,7 @@ component VM {
 				if (currentCallFrame.ip > entry.0 && currentCallFrame.ip <= entry.1) {
 					// resize stack + update pc to the handler
 					currentCallFrame.ip = entry.1;
-					VM.stack.resize(entry.2 + currentCallFrame.baseStartIndex);
+					VM.stack.resize(entry.2 + currentCallFrame.nonLocalsStartIndex);
 					VM.stack.push(exn);
 					VM.result = Result.Uncomputed;
 
@@ -1531,11 +1534,10 @@ component VM {
 				isTopFrame = false;
 
 				if (CiceroOptions.profileFunctionCalls || CiceroOptions.profileFuncObjectCalls || CiceroOptions.profileCallerCalleePairs) {
-					if (!VM.callFrames.empty()) {
-						def endTime = System.ticksUs();
-						// for profiling purposes, treat exception popping call frames as returning from them
-						ProfilingHelpers.handleProfilingDuringReturn(endTime, VM.callFrames.peek().associatedFunc, currentCallFrame.associatedFunc);
-					}
+					def endTime = System.ticksUs();
+					// for profiling purposes, treat exception popping call frames as returning from them
+					def callerFunc = if(VM.callFrames.empty(), null, VM.callFrames.peek().associatedFunc);
+					ProfilingHelpers.handleProfilingDuringReturn(endTime, callerFunc, currentCallFrame.associatedFunc);
 				}
 			} else break;
 		}

@@ -290,7 +290,9 @@ class Parser extends TextReader {
 						}
 
 						// body expression
+						returnExprAllowedStack.push(true);
 						def ret = readCode(params.copy());
+						returnExprAllowedStack.pop();
 						def body = ret.0, prev = ret.1;
 						req1(')');
 

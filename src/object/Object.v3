@@ -142,7 +142,7 @@ class Object {
 			if (cls == null)
 				System.error("field error", "class not initialized");
 		}
- 		return Assert.assertNonNull(fields.loadIndex(idx));
+ 		return fields.loadIndex(idx);
  	}
 
  	def getIndex(field: string) -> int {
