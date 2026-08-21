@@ -118,7 +118,7 @@ d
 => true
 => true
 --
-; test for bytecode rewriting and also 
+; test for bytecode rewriting and also
 ; test to see if lookup works when more than 2^8 globals
 {
   (set i 2)

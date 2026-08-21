@@ -31,7 +31,7 @@ class BeyondRelooper(g: CFGraph) {
 		if (branch != null) return ControlFlow.Unconditional(branch);
 		return ControlFlow.TerminalFlow;
 	}
-	
+
 	def doTree(tree: BasicBlock, ctx: List<ContainingSyntax>) -> WasmStructure {
 		def codeForX = nodeWithin(tree, Lists.fromArray(Arrays.filter(tree.sortedDomChildren, isStructuralMergeChild)), _);
 		if (tree.isLoopHead) {

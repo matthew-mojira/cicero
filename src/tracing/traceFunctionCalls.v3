@@ -1,0 +1,19 @@
+component TraceFunctionCalls {
+
+	def trace(name: string, args: Array<(string, Object)>) {
+		def sb = StringBuilder.new();
+		sb.puts(name);
+		sb.puts("(");
+		for (i < args.length) {
+			def arg = args[i];
+			sb.puts(arg.0);
+			sb.puts(" = ");
+			sb.puts(arg.1.display());
+			if (i < args.length - 1)
+				sb.puts(", ");
+		}
+		sb.puts(")\n");
+		System.puts(sb.extract());
+	}
+
+}

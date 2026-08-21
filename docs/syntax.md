@@ -31,7 +31,7 @@ evaluated and is the value of the entire expression.
 ```
 All of the `ei`s and `fi`s are expressions. There must be at least one case.
 
-Evaluates the `ei`s in order until it evaluates to a truthy value, then `f1` is
+Evaluates the `ei`s in order until it evaluates to a truthy value, then `fi` is
 evaluated and is the value of the entire expression.
 
 An exception is raised if no cases evaluate to a truthy value.
@@ -158,12 +158,8 @@ local scope. The value of the entire expression is also this class object.
 `e` must evaluate to a class. Instantiates an object of that class. The
 instantiation process works as follows:
 
-For each superclassclass from the class of `e` to the base class:
-* for each field `xi` not already bound, `ei` is evaluated in a new scope and 
-  `xi` is set to that value. The `ei` expression may not see other fields or
-  the object `self`.
-* the expression `i` in the `init` clause is evaluated in a new scope. It may
-  see the fields of the object through `self`.
+For each superclass, from the base class to the class of `e`
+* Field initializers execute before the explicit `init` body, in the order they appear in the class definition. Both field initializers and the init clause may access the object through `self`.
 * Nothing happens yet with methods. See comments for `get-field` down below.
 
 The value of the entire expression is the newly created object.
@@ -175,7 +171,7 @@ The value of the entire expression is the newly created object.
 e.x
 ```
 
-Accesses the field `x` of the object evaluated in `e`. If the object contains 
+Accesses the field `x` of the object evaluated in `e`. If the object contains
 the field, then that field value is the value of the entire expression.
 Otherwise, it is an exception.
 
@@ -219,7 +215,9 @@ When a top-level return expression is evaluated, the program exits with the foll
 * All other values result in exit code 255
 
 #### Non-Top level return
-If not used at the top-level, `return`, like in other languages, does two things:
+Return expression is not allowed inside field expressions and inside the init clause of a class.
+
+Other than that, if not used at the top-level, `return`, like in other languages, does two things:
 * it <b>*immediately*</b> exits the function/method.
 * it sends a value back to where the function/method was called.
 

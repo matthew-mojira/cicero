@@ -27,7 +27,7 @@
       {
         (set p list)
 	(while (!= p.link ())
-	  (set p p.link) 
+	  (set p p.link)
 	)
 	(set-field link p self)
 	list
@@ -138,7 +138,7 @@
   (while (!= t ()) {
     ; Without this `set`, the program hangs. Why?
     (set pkt ())
-    (cond 
+    (cond
       ((= t.state task/S_WAITPKT) {
         (set pkt t.wkq)
 	(set-field wkq t pkt.link)

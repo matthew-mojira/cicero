@@ -6,7 +6,7 @@ be represented as Cicero objects. These "primitive fields" are immutable core
 information on an object which would significantly change (read: break) the
 runtime if they were modified. Thus field accesses are done through getter
 methods. For example, you cannot change the code of a function. Its accessor
-method `code` is mutable, but this mutates the accessor method, not the 
+method `code` is mutable, but this mutates the accessor method, not the
 internal code. Interally, these methods are not used by the runtime, and access
 is done directly to the underlying object away from user manipulation. In the
 future, this might change so that primitive fields are treated as regular
@@ -84,13 +84,6 @@ Represents an exception, which holds a message and a stacktrace.
 Methods:
 * `(e.display)`: returns a string representation of the object
 * `(e.stacktrace)`: returns the stacktrace as a list of strings
-
-## frame
-
-Wrapper for a frame of execution.
-
-Methods:
-* `(fr.display)`: returns a string representation of the object
 
 ## func
 

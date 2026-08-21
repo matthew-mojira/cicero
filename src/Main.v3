@@ -16,16 +16,16 @@ def main(args: Array<string>) -> int {
 	}
 
 	def tier = CLOptions.TIER.get();
-	if (tier < 0 || tier > 1) {
+	if (tier != 1) {
 		System.error("argument error", Strings.format1("unrecognized tier: %d", tier));
 		return 1;
 	}
 
-	def frame = FrameObjects.newTopFrame();
-	loadCore(frame);
+	initRuntime();
+	loadCore();
 
 	def FAILURE = if(CLOptions.FUZZING.get(), 0, 1);
-	
+
 	// evaluate files (if present)
 	for (filename in files) {
 		// read in file
@@ -38,24 +38,24 @@ def main(args: Array<string>) -> int {
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
 				// compile to tier1 bytecode
-				if (CLOptions.TIER.get() > 0) expr.compile([]);
+				expr.compile([], TopLevel.name, true, false);
 
 				if (!CLOptions.DO_NOT_EVALUATE.get()) {
 					// evaluate
-					frame.evalCode(expr);
-					match (frame.result) {
+					VM.eval(expr);
+					match (VM.result) {
 						Exn(exn) => {
 							exn.print();
 							return FAILURE;
 						}
 						OK(val) => {
-							if (!CLOptions.SUPPRESS_OUTPUT.get()) 
+							if (!CLOptions.SUPPRESS_OUTPUT.get())
 								System.puts(Strings.format1("=> %s\n", val.display()));
 						}
 						// `return` at a top-level is the equivalent of aborting cicero completely.
 						Return(val) => return abortCicero(val);
-						_ => {
-							System.error("eval error", "frame did not give result");
+						Uncomputed => {
+							System.error("eval error", "Interpreter did not give result");
 							return 1;
 						}
 					}
@@ -85,18 +85,17 @@ def main(args: Array<string>) -> int {
 
 				for (expr in exprs) {
 					// compile to tier1 bytecode
-					if (CLOptions.TIER.get() > 0) expr.compile([]);
+					expr.compile([], TopLevel.name, true, false);
 
 					// evaluate
-					frame.evalCode(expr);
-					match (frame.result) {
+					VM.eval(expr);
+					match (VM.result) {
 						Exn(exn) => {
 							exn.print();
-							frame.resetExn();
 						}
-						OK(val)     => System.puts(Strings.format1("=> %s\n", val.display()));
-						Return(val) => return abortCicero(val);
-						_           => System.error("eval error", "frame did not give result");
+						OK(val)		=> System.puts(Strings.format1("=> %s\n", val.display()));
+						Return(val)	=> return abortCicero(val);
+						Uncomputed	=> System.error("eval error", "Interpreter did not give result");
 					}
 				}
 			} else {
@@ -109,26 +108,46 @@ def main(args: Array<string>) -> int {
 		}
 	}
 
-	if (CiceroOptions.profileBytecode) {
-		/* Output Cicero's profiling */
-		var i = 0;
-		var total = 0;
-		System.puts("\nSTATIC COUNTS:\n");
-		for (op in Opcode.set.all) {
-			def count = Profiling.staticCounts[i++];
-			total += count;
-			System.puts(Strings.format2("%s: %d\n", op.name, count));
+	if (CiceroOptions.profileStaticBytecode) {
+		ProfileBytecode.printStaticStats();
+	}
+
+	if (CiceroOptions.profileCompilationTimes) {
+		ProfileCompilationTimes.printStats();
+	}
+
+	if (CiceroOptions.profileDynamicBytecode) {
+		ProfileBytecode.printDynamicStats();
+	}
+
+	if (CiceroOptions.profileStaticOpcodePairCounts) {
+		ProfileStaticOpcodePairCounts.printStats();
+	}
+
+	if (CiceroOptions.profileDynamicOpcodePair) {
+		ProfileDynamicOpcodePair.printStats();
+	}
+
+	if (CiceroOptions.profileJumpOutcomes) {
+		ProfileJumpOutcomes.printJumpStats();
+	}
+
+	if (CiceroOptions.profileInlineCaching) {
+		if (CLOptions.CACHE.get()) {
+			ProfileInlineCache.printCacheStats();
 		}
-		System.puts(Strings.format1("Total static bytecodes: %d\n", total));
-		System.puts("\nDYNAMIC COUNTS:\n");
-		i = 0;
-		total = 0;
-		for (op in Opcode.set.all) {
-			def count = Profiling.dynamicCounts[i++];
-			total += count;
-			System.puts(Strings.format2("%s: %d\n", op.name, count));
-		}
-		System.puts(Strings.format1("Total dynamic bytecodes: %d\n", total));
+	}
+
+	if (CiceroOptions.profileFunctionCalls) {
+		ProfileFunctionCalls.printFuncCallsStats();
+	}
+
+	if (CiceroOptions.profileFuncObjectCalls) {
+		ProfileFunctionCalls.printFuncObjectCallsStats();
+	}
+
+	if (CiceroOptions.profileCallerCalleePairs) {
+		ProfileCallerCalleePairs.printStats();
 	}
 
 	// experimental results
@@ -143,14 +162,19 @@ def main(args: Array<string>) -> int {
 	return 0;
 }
 
-def loadCore(frame: FrameObject) {
+def initRuntime() {
+	for (builtin in Builtin.set.all) {
+		Globals.storeGlobal(builtin.id, builtin.val);
+	}
+	CodeObjects.compileUncompiledCodeObjects();
+}
+
+def loadCore() {
 	def reader = Parser.new("core", CiceroTexts.core);
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
- 		if (CLOptions.TIER.get() > 0) {
- 			expr.compile([]);
-		}
-		frame.evalCode(expr);
+ 		expr.compile([], TopLevel.name, true, false);
+		VM.eval(expr);
 	}
 }
 
@@ -168,18 +192,23 @@ def printHelp() {
 }
 
 /* `return` expr at a top-level aborts cicero completely.
-	For the exit code:
-		* integers are converted using % 256
-		* unit () -> returns 0
-		* everything else -> returns 255.
-*/
-def abortCicero(obj: Object) -> int{
-	if (obj.instanceOf(ClassObjects.classUnit)){
+ * For the exit code:
+ * - integers are converted using % 256
+ * - unit () -> returns 0
+ * - everything else -> returns 255.
+ */
+def abortCicero(obj: Object) -> int {
+	if (obj.instanceOf(ClassObjects.classUnit)) {
 		return 0;
-	} else if (obj.instanceOf(ClassObjects.classInt)){
+	} else if (obj.instanceOf(ClassObjects.classInt)) {
 		// bash exit codes are in the range 0-255
 		return int.!(IntObject.!(obj).val.longValue() % 256);
-	} else{
+	} else {
 		return 255;
 	}
+}
+
+component TopLevel {
+	def name: string = "\"repl\"";
+	def metadata: FunctionProfileMetadata = FunctionProfileMetadata.new(TopLevel.name, true);
 }

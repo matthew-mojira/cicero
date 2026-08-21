@@ -1,0 +1,12 @@
+Line Number,Bytecode ID,Instruction Index,Function Identifier,Function Label,Instruction,Jumps taken,Jumps not taken
+15,38,120,104,Queens.benchmark,JUMP,10,0
+15,38,52,104,Queens.benchmark,JUMP_IF_FALSE_PEEK,1,10
+16,38,60,104,Queens.benchmark,JUMP_IF_FALSE_PEEK,0,10
+35,41,300,107,Queens.place_queen,JUMP,8680,0
+35,41,36,107,Queens.place_queen,JUMP_IF_FALSE_PEEK,1050,8760
+37,41,260,107,Queens.place_queen,JUMP,1050,0
+37,41,64,107,Queens.place_queen,JUMP_IF_FALSE,7630,1130
+41,41,152,107,Queens.place_queen,JUMP_IF_FALSE,1120,10
+42,41,208,107,Queens.place_queen,JUMP_IF_FALSE,1050,70
+54,42,68,108,Queens.get_row_column,JUMP_IF_FALSE_PEEK,6360,2400
+55,42,24,108,Queens.get_row_column,JUMP_IF_FALSE_PEEK,5400,3360

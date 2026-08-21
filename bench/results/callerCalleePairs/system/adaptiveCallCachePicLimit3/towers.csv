@@ -1,0 +1,34 @@
+# Execution time is the total time spent inside the callee
+caller identifier id,caller label,callee identifier id,callee label,calls,execution time(μs),execution time(μs)_std
+0,repl,111,Towers.benchmark,1,382267.1,2242.0282851870966
+0,repl,112,Towers.verify_result,1,8.65,0.5871429486123999
+0,repl,113,Towers.init,1,4.05,0.6863327411532597
+43,lambda-43,48,int.+,8191,6516.25,63.50372968740097
+44,lambda-44,49,int.-,8204,6575.35,57.46969453088898
+88,-,49,int.-,8190,10096.5,87.14929718592118
+92,=,53,int.=,8192,5887.2,63.82921291268304
+93,!=,6,base.=,8205,5622.9,59.026220756898226
+93,!=,101,not,8205,5857.6,55.029561433641696
+97,>=,57,int.>=,8092,5670.5,53.214066205330155
+106,Towers._push_disk,65,list.get,8205,13070.25,99.02411986879406
+106,Towers._push_disk,66,list.set,8205,9459.55,72.558850887437
+106,Towers._push_disk,93,!=,8205,31427.0,199.3455080480801
+106,Towers._push_disk,97,>=,8077,18902.7,125.1164089537167
+107,Towers._pop_disk_from,65,list.get,8191,9528.0,72.78013031330042
+107,Towers._pop_disk_from,66,list.set,8191,9415.1,73.74272488648816
+108,Towers._move_top_disk,43,lambda-43,8191,29043.35,177.064744328765
+108,Towers._move_top_disk,106,Towers._push_disk,8191,110380.8,654.5696537259755
+108,Towers._move_top_disk,107,Towers._pop_disk_from,8191,43757.45,278.06766972693515
+109,Towers._build_tower_at,44,lambda-44,14,142.75,20.104660365722484
+109,Towers._build_tower_at,97,>=,15,207.1,24.642496455898034
+109,Towers._build_tower_at,104,_TowersDisk.init-values,14,30.35,4.976523834332978
+109,Towers._build_tower_at,105,_TowersDisk.init,14,34.0,4.768316485434157
+109,Towers._build_tower_at,106,Towers._push_disk,14,534.05,71.40800117339059
+110,Towers._move_disks,44,lambda-44,8190,24574.1,175.74230536423738
+110,Towers._move_disks,88,-,8190,35489.2,219.73395396778406
+110,Towers._move_disks,92,=,8191,43020.85,256.2394593467527
+110,Towers._move_disks,108,Towers._move_top_disk,8191,233815.75,1350.687032782324
+110,Towers._move_disks,110,Towers._move_disks,8190,4109244.05,23917.92900618153
+111,Towers.benchmark,109,Towers._build_tower_at,1,1249.65,164.13995151763177
+111,Towers.benchmark,110,Towers._move_disks,1,381001.8,2208.007832747347
+112,Towers.verify_result,92,=,1,6.9,0.3077935056255463

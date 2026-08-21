@@ -24,7 +24,7 @@
     (false)
 })
 (try { 1 (except "raise me") false } e true)
-; no matching cond    
+; no matching cond
 (try
   (cond
     (false 1)

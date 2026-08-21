@@ -5,7 +5,7 @@
       ((= n 1) 1)
       ; true => default case
       (true (+ (fib (- n 1)) (fib (- n 2))))))
-  
+
   (puts ((get-field disassemble (fib.code))))
 
   (fib 15)

@@ -1,6 +1,6 @@
 V3C_LOCATION=$(dirname $(which v3c))
 VIRGIL_LOCATION=$(cd $V3C_LOCATION/../ && pwd)
-    
+
 LIB=$VIRGIL_LOCATION/lib/
 FILES="$(dirname $0)/doubles_arith.v3 ../src/util/BigInteger.v3 ../src/util/DoubleParserHelper.v3 $LIB/util/*.v3"
 

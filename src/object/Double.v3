@@ -6,7 +6,7 @@ class DoubleObject(val: double) extends Object {
 
 	// @todo: need to work on display for doubles without need to roundd to floats;
 	// but this would be smthg to work on the virgil side
-	def display() -> string{
+	def display() -> string {
 		var a: Array<byte> = Array<byte>.new(FLOAT_MAX_LENGTH);
 		var l = Floats.renderFloat(float.roundd(val), a, 0);
 		return Strings.format1("%s", Arrays.range(a, 0, l));
@@ -14,9 +14,9 @@ class DoubleObject(val: double) extends Object {
 
 	def isTrue()  => true;
 
-    def do_display() => Result.OK(StrObjects.fromString(display()));
+	def do_display() => Result.OK(StrObjects.fromString(display()));
 
-	def do_try(obj: Object) -> Result{
+	def do_try(obj: Object) -> Result {
 		if (obj == ClassObjects.classStr)
 			return do_display();
 		else if (obj == ClassObjects.classInt)
@@ -25,7 +25,7 @@ class DoubleObject(val: double) extends Object {
 			return Result.Exn(ExnObjects.fromVirgil("try", "Unable to convert `double`"));
 	}
 
-	def trunc() -> DoubleObject{
+	def trunc() -> DoubleObject {
 		// Edge cases
 		if (val == double.infinity || val == -double.infinity) {
 			return this;
@@ -65,7 +65,7 @@ class DoubleObject(val: double) extends Object {
 		return Result.OK(DoubleObjects.fromDouble(double.sqrt(this.val)));
 	}
 
-	def do_sin() -> Result{
+	def do_sin() -> Result {
 		var x = normalize_angle(this.val);
 		if (CiceroOptions.sanityChecks && x == 1.0)
 			System.error("internal error", "DoubleObject.do_sin: unable to compute sin");
@@ -86,7 +86,7 @@ class DoubleObject(val: double) extends Object {
 		return Result.OK(DoubleObjects.fromDouble(result));
 	}
 
-	def do_cos() -> Result{
+	def do_cos() -> Result {
 		var x = normalize_angle(this.val);
 		if (CiceroOptions.sanityChecks && x == -1.0)
 			System.error("internal error", "DoubleObject.do_sin: unable to compute cos");
@@ -98,7 +98,7 @@ class DoubleObject(val: double) extends Object {
 
 		def terms = 10;
 
-		for (n=0; n < terms; n++){
+		for (n=0; n < terms; n++) {
 			result = result + (sign * power / factorial);
 			sign = sign * -1;
 			power = power * x * x;
@@ -116,15 +116,15 @@ class DoubleObject(val: double) extends Object {
 	def do_sub(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val - that.val));
 	def do_mul(that: DoubleObject) => Result.OK(DoubleObjects.fromDouble(val * that.val));
 
-	def do_div(that: DoubleObject) -> Result{
+	def do_div(that: DoubleObject) -> Result {
 		if (that.val == 0) return Result.Exn(ExnObjects.fromVirgil("double.div", divideByZero));
 		return Result.OK(DoubleObjects.fromDouble(val / that.val));
 	}
 
 	/* Comparisons */
 
-	def do_eq(obj: Object) -> Result{
-		if (obj.instanceOf(ClassObjects.classDouble)){
+	def do_eq(obj: Object) -> Result {
+		if (obj.instanceOf(ClassObjects.classDouble)) {
 			def dval = (DoubleObject.!(obj).val);
 			return Result.OK(BoolObjects.fromBool(val == dval));
 		}
@@ -144,7 +144,7 @@ def divideByZero = "division by zero";
 
 /* Helper functions */
 
-def fmod(x: double, y: double) -> double{
+def fmod(x: double, y: double) -> double {
 	if (y == 0) System.error("internal error", "Double.fmod: y=0 encountered");
 
 	def quotient = int.truncd(x / y);
@@ -152,7 +152,7 @@ def fmod(x: double, y: double) -> double{
 	return remainder;
 }
 
-def normalize_angle(x: double) -> double{
+def normalize_angle(x: double) -> double {
 	var x = fmod(x, 2 * PI);
 	if (x > PI) {
 		x = x - 2 * PI;

@@ -2,7 +2,6 @@
 
 ```
 0 - Virgil code
-1 - AST
-2 - Cicero Bytecode
-3 - Wasm
+1 - Cicero Bytecode
+2 - Wasm
 ```

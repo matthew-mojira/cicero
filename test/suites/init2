@@ -1,0 +1,129 @@
+(set GLOBAL_X "GLOBAL_X")
+(class BasicClass
+    (field x 1)
+    (field y 9)
+    (init {
+        (set-field x self (+ self.x 10))
+        (set-field y self (+ self.y 10))
+    })
+)
+
+(class TargetRoot
+    ; Should run first
+    (field trace 1) ; Desugars to: (set-field trace self 1)
+    (field name "TargetRoot")
+)
+
+(class TargetParent
+    (extends TargetRoot)
+    ; Should run second
+    (init {
+        (set-field trace self (+ self.trace 10))
+        (set-field name self (+ self.name " TargetParent"))
+    })
+)
+
+(class TargetChild
+    (extends TargetParent)
+    ; Should run third.
+    (field trace (+ self.trace 100))
+    (init {
+        (set-field name self (+ self.name " TargetChild"))
+    })
+)
+
+(class DependencyBase
+    (field x 5)
+    (field y (+ self.x 5)) ; self.x should be set first (y should be 10)
+)
+
+(class DependencyChild
+    (extends DependencyBase)
+    (field z (+ self.y 10)) ; superclass field self.y should be set before this executes (z should be 20)
+)
+
+(class GhostMiddle
+    (extends DependencyChild)
+)
+
+(class GhostMiddleExtended
+    (extends GhostMiddle)
+    (field gx GLOBAL_X)
+    (init {
+        (set-field z self (+ self.z 9)) ; self.z should be 29
+    })
+)
+
+--
+=> "GLOBAL_X"
+=> <class 'BasicClass'>
+=> <class 'TargetRoot'>
+=> <class 'TargetParent'>
+=> <class 'TargetChild'>
+=> <class 'DependencyBase'>
+=> <class 'DependencyChild'>
+=> <class 'GhostMiddle'>
+=> <class 'GhostMiddleExtended'>
+==
+(set obj (new BasicClass))
+obj.x
+obj.y
+--
+=> <object>
+=> 11
+=> 19
+--
+(set obj (new TargetRoot))
+obj.name
+obj.trace
+--
+=> <object>
+=> "TargetRoot"
+=> 1
+--
+{
+    (set obj (new TargetChild))
+    ; If initialization happened top-down: 1 -> 11 -> 111
+    (if (= obj.trace 111)
+        "pass" ; Pass
+        "fail"
+    )
+}
+--
+=> "pass"
+--
+(set obj (new DependencyChild))
+obj.x
+obj.y
+obj.z
+--
+=> <object>
+=> 5
+=> 10
+=> 20
+--
+{
+    (set obj (new TargetChild))
+    obj.name
+}
+--
+=> "TargetRoot TargetParent TargetChild"
+--
+(set obj (new GhostMiddleExtended))
+obj.x
+obj.y
+obj.z
+obj.gx
+(set GLOBAL_X "GLOBAL_X_CHANGED")
+(set obj (new GhostMiddleExtended))
+obj.gx
+--
+=> <object>
+=> 5
+=> 10
+=> 29
+=> "GLOBAL_X"
+=> "GLOBAL_X_CHANGED"
+=> <object>
+=> "GLOBAL_X_CHANGED"
+--

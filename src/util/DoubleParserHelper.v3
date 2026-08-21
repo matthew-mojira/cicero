@@ -1,6 +1,6 @@
 // For parsing purposes
 // Source: From virgil's f64 implementation
-component DoubleParserHelper{
+component DoubleParserHelper {
 	def f64(sign: int, exp: int, mantissa: u64) -> double {
 		var bits = if(sign != 0, 0x8000000000000000ul);
 		if (exp < -1076) return double.view(bits);

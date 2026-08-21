@@ -4,7 +4,7 @@ class MapObject extends Object {
 
 	def display() -> string { return "<map>"; }
 	def isTrue()  -> bool   { return true; }
-	
+
 	/* METHODS */
 
 	def p_set(key: StrObject, val: Object) -> Result {

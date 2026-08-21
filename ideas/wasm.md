@@ -12,7 +12,7 @@ wraps around the CodeObject (e.g. FuncObject). But we can reuse this for tier2.
 Let's say that each CodeObject shall translate to a Wasm module which
 includes one function with all these parameter stuff.
 
-## Translation by AST 
+## Translation by AST
 
 This document outlines how to translate the cicero AST to wasm (for use in a
 Type II-c embedding). A Type II-ic embedding would use a conversion from
@@ -25,7 +25,7 @@ is deferred to the runtime system in imported functions which basically handle
 all the logic. We can lower further if we use Wasm GC to make Cicero objects
 into Wasm objects, but how much engineering is required to do that? Is this a
 reimplementation of the language? Can it be automatically generated from the
-source code? (thinking about structs in CPython, which are complicated but 
+source code? (thinking about structs in CPython, which are complicated but
 could programmatically generate the Wasm GC structs types from)
 
 ### Lit
@@ -43,7 +43,7 @@ could programmatically generate the Wasm GC structs types from)
     function to function. Instead this should be implemented as a call to an
     imported function from the RTS that does this (what value does it give?)
 * nonlocal:
-  * nonlocals are provided as part of the `nonlocalArgs`, so these can be 
+  * nonlocals are provided as part of the `nonlocalArgs`, so these can be
     initialized as either locals or (immutable) globals
 
 ### VarSet
@@ -117,7 +117,7 @@ end
       unreachable
     end
     ```
-  * Next, we must evaluate each target expression, leaving one value on the 
+  * Next, we must evaluate each target expression, leaving one value on the
     stack for each argument
   * So we have a bunch of values and an additional one for the function (note:
     we know how many we have in total). Who's doing the arity checking and

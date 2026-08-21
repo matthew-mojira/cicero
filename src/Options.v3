@@ -17,7 +17,16 @@ component CiceroOptions {
 	def testBeyondRelooper = false;
 
 	/* profiling */
-	def profileBytecode = false;
+	def profileStaticBytecode = false;
+	def profileCompilationTimes = false;
+	def profileStaticOpcodePairCounts = false;
+	def profileDynamicBytecode = false;
+	def profileDynamicOpcodePair = false;
+	def profileJumpOutcomes = false;
+	def profileInlineCaching = false;
+	def profileFunctionCalls = false;
+	def profileFuncObjectCalls = false;
+	def profileCallerCalleePairs = false;
 }
 
 // for parsing
@@ -27,23 +36,23 @@ def ciceroOpt = OptionGroup.new("CICERO", opt);
 /* Runtime options (set on the command line or implied by other options) */
 component CLOptions {
 	// cicero options
-	def HELP = ciceroOpt.newBoolOption("help", false, 
+	def HELP = ciceroOpt.newBoolOption("help", false,
 			"Print this help text.");
-	def VERSION = ciceroOpt.newBoolOption("version", false, 
+	def VERSION = ciceroOpt.newBoolOption("version", false,
 			"Print the version of this interpreter and exit.");
-	def TIER = ciceroOpt.newIntOption("tier", 0, 
-			"Set the evaluation tier for the interpreter (default: 0).");
-	def CACHE = ciceroOpt.newBoolOption("cache", false, 
+	def TIER = ciceroOpt.newIntOption("tier", 1,
+			"Set the evaluation tier for the interpreter (default: 1).");
+	def CACHE = ciceroOpt.newBoolOption("cache", false,
 			"Use inline caches for the tier1 interpreter.");
-	def REPL = ciceroOpt.newBoolOption("repl", false, 
+	def REPL = ciceroOpt.newBoolOption("repl", false,
 			"Open the REPL after evaluating files.");
-	def SUPPRESS_OUTPUT = ciceroOpt.newBoolOption("suppress-output", false, 
+	def SUPPRESS_OUTPUT = ciceroOpt.newBoolOption("suppress-output", false,
 			"Suppress the output of top-level evaluation (useful for benchmarking).");
-	def CHECK_SYNTAX = ciceroOpt.newBoolOption("check-syntax", false, 
+	def CHECK_SYNTAX = ciceroOpt.newBoolOption("check-syntax", false,
 			"Check syntax of a program only, then exit.");
-	def FUZZING = ciceroOpt.newBoolOption("fuzzing", false, 
+	def FUZZING = ciceroOpt.newBoolOption("fuzzing", false,
 			"Force program to return 0 in known failure conditions (e.g. parse error, unhandled exception). This is useful for fuzz testing, where nonzero exit codes denote some internal failure in the engine which should not happen.");
-	def DO_NOT_EVALUATE = ciceroOpt.newBoolOption("do-not-evaluate", false, 
+	def DO_NOT_EVALUATE = ciceroOpt.newBoolOption("do-not-evaluate", false,
 			"Load program and compile it, but stop short of evaluating it.");
 	def parse(args: Array<string>) -> Array<string> {
 		return opt.parse(args);

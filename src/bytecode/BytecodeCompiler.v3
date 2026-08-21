@@ -1,10 +1,9 @@
-/* The bytecode compiler translates an AST into bytecode.
- */
+/* The bytecode compiler translates an AST into bytecode. */
 class BytecodeCompiler {
-	def writer:     DataWriter     = DataWriter.new();
+	def writer:	DataWriter	= DataWriter.new();
 
-	def params:     Array<string>; // XXX used by analysis only
-	def strings:    Vector<string> = Vector.new();
+	def params:	Array<string>; // XXX used by analysis only
+	def strings:	Vector<string>	= Vector.new();
 	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
 	def funcholes:  Vector<ASTData.Func> = Vector.new();
 	def constants:  Vector<Object> = Vector.new();
@@ -12,6 +11,8 @@ class BytecodeCompiler {
 	def nonlocals:  Vector<string> = Vector.new();
 	def exceptions: Vector<(int, int, int)> = Vector.new();
 
+	/* most recently compiled (written) instruction */
+	var recentInstr: Maybe<Opcode> = Maybe.Nothing;
 	/* Source mappings */
 	def source: Vector<FileRange>  = Vector.new();
 
@@ -21,14 +22,18 @@ class BytecodeCompiler {
 	 * parameters, which will become the first locals of the Bytecode
 	 * object.
 	 */
-	new(ast: AST, params) {
+	new(ast: AST, params, isTopLevel: bool, isInit: bool) {
 		locals.puta(params);
 		if (CiceroOptions.traceBytecodeCompilation) {
 			System.puts("== Beginning Bytecode compilation ==\n");
 			compileAST(ast, 0);
+			if (isInit) writeInstr(ast.loc, Opcode.RETURN_INIT);
+			else if (!isTopLevel) writeInstr(ast.loc, Opcode.RETURN);
 			System.puts("== Done compiling! ==\n");
 		} else {
 			compileAST(ast, 0);
+			if (isInit) writeInstr(ast.loc, Opcode.RETURN_INIT);
+			else if (!isTopLevel) writeInstr(ast.loc, Opcode.RETURN);
 		}
 	}
 
@@ -120,12 +125,12 @@ class BytecodeCompiler {
 					fillHole(hole, writer.pos - hole - 4);
 				}
 			}
-			Func(id, params, code, nonlocals) => {
+			Func(id, params, code, nonlocals, metadata) => {
 				// XXX compiling code
-				code.compile(params);
+				code.compile(params, metadata.label, false, false);
 
 				for (i < nonlocals.length) {
-					def nonlocal = nonlocals[i];
+					def nonlocal: string = nonlocals[i];
 					if (Strings.equal(nonlocal, id))
 						// the function itself is captured, but not loaded to a local
 						continue;
@@ -207,18 +212,14 @@ class BytecodeCompiler {
 					}
 					Just(expr) => compileAST(expr, stackDepth);
 				}
-				var init2: CodeObject;
 				match (init) {
 					Nothing => ;
-					Just(code) => {
-						code.compile(["self"]);
-						init2 = code;
+					Just(fn) => {
+						fn.code.compile(["self"], fn.metadata.label, false, true);
 					}
 				}
-				// XXX compiling subcode
-				for (field in fields) field.1.compile([]);
 				//                                   XXX
-				def idx = addClasshole(ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc)));
+				def idx = addClasshole(ClassObjects.classhole(id, init.fromMaybe(null), fields, Arrays.map(methods, funcToFunc)));
 				writeInstrWithOperand(loc, Opcode.CREATE_CLASS, idx);
 			}
 			New(obj) => {
@@ -235,7 +236,6 @@ class BytecodeCompiler {
 				writeInstr(loc, Opcode.RETURN);
 			}
 		}
-
 	}
 
 	/* writer wrappers */
@@ -249,9 +249,13 @@ class BytecodeCompiler {
 		writer.putbbb(operand, operand >> 8, operand >> 16);
 
 		source.put(loc);
-		if (CiceroOptions.profileBytecode) {
-			Profiling.staticCounts[op.tag]++;
+		if (CiceroOptions.profileStaticBytecode) {
+			ProfileBytecode.profileStaticCount(op.tag);
 		}
+		if (CiceroOptions.profileStaticOpcodePairCounts) {
+			ProfileStaticOpcodePairCounts.profile(recentInstr, op);
+		}
+		recentInstr = Maybe.Just(op);
 	}
 
 	def writeInstrDeferOperand(loc: FileRange, op: Opcode) -> int {
@@ -322,7 +326,7 @@ class BytecodeCompiler {
 
 def funcToFunc(f: ASTData.Func) -> FuncObject {
 	// XXX compilation here
-	f.body.compile(Arrays.prepend("self", f.params));
+	f.body.compile(Arrays.prepend("self", f.params), f.metadata.label, false, false);
 	// XXX empty map = no variable capture for a method
-	return FuncObjects.newFO(f.id, f.params, [], f.body);
+	return FuncObjects.newFO(f.id, f.params, [], f.body, f.metadata);
 }

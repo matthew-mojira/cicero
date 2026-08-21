@@ -1,0 +1,4 @@
+Line Number,Bytecode ID,Instruction Index,Function identifier,Function label,Instruction,Hits,Misses,Classes seen
+1,17,4,94,<,LOAD_FIELD,0,100001,1
+10,37,60,0,repl,LOAD_FIELD,99999,1,1
+13,37,92,0,repl,LOAD_FIELD,0,100000,1

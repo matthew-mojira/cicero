@@ -1,0 +1,89 @@
+(func (setter x) {
+    (set y 999) y
+})
+(set cond false)
+--
+=> <func 'setter'>
+=> false
+==
+(func (f x) {
+    (if cond (set y 1) 10)
+    x
+    y
+})
+(setter 1)
+(try { (f 2) "fail" } e "pass")
+--
+=> <func 'f'>
+=> 999
+=> "pass"
+--
+(class A
+    (method (m a b) (+ a b))
+)
+(set x (new A))
+(x.m 10 20)
+--
+=> <class 'A'>
+=> <object>
+=> 30
+--
+(class A
+    (field a { (if cond (set y 555) ()) y })
+)
+(setter 999)
+(try { (new A) "fail" } e "pass")
+--
+=> <class 'A'>
+=> 999
+=> "pass"
+--
+(class S
+    (init (set a 999))
+)
+(class A
+    (extends S)
+    (field a { (if cond (set y 555) ()) y })
+)
+(try { (new A) "fail" } e "pass")
+--
+=> <class 'S'>
+=> <class 'A'>
+=> "pass"
+--
+(func (dirtyStack a b c d e) {
+    (set target 66)
+    target
+})
+(func (testFunc) {
+    (if cond (set target 111) ())
+    target
+})
+(dirtyStack 11 22 33 44 55)
+(try { (testFunc) "fail" } e "pass")
+--
+=> <func 'dirtyStack'>
+=> <func 'testFunc'>
+=> 66
+=> "pass"
+--
+(class MethodResidue
+    (method (m1) {
+        (set temp1 8888)
+        (set temp2 9999)
+        temp1
+    })
+    (method (m2) {
+        (if cond (set temp 1111) ())
+        temp
+    })
+)
+(set obj (new MethodResidue))
+(obj.m1)
+(try { (obj.m2) "fail" } e "pass")
+--
+=> <class 'MethodResidue'>
+=> <object>
+=> 8888
+=> "pass"
+--

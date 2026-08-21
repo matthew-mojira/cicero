@@ -1,0 +1,62 @@
+; Stress testing cache site where the receiver gets a different class each time
+; In this case, the class seen at the cache site will alternate like this: ABCABCABC..
+; Polymorphic cache benchmark
+{
+    (func (check-benchmark-result objs expected){
+        (set result true)
+        (set i 0)
+        (while (i.< (objs.length)){
+            (set obj (objs.get i))
+            (set result (and result
+                (and (and (= obj.x expected)
+                (= obj.y expected))
+                (= obj.z expected))
+            ))
+            (set i (i.+ 1))
+        })
+        result
+    })
+
+    (class A
+        (field x 0)
+        (field y 0)
+        (field z 0)
+
+        (field a 349)
+        (field b 381)
+        (field c -182)
+        (field d 7)
+        (field e "A")
+        (field f false)
+        (field g "thing")
+    )
+
+    (class B (extends A))
+    (class C (extends B))
+
+    (set objs [(new A) (new B) (new C)])
+
+    (set i 0)
+    ; stress test loop
+    (while (i.< 999999)
+    {
+        (set obj (objs.get (i.% 3)))
+
+        ; field access only
+        obj.a
+        obj.b
+        obj.c
+        obj.d
+        obj.e
+        obj.f
+        obj.g
+
+        (set-field x obj (+ obj.x 1)) ; load and store field access
+        (set-field y obj (+ obj.y 1)) ; load and store field access
+        (set-field z obj (+ obj.z 1)) ; load and store field access
+
+        (set i (i.+ 1))
+    })
+
+    (check-benchmark-result objs 333333)
+}

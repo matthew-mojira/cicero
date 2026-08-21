@@ -17,7 +17,7 @@
   (method (_push_disk disk pile) {
     (set top (self._piles.get pile))
     (if (and (!= top ()) (>= disk.size top.size)) (raise "Cannot put a big disk on a smaller one")
-    ; else 
+    ; else
     {
       (set-field next disk top)
       (self._piles.set pile disk)

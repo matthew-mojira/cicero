@@ -64,10 +64,6 @@
 --
 => "pass"
 --
-(try-new frame)
---
-=> "pass"
---
 (try-new func)
 --
 => "pass"

@@ -1,6 +1,5 @@
 /* This code is a Virgil adaptation of select methods from java.math.BigInteger,
  * java.math.MutableBigInteger, and java.lang.Integer.
- *
  */
 
 def LONG_MASK: long = 0xffffffffL;
@@ -474,7 +473,7 @@ class BigInteger(mag: Array<int>, signum: int) {
 		if (signum == 0) return val;
 		if (signum == val.signum)
 			return BigInteger.new(addMag(mag, val.mag), signum);
-		
+
 		def cmp = compareMagnitude(val);
 		if (cmp == 0) return ZERO;
 		def resultMag = if(cmp > 0, subtractMag(mag, val.mag), subtractMag(val.mag, mag));
@@ -501,7 +500,7 @@ class BigInteger(mag: Array<int>, signum: int) {
 	def multiply(val: BigInteger) -> BigInteger {
 		if (val.signum == 0 || signum == 0)
 			return ZERO;
-		
+
 		def xlen = mag.length;
 		def ylen = val.mag.length;
 
@@ -542,7 +541,7 @@ class BigInteger(mag: Array<int>, signum: int) {
 
 		return q.toBigInteger(this.signum * val.signum);
 	}
-	
+
 	def remainder(val: BigInteger) -> BigInteger {
 		def q = MutableBigInteger.new();
 		def a = MutableBigIntegers.fromIntArray(this.mag);
@@ -567,7 +566,7 @@ class BigInteger(mag: Array<int>, signum: int) {
 
 		return valueOf(result);
 	}
-	
+
 	def xor(val: BigInteger) -> BigInteger {
 		def result: Array<int> = Array<int>.new(Ints.max(intLength(), val.intLength()));
 		for (i < result.length)
@@ -657,7 +656,7 @@ class BigInteger(mag: Array<int>, signum: int) {
 	def abs() -> BigInteger {
 		return if(signum >= 0, this, this.negate());
 	}
-	
+
 	def negate() -> BigInteger {
 		return BigInteger.new(mag, -signum); /* XXX always creates new biginteger */
 	}
@@ -688,7 +687,7 @@ class BigInteger(mag: Array<int>, signum: int) {
 	/* Returns -1, 0, or 1 if {this} BigInteger is numerically less than, equal to,
 	 * or greater than {val}, respectively.
 	 */
-	def compareTo(val: BigInteger) -> int{
+	def compareTo(val: BigInteger) -> int {
 		if (signum == val.signum) {
 			match (signum) {
 				 1 => return compareMagnitude(val);
@@ -724,7 +723,7 @@ class BigInteger(mag: Array<int>, signum: int) {
 
 		def sb = StringBuilder.new();
 		if (signum < 0) sb.putc('-');
-		
+
 		sb.puts("0x");
 		for (num in mag) {
 			sb.putx(num);
@@ -735,50 +734,50 @@ class BigInteger(mag: Array<int>, signum: int) {
 
  	def displayDec() -> string {
  		if (signum == 0) return "0";
- 
+
  		def sb = StringBuilder.new();
- 
+
  		if (signum < 0) sb.putc('-');
- 
+
  		abs().schoenhage(sb, 0);
- 
+
  		return sb.extract();
  	}
- 
+
  	private def schoenhage(sb: StringBuilder, digits: int) {
  		if (signum <= 0) System.error("schoenhage", "signum is nonpositive");
- 
+
  		// if (mag.length <= SCHOENHAGE_BASE_CONVERSION_THRESHOLD) {
  			smallToString(sb, digits);
- 			return;	
+ 			return;
  		// }
- 
+
  		// System.error("unimplemented", "m.mag.length > 20");
  	}
- 
+
  	private def smallToString(buf: StringBuilder, digits: int) {
  		if (signum <= 0) System.error("schoenhage", "signum is nonpositive");
- 		
+
  		if (signum == 0) {
  			padWithZeros(buf, digits);
  			return;
  		}
- 
+
  		def digitGroups = Vector<long>.new();
- 
+
  		var tmp = this;
  		var numGroups = 0;
  		while (tmp.signum != 0) {
  			def d = BigIntegers.fromLong(0xde0b6b3a7640000L);
- 			
+
 			def q = MutableBigInteger.new();
 			def a = MutableBigIntegers.fromIntArray(tmp.mag);
 			def b = MutableBigIntegers.fromIntArray(d.mag);
  			def r = a.divide(b, q);
- 
+
  			def q2 = q.toBigInteger(tmp.signum * d.signum);
  			def r2 = r.toBigInteger(tmp.signum * d.signum);
- 
+
  			digitGroups.put(r2.longValue());
 			numGroups++;
  			tmp = q2;
@@ -806,7 +805,7 @@ class BigInteger(mag: Array<int>, signum: int) {
 			buf.puts(s);
 		}
  	}
- 
+
 	/* auxiliary methods */
 
 	def longValue() -> long {
@@ -928,12 +927,12 @@ def addMag(x: Array<int>, y: Array<int>) -> Array<int> {
 			result[xIndex] = int.view(sum);
 		}
 	}
-	
+
 	// Copy remainder of longer number while carry propagation is required
 	var carry: bool = (sum >>> 32 != 0);
 	while (xIndex > 0 && carry)
 		carry = ((result[--xIndex] = x[xIndex] + 1) == 0);
-	
+
 	// Copy remainder of longer number
 	while (xIndex > 0)
 		result[--xIndex] = x[xIndex];
@@ -971,8 +970,7 @@ def subtractMag(big: Array<int>, little: Array<int>) -> Array<int> {
 	return result;
 }
 
-/**
- * Returns the input array stripped of any leading zero bytes.
+/* Returns the input array stripped of any leading zero bytes.
  * Since the source is trusted the copying may be skipped.
  */
 def stripLeadingZeros(val: Array<int>) -> Array<int> {
@@ -1003,7 +1001,7 @@ def copyAndShift(src: Array<int>, srcFrom: int, srcLen: int, dst: Array<int>, ds
 		dst[dstFrom + i] = (b << byte.!(shift)) | (c >>> byte.!(n2));
 	}
 	dst[dstFrom + srcLen-1] = c << byte.!(shift);
-	
+
 }
 
 def divWord(n: long, d: int) -> long {
@@ -1244,7 +1242,8 @@ def makePositive(a: Array<int>) -> Array<int> {
 	while (keep < a.length && a[keep] == -1) keep++;
 
 	/* Allocate output array.  If all non-sign ints are 0x00, we must
-	 * allocate space for one extra output int. */
+	 * allocate space for one extra output int.
+	 */
 	var j: int = keep;
 	while (j < a.length && a[j] == 0) j++;
 
@@ -1252,7 +1251,8 @@ def makePositive(a: Array<int>) -> Array<int> {
 	def result: Array<int> = Array<int>.new(a.length - keep + extraInt);
 
 	/* Copy one's complement of input into output, leaving extra
-	 * int (if it exists) == 0x00 */
+	 * int (if it exists) == 0x00
+	 */
 	for (i = keep; i < a.length; i++)
 		result[i - keep + extraInt] = ~a[i];
 

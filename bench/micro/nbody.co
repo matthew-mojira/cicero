@@ -101,7 +101,7 @@
     (set px 0.0)
     (set py 0.0)
     (set pz 0.0)
-	
+
     (set i 0)
     (while (< i (bodies.length)){
 		(set b (bodies.get i))
@@ -150,7 +150,7 @@
 
 			(set i (i.succ))
 		})
-		
+
 		(set i 0)
 		(while (< i (self._bodies.length)){
 			(set body (self._bodies.get i))

@@ -25,7 +25,7 @@ if [ "$BENCH_TARGETS" = "" ]; then
 fi
 
 if [ "$BENCH_TIERS" = "" ]; then
-    BENCH_TIERS="0 1"
+    BENCH_TIERS="1"
 fi
 
 if [ "$WARMUP_RUNS" = "" ]; then

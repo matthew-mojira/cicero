@@ -2,7 +2,7 @@
 --
 => 11
 ==
-(try { 
+(try {
   a
   b
   a
@@ -11,7 +11,7 @@
 --
 => "pass"
 --
-(try { 
+(try {
   a
   b
   (set b "unbound")
