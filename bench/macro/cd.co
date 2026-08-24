@@ -83,7 +83,7 @@
     (method (dot other)
         (+ (+ (* self.x other.x) (* self.y other.y)) (* self.z other.z)) ; return
     )
-    
+
     (method (squared_magnitude)
         (self.dot self) ; return
     )
@@ -414,7 +414,7 @@
                     (set w x_parent.right)
                 }())
 
-                (if (and 
+                (if (and
                     (or (= w.left ()) (= w.left.color BLACK))
                     (or (= w.right ()) (= w.right.color BLACK))
                 ){
@@ -452,7 +452,7 @@
                     (set w x_parent.left)
                 }())
 
-                (if (and 
+                (if (and
                     (or (= w.right ()) (= w.right.color BLACK))
                     (or (= w.left ()) (= w.left.color BLACK))
                 ){
@@ -699,10 +699,10 @@
 
 (func (_voxel_hash position){
     (set x_div (/ position.x GOOD_VOXEL_SIZE))
-    (set y_div (/ position.y GOOD_VOXEL_SIZE)) 
+    (set y_div (/ position.y GOOD_VOXEL_SIZE))
 
     (set x_div (x_div.trunc))
-    (set y_div (y_div.trunc)) 
+    (set y_div (y_div.trunc))
 
     (set x (* GOOD_VOXEL_SIZE x_div))
     (set y (* GOOD_VOXEL_SIZE y_div))

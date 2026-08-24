@@ -1,6 +1,6 @@
 /* A Cicero bytecode instruction is four bytes, one byte for the opcode and
  * three for the operand.
- * 
+ *
  * Contrast this approach with CPython bytecode, which is one byte for the
  * opcode and one for the operand. If a bytecode requires a longer operand,
  * there is the EXTENDED_ARG opcode which uses its operand as part of the
@@ -13,39 +13,47 @@ layout Instruction {
 	=4;
 }
 
+/* Each bytecode object created is assigned a unique id */
+var current_bytecode_id: int = 0;
+
 /* The bytecode object, which contains the instructions (as bytes) and all the
  * locals and pools that the instructions will reference
  */
-class Bytecode(instrs:     Array<byte>, 
-		locals:     Array<string>,
-		nonlocals:  Array<string>,
-		params:     Array<string>, // XXX used by analysis only
+class Bytecode(instrs:		Array<byte>,
+		locals:		Array<string>,
+		nonlocals:	Array<string>,
+		params:		Array<string>, // XXX used by analysis only
 		/* String pool is used for lookups by name (e.g. globals) */
-                stringPool: Array<string>,
-                constPool:  Array<Object>,
+		stringPool: Array<string>,
+		constPool:  Array<Object>,
 		/* This is a function which takes the superclass object and
 		 * creates a new class object with respect to that
 		 */
-                classPool:  Array<ClassObject -> ClassObject>,
+		classPool:  Array<ClassObject -> ClassObject>,
 		/* This is the AST-level information for the function, and not
 		 * function objects. At runtime, the VM will need to use some
 		 * information to capture free variables before creating the
 		 * actual function object.
 		 */
-                funcPool:   Array<ASTData.Func>,
+		funcPool:   Array<ASTData.Func>,
+		/* When exception tables are used, we don't add handler stack
+	         * at runtime and instead perform a lookup in this table. */
+		exnTable:   Array<(int, int, int)>,
 		/* Instructions are 4-byte aligned, so take pc >> 2 to find the
 		 * source location of an instruction.
 		 */
-                sourceMap:  Array<FileRange>)
+		sourceMap:  Array<FileRange>)
 {
-	def var cache: Array<Pair<ClassObject, int>>;
+	var id: int;
+	def var cache: Array<CacheState>;
 
 	new() {
 		if (CLOptions.CACHE.get()) {
 			cache = Array.new(sourceMap.length);
 			for (i < cache.length)
-				cache[i] = Pair.new(null, -1);
+				cache[i] = CacheState.Uncached;
 		}
+		id = current_bytecode_id++;
 	}
 
 	def optimize() {
@@ -71,15 +79,15 @@ class Bytecode(instrs:     Array<byte>,
 		def bc = instrs;
 		var pc = 0;
 		while (pc < bc.length) {
-			def bc      = Ref<Instruction>.at(bc, pc);
-			def opcode  = bc.opcode;
-			def operand = bc.operand;
-			def loc = sourceMap[pc >> 2];
+			def bc		= Ref<Instruction>.at(bc, pc);
+			def opcode	= bc.opcode;
+			def operand	= bc.operand;
+			def loc		= sourceMap[pc >> 2];
 
 			str.put3("+%d: %s %d", pc, opcode.name, operand);
 			if (loc != null) str.put2(" (%d:%d)", loc.beginLine, loc.beginColumn);
 			str.ln();
-			
+
 			pc += 4;
 		}
 
@@ -89,5 +97,15 @@ class Bytecode(instrs:     Array<byte>,
 	def inspect() {
 		System.puts(display());
 	}
+
+	/* Generic bytecode rewriting method */
+	def rewrite(op_index: int, new_op: Opcode, operand: int) {
+		// replace opcode
+		instrs[op_index] = new_op.tag;
+
+		// Little endian representation used to store the `operand` in bytecode
+		instrs[op_index + 1] = byte.!(operand & 0xFF);
+		instrs[op_index + 2] = byte.!((operand >> 8) & 0xFF);
+		instrs[op_index + 3] = byte.!((operand >> 16) & 0xFF);
+	}
 }
- 

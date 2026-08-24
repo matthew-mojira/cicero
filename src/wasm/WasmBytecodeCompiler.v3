@@ -21,7 +21,7 @@ class WasmBytecodeCompiler extends WasmCompiler {
 		def hole = wasm.skip_leb32();
 		wasm.putb(0x7F);    // i32
 
-		ciceroBytecode = BytecodeCompiler.new(ast, params).extract();
+		ciceroBytecode = BytecodeCompiler.new(ast, params, false, false).extract();
 		if (CiceroOptions.optimizeBytecode) {
 			ciceroBytecode.optimize();
 		}
@@ -161,7 +161,7 @@ class WasmBytecodeCompiler extends WasmCompiler {
 			Ranges.dup(ciceroBytecode.instrs[absStart ... absEnd]),
 			ciceroBytecode.locals, ciceroBytecode.nonlocals, ciceroBytecode.params,
 			ciceroBytecode.stringPool, ciceroBytecode.constPool, ciceroBytecode.classPool,
-			ciceroBytecode.funcPool,
+			ciceroBytecode.funcPool, [],
 			Ranges.dup(ciceroBytecode.sourceMap[(absStart >> 2) ... (absEnd >> 2)]));
 		def br = BeyondRelooper.new(CFGraph.new(slice, true));
 		br.structuredControl();
@@ -507,6 +507,7 @@ class WasmBytecodeCompiler extends WasmCompiler {
 					}
 				}
 				RETURN => /* no implementation */ ;
+				RETURN_INIT => System.error("unimplemented", "Wasm tier: class-init chaining is not compiled through the tier-1-derived path");
 			}
 
 			pc += 4;

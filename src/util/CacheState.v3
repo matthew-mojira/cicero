@@ -1,0 +1,10 @@
+type CacheState #unboxed {
+	case Uncached;
+	case Monomorphic(cls: ClassObject, index: int);
+	case Polymorphic(values: Array<(ClassObject, int)>);
+	case Megamorphic;
+}
+
+component InlineCache {
+	def picLimit: int = 3;
+}

@@ -31,7 +31,7 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 			def operand = ins.operand;
 
 			pc += 4;
-			if (!ignoreExceptions) {
+			if (!ignoreExceptions && !CiceroOptions.useExceptionTables) {
 				match (opcode) {
 					TRY   => handlerStk.push(pc + operand);
 					CATCH => handlerStk.pop();
@@ -51,8 +51,9 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 				boundaries[pc] = true;
 			}
 			if (!ignoreExceptions && opcode.exception) {
-				boundaries[handlerStk.peek()] = true; // XXX duplicate set many, many times
-				handlerLoc[pc] = handlerStk.peek();
+				def target = if(CiceroOptions.useExceptionTables, findHandlerTarget(pc, exceptionExitPc), handlerStk.peek());
+				boundaries[target] = true; // XXX duplicate set many, many times
+				handlerLoc[pc] = target;
 				boundaries[pc] = true;
 			}
 		}
@@ -81,7 +82,7 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 			def block = basicBlocks[i];
 			def lastOp = Opcodes.map[block.bytes[block.bytes.length - 4]];
 			def lastPc = block.startPc + block.bytes.length;
-			
+
 			if (lastOp.fallthrough)	{
 				block.fallthroughSuccessor = basicBlocks[map[lastPc]];
 				block.fallthroughSuccessor.predecessors.add(block);
@@ -102,6 +103,13 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 			}
 		}
 		head = basicBlocks[0];
+	}
+
+	def findHandlerTarget(pc: int, noHandler: int) -> int {
+		for (entry in bytecode.exnTable) {
+			if (pc > entry.0 && pc <= entry.1) return entry.1;
+		}
+		return noHandler;
 	}
 
 	def computeDominators() {
@@ -132,7 +140,7 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 					newDoms.retainAll(pred.dominators);
 				}
 
-				newDoms.add(block);				
+				newDoms.add(block);
 
 				if (!newDoms.equalS(block.dominators)) {
 					block.dominators = newDoms;
@@ -146,7 +154,7 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 	def computeImmediateDominator() {
 		for (i < basicBlocks.length) {
 			def block = basicBlocks[i];
-			if (block == head){
+			if (block == head) {
 				block.immDom = null;
 				continue;
 			}
@@ -169,7 +177,7 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 					break;
 				}
 			}
-			block.immDom = immDomCand;			
+			block.immDom = immDomCand;
 		}
 	}
 
@@ -195,7 +203,7 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 		postorder.put(b);
 	}
 
-	// Builds the immediate dominator (really: dominates) tree and sorts 
+	// Builds the immediate dominator (really: dominates) tree and sorts
 	// children in reverse postorder
 	def computeDominatorTree() {
 		for (i < basicBlocks.length) {
@@ -253,7 +261,7 @@ class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 		System.ln();
 		for (block in basicBlocks.copy()) {
 			block.display();
-		}		
+		}
 	}
 }
 
@@ -297,7 +305,7 @@ class BasicBlock(bytes: Range<byte>, startPc: int) {
  		} else {
  			System.puts("(=> imm dom: none)\n");
  		}
-		
+
 		def predecessors = predecessors.toArray();
 		System.puts("   [");
 		for (i = 0; i < predecessors.length - 1; i++) {

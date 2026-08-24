@@ -20,9 +20,9 @@ nohup bash path/to/run_bench.sh &
 You can config/add/edit benchmarks, number of runs by editing the `/path/to/cicero-repo/bench/run_bench.config.csv` file.
 
 ### Optional env vars
-By default, the benchmarks only run for the `x86-64-linux` target across tiers `0` and `1` with Virgil optimization level `2`, but you can change it with the following environment variables:
+By default, the benchmarks only run for the `x86-64-linux` target at tier `1` with Virgil optimization level `2`, but you can change it with the following environment variables:
 * `BENCH_TARGETS`: which targets to test (e.g `export BENCH_TARGETS="x86-linux x86-64-linux"`)
-* `BENCH_TIERS`: which tiers to test (e.g `export BENCH_TIERS="0 1"`)
+* `BENCH_TIERS`: which tiers to test (e.g `export BENCH_TIERS="1"`)
 * `BENCH_OPT_LEVELS`: which Virgil optimization levels to test (e.g `export BENCH_OPT_LEVELS="0 1 2"`)
 * `BENCH_CONFIG`: path to benchmark configuration CSV file, default is `bench/run_bench.config.csv` (e.g `export BENCH_CONFIG="/path/to/custom_benchmarks.csv"`)
 * `WARMUP_RUNS`: number of warmup runs for hyperfine, default is 1 (e.g `export WARMUP_RUNS=3`)

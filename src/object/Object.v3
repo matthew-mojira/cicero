@@ -2,10 +2,10 @@
  * Virgil subclass, while all objects of user-defined types are Object.
  *
  * cls represents a linked list of classes up to the base class
- * 
+ *
  * fields is an array of Objects which hold each field, starting from the
  * base class down to the lowest class (cls).
- * 
+ *
  * For each class, we separate fields and methods (since they're separated
  * like that in the field), but here they are stored in the same array. The
  * bona-fide fields are stored first, then the methods, for each class from
@@ -51,7 +51,7 @@ class Object {
 	new() {}
 
 	/* Objects of the built-in classes are eagerly allocated (as needed),
-	 * but lazily initialized. This is because of depedencies between 
+	 * but lazily initialized. This is because of depedencies between
 	 * objects of the built-in classes, where allocation is sufficient to
 	 * glue the objects together. This means, however, that we must be
 	 * careful not to perform an operation on an uninitialized object.
@@ -75,14 +75,13 @@ class Object {
  	 		x: ClassObject  => cls = ClassObjects.classClass;
 	 		x: CodeObject   => cls = ClassObjects.classCode;
 	 		x: DoubleObject => cls = ClassObjects.classDouble;
-	 		x: ExnObject    => cls = ClassObjects.classExn;
- 	 		x: FrameObject  => cls = ClassObjects.classFrame;
+	 		x: ExnObject	=> cls = ClassObjects.classExn;
  	 		x: FuncObject   => cls = ClassObjects.classFunc;
- 	 		x: IntObject    => cls = ClassObjects.classInt;
+ 	 		x: IntObject	=> cls = ClassObjects.classInt;
  	 		x: ListObject   => cls = ClassObjects.classList;
- 	 		x: MapObject    => cls = ClassObjects.classMap;
+ 	 		x: MapObject	=> cls = ClassObjects.classMap;
  	 		x: UnitObject   => cls = ClassObjects.classUnit;
- 	 		x: StrObject    => cls = ClassObjects.classStr;
+ 	 		x: StrObject	=> cls = ClassObjects.classStr;
 		}
 
 		// sanity check
@@ -97,7 +96,7 @@ class Object {
 		/* Figure out how much space needs to be allocated for fields. */
 		for (clazz in classes.reverse().copy()) {
 			for (field in clazz.classFields) {
-				fields.storeKey(field.0, null);
+				fields.storeKey(field, null);
 			}
 			// methods are not initialized but a slot is allocated
 			for (method in clazz.classMethods) {
@@ -105,19 +104,19 @@ class Object {
 			}
 		}
 		/* Initialization sets classes, allocates space for fields, and
-		 * initializes methods. Setting the fields are done later. 
+		 * initializes methods. Setting the fields are done later.
 		 * Non-method fields
 		 * are eagerly initialized by the runtime for user-defined classes.
 		 * No built-in class makes use of non-method fields, but maybe this
 		 * could change if we expose *primitive* fields which are also
 		 * Cicero objects.
 		 */
-		
+
 		// Methods are initialized when class is initialized
 		if (!CiceroOptions.useLazyMethods) {
 			for (clazz in classes.copy()) {
 				for (func in clazz.classMethods) {
-					def m = MethodObject.new(this, func.id, func.params, func.code);
+					def m = MethodObject.new(this, func.id, func.params, func.code, func.metadata);
 					fields.storeKey(func.id, m);
 				}
 			}
@@ -137,13 +136,13 @@ class Object {
  	def setFieldByIndex(idx: int, obj: Object) {
 		fields.storeIndex(idx, obj);
  	}
- 
+
  	def getFieldByIndex(idx: int) -> Object {
 		if (CiceroOptions.sanityChecks) {
 			if (cls == null)
 				System.error("field error", "class not initialized");
 		}
- 		return Assert.assertNonNull(fields.loadIndex(idx));
+ 		return fields.loadIndex(idx);
  	}
 
  	def getIndex(field: string) -> int {
@@ -159,13 +158,13 @@ class Object {
 
 		def obj = fields.loadKey(name).fromJust();
 		if (obj != null) return obj; // allocated
-	
+
 		if (CiceroOptions.useLazyMethods) {
 			// null if and only if lazy (uninitialized) method
 			for (clazz = this.cls; clazz != null; clazz = clazz.superclass) {
 				for (func in clazz.classMethods) {
 					if (Strings.equal(func.id, name)) {
-						def m = MethodObject.new(this, func.id, func.params, func.code);
+						def m = MethodObject.new(this, func.id, func.params, func.code, func.metadata);
 						fields.storeKey(name, m);
 						return m;
 					}

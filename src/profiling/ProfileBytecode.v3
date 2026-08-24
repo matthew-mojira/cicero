@@ -1,0 +1,55 @@
+component ProfileBytecode {
+	def staticCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+	/* `dynamicCounts` tracks op execution counts at runtime.
+	 * `dynamicOpExecutionTimes` tracks op's total execution runtime cost
+	 */
+	def dynamicCounts: Array<int> = Array.new(Opcodes.numOpcodes);
+	def dynamicOpExecutionTimes: Array<long> = Array.new(Opcodes.numOpcodes);
+
+	def profileStaticCount(opTag: int) {
+		ProfileBytecode.staticCounts[opTag]++;
+	}
+
+	def profileDynamicCountAndExecutionTime(opTag: int, executionTime: long) {
+		ProfileBytecode.dynamicCounts[opTag]++;
+		ProfileBytecode.dynamicOpExecutionTimes[opTag] += executionTime;
+	}
+
+	def profileDynamicExecutionTime(opTag: int, executionTime: long) {
+		ProfileBytecode.dynamicOpExecutionTimes[opTag] += executionTime;
+	}
+
+	def printStaticStats() {
+		/* Output Cicero's profiling */
+		var i = 0;
+		var total = 0;
+
+		def sb = StringBuilder.new();
+		sb.puts("# STATIC COUNTS\n");
+		sb.puts("instruction, counts\n");
+		for (op in Opcode.set.all) {
+			def count = ProfileBytecode.staticCounts[i++];
+			total += count;
+			sb.put2("%s, %d\n", op.name, count);
+		}
+		sb.put1("# Total static bytecodes: %d\n", total);
+		System.puts(sb.extract());
+	}
+
+	def printDynamicStats() {
+		var i = 0;
+		var total = 0;
+		def sb = StringBuilder.new();
+		sb.puts("# DYNAMIC COUNTS:\n");
+		sb.puts("instruction, counts, total execution time(μs)\n");
+		for (op in Opcode.set.all) {
+			def execTime: long = ProfileBytecode.dynamicOpExecutionTimes[i];
+			def count = ProfileBytecode.dynamicCounts[i++];
+			total += count;
+
+			sb.put3("%s, %d, %s\n", op.name, count, ProfilingHelpers.longToString(execTime));
+		}
+		sb.put1("# Total dynamic bytecodes: %d\n", total);
+		System.puts(sb.extract());
+	}
+}

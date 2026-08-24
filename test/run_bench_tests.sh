@@ -20,7 +20,7 @@ deps_for_macro(){
 update_deps(){
     if [ -e "$MACRO/$SUITE.co" ]; then
         deps_for_macro
-    else 
+    else
         if [ -e "$MICRO/$SUITE.co" ]; then
             DEPS=''
         else
@@ -45,7 +45,7 @@ for bench in $TEST_SUITES; do
 
         if [ -e "$MICRO/$BENCH.co" ]; then
             cp $MICRO/$BENCH.co $T
-        else 
+        else
             if [ -e "$MACRO/$BENCH.co" ]; then
                 cp $MACRO/$BENCH*.co $T
             else

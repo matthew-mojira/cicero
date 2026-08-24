@@ -1,0 +1,11 @@
+Line Number,Bytecode ID,Instruction Index,Function Identifier,Function Label,Instruction,Jumps taken,Jumps not taken
+1,31,12,101,not,JUMP,128,0
+1,31,4,101,not,JUMP_IF_FALSE,8077,128
+19,41,56,106,Towers._push_disk,JUMP_IF_FALSE_PEEK,128,8077
+19,41,88,106,Towers._push_disk,JUMP_IF_FALSE,8205,0
+29,42,108,107,Towers._pop_disk_from,JUMP,8191,0
+29,42,40,107,Towers._pop_disk_from,JUMP_IF_FALSE,0,8191
+43,44,140,109,Towers._build_tower_at,JUMP,14,0
+43,44,36,109,Towers._build_tower_at,JUMP_IF_FALSE_PEEK,1,14
+53,45,20,110,Towers._move_disks,JUMP_IF_FALSE,4095,4096
+53,45,48,110,Towers._move_disks,JUMP,4096,0

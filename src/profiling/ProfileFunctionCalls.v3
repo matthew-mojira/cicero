@@ -1,0 +1,65 @@
+// Used during both `profileFunctionCalls` and `profileFuncObjectCalls`
+class ProfiledFuncData #unboxed {
+	def label: string;
+	var calls: int;
+	var inclusiveTime: int; // μs
+	var exclusiveTime: int; // μs
+
+	new(label, calls, inclusiveTime, exclusiveTime) {}
+}
+
+// This object is stored in the `ProfilingHelpers.callDataFrames` array stack
+// The relevant call frame object for any `ProfileCallFrameData` object will always be at the same depth in the VM's call frames array stack.
+class ProfileCallFrameData #unboxed {
+	def uid: int;
+	def startTime: int; // μs
+	var totalCalleeTime: int = 0; // μs
+	new(uid, startTime) {}
+}
+
+component ProfileFunctionCalls {
+	def funcCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
+	def funcObjectCallCounts: HashMap<int, ProfiledFuncData> = HashMap.new(int.!<int>, int.==);
+
+	private def profile(dict: HashMap<int, ProfiledFuncData>, key: int, name: string, inclusiveTime: int, exclusiveTime: int) {
+		if (dict.has(key)) {
+			def data: ProfiledFuncData = dict[key];
+			data.calls += 1; // increment calls
+			data.inclusiveTime += inclusiveTime;
+			data.exclusiveTime += exclusiveTime;
+		} else {
+			dict[key] = ProfiledFuncData.new(name, 1, inclusiveTime, exclusiveTime);
+		}
+	}
+
+	def profileFunctionCall(metadata: FunctionProfileMetadata, inclusiveTime: int, exclusiveTime: int) {
+		profile(ProfileFunctionCalls.funcCallCounts, metadata.identifier, metadata.label, inclusiveTime, exclusiveTime);
+	}
+
+	def profileFunctionObjectCall(uid: int, label: string, inclusiveTime: int, exclusiveTime: int) {
+		profile(ProfileFunctionCalls.funcObjectCallCounts, uid, label, inclusiveTime, exclusiveTime);
+	}
+
+	private def printStats(dict: HashMap<int, ProfiledFuncData>, sb: StringBuilder) {
+		for (list = Maps.keyList(dict); list != null; list = list.tail) {
+			def key: int = list.head;
+			def data: ProfiledFuncData = dict[key];
+
+			sb.put3("%d, %s, %d, ", key, data.label, data.calls);
+			sb.put2("%d, %d\n", data.inclusiveTime, data.exclusiveTime);
+		}
+		System.puts(sb.extract());
+	}
+
+	def printFuncCallsStats() {
+		def sb = StringBuilder.new();
+		sb.puts("Function identifier, Function label, calls, inclusive execution time(μs), exclusive execution time(μs)\n");
+		printStats(ProfileFunctionCalls.funcCallCounts, sb);
+	}
+
+	def printFuncObjectCallsStats() {
+		def sb = StringBuilder.new();
+		sb.puts("Function object uid, Function label, calls, inclusive execution time(μs), exclusive execution time(μs)\n");
+		printStats(ProfileFunctionCalls.funcObjectCallCounts, sb);
+	}
+}

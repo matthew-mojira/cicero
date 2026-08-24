@@ -1,0 +1,24 @@
+class CallFrame #unboxed {
+	var b: Bytecode; // only changes for `InitCallFrames` since same frame is reused
+	var ip: int;
+
+	def localsStartIndex: int;
+	def nonLocalsStartIndex: int;
+	def baseStartIndex: int;
+
+	var associatedFunc: FunctionProfileMetadata; // only changes for `InitCallFrames`
+	var loc: FileRange;
+
+	new(b, ip, localsStartIndex, nonLocalsStartIndex, baseStartIndex, associatedFunc) {}
+}
+
+class InitCallFrame extends CallFrame #unboxed {
+	// classes with init code objects to execute
+	var initFOs: Array<FuncObject>;
+	var currentIndex: int = 0;
+
+	// classes don't capture nonlocals
+	new(b: Bytecode, initFOs: Array<FuncObject>, stackStartIndex: int,
+		associatedFunc: FunctionProfileMetadata)
+			super(b, 0, stackStartIndex, stackStartIndex, stackStartIndex, associatedFunc) {}
+}

@@ -28,7 +28,7 @@
       (print (self.tail.display))
 	  (print " ")
 	}
-	  () 
+	  ()
 	)
 	(print ")")
 	" " ; FIXME: why is this printed every time?

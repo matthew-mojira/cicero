@@ -83,7 +83,7 @@ class WasmShadowStackCompiler extends WasmCompiler {
 		def hole = wasm.skip_leb32();
 		wasm.putb(0x7F);    // i32
 
-		ciceroBytecode = BytecodeCompiler.new(ast, params).extract();
+		ciceroBytecode = BytecodeCompiler.new(ast, params, false, false).extract();
 		if (CiceroOptions.optimizeBytecode) {
 			ciceroBytecode.optimize();
 		}
@@ -221,6 +221,7 @@ class WasmShadowStackCompiler extends WasmCompiler {
 			DUPE => return 1;
 			SWAP => return 0;
 			RETURN => return -1;
+			RETURN_INIT => return -1; // never actually compiled -- see the compileActions case below
 		}
 	}
 
@@ -313,7 +314,7 @@ class WasmShadowStackCompiler extends WasmCompiler {
 						Ranges.dup(ciceroBytecode.instrs[handlerAbs ... endAbs]),
 						ciceroBytecode.locals, ciceroBytecode.nonlocals, ciceroBytecode.params,
 						ciceroBytecode.stringPool, ciceroBytecode.constPool, ciceroBytecode.classPool,
-						ciceroBytecode.funcPool,
+						ciceroBytecode.funcPool, [],
 						Ranges.dup(ciceroBytecode.sourceMap[(handlerAbs >> 2) ... (endAbs >> 2)]));
 					def subCfg = CFGraph.new(slice, true);
 					BeyondRelooper.new(subCfg).structuredControl(); // computes RPO, needed below
@@ -830,7 +831,7 @@ class WasmShadowStackCompiler extends WasmCompiler {
 			Ranges.dup(ciceroBytecode.instrs[absStart ... absEnd]),
 			ciceroBytecode.locals, ciceroBytecode.nonlocals, ciceroBytecode.params,
 			ciceroBytecode.stringPool, ciceroBytecode.constPool, ciceroBytecode.classPool,
-			ciceroBytecode.funcPool,
+			ciceroBytecode.funcPool, [],
 			Ranges.dup(ciceroBytecode.sourceMap[(absStart >> 2) ... (absEnd >> 2)]));
 		def br = BeyondRelooper.new(CFGraph.new(slice, true));
 		br.structuredControl();
@@ -1181,6 +1182,7 @@ class WasmShadowStackCompiler extends WasmCompiler {
 					applyEffect(atPc, 0);
 				}
 				RETURN => { applyEffect(atPc, -1); }
+				RETURN_INIT => System.error("unimplemented", "Wasm tier: class-init chaining is not compiled through the tier-1-derived path");
 			}
 
 			lastAtPc = atPc;

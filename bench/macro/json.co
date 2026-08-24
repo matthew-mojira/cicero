@@ -100,7 +100,7 @@
 			(return (self._read_true)) ())
 		(if (= self._current 'f')
 			(return (self._read_false)) ())
-		(if (= self._current '\"') 
+		(if (= self._current '\"')
 			(return (self._read_string)) ())
 		(if (= self._current '[')
 			(return (self._read_array)) ())
@@ -126,7 +126,7 @@
         (array.add (self._read_value))
         (self._skip_white_space)
 	})
-	
+
 	(method (_read_array){
 		(self._read)
 		(set array (new _JsonArray))
@@ -152,7 +152,7 @@
 			(self._skip_white_space)
 		})
 	})
-    
+
 	(method (_read_object){
 		(self._read)
 		(set obj (new _JsonObject))
@@ -374,7 +374,7 @@
 			(= '\r' self._current)
 		))) ; return
 	})
-	
+
 	(method (_is_digit){
 		(or (= self._current '0')
 		(or (= self._current '1')

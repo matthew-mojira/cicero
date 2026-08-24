@@ -1,7 +1,12 @@
-class WasmFrame extends FrameObject {
+// Kept as a class only for Main.v3's reusable top-level frame; call sites
+// otherwise just want invokeCode's swap-call-restore, not a heap object.
+class WasmFrame {
+	def var args: Array<(string, Object)>;
+	var result: Result;
 
-	new(prev: FrameObject, code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) super(prev, code, args) {
+	new(code: CodeObject, args: Array<(string, Object)>, nonlocalArgs: Array<(string, Object)>) {
 		if (code != null) {
+			this.args = args;
 			wasm = Code.Wasm.!(code.code).wasm;
 			nonlocals = nonlocalArgs;
 			// XXX can do better here

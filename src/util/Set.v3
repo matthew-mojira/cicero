@@ -25,9 +25,9 @@ class HashSet<T> extends HashMap<T, void> {
 		}
 	}
 	def equalS(s: HashSet<T>) -> bool {
-		for (e in toArray()) 
+		for (e in toArray())
 			if (!s.contains(e)) return false;
-		for (e in s.toArray()) 
+		for (e in s.toArray())
 			if (!contains(e)) return false;
 		return true;
 	}

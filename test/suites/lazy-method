@@ -1,0 +1,17 @@
+==
+(class C
+  (method (m) 1)
+)
+(func (call x) (x.m))
+(set a (new C))
+(set b (new C))
+(call a)
+(call b)
+--
+=> <class 'C'>
+=> <func 'call'>
+=> <object>
+=> <object>
+=> 1
+=> 1
+--

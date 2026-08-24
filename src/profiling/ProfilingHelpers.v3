@@ -1,0 +1,57 @@
+component ProfilingHelpers {
+
+	/* Used by function calls profiler, func object calls profiler, caller-callee pairs profiler */
+	def callDataFrames: ArrayStack<ProfileCallFrameData> = ArrayStack.new();
+
+	/* Combines two ints to form a long which is used as a key in a hash-map */
+	def constructLong(one: int, two: int) -> long {
+		return long.!(one) << 32 | (long.!(two) & 0xFFFFFFFF);
+	}
+
+	/* The key packs two 32-bit ints into a 64-bit long (see `ProfilingHelpers.constructLong` function)
+	 * Hashing a `long` by truncating it to an `int` would ignore the upper 32 bits.
+	 * Instead, we combine the lower 16 bits of each component.
+	 * For the current profiling workload (benchmarks), each component fits within 16 bits, making this collision-free.
+	 */
+	def computeHash(key: long) -> int {
+		def keyOne16 = key & 0xFFFF;
+    		def keyTwo16 = key & 0xFFFF00000000;
+    		return int.!((keyTwo16 >> 16) | keyOne16);
+	}
+
+	def longToString(value: long) -> string {
+		var a: Array<byte> = Array<byte>.new(20); // 20 is the maximum possible length of a long
+		def l = Longs.renderDecimal(value, a, 0);
+		return Strings.format1("%s", Arrays.range(a, 0, l));
+	}
+
+	def createMatrix<T>(rows: int, cols: int) -> Array<Array<T>> {
+		var matrix = Array<Array<T>>.new(rows);
+		for (i=0; i < rows; i++) {
+			matrix[i] = Array<T>.new(cols);
+		}
+		return matrix;
+	}
+
+	def handleProfilingDuringReturn(endTime: int, callerFunc: FunctionProfileMetadata, calleeFunc: FunctionProfileMetadata) {
+		def poppedDataFrame = ProfilingHelpers.callDataFrames.pop();
+		def inclusiveExecutionTime: int = endTime - poppedDataFrame.startTime;
+		def exclusiveExecutionTime: int = inclusiveExecutionTime - poppedDataFrame.totalCalleeTime;
+
+		if (callerFunc != null) {
+			if (CiceroOptions.profileCallerCalleePairs) {
+				ProfileCallerCalleePairs.profilePair(callerFunc, calleeFunc, inclusiveExecutionTime);
+			}
+
+			// update `totalCalleeTime`
+			ProfilingHelpers.callDataFrames.elems[ProfilingHelpers.callDataFrames.top - 1].totalCalleeTime += inclusiveExecutionTime;
+		}
+
+		if (CiceroOptions.profileFunctionCalls) {
+			ProfileFunctionCalls.profileFunctionCall(calleeFunc, inclusiveExecutionTime, exclusiveExecutionTime);
+		}
+		if (CiceroOptions.profileFuncObjectCalls) {
+			ProfileFunctionCalls.profileFunctionObjectCall(poppedDataFrame.uid, calleeFunc.label, inclusiveExecutionTime, exclusiveExecutionTime);
+		}
+	}
+}

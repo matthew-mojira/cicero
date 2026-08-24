@@ -256,10 +256,7 @@ component WasmRuntime {
 			return true;
 		}
 
-		// create new frame (and evaluate)
-		def newFrame = frame.newFrame(fv.id, code, argv, fv.nonlocals);
-		newFrame.eval();
-		match (newFrame.result) {
+		match (invokeCode(code, argv, fv.nonlocals)) {
 			OK(v) => {
 				result = alloc(v);
 				return false;
@@ -271,6 +268,22 @@ component WasmRuntime {
 			_ => {
 				System.error("internal error", "evaluation of frame returned uncomputed");
 				return false;
+			}
+		}
+	}
+
+	// A Wasm-tier call target is always Wasm-compiled or a Virgil builtin.
+	def invokeCode(code: CodeObject, argv: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> Result {
+		match (code.code) {
+			Virgil(fn) => return fn(Arrays.map(argv, fun(p: (string, Object)) => p.1));
+			Wasm => {
+				def f = WasmFrame.new(code, argv, nonlocals);
+				f.eval();
+				return f.result;
+			}
+			_ => {
+				System.error("internal error", "WasmRuntime.invokeCode: unsupported code tier");
+				return Result.Uncomputed;
 			}
 		}
 	}
@@ -316,7 +329,7 @@ component WasmRuntime {
 		def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
 
 		var j = 0;
-		def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body);
+		def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body, funchole.metadata);
 		for (i < funchole.nonlocals.length) {
 			// if the nonlocal is the function itself (for recursion)
 			if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
@@ -366,7 +379,6 @@ component WasmRuntime {
 	// createObjectPtr; returns (isExn, resultObj) - callers convert
 	// resultObj via alloc/objToPtr and assign `result` themselves.
 	def createObjectFromClass(clsObj: ClassObject) -> (bool, Object) {
-		def parentFr = WasmRuntime.frame;
 		def obj = Objects.newObject(clsObj);
 
 		def classes: Vector<ClassObject> = Vector.new();
@@ -376,27 +388,13 @@ component WasmRuntime {
 		// initialization order is from base class downwards, which
 		// may involve reinitializing some fields
 		for (cls in classes.reverse().extract()) {
-			// initialize fields
-			for (field in cls.classFields) {
-				def name = field.0, expr = field.1;
-
-				// XXX hackfix
-				if (expr == null) continue;
-				// create new frames here!
-				def frame = parentFr.newFrame(Strings.format2("%s.%s", cls.name, name), expr, [], []);
-				frame.eval();
-				if (frame.isExn()) return (true, frame.getExn());
-				obj.setField(name, frame.getValue());
-			}
-			// call initializer
 			if (cls.init != null) {
-				def args = [("self", obj)];
-				def code = cls.init;
-
-				// create new frames here!
-				def frame = parentFr.newFrame(Strings.format1("%s.init", cls.name), code, args, []);
-				frame.eval();
-				if (frame.isExn()) return (true, frame.getExn());
+				def args: Array<(string, Object)> = [("self", obj)];
+				match (invokeCode(cls.init.code, args, [])) {
+					OK => ;
+					Exn(e) => return (true, e);
+					_ => System.error("internal error", "class init returned uncomputed");
+				}
 			}
 		}
 		return (false, obj);
@@ -664,9 +662,7 @@ component WasmRuntime {
 			return true;
 		}
 
-		def newFrame = frame.newFrame(fv.id, code, argv, fv.nonlocals);
-		newFrame.eval();
-		match (newFrame.result) {
+		match (invokeCode(code, argv, fv.nonlocals)) {
 			OK(v) => { result = objToPtr(v); return false; }
 			Exn(e) => { result = objToPtr(e); return true; }
 			_ => { System.error("internal error", "evaluation of frame returned uncomputed"); return false; }
@@ -737,7 +733,7 @@ component WasmRuntime {
 		def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
 
 		var j = 0;
-		def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body);
+		def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body, funchole.metadata);
 		for (i < funchole.nonlocals.length) {
 			if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
 				nonlocals[i] = (funchole.id, fn);

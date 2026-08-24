@@ -81,7 +81,7 @@ Potpourri of potentially bigger things
 - [ ] do not allow `set` in the top level
 - [ ] collect a set of design decisions, keeping track of dynamic language
       features we've added and what languages they model
-- [ ] print should call field display, not internal Virgil object's 
+- [ ] print should call field display, not internal Virgil object's
 - [ ] rename XObjects component (e.g. getIntObject -> fromLong)
 - [ ] return, break, continue
 - [ ] namespaces?
@@ -130,7 +130,7 @@ In the Parser, we must detect nonlocal accesses. This is tricky because a
 naive single-pass approach will fail to detect local set later:
 
 ```
-{ 
+{
   (lambda (y) (+ x y)) ; x is parsed as a global access
   (set x 1) ; x now local!
 }
@@ -189,7 +189,7 @@ wraps around a string (its name), a list of strings (its parameters), and code
 (`f_name`, `f_params`, and `f_body`, respectively). Since all fields in Cicero
 are mutable, we can change these. But these are getter methods, not the actual
 underlying values. In addition, each call to this method generates a new
-Cicero object which wraps around the same underlying Virgil value. This value 
+Cicero object which wraps around the same underlying Virgil value. This value
 is not backed by the original value nor can modifying this new value modify the
 internal one. `f_params` returns a list, which if modified, doesn't change the
 original function.
@@ -223,7 +223,7 @@ func.fields["params"] = ListObject.of(params);
 func.fields["code"] = CodeObject.of(code);
 ```
 
-When a function is evaluated, the frame accesses the Cicero fields, which are 
+When a function is evaluated, the frame accesses the Cicero fields, which are
 now exposed to the user and mutable. This means the user can mess with them, in
 a way which is more often than not confusing and unintuitive. But it's more
 dynamic!
@@ -297,7 +297,7 @@ class Object {
 
 Inline caches don't work so well when lazy methods are being used. In some
 limited testing, lazy methods improve the performance of the richards benchmark
-by 20-25%. But lazy methods conflict with inline caches. 
+by 20-25%. But lazy methods conflict with inline caches.
 
 Inline caches are supposed to be a fast path to getting the value of a field.
 But what if that field is of a method that has not yet been initialized? The
@@ -386,13 +386,13 @@ A code object consists of a Code and a FileRange.
 * Code is an ADT which may be
   * Virgil: a virgil function `Range<Object> -> Result`. Note that the resulting
     Code is already parameterized (the names for the parameters are stored
-    separately, which brings arity redundancy issues). The idea here is that 
+    separately, which brings arity redundancy issues). The idea here is that
     Virgil functions should take differing number of arguments, but its wrapping
     in a FuncObject (and thus all functions in cicero) explicitly prohibits this.
   * AST: the root node of an AST tree. Note the AST type itself is a combination
     of both ASTData (the real syntatical construct) and a FileRange for the source
     of just that AST node.
-  * Bytecode: which contains the bytecodes but also constant pools, source 
+  * Bytecode: which contains the bytecodes but also constant pools, source
     mappings, and inline caches.
 * As far as I am aware the FileRange is not in use anywhere. Note that the Virgil
   type does not use this FileRange because its source is defined in Virgil code.
@@ -403,7 +403,7 @@ tiered up to Bytecode (without creating a new CodeObject). Note that Virgil code
 cannot be compiled.
 
 The layout is sorta inconsistent to how frames work (with an abstract class
-extended by three classes, one for each case in the Code AST). Frames are 
+extended by three classes, one for each case in the Code AST). Frames are
 usually a one-off execution thing (except for the top-level which is multiple
 expressions evaluated in a single frame--different than the block). In the
 future, implementing coroutines means a frame needs to be able to suspend
@@ -434,19 +434,19 @@ Taken from the above section:
 
 > Another possibility is to integrate the components of a function as fields of
 > the object. When creating a new function, something like this occurs:
-> 
+>
 > ```
 > def func = Object.new(Class.func);
 > func.fields["name"] = StrObject.of(id);
 > func.fields["params"] = ListObject.of(params);
 > func.fields["code"] = CodeObject.of(code);
 > ```
-> 
-> When a function is evaluated, the frame accesses the Cicero fields, which are 
+>
+> When a function is evaluated, the frame accesses the Cicero fields, which are
 > now exposed to the user and mutable. This means the user can mess with them, in
 > a way which is more often than not confusing and unintuitive. But it's more
 > dynamic!
-> 
+>
 > The question is speed. Obviously this is slower in a trivial implementation,
 > but how much can dynamic optimizations cut down on this overhead?
 

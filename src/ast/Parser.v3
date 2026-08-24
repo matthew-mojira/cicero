@@ -44,11 +44,12 @@ component ParseOption {
 	// TODO add allowEmptyBegin
 }
 
-def missingCloseParentheses: string = "expected closing parentheses but reached end of file";
-def duplicatedParameter: string     = "parameter redefined";
-def duplicatedFieldMethod: string   = "field/method redefined";
-def duplicatedExtends: string       = "extends clause defined";
-def duplicatedInit: string          = "init clause defined";
+def missingCloseParentheses: string	= "expected closing parentheses but reached end of file";
+def duplicatedParameter: string		= "parameter redefined";
+def duplicatedFieldMethod: string	= "field/method redefined";
+def duplicatedExtends: string		= "extends clause defined";
+def duplicatedInit: string		= "init clause defined";
+def returnUsedInsideFieldOrInit: string	= "return expression not allowed inside field/init";
 
 class Vars {
 	def referencedVars: HashMap<string, Box<AccessMode>> = Strings.newMap();
@@ -56,10 +57,11 @@ class Vars {
 }
 
 class Parser extends TextReader {
-	private def exprs: Vector<CodeObject>          = Vector.new();
+	private def exprs: Vector<CodeObject> = Vector.new();
 
 	new(fileName: string, data: string) super(fileName, data) {
 		skipWs = skipWhitespaceAndComments;
+		returnExprAllowedStack.push(true);
 
 		skipWs(this);
 		while (pos < limit) {
@@ -72,11 +74,12 @@ class Parser extends TextReader {
 		}
 	}
 
+	var returnExprAllowedStack: ArrayStack<bool> = ArrayStack.new();
 	def varStack: ArrayStack<Vars> = ArrayStack.new();
 	// all global-set/gets use this to reduce allocations. Don't mutate this
 	def global:   Box<AccessMode> = Box.new(AccessMode.Global);
 
-	                                             /* AST,  globals (which may be nonlocals) */
+							/* AST,  globals (which may be nonlocals) */
 	private def readCode(locals: Array<string>) -> (AST, Array<(string, Box<AccessMode>)>) {
 		def top = Vars.new();
 		for (local in locals) {
@@ -122,7 +125,7 @@ class Parser extends TextReader {
 			'(' => {
 				// consume matched token
 				req1('(');
-				
+
 				// check for unit
 				if (opt1(')') >= 0) {
 					return AST.new(ASTData.Lit(UnitObjects.instance), FileRange.new(fileName, startLine, startColumn, line, column));
@@ -172,7 +175,7 @@ class Parser extends TextReader {
 							def snd = readExpr();
 							req1(')');
 							cases.put((fst, snd));
-							
+
 							if (pos >= limit) {
 								failRel(startPos - pos, missingCloseParentheses);
 								return null;
@@ -186,7 +189,7 @@ class Parser extends TextReader {
 						def cond = readExpr();
 						def body = readExpr();
 						req1(')');
-						
+
 						return AST.new(ASTData.While(cond, body),
 							FileRange.new(fileName, startLine, startColumn, line, column));
 					}
@@ -220,7 +223,7 @@ class Parser extends TextReader {
 								return null;
 							}
 						}
-						
+
 						return AST.new(ASTData.Begin(exprs.extract()),
 							FileRange.new(fileName, startLine, startColumn, line, column));
 					}
@@ -242,9 +245,12 @@ class Parser extends TextReader {
 								return null;
 							}
 						}
-						
+
 						// body expression
+						returnExprAllowedStack.push(true);
 						def ret = readCode(params.copy());
+						returnExprAllowedStack.pop();
+
 						def body = ret.0, prev = ret.1;
 						req1(')');
 
@@ -253,14 +259,18 @@ class Parser extends TextReader {
 
 						// get func to the set of possible nonlocals
 						// XXX creating CodeObject here
-						def func = ASTData.Func(name, params.extract(), CodeObjects.fromAST(body), Vector.new());
+						def metadata = FunctionProfileMetadata.new(name, false);
+						def func = ASTData.Func(name, params.extract(),
+							CodeObjects.fromAST(body), Vector.new(),
+							metadata);
+
 						def vars = varStack.peek();
 						if (vars != null) {
 							vars.possibleNonlocals.put((func, prev));
 						}
-						
+
 						// restore code-level
-						return AST.new(ASTData.VarSet(name, b, AST.new(func, range)), 
+						return AST.new(ASTData.VarSet(name, b, AST.new(func, range)),
 										range);
 					}
 					LAMBDA => {
@@ -278,23 +288,30 @@ class Parser extends TextReader {
 								return null;
 							}
 						}
-						
+
 						// body expression
+						returnExprAllowedStack.push(true);
 						def ret = readCode(params.copy());
+						returnExprAllowedStack.pop();
 						def body = ret.0, prev = ret.1;
 						req1(')');
 
 						def range = FileRange.new(fileName, startLine, startColumn, line, column);
-						
+
 						// get func to the set of possible nonlocals
 						// XXX creating CodeObject here
 						// lambda has no name
-						def func = ASTData.Func("", params.extract(), CodeObjects.fromAST(body), Vector.new());
+						def metadata = FunctionProfileMetadata.new(Strings.format1("lambda-%d", FuncObjects.identifier_id), false);
+
+						def func = ASTData.Func("", params.extract(),
+							CodeObjects.fromAST(body), Vector.new(),
+							metadata);
+
 						def vars = varStack.peek();
 						if (vars != null) {
 							vars.possibleNonlocals.put((func, prev));
 						}
-						
+
 						return AST.new(func, range);
 					}
 					SET => {
@@ -341,17 +358,41 @@ class Parser extends TextReader {
 							FileRange.new(fileName, startLine, startColumn, line, column));
 					}
 					CLASS => {
+						/*	(class A
+						 *		(extends c)
+						 *		(field x1 e1)
+						 *		(field x2 e2)
+						 *		(init e3)
+						 *		(method (m1 y11 y12 ... y1n1) e4)
+						 *		...
+						 *	)
+						 *	will need to parsed as if:
+						 *	(class A
+						 *		(extends c)
+						 *		(field x1) ; declared only
+						 *		(field x2) ; declared only
+						 *		(init {
+						 *			(set-field x1 self e1)
+						 *			(set-field x2 self e2)
+						 *			e3
+						 *		})
+						 *		(method (m1 y11 y12 ... y1n1) e4)
+						 *		...
+						 *	)
+						 * `A`, `xi`s, `mi`s, and `yi`s are identifiers. `c`, `ei`s are all expressions.
+						 */
 						def name = readIdentifier();
-						def fields: Vector<(string, CodeObject)> = Vector.new();
 						def methods: Vector<ASTData.Func> = Vector.new();
-						var init: Maybe<CodeObject> = Maybe.Nothing;
+						def fieldNames: Vector<string> = Vector.new();
+						def initASTs: Vector<AST> = Vector.new();
+						var init: Maybe<AST> = Maybe.Nothing;
 						var superclass: Maybe<AST> = Maybe.Nothing;
 
 						while (opt1(')') < 0) {
 							req1('(');
-							
+
 							def kw = readClassKeyword();
-							
+
 							if (kw.isNothing()) {
 								fail("unrecognized construct in class definition");
 								return null;
@@ -370,20 +411,36 @@ class Parser extends TextReader {
 										fail(duplicatedInit);
 										// XXX fail but keep parsing
 									}
-									init = Maybe.Just(CodeObjects.fromAST(readCode(["self"]).0)); // XXX ignoring .1
+
+									returnExprAllowedStack.push(false);
+									def initAST = readCode(["self"]).0;
+									returnExprAllowedStack.pop();
+
+									// We don't add `initAST` to the `initASTs` vector yet
+									// because `initAST` needs to be executed AFTER the set-field ASTs are executed
+									init = Maybe.Just(initAST); // XXX ignoring .1
 								}
 								FIELD => {
 									def fieldName = readIdentifier();
-									def fieldInit = readCode(["self"]).0; // XXX ignoring .1
-									
-									fields.put(fieldName, CodeObjects.fromAST(fieldInit));
+
+									returnExprAllowedStack.push(false);
+									def fieldExpr = readCode(["self"]).0; // XXX ignoring .1
+									returnExprAllowedStack.pop();
+
+									if (fieldExpr != null) {
+										initASTs.put(AST.new(
+											ASTData.SetField(fieldName, AST.new(ASTData.VarGet("self", Box.new(AccessMode.Local)), fieldExpr.loc), fieldExpr),
+											fieldExpr.loc
+										));
+										fieldNames.put(fieldName);
+									}
 								}
 								METHOD => {
 									req1('(');
 									def methodName = readIdentifier();
 									def methodParams = Vector<string>.new();
 									methodParams.put("self");
-									
+
 									while (opt1(')') < 0) {
 										def paramName = readIdentifier();
 										// check param
@@ -395,12 +452,17 @@ class Parser extends TextReader {
 											return null;
 										}
 									}
+									returnExprAllowedStack.push(true);
 									def methodBody = readCode(methodParams.copy()).0; // XXX ignoring .1
+									returnExprAllowedStack.pop();
 
+									def metadata = FunctionProfileMetadata.new(Strings.format2("%s.%s", name, methodName), false);
 									// XXX creating CodeObject here
-									methods.put(ASTData.Func(methodName, 
-												Ranges.dup(methodParams.copy()[1 ...]), 
-												CodeObjects.fromAST(methodBody), Vector.new()));
+									methods.put(ASTData.Func(methodName,
+												Ranges.dup(methodParams.copy()[1 ...]),
+												CodeObjects.fromAST(methodBody), Vector.new(),
+												metadata
+												));
 								}
 							}
 							req1(')');
@@ -413,11 +475,41 @@ class Parser extends TextReader {
 
 						def b = bindLocal(name);
 						def range = FileRange.new(fileName, startLine, startColumn, line, column);
-						
+
+						// Create `FuncObject` for init, if necessary
+						var initFO: Maybe<FuncObject> = Maybe.Nothing;
+						if (init.isJust()) initASTs.put(init.fromJust());
+						if (initASTs.length > 0) {
+							// Setup `loc` for init
+							var minBeginLine: int = int.max;
+							var minBeginColumn: int = int.max;
+							var maxEndLine: int = -1;
+							var maxEndColumn: int = -1;
+
+							for (i = 0; i < initASTs.length; i++) {
+								def ast = initASTs[i];
+								def loc = ast.loc;
+								if (loc.beginLine < minBeginLine || (loc.beginLine == minBeginLine && loc.beginColumn < minBeginColumn)) {
+									minBeginLine = loc.beginLine;
+									minBeginColumn = loc.beginColumn;
+								}
+								if (loc.endLine > maxEndLine || (loc.endLine == maxEndLine && loc.endColumn > maxEndColumn)) {
+									maxEndLine = loc.endLine;
+									maxEndColumn = loc.endColumn;
+								}
+							}
+
+							def loc = FileRange.new(fileName, minBeginLine, minBeginColumn, maxEndLine, maxEndColumn);
+							def initBody = AST.new(ASTData.Begin(initASTs.extract()), loc);
+							def code =  CodeObjects.fromAST(initBody);
+							def metadata = FunctionProfileMetadata.new(Strings.format1("%s.init", name), false);
+							initFO =  Maybe.Just(FuncObjects.newFO("init", ["self"], [], code, metadata));
+						}
+
 						// XXX creating CodeObject here
 						return AST.new(ASTData.VarSet(name, b,
-															AST.new(ASTData.Class(name, superclass, init, fields.extract(), methods.extract()), range)),
-										range);
+							AST.new(ASTData.Class(name, superclass, initFO, fieldNames.extract(), methods.extract()), range)),
+							range);
 					}
 					NEW => {
 						def expr = readExpr();
@@ -437,7 +529,7 @@ class Parser extends TextReader {
 						def exn = readIdentifier();
 						def catch = readExpr();
 						req1(')');
-						
+
 						// make the exception variable a local
 						def b = bindLocal(exn);
 
@@ -454,6 +546,10 @@ class Parser extends TextReader {
 							value = readExpr();
 							req1(')');
 						}
+
+						if (!returnExprAllowedStack.peek())
+							fail(returnUsedInsideFieldOrInit);// XXX fail but keep parsing
+
 						return AST.new(ASTData.Return(value),
 							FileRange.new(fileName, startLine, startColumn, line, column));
 					}
@@ -513,7 +609,7 @@ class Parser extends TextReader {
 				return AST.new(ASTData.Lit(StrObjects.getStrObject(str)),
 					FileRange.new(fileName, startLine, startColumn, line, column));
 			}
-			'\'' =>{
+			'\'' => {
 				def char = readChar();
 				return AST.new(ASTData.Lit(CharObjects.fromByte(char)),
 					FileRange.new(fileName, startLine, startColumn, line, column));
@@ -529,18 +625,18 @@ class Parser extends TextReader {
 				// Number (integer or double)
 				if ((strs.length == 1 || strs.length == 2)
 					&& (str.length > 0)
-					&& ((str[0] >= '0' && str[0] <= '9') || ((str[0] == '-') && (str.length > 1)))){
+					&& ((str[0] >= '0' && str[0] <= '9') || ((str[0] == '-') && (str.length > 1)))) {
 
 					def string_value = if(strs.length ==1, strs[0], Arrays.concat(Arrays.concat(strs[0], ['.']), strs[1]));
 
 					def np = NumberParser.new(string_value);
-					if (np.parse()){
+					if (np.parse()) {
 						// TODO: Handle big integers and floats
 						if (np.is_float) {
 							// double
 							var fval = NumberParserValue.Float.!(np.val);
 							var dval = DoubleParserHelper.f64(fval.sign, fval.exp, fval.mantissa);
-							if (string_value.length == np.pos){
+							if (string_value.length == np.pos) {
 								expr = AST.new(ASTData.Lit(DoubleObjects.fromDouble(dval)), range);
 								strIndex = 2;
 							} else {
@@ -548,20 +644,20 @@ class Parser extends TextReader {
 								def rounded_long = long.!(dval); // explicit because value must be the same
 								expr = AST.new(ASTData.Lit(IntObjects.fromLong(rounded_long)), range);
 							}
-						} else if (string_value.length == np.pos){
+						} else if (string_value.length == np.pos) {
 							// integer
 							var ival = NumberParserValue.Int.!(np.val).v;
 							expr = AST.new(ASTData.Lit(IntObjects.fromLong(long.view(ival))), range);
 
-						} else{
+						} else {
 							fail("error parsing number literal");
 							return null;
 						}
-					} else{
+					} else {
 						failRel(-(np.pos + 1), "error parsing number literal");
 						return null;
 					}
-				} else{
+				} else {
 					// VarGet: local or global?
 					var b: Box<AccessMode>;
 
@@ -628,7 +724,7 @@ class Parser extends TextReader {
 		def str = readToken(len).image;
 		return str;
 	}
-	
+
 	/* this reads a keyword, returning the keyword found and consuming it
 	 * returns null if no keyword is found (should not consume anything)
 	 */
@@ -639,14 +735,14 @@ class Parser extends TextReader {
 		}
 		// not a keyword if it is part of a qualified string
 		if (peekRel(len) == '.') return Maybe.Nothing;
-	
+
 		// check in list of keywords
 		for (kw in Keyword.set.all) {
 			def str = kw.id;
 
 			// check length first
 			if (str.length != len) continue;
-			
+
 			var matched: bool = true;
 			for (i < str.length) {
 				if (str[i] != peekRel(i)) matched = false;
@@ -668,14 +764,14 @@ class Parser extends TextReader {
 		}
 		// not a keyword if it is part of a qualified string
 		if (peekRel(len) == '.') return Maybe.Nothing;
-	
+
 		// check in list of keywords
 		for (kw in ClassKeyword.set.all) {
 			def str = kw.id;
 
 			// check length first
 			if (str.length != len) continue;
-			
+
 			var matched: bool = true;
 			for (i < str.length) {
 				if (str[i] != peekRel(i)) matched = false;

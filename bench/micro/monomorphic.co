@@ -1,0 +1,32 @@
+; Stress testing cache site where the receiver has exactly the same class.
+; Monomorphic cache benchmark
+{
+    (class A
+        (field x 1)
+        (field i 0)
+        (field a 349)
+        (field b 381)
+        (field c -182)
+        (field d 7)
+        (field e "A")
+        (field f false)
+        (field g "thing")
+    )
+
+    (set obj (new A))
+
+    (set i 0)
+    (while (< obj.i 1000000)
+    {
+        obj.x
+        obj.a
+        obj.b
+        obj.c
+        obj.d
+        obj.e
+        obj.f
+        obj.g
+        (set-field i obj (+ obj.i 1)) ; load and store field access
+    })
+    (= obj.i 1000000) ; passed the benchmark
+}

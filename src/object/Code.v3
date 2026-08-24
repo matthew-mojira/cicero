@@ -1,5 +1,5 @@
 /* Code is an expression that can be evaluated.
- * 
+ *
  * It comes in three forms based on how that expression is defined.
  */
 type Code {
@@ -18,15 +18,26 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 	def var code: Code;
 
 	/* Compile code */
-	def compile(params: Array<string>) {
+	def compile(params: Array<string>, label: string, isTopLevel: bool, isInit: bool) {
 		match (code) {
 			Virgil   => System.error("compile error", "attempting to compile Virgil code to bytecode");
 			Bytecode => System.error("compile error", "compiling what has already been compiled to bytecode");
-			
 			Wasm     => System.error("compile error", "compiling what has already been compiled to wasm");
 			AST(ast) => match (CLOptions.TIER.get()) {
 				1 => {
-					def bytecode = BytecodeCompiler.new(ast, params).extract(); // already optimized internally
+					var startTime: int;
+
+					if (CiceroOptions.profileCompilationTimes) {
+						startTime = System.ticksUs();
+					}
+
+					def bytecode = BytecodeCompiler.new(ast, params, isTopLevel, isInit).extract(); // already optimized internally
+
+					if (CiceroOptions.profileCompilationTimes) {
+						def endTime = System.ticksUs();
+						ProfileCompilationTimes.profile(bytecode.id, label, endTime - startTime);
+					}
+
 					if (CiceroOptions.testBeyondRelooper) {
 						def br = BeyondRelooper.new(CFGraph.new(bytecode, false));
 						br.structuredControl();
@@ -50,19 +61,33 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 	def isTrue()  -> bool   { return true; }
 
 	/* METHODS */
-	
+
 	def co_display() -> Result {
 		return Result.OK(StrObjects.fromString(display()));
 	}
 	def co_disassemble() -> Result {
 		match (code) {
 			Bytecode => return Result.OK(StrObjects.fromString(Code.Bytecode.!(code).bytecode.display()));
-			_        => return Result.Exn(ExnObjects.fromVirgil("co.disassemble", "code object has not been compiled to bytecode"));
+			_	 => return Result.Exn(ExnObjects.fromVirgil("co.disassemble", "code object has not been compiled to bytecode"));
 		}
 	}
 }
 
 component CodeObjects {
+
+        /* Holds ASTData.Func whose compilation is delayed.
+         * Once the VM finishes booting, it will
+         * loop through this vector and compile them all at once.
+         */
+       	def compileLater: Vector<ASTData.Func> = Vector.new();
+
+	def compileUncompiledCodeObjects() {
+		for (i < CodeObjects.compileLater.length) {
+			def fn = CodeObjects.compileLater[i];
+			fn.body.compile(fn.params, fn.metadata.label, false, false);
+		}
+		CodeObjects.compileLater.clear();
+	}
 
 	/* Create a CodeObject from a Virgil function */
 	def fromVirgil(func: Range<Object> -> Result) -> CodeObject {

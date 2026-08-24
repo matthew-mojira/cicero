@@ -31,7 +31,7 @@ e "pass")
   x
   (set x n)
 })
-(try { 
+(try {
   (foo3 100)
   "fail"
 }
@@ -47,7 +47,7 @@ e "pass")
   x
 })
 (foo4 10)
-(try { 
+(try {
   (foo4 false)
   "fail"
 }

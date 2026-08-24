@@ -35,8 +35,8 @@ if [ ! -e "$VIRGIL_LIB/util/Vector.v3" ]; then
     echo "  VIRGIL_LIB, to point directly to root of the library"
     exit 1
 fi
-    
-ENGINE="src/*.v3 src/object/*.v3 src/util/*.v3 src/eval/*.v3 src/ast/*.v3 src/bytecode/*.v3 src/bytecode/analyze/*.v3 $VIRGIL_LIB/util/*.v3"
+
+ENGINE="src/*.v3 src/object/*.v3 src/util/*.v3 src/eval/*.v3 src/ast/*.v3 src/bytecode/*.v3 src/bytecode/analyze/*.v3 src/profiling/*.v3 src/tracing/*.v3 $VIRGIL_LIB/util/*.v3"
 
 PROGRAM=$1
 TARGET=$2
@@ -99,7 +99,7 @@ echo "}" >> "$CICERO_TEXT"
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="$V3C_OPTS -shadow-stack-size=32M -heap-size=1800M -stack-size=32M"
+V3C_OPTS="$V3C_OPTS -symbols -shadow-stack-size=32M -heap-size=1800M -stack-size=32M"
 
 # build
 exe=${PROGRAM}.${TARGET}

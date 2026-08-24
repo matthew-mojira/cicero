@@ -1,0 +1,116 @@
+; Stress-Test all states of the cache site: Monomorphic, Polymorphic, Megamorphic
+{
+    (class A
+        (field x 0)
+        (field y 0)
+        (field z 0)
+
+        (field a 349)
+        (field b 381)
+        (field c -182)
+        (field d 7)
+        (field e "A")
+        (field f false)
+        (field g "thing")
+    )
+
+    (class B (extends A))
+    (class C (extends B))
+    (class D (extends C))
+
+    (func (resetxyz obj){
+        (set-field x obj 0)
+        (set-field y obj 0)
+        (set-field z obj 0)
+    })
+
+    (func (stress-test number_of_classes_to_alternate){
+        (set i 0)
+        ; stress test loop
+        (while (i.< 240000)
+        {
+            (set obj (objs.get (i.% number_of_classes_to_alternate)))
+
+            ; field access only
+            obj.a
+            obj.b
+            obj.c
+            obj.d
+            obj.e
+            obj.f
+            obj.g
+
+            (set-field x obj (+ obj.x 1)) ; load and store field access
+            (set-field y obj (+ obj.y 1)) ; load and store field access
+            (set-field z obj (+ obj.z 1)) ; load and store field access
+
+            (set i (i.+ 1))
+        })
+    })
+
+    (func (check-benchmark-result objs expected){
+        (set result true)
+        (set i 0)
+        (while (i.< (objs.length)){
+            (set obj (objs.get i))
+            (set result (and result
+                (and (and (= obj.x expected)
+                (= obj.y expected))
+                (= obj.z expected))
+            ))
+            (set i (i.+ 1))
+        })
+        result
+    })
+
+    (set objs [(new A) (new B) (new C) (new D)])
+    (set obj0 (objs.get 0))
+    (set obj1 (objs.get 1))
+    (set obj2 (objs.get 2))
+    (set obj3 (objs.get 3))
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Phase 1: Monomorphic
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+{
+    (stress-test 1)
+    (set result (check-benchmark-result [ obj0 ] 240000))
+    (resetxyz obj0)
+    result
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Phase 2: Bimorphic
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+{
+    (stress-test 2)
+    (set result (check-benchmark-result [ obj0 obj1 ] 120000))
+    (resetxyz obj0)
+    (resetxyz obj1)
+    result
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Phase 3: Trimorphic (PIC full)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+{
+    (stress-test 3)
+    (set result (check-benchmark-result [ obj0 obj1 obj2 ] 80000))
+    (resetxyz obj0)
+    (resetxyz obj1)
+    (resetxyz obj2)
+    result
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Phase 4: Megamorphic
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+{
+    (stress-test 4)
+    (check-benchmark-result objs 60000)
+}

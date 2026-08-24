@@ -1,0 +1,33 @@
+component ProfileStaticOpcodePairCounts {
+	/* For e.g. ProfileStaticOpcodePairCounts.data[Opcode.LOAD_LOCAL.tag][Opcode.LOAD_CONST.tag]
+	 * would track static counts of LOAD_LOCAL followed by LOAD_CONST
+	 */
+	def data: Array<Array<int>> = ProfilingHelpers.createMatrix(Opcodes.numOpcodes, Opcodes.numOpcodes);
+
+	def profile(maybeOpOne: Maybe<Opcode>, opTwo: Opcode) {
+		match (maybeOpOne) {
+			Nothing => {}
+			Just(opOne) => {
+				ProfileStaticOpcodePairCounts.data[opOne.tag][opTwo.tag]++;
+			}
+		}
+	}
+
+	def printStats() {
+		def sb = StringBuilder.new();
+		sb.puts("# Omitting opcode pairs seen zero times during compilation\n");
+		sb.puts("opcode, next opcode, counts\n");
+		for (row=0; row < Opcodes.numOpcodes; row++) {
+			for (col=0; col < Opcodes.numOpcodes; col++) {
+				def counts = ProfileStaticOpcodePairCounts.data[row][col];
+				if (counts != 0) {
+					sb.put3("%s, %s, %d\n",
+						Opcodes.map[row].name,
+						Opcodes.map[col].name,
+						counts);
+				}
+			}
+		}
+		System.puts(sb.extract());
+	}
+}

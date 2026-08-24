@@ -58,7 +58,7 @@
 
 (class _Scheduler
     (extends _RBObject)
-    
+
     ; init tracing
     (field _layout 0)
 
@@ -86,11 +86,11 @@
             }())
 
             (set-field pending data_record function_work)
-            (if _TRACING 
+            (if _TRACING
                 (self._trace function_work.datum)())
             (self._hold_self) ; return
         })
-        
+
         (self.create_task identity priority work state data fn)
     })
 
@@ -145,7 +145,7 @@
             (set-field control data_record (^ (/ data_record.control 2) 53256))
             (self.release _DEVICE_B) ; return
         })
-        
+
         (self.create_task identity priority work state data fn)
     })
 
@@ -154,7 +154,7 @@
         (packet.init-values link identity kind)
         packet
     })
-    
+
     (method (create_task identity priority work state data fn){
         (set t (new _TaskControlBlock))
         (t.init-values self._task_list identity priority work state data fn)
@@ -340,7 +340,7 @@
         (set-field _task_holding self false)
         self
     })
-    
+
     (method (running){
         (set-field _packet_pending self false)
         (set-field _task_waiting self false)

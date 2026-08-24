@@ -8,15 +8,15 @@ class IntObject(val: BigInteger) extends Object {
 	def isTrue()  => true;
 
 	/* METHODS */
-	def i_as(obj: Object) -> Result{
+	def i_as(obj: Object) -> Result {
 		return cast(obj, false);
 	}
 
-	def i_try(obj: Object) -> Result{
+	def i_try(obj: Object) -> Result {
 		return cast(obj, true);
 	}
 
-	def cast(obj: Object, strict: bool) -> Result{
+	def cast(obj: Object, strict: bool) -> Result {
 		if (obj == ClassObjects.classStr)
 			return i_display();
 		else if (obj == ClassObjects.classDouble)

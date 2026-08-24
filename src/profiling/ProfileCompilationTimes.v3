@@ -1,0 +1,31 @@
+class CompilationTimeData {
+	def label: string;
+	def time: int; // μs
+	new(label, time) {}
+}
+
+component ProfileCompilationTimes {
+	// bytecode id is the index
+	def data: Vector<CompilationTimeData> = Vector.new();
+
+	def profile(bytecodeId: int, label: string, compilationTime: int) {
+		ProfileCompilationTimes.data.put(CompilationTimeData.new(label, compilationTime));
+
+		if (CiceroOptions.sanityChecks && (ProfileCompilationTimes.data.length != (bytecodeId + 1)))
+			System.error("compiler profiling error", "`bytecode_id` should count up sequentially");
+	}
+
+	def printStats() {
+		def sb = StringBuilder.new();
+		sb.put1(
+			"# Code label is the function/method name. Exceptions: if it is the top-level code, it is \"repl\", classes field and init have their labels as well\n",
+			TopLevel.name);
+		sb.puts("Bytecode ID, Label, Inclusive Compilation Time(μs)\n");
+
+		for (bytecodeId = 0; bytecodeId < ProfileCompilationTimes.data.length; bytecodeId++) {
+			def data: CompilationTimeData = ProfileCompilationTimes.data[bytecodeId];
+			sb.put3("%d, %s, %d\n", bytecodeId, data.label, data.time);
+		}
+		System.puts(sb.extract());
+	}
+}

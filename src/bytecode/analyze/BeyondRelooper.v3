@@ -39,7 +39,7 @@ class BeyondRelooper(g: CFGraph) {
 		if (branch != null) return ControlFlow.Unconditional(branch);
 		return ControlFlow.TerminalFlow;
 	}
-	
+
 	// fallThrough is the block whose code is emitted immediately after the
 	// structure being built, at this nesting level. A branch to it compiles to
 	// nothing (Fallthrough) rather than a labeled br, which is what lets an
