@@ -1222,8 +1222,11 @@ class WasmShadowStackCompiler extends WasmCompiler {
 		emitCall(WasmFuncIds.IS_NULL_PTR); // safe predicate
 		withIfElse<int, int>(fun {
 			// null: [orig] is the block's input; drop it, raise a fresh exn.
+			// Unguarded is fine: unwinds via emitJumpToExnHandler right after,
+			// same discard-on-exception reasoning as TRY/CATCH.
 			wasm.putb(WasmOp.DROP.opcode);
-			emitPushConstPtr(ExnObjects.fromWasm(exn)); // safe, unguarded
+			emitPushString(exn);
+			emitCall(WasmFuncIds.RAISE_MSG_PTR);
 			emitJumpToExnHandler();
 		}, /* else */ fun {
 			// not-null: [orig] forwarded as the result, nothing to do.

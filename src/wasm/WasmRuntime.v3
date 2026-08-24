@@ -104,6 +104,14 @@ component WasmRuntime {
 		decref(strIdx);
 		return alloc(exn);
 	}
+	// For a static message (e.g. "unbound global"), constructed fresh here at
+	// raise time so fromWasm's ambient label reflects whoever actually raised
+	// it -- unlike a compile-time-baked ExnObject constant, which would freeze
+	// in whatever label happened to be ambient during compilation.
+	def raiseMsg(strIdx: int) -> int {
+		def exn = ExnObjects.fromWasm(strings[strIdx]);
+		return alloc(exn);
+	}
 	def raiseMissingField(objIdx: int, strIdx: int) -> int {
 		def obj = objects[objIdx];
 		def str = strings[strIdx];
@@ -285,7 +293,7 @@ component WasmRuntime {
 			}
 		}
 		// record this frame as the exception unwinds through it, mirroring VM.rethrow
-		if (Result.Exn.?(res)) Result.Exn.!(res).exn.stacktrace.put((currentLabel, null));
+		if (Result.Exn.?(res)) Result.Exn.!(res).exn.stacktrace.put((currentLabel, ExnObjects.wasmUnknownLoc));
 		return res;
 	}
 
@@ -709,6 +717,10 @@ component WasmRuntime {
 	def raiseStringPtr(strPtr: int) -> int {
 		def str = ptrToObj(strPtr);
 		def exn = ExnObjects.fromWasm(StrObject.!(str).str);
+		return objToPtr(exn);
+	}
+	def raiseMsgPtr(strIdx: int) -> int {
+		def exn = ExnObjects.fromWasm(strings[strIdx]);
 		return objToPtr(exn);
 	}
 	def raiseMissingFieldPtr(objPtr: int, strIdx: int) -> int {

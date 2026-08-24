@@ -219,7 +219,8 @@ class WasmASTCompiler extends WasmCompiler {
 					}
 
 					// throw exception
-					emitPushConst(ExnObjects.fromWasm(Exceptions.noTrueBranch));
+					emitPushString(Exceptions.noTrueBranch);
+					emitCall(WasmFuncIds.RAISE_MSG);
 					emitJumpToExnHandler();
 				});
 			}
