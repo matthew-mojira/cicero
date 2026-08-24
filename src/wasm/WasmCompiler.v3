@@ -152,12 +152,13 @@ class WasmCompiler {
 	// TODO get better wasm code generator (use Aeneas?)
 	def wasm: DataWriter = DataWriter.new();
 	def params: Array<string>;
+	def label: string;
 	var scratch0: u32;
 	var scratch1: u32;
 	var refScratch: u32; // dedicated to emitIncref/emitDecref*'s own dup; never shared with scratch0/scratch1
 
 	/* private = don't create this class explicitly */
-	private new(params) { }
+	private new(params, label) { }
 
 	// from BytecodeCompiler
 	def locals:    Vector<string> = Vector.new();
@@ -238,7 +239,8 @@ class WasmCompiler {
 				strings.extract(),
 				consts.extract(),
 				classholes.extract(),
-				funcholes.extract()
+				funcholes.extract(),
+				label
 				);
 	}
 

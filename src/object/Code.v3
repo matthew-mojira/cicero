@@ -47,9 +47,9 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 				}
 				2 => {
 					var wc: WasmCompiler;
-					if (CiceroOptions.useShadowStack) wc = WasmShadowStackCompiler.new(ast, params);
-					else if (CiceroOptions.compileFromTier1) wc = WasmBytecodeCompiler.new(ast, params);
-					else wc = WasmASTCompiler.new(ast, params);
+					if (CiceroOptions.useShadowStack) wc = WasmShadowStackCompiler.new(ast, params, label);
+					else if (CiceroOptions.compileFromTier1) wc = WasmBytecodeCompiler.new(ast, params, label);
+					else wc = WasmASTCompiler.new(ast, params, label);
 					code = Code.Wasm(wc.compile());
 				}
 				_ => System.error("compile error", "attempting to compile on interpreter tier");

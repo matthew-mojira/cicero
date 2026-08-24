@@ -1,11 +1,12 @@
 class WasmBytecode(
-		f: WasmFunction, 
+		f: WasmFunction,
 		locals:     Array<string>,
 		nonlocals:  Array<string>,
                 stringPool: Array<string>,
                 constPool:  Array<Object>,
                 classPool:  Array<ClassObject -> ClassObject>,
-                funcPool:   Array<ASTData.Func>
+                funcPool:   Array<ASTData.Func>,
+                label:      string
 		) // XXX no sourcemap
 {}
 

@@ -1,6 +1,6 @@
 // Compiles the AST directly to Wasm, bypassing bytecode and the relooper (CiceroOptions.compileFromTier1 = false).
 class WasmASTCompiler extends WasmCompiler {
-	new(ast: AST, params: Array<string>) super(params) {
+	new(ast: AST, params: Array<string>, label: string) super(params, label) {
 		addConst(null); // XXX what is this?
 
 		scratch0 = addLocal("<receiver>"); /* also used as scratch */

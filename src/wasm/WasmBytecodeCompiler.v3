@@ -11,7 +11,7 @@ class WasmBytecodeCompiler extends WasmCompiler {
 	def var regionMode = false;
 	def var regionOffset = 0;
 
-	new(ast: AST, params: Array<string>) super(params) {
+	new(ast: AST, params: Array<string>, label: string) super(params, label) {
 		addConst(null); // XXX what is this?
 
 		scratch0 = addLocal("<receiver>"); /* also used as scratch */
@@ -61,7 +61,7 @@ class WasmBytecodeCompiler extends WasmCompiler {
 			handlerStack.push(blockDepth);
 
 			// initialize extra parameters (beyond 9) from WasmRuntime.xargs, same
-			// as the AST branch below: WasmFrame.eval pushed them left-to-right, so
+			// as the AST branch below: invokeWasm pushed them left-to-right, so
 			// pop in reverse to fill the tail parameter locals first. Params are the
 			// leading bytecode locals, at wasm local 1+i (slot 0 is <receiver>).
 			if (params.length > 9) {

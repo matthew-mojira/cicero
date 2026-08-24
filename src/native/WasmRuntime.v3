@@ -1,6 +1,7 @@
 
 component WasmRuntime {
-	var frame: WasmFrame;
+	var nonlocals: Array<(string, Object)>;
+	var currentLabel: string;
 	var strings: Array<string>;
 	var funcholes: Array<ASTData.Func>;
 	var classholes: Array<ClassObject -> ClassObject>;
@@ -29,6 +30,8 @@ component WasmRuntime {
 	def getNonlocal(idx: int) -> int;
 
 	def setGlobal(strIdx: int, objIdx: int) -> int;
+
+	def evalTopLevel(code: CodeObject) -> Result;
 
 	def raiseTypeException(actIdx: int, expIdx: int) -> int;
 	def raiseString(strIdx: int) -> int;

@@ -2,10 +2,11 @@
 def traceRuntime = true;
 
 component WasmRuntime {
-	/* this are not stacks, since Frame will be responsible for
-	 * restoring this state
+	/* these are not stacks; invokeWasm is responsible for restoring this
+	 * state around each call
 	 */
-	var frame: WasmFrame;
+	var nonlocals: Array<(string, Object)>;
+	var currentLabel: string;
 	var strings: Array<string>;
 	var funcholes: Array<ASTData.Func>;
 	var classholes: Array<ClassObject -> ClassObject>;
@@ -64,7 +65,7 @@ component WasmRuntime {
 
 	def getGlobal(idx: int) -> int {
 		def id = strings[idx];
-		def obj = frame.getGlobal(id);
+		def obj = Globals.loadGlobal(id).maybe(null, fun(p: (Object, int)) => p.0);
 		return alloc(obj);
 	}
 	def getGlobalByIndex(idx: int) -> int {
@@ -73,14 +74,14 @@ component WasmRuntime {
 
 	def getNonlocal(idx: int) -> int {
 		def id = strings[idx];
-		def obj = frame.getNonlocal(id);
+		def obj = findNonlocal(id);
 		return alloc(obj);
 	}
 
 	def setGlobal(strIdx: int, objIdx: int) -> int {
 		def obj = objects[objIdx];
 		def id = strings[strIdx];
-		frame.setGlobal(id, obj);
+		Globals.storeGlobal(id, obj);
 		return objIdx;
 	}
 	def setGlobalByIndex(idx: int, objIdx: int) -> int {
@@ -274,15 +275,166 @@ component WasmRuntime {
 
 	// A Wasm-tier call target is always Wasm-compiled or a Virgil builtin.
 	def invokeCode(code: CodeObject, argv: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> Result {
+		var res: Result;
 		match (code.code) {
-			Virgil(fn) => return fn(Arrays.map(argv, fun(p: (string, Object)) => p.1));
-			Wasm => {
-				def f = WasmFrame.new(code, argv, nonlocals);
-				f.eval();
-				return f.result;
-			}
+			Virgil(fn) => res = fn(Arrays.map(argv, fun(p: (string, Object)) => p.1));
+			Wasm => res = invokeWasm(Code.Wasm.!(code.code).wasm, argv, nonlocals);
 			_ => {
 				System.error("internal error", "WasmRuntime.invokeCode: unsupported code tier");
+				res = Result.Uncomputed;
+			}
+		}
+		// record this frame as the exception unwinds through it, mirroring VM.rethrow
+		if (Result.Exn.?(res)) Result.Exn.!(res).exn.stacktrace.put((currentLabel, null));
+		return res;
+	}
+
+	def findNonlocal(id: string) -> Object { // FIXME don't use string
+		for (p in nonlocals) {
+			if (Strings.equal(p.0, id)) return p.1;
+		}
+		System.puts(Strings.format1("cannot find nonlocal %s\n", id));
+		System.error("internal error", "cannot find nonlocal");
+		return null;
+	}
+
+	// No frame object needed here: recursion already rides the native Virgil
+	// call stack (compiled Wasm code calls back into invokeCode via callFuncN).
+	def invokeWasm(wasm: WasmBytecode, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> Result {
+		def oldNonlocals    = WasmRuntime.nonlocals;
+		def oldLabel        = WasmRuntime.currentLabel;
+		def oldStrings      = WasmRuntime.strings;
+		def oldFuncholes    = WasmRuntime.funcholes;
+		def oldClassholes   = WasmRuntime.classholes;
+		def oldObjects      = WasmRuntime.objects;
+		def oldRefcounts    = WasmRuntime.refcounts;
+		def oldFreelist     = WasmRuntime.freelist;
+		def oldConstPoolLen = WasmRuntime.constPoolLen;
+		def oldConstsPtr    = WasmRuntime.constsPtr;
+		def oldResult       = WasmRuntime.result;
+
+		WasmRuntime.nonlocals    = nonlocals;
+		WasmRuntime.currentLabel = wasm.label;
+		WasmRuntime.strings      = wasm.stringPool;
+		WasmRuntime.funcholes    = wasm.funcPool;
+		WasmRuntime.classholes   = wasm.classPool;
+		// Shadow-stack mode never touches WasmRuntime.objects/refcounts/freelist
+		// (it passes raw pointers, not objects-vector indices) - skip allocating
+		// them on every single call in that mode; only constsPtr is needed.
+		if (!CiceroOptions.useShadowStack) {
+			WasmRuntime.objects   = Vectors.ofN(wasm.constPool);
+			WasmRuntime.refcounts = Vectors.ofN(Array<int>.new(wasm.constPool.length));
+			WasmRuntime.freelist  = ArrayStack.new();
+		}
+		WasmRuntime.constPoolLen = wasm.constPool.length;
+		WasmRuntime.constsPtr    = wasm.constPool; // shadow-stack mode only; harmless to set otherwise
+		WasmRuntime.result       = 0;
+
+		// Shadow-stack mode passes raw pointers (WasmRuntime.objToPtr), not
+		// WasmRuntime.objects indices - CiceroOptions.useShadowStack is a
+		// compile-time constant, so only one side of each `if` here actually
+		// ships in a given build.
+		var arg0: int = if(args.length > 0, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[0].1), WasmRuntime.alloc(args[0].1)));
+		var arg1: int = if(args.length > 1, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[1].1), WasmRuntime.alloc(args[1].1)));
+		var arg2: int = if(args.length > 2, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[2].1), WasmRuntime.alloc(args[2].1)));
+		var arg3: int = if(args.length > 3, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[3].1), WasmRuntime.alloc(args[3].1)));
+		var arg4: int = if(args.length > 4, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[4].1), WasmRuntime.alloc(args[4].1)));
+		var arg5: int = if(args.length > 5, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[5].1), WasmRuntime.alloc(args[5].1)));
+		var arg6: int = if(args.length > 6, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[6].1), WasmRuntime.alloc(args[6].1)));
+		var arg7: int = if(args.length > 7, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[7].1), WasmRuntime.alloc(args[7].1)));
+		var arg8: int = if(args.length > 8, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[8].1), WasmRuntime.alloc(args[8].1)));
+		var arg9: int = if(args.length > 9, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[9].1), WasmRuntime.alloc(args[9].1)));
+
+		var exn: bool;
+		match (wasm.f) {
+			Func0(f) => exn = f();
+			Func1(f) => exn = f(arg0);
+			Func2(f) => exn = f(arg0, arg1);
+			Func3(f) => exn = f(arg0, arg1, arg2);
+			Func4(f) => exn = f(arg0, arg1, arg2, arg3);
+			Func5(f) => exn = f(arg0, arg1, arg2, arg3, arg4);
+			Func6(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5);
+			Func7(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+			Func8(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+			Func9(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+			FuncN(f) => {
+				// >9-param entry point. Shadow-stack mode uses xargsObjs (real,
+				// GC-scanned Objects - args[9+i].1 is already one, no raw-pointer
+				// round-trip needed) instead of xargs (a plain ArrayStack<int>,
+				// unsafe for raw pointers - see xargsObjs's own doc comment).
+				// baseDepth, not empty(): an outer call's pending rest-args may be under ours.
+				if (CiceroOptions.useShadowStack) {
+					def baseDepth = WasmRuntime.xargsObjs.top;
+					def numRest = args.length - 9;
+					for (i < numRest)
+						WasmRuntime.xargsObjs.push(args[9 + i].1);
+					exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+					if (CiceroOptions.sanityChecks && WasmRuntime.xargsObjs.top != baseDepth) {
+						System.puts("internal error: WasmRuntime.xargsObjs did not return to its pre-call depth\n");
+						System.error("internal error", "WasmRuntime.xargsObjs did not return to its pre-call depth");
+					}
+				} else {
+					def baseDepth = WasmRuntime.xargs.top;
+					def numRest = args.length - 9;
+					for (i < numRest)
+						WasmRuntime.xargs.push(WasmRuntime.alloc(args[9 + i].1));
+					exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+					if (CiceroOptions.sanityChecks && WasmRuntime.xargs.top != baseDepth) {
+						System.puts("internal error: WasmRuntime.xargs did not return to its pre-call depth\n");
+						System.error("internal error", "WasmRuntime.xargs did not return to its pre-call depth");
+					}
+				}
+			}
+		}
+		def resultObj = if(CiceroOptions.useShadowStack, WasmRuntime.ptrToObj(WasmRuntime.result), WasmRuntime.objects[WasmRuntime.result]);
+		var res: Result;
+		if (exn) {
+			res = Result.Exn(ExnObject.!(resultObj));
+		} else {
+			res = Result.OK(resultObj);
+		}
+
+		WasmRuntime.nonlocals    = oldNonlocals;
+		WasmRuntime.currentLabel = oldLabel;
+		WasmRuntime.strings      = oldStrings;
+		WasmRuntime.funcholes    = oldFuncholes;
+		WasmRuntime.classholes   = oldClassholes;
+		WasmRuntime.objects      = oldObjects;
+		WasmRuntime.refcounts    = oldRefcounts;
+		WasmRuntime.freelist     = oldFreelist;
+		WasmRuntime.constPoolLen = oldConstPoolLen;
+		WasmRuntime.constsPtr    = oldConstsPtr;
+		WasmRuntime.result       = oldResult;
+
+		return res;
+	}
+
+	// Tier 2's top-level entry point, VM.eval()'s counterpart; no caller to
+	// restore ambient state to afterward.
+	def evalTopLevel(code: CodeObject) -> Result {
+		WasmRuntime.nonlocals = [];
+		WasmRuntime.result = 0;
+		def wasm = Code.Wasm.!(code.code).wasm;
+		WasmRuntime.currentLabel = wasm.label;
+		WasmRuntime.strings    = wasm.stringPool;
+		WasmRuntime.funcholes  = wasm.funcPool;
+		WasmRuntime.classholes = wasm.classPool;
+		if (!CiceroOptions.useShadowStack) {
+			WasmRuntime.objects    = Vectors.ofN(wasm.constPool);
+			WasmRuntime.refcounts  = Vectors.ofN(Array<int>.new(wasm.constPool.length));
+			WasmRuntime.freelist   = ArrayStack.new();
+		}
+		WasmRuntime.constPoolLen = wasm.constPool.length;
+		WasmRuntime.constsPtr  = wasm.constPool;
+		match (wasm.f) {
+			Func0(f) => {
+				def exn = f();
+				def resultObj = if(CiceroOptions.useShadowStack, WasmRuntime.ptrToObj(WasmRuntime.result), WasmRuntime.objects[WasmRuntime.result]);
+				if (exn) return Result.Exn(ExnObject.!(resultObj));
+				return Result.OK(resultObj);
+			}
+			_ => {
+				System.error("unimplemented", "WasmRuntime.evalTopLevel: FuncN (N != 0)");
 				return Result.Uncomputed;
 			}
 		}
@@ -525,7 +677,7 @@ component WasmRuntime {
 
 	def getGlobalPtr(idx: int) -> int {
 		def id = strings[idx];
-		def obj = frame.getGlobal(id);
+		def obj = Globals.loadGlobal(id).maybe(null, fun(p: (Object, int)) => p.0);
 		return objToPtr(obj);
 	}
 	def getGlobalByIndexPtr(idx: int) -> int {
@@ -533,13 +685,13 @@ component WasmRuntime {
 	}
 	def getNonlocalPtr(idx: int) -> int {
 		def id = strings[idx];
-		def obj = frame.getNonlocal(id);
+		def obj = findNonlocal(id);
 		return objToPtr(obj);
 	}
 	def setGlobalPtr(strIdx: int, ptr: int) -> int {
 		def obj = ptrToObj(ptr);
 		def id = strings[strIdx];
-		frame.setGlobal(id, obj);
+		Globals.storeGlobal(id, obj);
 		return ptr;
 	}
 	def setGlobalByIndexPtr(idx: int, ptr: int) -> int {

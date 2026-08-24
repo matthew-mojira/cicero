@@ -8,13 +8,13 @@ class WasmCompiler {
 }
 
 class WasmBytecodeCompiler extends WasmCompiler {
-	new(ast: AST, params: Array<string>) super() {}
+	new(ast: AST, params: Array<string>, label: string) super() {}
 }
 
 class WasmASTCompiler extends WasmCompiler {
-	new(ast: AST, params: Array<string>) super() {}
+	new(ast: AST, params: Array<string>, label: string) super() {}
 }
 
 class WasmShadowStackCompiler extends WasmCompiler {
-	new(ast: AST, params: Array<string>) super() {}
+	new(ast: AST, params: Array<string>, label: string) super() {}
 }

@@ -1,12 +1,8 @@
 //export "foo" def foo();
 
-// Tier 2's top-level frame; reused across every expr, VM.eval()'s counterpart.
-var wasmFrame: WasmFrame;
-
 def evalTopLevel(expr: CodeObject) -> Result {
 	if (CLOptions.TIER.get() == 2) {
-		wasmFrame.evalCode(expr);
-		return wasmFrame.result;
+		return WasmRuntime.evalTopLevel(expr);
 	} else {
 		VM.eval(expr);
 		return VM.result;
@@ -35,8 +31,6 @@ def main(args: Array<string>) -> int {
 		System.error("argument error", Strings.format1("unrecognized tier: %d", tier));
 		return 1;
 	}
-
-	if (tier == 2) wasmFrame = WasmFrame.new(null, null, null);
 
 	initRuntime();
 	loadCore();

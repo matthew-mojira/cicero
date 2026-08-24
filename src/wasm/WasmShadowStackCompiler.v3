@@ -12,7 +12,7 @@
 // (a GC-safe ArrayStack<Object>, not the index-mode tiers' plain
 // ArrayStack<int> xargs - see its own doc comment) via emitRestGuard; >9-param
 // function entry pops the same way, mirroring WasmASTCompiler's prologue -
-// see WasmFrame.v3's FuncN case for the calling side.
+// see WasmRuntime.invokeWasm's FuncN case for the calling side.
 class WasmShadowStackCompiler extends WasmCompiler {
 	def var ciceroBytecode: Bytecode;
 	def var cfg: CFGraph;
@@ -73,7 +73,7 @@ class WasmShadowStackCompiler extends WasmCompiler {
 	// original save address can't be recomputed from current state.
 	def guardStack: Stack<(int, int, int)> = ArrayStack.new();
 
-	new(ast: AST, params: Array<string>) super(params) {
+	new(ast: AST, params: Array<string>, label: string) super(params, label) {
 		addConst(null); // XXX what is this?
 
 		this.scratch0 = addLocal("<receiver>"); /* also used as scratch */
@@ -140,7 +140,7 @@ class WasmShadowStackCompiler extends WasmCompiler {
 			wasm.put_uleb32(shadowBase);
 
 			// Params beyond 9 arrive via WasmRuntime.xargsObjs (pushed by the
-			// caller - WasmFrame.eval's FuncN case, or a >9-arg CALL's own
+			// caller - invokeWasm's FuncN case, or a >9-arg CALL's own
 			// PUSH_ARG_PTR sequence below), not as fixed Wasm params (the
 			// forged-closure calling convention caps at 9 + receiver). Pop in
 			// reverse to fill the tail of the parameter locals first, mirroring
