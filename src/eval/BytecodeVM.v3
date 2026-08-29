@@ -636,6 +636,10 @@ component VM {
 						AST => {
 							System.error("internal error", "attempted to call a function whose code has not been compiled to bytecode");
 						}
+						Wasm => {
+							// unreachable: a tier-1 run never produces a Wasm FuncObject
+							System.error("internal error", "attempted to call a Wasm-compiled function from the tier-1 bytecode VM");
+						}
 					}
 					if (CiceroOptions.profileDynamicBytecode) {
 						opExecTime = System.ticksUs() - opExecTime;

@@ -18,8 +18,16 @@ class BeyondRelooper(g: CFGraph) {
 		g.computeMergeNodes();
 		g.computeLoopHeaders();
 
+		// The outermost frame is the function-level exception handler block. It is
+		// not a relooper branch target (with exception edges ignored, nothing
+		// branches to exceptionSentinel); it exists so depth counting stays
+		// consistent with the handler block that WasmCompiler emits around this
+		// body, which exception guards br to. The handler block and its
+		// exception-return epilogue are emitted by WasmCompiler, not here.
+		// The top-level fall-through is exceptionSentinel: if the body ran off its
+		// end it would reach that epilogue (normal completion is via return).
 		def outerCtx: List<ContainingSyntax> = List.new(ContainingSyntax.BlockFollowedBy(exceptionSentinel), null);
-		output = WasmStructure.Seq(WasmStructure.Block(doTree(g.head, outerCtx)), WasmStructure.ReturnWithException);
+		output = doTree(g.head, outerCtx, exceptionSentinel);
 	}
 
 	def flowLeaving(cfgNode: BasicBlock) -> ControlFlow {
@@ -32,44 +40,114 @@ class BeyondRelooper(g: CFGraph) {
 		return ControlFlow.TerminalFlow;
 	}
 
-	def doTree(tree: BasicBlock, ctx: List<ContainingSyntax>) -> WasmStructure {
-		def codeForX = nodeWithin(tree, Lists.fromArray(Arrays.filter(tree.sortedDomChildren, isStructuralMergeChild)), _);
+	// fallThrough is the block whose code is emitted immediately after the
+	// structure being built, at this nesting level. A branch to it compiles to
+	// nothing (Fallthrough) rather than a labeled br, which is what lets an
+	// if-join merge inline after a value-producing if (keeping prior operand
+	// values below the if's base) instead of becoming a block the arms br to.
+	def doTree(tree: BasicBlock, ctx: List<ContainingSyntax>, fallThrough: BasicBlock) -> WasmStructure {
+		def mergeChildren = Lists.fromArray(Arrays.filter(tree.sortedDomChildren, isStructuralMergeChild));
 		if (tree.isLoopHead) {
-			return WasmStructure.Loop(codeForX(List.new(ContainingSyntax.LoopHeadedBy(tree), ctx)));
+			def loopCtx = List.new(ContainingSyntax.LoopHeadedBy(tree), ctx);
+			// A loop's exit continuation (its follow node) must be emitted AFTER the
+			// loop, not inlined into the exit arm: otherwise operand-stack values
+			// that were live before the loop sit below the loop's base and are
+			// unreachable from the continuation (e.g. `(f (while ...))` — f is pushed
+			// before the loop and used after). The dominator tree alone places the
+			// follow under the in-loop exit block, so extract it explicitly. Restricted
+			// to a non-merge follow so it never also appears in a mergeChildren list.
+			def follow = computeLoopFollow(tree);
+			if (follow != null && follow != fallThrough) {
+				def body = nodeWithin(tree, mergeChildren, loopCtx, follow);
+				return WasmStructure.Seq(WasmStructure.Loop(body), doTree(follow, ctx, fallThrough));
+			}
+			return WasmStructure.Loop(nodeWithin(tree, mergeChildren, loopCtx, fallThrough));
 		} else {
-			return codeForX(ctx);
+			return nodeWithin(tree, mergeChildren, ctx, fallThrough);
 		}
+	}
+
+	// The follow node of a loop: the single block outside the loop that an exit
+	// edge targets. Returns null if there is no such block (e.g. all exits are
+	// returns) or more than one distinct one, or if it is a merge node (a merge is
+	// already placed via the merge-child mechanism, and excluding it here keeps the
+	// two paths from double-emitting). Loop body = head + everything that can reach
+	// a back-edge source without passing through the head (natural loop).
+	def computeLoopFollow(loopHead: BasicBlock) -> BasicBlock {
+		def body = HashSet<BasicBlock>.new(BasicBlock.hash, BasicBlock.==);
+		body.add(loopHead);
+		def worklist: Stack<BasicBlock> = ArrayStack.new();
+		for (p in loopHead.predecessors.toArray()) {
+			if (p.reversePostorder >= loopHead.reversePostorder) worklist.push(p); // back-edge source
+		}
+		while (!worklist.empty()) {
+			def n = worklist.pop();
+			if (body.contains(n)) continue;
+			body.add(n);
+			for (q in n.predecessors.toArray()) worklist.push(q);
+		}
+		var follow: BasicBlock;
+		for (b in body.toArray()) {
+			for (s in b.successors()) {
+				if (body.contains(s)) continue;
+				if (s == returnSentinel || s == exceptionSentinel) continue;
+				if (follow == null) follow = s;
+				else if (follow != s) return null; // multiple distinct exits: bail
+			}
+		}
+		if (follow != null && follow.isMerge) return null;
+		return follow;
 	}
 
 	def isStructuralMergeChild(b: BasicBlock) -> bool {
 		return b.isMerge && b != returnSentinel && b != exceptionSentinel;
 	}
 
-	def nodeWithin(node: BasicBlock, arr: List<BasicBlock>, ctx: List<ContainingSyntax>) -> WasmStructure {
+	// A *_PEEK conditional leaves the tested value on the stack for the taken
+	// (branch) arm but pops it on the fall-through arm; the wasm If compiles it as
+	// (i32)->(i32) so the value is an input both arms can treat differently.
+	def lastOpcodeIsPeekJump(node: BasicBlock) -> bool {
+		if (node.bytes == null || node.bytes.length < 4) return false;
+		def op = Opcodes.map[node.bytes[node.bytes.length - 4]];
+		return op == Opcode.JUMP_IF_FALSE_PEEK || op == Opcode.JUMP_IF_TRUE_PEEK;
+	}
+
+	def nodeWithin(node: BasicBlock, arr: List<BasicBlock>, ctx: List<ContainingSyntax>, fallThrough: BasicBlock) -> WasmStructure {
 		if (arr == null) { // []
 			def fst = WasmStructure.Actions(node);
 			var snd: WasmStructure;
 			match (flowLeaving(node)) {
-				Unconditional(tgt) => snd = doBranch(node, tgt, ctx);
+				Unconditional(tgt) => snd = doBranch(node, tgt, ctx, fallThrough);
 				Conditional(fallthrough, branch) => snd = WasmStructure.If(
-						doBranch(node, fallthrough, List.new(ContainingSyntax.IfThenElse, ctx)),
-						doBranch(node, branch, List.new(ContainingSyntax.IfThenElse, ctx)));
+						lastOpcodeIsPeekJump(node),
+						doBranch(node, fallthrough, List.new(ContainingSyntax.IfThenElse, ctx), fallThrough),
+						doBranch(node, branch, List.new(ContainingSyntax.IfThenElse, ctx), fallThrough));
 				TerminalFlow => snd = WasmStructure.ReturnWithValue;
 			}
 			return WasmStructure.Seq(fst, snd);
-		} else { // y_n:ys
-			return WasmStructure.Seq(WasmStructure.Block(nodeWithin(node, arr.tail, List.new(ContainingSyntax.BlockFollowedBy(arr.head), ctx))),
-					doTree(arr.head, ctx));
+		} else { // y_n:ys — inline the merge child as the fall-through continuation
+			// of the rest, then emit it; no wrapping block, so values live across
+			// the merge stay on the operand stack below the if that produces the
+			// merge value (mirrors the AST tier).
+			def merge = arr.head;
+			return WasmStructure.Seq(nodeWithin(node, arr.tail, ctx, merge),
+					doTree(merge, ctx, fallThrough));
 		}
 	}
 
-	def doBranch(src: BasicBlock, dst: BasicBlock, ctx: List<ContainingSyntax>) -> WasmStructure {
+	def doBranch(src: BasicBlock, dst: BasicBlock, ctx: List<ContainingSyntax>, fallThrough: BasicBlock) -> WasmStructure {
+		if (dst == fallThrough) return WasmStructure.Fallthrough;
 		if (dst == returnSentinel) return WasmStructure.ReturnWithValue;
-		if (src.isBackward(dst) || dst.isMerge || dst == exceptionSentinel) {
+		if (src.isBackward(dst)) return WasmStructure.Br(index(dst, ctx));
+		if (dst.isMerge || dst == exceptionSentinel) {
+			// A forward merge that is not the current fall-through has no enclosing
+			// block to br to (merges are inlined as fall-throughs). Structured
+			// Cicero bytecode shouldn't produce this; flag it rather than emit a br
+			// to a non-existent label.
+			System.error("relooper", "forward branch to a non-fallthrough merge is unsupported");
 			return WasmStructure.Br(index(dst, ctx));
-		} else {
-			return doTree(dst, ctx);
 		}
+		return doTree(dst, ctx, fallThrough);
 	}
 
 	def index(block: BasicBlock, ctx: List<ContainingSyntax>) -> int {
@@ -106,8 +184,8 @@ class BeyondRelooper(g: CFGraph) {
 				displayAt(body, indent + 1);
 				printIndent(indent); System.puts("}\n");
 			}
-			If(bodyFallthrough, bodyBranch) => {
-				printIndent(indent); System.puts("if {\n");
+			If(peeksValue, bodyFallthrough, bodyBranch) => {
+				printIndent(indent); System.puts(if(peeksValue, "if (peek) {\n", "if {\n"));
 				displayAt(bodyFallthrough, indent + 1);
 				printIndent(indent); System.puts("} else {\n");
 				displayAt(bodyBranch, indent + 1);
@@ -128,6 +206,9 @@ class BeyondRelooper(g: CFGraph) {
 			Seq(fst, snd) => {
 				displayAt(fst, indent);
 				displayAt(snd, indent);
+			}
+			Fallthrough => {
+				printIndent(indent); System.puts("<fallthrough>\n");
 			}
 		}
 	}
@@ -173,12 +254,21 @@ type WasmStructure {
 	case Loop(body: WasmStructure);
 	// no cond field: If always follows Actions of the same node in a Seq,
 	// so whatever determines the branch is already shown there.
-	case If(bodyFallthrough: WasmStructure, bodyBranch: WasmStructure);
+	// peeksValue is true when the conditional is a *_PEEK jump, which leaves the
+	// tested value on the stack for the branch (taken) arm but pops it on the
+	// fall-through arm (BytecodeFrame semantics). Compiled as an (i32)->(i32) if
+	// taking that value as input, with the fall-through arm dropping it.
+	case If(peeksValue: bool, bodyFallthrough: WasmStructure, bodyBranch: WasmStructure);
 	case Br(depth: int);
 	case Actions(actions: BasicBlock);
 	case Seq(fst: WasmStructure, snd: WasmStructure);
 	case ReturnWithValue;
 	case ReturnWithException;
+	// Emits nothing: control falls through to the structure emitted next at this
+	// level. Used when a branch's target is the immediate fall-through
+	// continuation, so an if-join merge inlines after a value-producing if
+	// instead of becoming a separate block that arms br to.
+	case Fallthrough;
 }
 
 // type Context = [ContainingSyntax]

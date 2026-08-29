@@ -1,0 +1,1337 @@
+// Compiles from the tier-1 bytecode IR (like WasmBytecodeCompiler), but emits
+// raw Virgil object pointers instead of WasmRuntime.objects indices, with no
+// refcounting - liveness across any call that could trigger a Virgil
+// collection is handled by saving/restoring live values into a per-function
+// shadow-stack frame (CiceroOptions.useShadowStack).
+//
+// v1 scope, deliberately: a single, generously-sized shadow-stack frame is
+// allocated once at function entry and freed at every exit, rather than
+// replicating Virgil's own dominator-based placement/loop-hoist optimization
+// (ShadowStackSpiller.placeShadowStackAllocation). Calls/lists/closures with
+// more than 9 arguments/elements/nonlocals go through WasmRuntime.xargsObjs
+// (a GC-safe ArrayStack<Object>, not the index-mode tiers' plain
+// ArrayStack<int> xargs - see its own doc comment) via emitRestGuard; >9-param
+// function entry pops the same way, mirroring WasmASTCompiler's prologue -
+// see WasmRuntime.invokeWasm's FuncN case for the calling side.
+class WasmShadowStackCompiler extends WasmCompiler {
+	def var ciceroBytecode: Bytecode;
+	def var cfg: CFGraph;
+	def var liveness: ShadowStackLivenessAnalysis;
+
+	def var shadowBase: u32;       // Wasm local holding this function's shadow-frame base
+	def var numLocalSlots: int;    // = ciceroBytecode.locals.length; shadow slots [0, numLocalSlots)
+	def var maxOperandDepth: int;  // shadow slots [numLocalSlots, numLocalSlots + maxOperandDepth)
+	def var stackScratch: Array<u32>; // Wasm locals mirroring the abstract cicero operand stack
+
+	// Ground truth for `applyEffect`'s sanity check: logicalDepth at entry to
+	// each absolute pc, computed structurally by computeMaxStackDepth (a CFG
+	// pass, independent of the running counters maintained during real
+	// emission below). Keyed the same way `atPc`/liveness queries already are
+	// (regionOffset + bb.startPc + pc).
+	def var entryDepthAt: HashMap<int, int>;
+	def argScratch: Array<u32> = Array.new(10); // reorder buffer: this-op's own operands during a livepoint guard (max fn+9 args)
+
+	// TRY's try-body (normal path) and CATCH's handler (exception path) are
+	// *alternatives* from the same point - same shape as If's two arms - but
+	// compiled by two separate, far-apart iterations of the same
+	// compileActions loop (the whole try-body runs in between), not a single
+	// withIfElse callback pair with locals to close over. This stack carries
+	// logicalDepth's value right after TRY's own construct guard (frameDepth
+	// is always 0 there, TRY's declaredParamCount) across that gap, so CATCH
+	// can compile its handler region against that baseline instead of
+	// wherever the try-body's own normal-path compilation happened to leave
+	// frameDepth/logicalDepth - a different, unrelated control-flow edge.
+	def tryEntryLogicalDepth: Stack<int> = ArrayStack.new();
+	// Structural-walk twin, for entryDepthAt's own construction (see its use
+	// in computeMaxStackDepth).
+	def structTryDepthStack: Stack<int> = ArrayStack.new();
+
+	// Two counters, not one. `logicalDepth` is the cumulative abstract
+	// cicero-stack depth - monotonic across the whole function, matches
+	// computeMaxStackDepth, used ONLY for shadow-slot addressing so nested
+	// construct guards don't collide. `frameDepth` is how many of those
+	// logical items are physically
+	// reachable on the real Wasm stack *right now* - it resets to 0 whenever a
+	// construct guard evacuates everything pending into shadow memory before
+	// opening a nested Block/Loop/If/Try, and is what popCount/protectDepth
+	// arithmetic must use, since Wasm forbids popping below the current
+	// control frame's entry height even when a value is physically present.
+	def var logicalDepth: int;
+	def var frameDepth: int;
+	def var lastAtPc: int = -4; // pc of the most recently compiled instruction; liveness-query point for construct guards, which don't correspond to a single instruction. -4 is a sentinel for "nothing compiled yet".
+
+	// See WasmBytecodeCompiler's identical fields for the try/catch region-slicing
+	// scheme this reuses unchanged.
+	def var regionMode = false;
+	def var regionOffset = 0;
+
+	// One entry per currently-open construct guard (Block/Loop/If/Try that had
+	// something evacuated on entry): (atPc used for the liveness query, base =
+	// logicalDepth-count at the time of evacuation, count = how many items).
+	// Needed because the matching exit happens after the construct's body -
+	// arbitrarily much later, with logicalDepth having moved on - so the
+	// original save address can't be recomputed from current state.
+	def guardStack: Stack<(int, int, int)> = ArrayStack.new();
+
+	new(ast: AST, params: Array<string>, label: string) super(params, label) {
+		addConst(null); // XXX what is this?
+
+		this.scratch0 = addLocal("<receiver>"); /* also used as scratch */
+		// XXX Virgil calling convention always requires a receiver object as the first argument
+
+		wasm.put_uleb32(1); // 1 set of
+		def hole = wasm.skip_leb32();
+		wasm.putb(0x7F);    // i32
+
+		ciceroBytecode = BytecodeCompiler.new(ast, params, false, false).extract();
+		if (CiceroOptions.optimizeBytecode) {
+			ciceroBytecode.optimize();
+		}
+		locals.puta(ciceroBytecode.locals); // XXX everything off by 1!!
+		nonlocals.puta(ciceroBytecode.nonlocals);
+		consts.puta(ciceroBytecode.constPool); // XXX everything off by 1!!
+		strings.puta(ciceroBytecode.stringPool);
+		classholes.puta(ciceroBytecode.classPool);
+		funcholes.puta(ciceroBytecode.funcPool);
+
+		this.scratch1 = addLocal("<scratch1>"); // appended last; doesn't shift the offsets above
+		this.shadowBase = addLocal("<shadowBase>");
+		for (i < argScratch.length) argScratch[i] = addLocal(Strings.format1("<arg%d>", i));
+
+		cfg = CFGraph.new(ciceroBytecode, true);
+		def br = BeyondRelooper.new(cfg);
+		br.structuredControl(); // also computes RPO/dominators, needed by computeMaxStackDepth below
+
+		numLocalSlots = ciceroBytecode.locals.length;
+		maxOperandDepth = computeMaxStackDepth(cfg, 0, 0);
+		stackScratch = Array.new(maxOperandDepth);
+		for (i < maxOperandDepth) stackScratch[i] = addLocal(Strings.format1("<stk%d>", i));
+
+		def livenessAnalysis = ShadowStackLivenessAnalysis.new();
+		def livenessResult = livenessAnalysis.runAnalysis(cfg);
+		livenessAnalysis.processResults(cfg, livenessResult);
+		liveness = livenessAnalysis;
+
+		if (CiceroOptions.traceWasmCompilation) {
+			System.puts("=== WasmShadowStackCompiler: params=[");
+			for (i < params.length) {
+				if (i > 0) System.puts(", ");
+				System.puts(params[i]);
+			}
+			System.puts("]\n--- bytecode ---\n");
+			ciceroBytecode.inspect();
+			System.puts("--- wasm structure ---\n");
+			br.display();
+			System.puts("---\n");
+		}
+
+		// FUNCTION BODY
+		withBlock<void, int>(fun {
+			handlerStack.push(blockDepth);
+
+			// Allocate this function's single shadow-stack frame before anything
+			// else runs (finding #6/#7 in the plan: everything live across a
+			// livepoint - locals and pending operand-stack values alike - needs a
+			// slot in it).
+			wasm.putb(WasmOp.I32_CONST.opcode);
+			wasm.put_sleb32(numLocalSlots + maxOperandDepth);
+			emitCall(WasmFuncIds.SHADOW_ALLOC);
+			wasm.putb(WasmOp.SET_LOCAL.opcode);
+			wasm.put_uleb32(shadowBase);
+
+			// Params beyond 9 arrive via WasmRuntime.xargsObjs (pushed by the
+			// caller - invokeWasm's FuncN case, or a >9-arg CALL's own
+			// PUSH_ARG_PTR sequence below), not as fixed Wasm params (the
+			// forged-closure calling convention caps at 9 + receiver). Pop in
+			// reverse to fill the tail of the parameter locals first, mirroring
+			// WasmASTCompiler's identical prologue. Safe with no shadow-stack
+			// protection of its own: popArgPtr() is non-allocating (a plain
+			// ArrayStack pop plus a pointer round-trip), so nothing here can go
+			// stale mid-loop.
+			if (params.length > 9) {
+				for (i = params.length - 1; i >= 9; i--) {
+					emitCall(WasmFuncIds.POP_ARG_PTR);
+					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					wasm.put_uleb32(u32.view(1 + i)); // skip <receiver> at slot 0
+				}
+			}
+
+			compileWasmStructure(br.output);
+			handlerStack.pop();
+		});
+
+		// exception epilogue: a guard's br left the exn on the stack
+		emitShadowFree();
+		emitCall(WasmFuncIds.SET_RESULT);
+		wasm.putb(WasmOp.I32_CONST.opcode);
+		wasm.putb(1); // exception
+
+		wasm.putb(WasmOp.END.opcode);
+
+		wasm.at(hole);
+		wasm.overwrite_uleb32(locals.length);
+	}
+
+	def emitShadowFree() {
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(shadowBase);
+		emitCall(WasmFuncIds.SHADOW_FREE);
+	}
+
+	// Net cicero-bytecode-abstract-stack effect of a single instruction (pops
+	// minus pushes of *cicero* values - immediates like a field's string-pool
+	// index don't count, they're not cicero stack slots). Shared by
+	// computeMaxStackDepth (upfront, structural) and the running `logicalDepth`/
+	// `frameDepth` counters maintained during real emission (compileActions).
+	def stackEffect(opcode: Opcode, operand: int) -> int {
+		match (opcode) {
+			NOP => return 0;
+			LOAD_CONST => return 1;
+			LOAD_GLOBAL => return 1;
+			LOAD_GLOBAL_BY_INDEX => return 1;
+			LOAD_LOCAL => return 1;
+			LOAD_LOCAL_SAFE => return 1;
+			LOAD_FIELD => return 0;       // pop obj, push field
+			LOAD_NONLOCAL => return 1;
+			STORE_GLOBAL => return -1;
+			STORE_GLOBAL_BY_INDEX => return -1;
+			STORE_LOCAL => return -1;
+			STORE_FIELD => return -2;     // pop val,obj,val_dupe (3), push val_orig (1)
+			CALL => return -operand;      // pop fn+args (operand+1), push result (1)
+			JUMP => return 0;
+			JUMP_IF_FALSE => return -1;
+			JUMP_IF_TRUE_PEEK => return 0;
+			JUMP_IF_FALSE_PEEK => return 0;
+			RAISE => return -1;
+			TRY => return 0;
+			CATCH => return 1;            // the caught exn arrives on the stack
+			ASSERT_FUNC => return 0;
+			CREATE_OBJECT => return 0;
+			CREATE_CLASS => return 0;
+			CREATE_LIST => return 1 - operand;
+			// operand here is a funcPool INDEX, not a nonlocal count - unlike
+			// CREATE_LIST/CALL/POP where `operand` genuinely *is* the count of
+			// cicero-stack values involved. Must look up the real nonlocal count
+			// the same way CREATE_FUNC's own case does (funcPool[operand].nonlocals,
+			// skipping the self-recursive one) - using `operand` directly here
+			// silently computed the wrong effect whenever a captured function's
+			// funcPool index didn't coincidentally equal its nonlocal count.
+			CREATE_FUNC => return 1 - countCapturedNonlocals(operand);
+			POP => return -operand;
+			DUPE => return 1;
+			SWAP => return 0;
+			RETURN => return -1;
+			RETURN_INIT => return -1; // never actually compiled -- see the compileActions case below
+		}
+	}
+
+	// How many genuine cicero values a CREATE_FUNC[funcholeIdx] actually pops:
+	// the funchole's own nonlocals, minus one if it captures itself (the
+	// self-recursive case, captured via nonlocal rather than local - see
+	// ASTFrame's Func handling in CLAUDE.md). Shared by stackEffect (the
+	// structural prediction) and the real CREATE_FUNC case's own emission, so
+	// the two can never disagree about this count the way they used to.
+	def countCapturedNonlocals(funcholeIdx: int) -> int {
+		def funchole = ciceroBytecode.funcPool[funcholeIdx];
+		var count = funchole.nonlocals.length;
+		for (i < funchole.nonlocals.length) {
+			if (Strings.equal(funchole.nonlocals[i], funchole.id)) count--;
+		}
+		return count;
+	}
+
+	// Given the absolute pc of a CATCH instruction, returns (handlerAbs,
+	// endAbs) - the byte range of its handler body. Shared by compileActions'
+	// CATCH case and computeMaxStackDepth's upfront region walk, so the two
+	// never disagree about where a handler starts/ends.
+	def catchRegionBounds(catchAbs: int) -> (int, int) {
+		def handlerAbs = catchAbs + 8;
+		def jumpIns = Ref<Instruction>.at(ciceroBytecode.instrs, catchAbs + 4);
+		def endAbs = handlerAbs + i24.view(jumpIns.operand);
+		return (handlerAbs, endAbs);
+	}
+
+	// A single forward pass over basic blocks in reverse-postorder: since
+	// Cicero bytecode has statically balanced stack effects (already relied on
+	// for BeyondRelooper's correctness - see CLAUDE.md), the abstract stack
+	// depth at any pc is uniquely determined regardless of path, so this needs
+	// no fixed-point iteration, just one topological pass.
+	//
+	// Populates `entryDepthAt` with the depth at entry to every instruction
+	// (keyed by absolute pc, i.e. absOffset + block.startPc + pc). {startDepth}
+	// seeds the cfg's head block - 0 for the top-level function, or whatever
+	// depth is live right after a CATCH for a handler region (see below).
+	//
+	// IMPORTANT: a catch-handler's block has *no predecessors* in this CFG
+	// (built with ignoreExceptions=true - see CFGraph's doc comment: fallible
+	// opcodes don't branch to a handler at all in this mode, that's the whole
+	// point, so BeyondRelooper only ever structures normal control flow). Its
+	// block is therefore "unreachable" by this pass's own reachability
+	// analysis and would be silently skipped, leaving entryDepthAt empty for
+	// every pc in the handler if we didn't do anything further. So: whenever
+	// this walk encounters a CATCH (always in a *reachable* block - it's an
+	// ordinary instruction in the try-body's own linear sequence, only its
+	// *handler* is otherwise-unreachable), recurse into the handler's own
+	// byte range with a fresh sub-CFG (mirroring compileRegion's own
+	// slice+CFGraph+BeyondRelooper construction) and a startDepth derived from
+	// CATCH's own effect, computed inline since we already have `depth` in
+	// hand here.
+	def computeMaxStackDepth(cfg: CFGraph, absOffset: int, startDepth: int) -> int {
+		if (entryDepthAt == null) entryDepthAt = HashMap<int, int>.new(int.!<int>, int.==);
+		def entryDepth: HashMap<BasicBlock, int> = HashMap.new(BasicBlock.hash, BasicBlock.==);
+		for (i < cfg.basicBlocks.length) entryDepth[cfg.basicBlocks[i]] = 0;
+		entryDepth[cfg.head] = startDepth;
+
+		def sorted = Arrays.sort(cfg.basicBlocks.copy(), 0, cfg.basicBlocks.length,
+			fun(a: BasicBlock, b: BasicBlock) => a.reversePostorder <= b.reversePostorder);
+
+		var maxDepth = startDepth;
+		for (block in sorted) {
+			if (block.reversePostorder < 0) continue; // unreachable
+			if (block == cfg.returnSentinel || block == cfg.exceptionSentinel) continue; // no bytes
+			var depth = entryDepth[block];
+			if (depth > maxDepth) maxDepth = depth;
+			def bytes = Ranges.dup(block.bytes);
+			var lastOpcode: Opcode;
+			for (pc = 0; pc < bytes.length; pc += 4) {
+				def instr = Ref<Instruction>.at(bytes, pc);
+				lastOpcode = instr.opcode;
+				if (instr.opcode == Opcode.TRY) structTryDepthStack.push(depth); // TRY's effect is 0, so pre- and post-effect depth are the same
+				if (instr.opcode == Opcode.CATCH) {
+					// CATCH's own atPc is dual-purpose: WasmShadowStackCompiler's
+					// runtime CATCH case uses it as applyEffect's bookkeeping marker
+					// for the handler region it's about to compile (a different
+					// control-flow edge than the try-body's own normal-path
+					// fallthrough that reaches this same pc linearly) - so its
+					// entryDepthAt entry must reflect TRY's own entry depth, not the
+					// try-body's linearly-accumulated `depth`.
+					def tryEntryDepth = structTryDepthStack.pop();
+					entryDepthAt[absOffset + block.startPc + pc] = tryEntryDepth;
+					def catchAbs = absOffset + block.startPc + pc;
+					def bounds = catchRegionBounds(catchAbs);
+					def handlerAbs = bounds.0, endAbs = bounds.1;
+					def slice = Bytecode.new(
+						Ranges.dup(ciceroBytecode.instrs[handlerAbs ... endAbs]),
+						ciceroBytecode.locals, ciceroBytecode.nonlocals, ciceroBytecode.params,
+						ciceroBytecode.stringPool, ciceroBytecode.constPool, ciceroBytecode.classPool,
+						ciceroBytecode.funcPool, [],
+						Ranges.dup(ciceroBytecode.sourceMap[(handlerAbs >> 2) ... (endAbs >> 2)]));
+					def subCfg = CFGraph.new(slice, true);
+					BeyondRelooper.new(subCfg).structuredControl(); // computes RPO, needed below
+					def regionMax = computeMaxStackDepth(subCfg, handlerAbs, tryEntryDepth + 1);
+					if (regionMax > maxDepth) maxDepth = regionMax;
+				} else {
+					entryDepthAt[absOffset + block.startPc + pc] = depth;
+				}
+				depth += stackEffect(instr.opcode, instr.operand);
+				if (depth > maxDepth) maxDepth = depth;
+				// RAISE has no fallthrough successor and isn't jump-flagged, so in
+				// ignoreExceptions=true mode nothing marks a block boundary after it -
+				// see the matching comment on compileActions' RAISE case. Any bytes
+				// still in this block after it are structurally dead (the shared
+				// BytecodeCompiler emits them uniformly, e.g. Begin's own POP after a
+				// non-last RAISE, without knowing RAISE never returns); walking them
+				// here would let a bogus depth (nothing "real" left to pop) reach a
+				// real fallthrough/branch successor below. Skip straight to CATCH (or
+				// the block's end) - NOT a plain break: CATCH isn't jump-flagged
+				// either, so a matching CATCH can be in this SAME block right after
+				// the dead bytes, and must still be walked normally (its own case
+				// above handles it, including the catch-region recursion).
+				if (instr.opcode == Opcode.RAISE) {
+					var skipPc = pc + 4;
+					while (skipPc < bytes.length) {
+						if (Ref<Instruction>.at(bytes, skipPc).opcode == Opcode.CATCH) break;
+						skipPc += 4;
+					}
+					pc = skipPc - 4; // this loop's own pc += 4 lands exactly on CATCH (or the block's end)
+				}
+			}
+			// JUMP_IF_FALSE_PEEK/JUMP_IF_TRUE_PEEK's stackEffect (0) models the
+			// branch-taken path correctly (the peeked value becomes the If's
+			// result, untouched) but NOT the fallthrough path: compileWasmStructure's
+			// If(peeksValue,...) case unconditionally drops the peeked value at
+			// the start of the fallthrough arm (bodyFallthrough) before compiling
+			// it - a real asymmetry between the two successors that a single
+			// uniform `depth` can't represent. Model it here so entryDepthAt
+			// matches what real emission (and applyEffect's cross-check) sees.
+			def isPeek = lastOpcode == Opcode.JUMP_IF_FALSE_PEEK || lastOpcode == Opcode.JUMP_IF_TRUE_PEEK;
+			def fallthroughDepth = if(isPeek, depth - 1, depth);
+			if (block.fallthroughSuccessor != null) entryDepth[block.fallthroughSuccessor] = fallthroughDepth;
+			if (block.branchSuccessor != null) entryDepth[block.branchSuccessor] = depth;
+		}
+		return maxDepth;
+	}
+
+	// The single mutation point for logicalDepth/frameDepth. Called inline at
+	// the point in each opcode's own case (or construct-guard entry) where the
+	// effect is semantically known to apply - never generically "after the
+	// fact" - so there's no separate step to forget or mis-order (the bug
+	// class that hit CATCH and If's arms during initial implementation).
+	//
+	// Deliberately does NOT cross-check against entryDepthAt here: a `cond`
+	// with a trailing "no true branch" RAISE, nested inside a `while`, has
+	// its RAISE block legitimately compiled *twice* by BeyondRelooper - once
+	// inline in the nested-if chain, once as the loop's "follow" node - and
+	// entryDepthAt (a single HashMap<pc,int>) can only hold one of the two
+	// structurally-valid entry depths for that pc, so whichever occurrence
+	// compiles second would always "mismatch" even though the emitted code
+	// is correct either way (logicalDepth/frameDepth are tracked
+	// independently per-opcode, not derived from entryDepthAt). entryDepthAt
+	// itself is still used by computeMaxStackDepth for stackScratch sizing.
+	def applyEffect(atPc: int, effect: int) {
+		logicalDepth += effect;
+		frameDepth += effect;
+	}
+
+	/* ====================================================================
+	 * Livepoint guard machinery.
+	 *
+	 * IMPORTANT invariant for every emitLivepointGuard call site: `popCount`
+	 * must equal exactly the number of genuine cicero-abstract-stack values
+	 * already sitting on the real Wasm stack when the guard is entered - never
+	 * more, never less. A host function's own *immediates* (a field's
+	 * string-pool index, a classhole/funchole index, etc.) are NOT cicero
+	 * stack values and must never be pushed before the guard call, or they get
+	 * miscounted as one of its "operands" and desync everything below - the
+	 * guard silently pops a stray immediate into protectDepth's region, or
+	 * leaves a genuine cicero value stranded above what gets restored. Emit
+	 * all such immediates *inside* `emitBody`, after the guard has restored
+	 * this op's genuine operands. (Values already resolved to real pointers by
+	 * an earlier, unguarded, provably-safe call - e.g. emitPushConstPtr - DO
+	 * count toward popCount: they're live pointers that need protecting across
+	 * this call, not immediates.)
+	 * ==================================================================== */
+
+	// Saves stackScratch[0, count) into shadow slots [numLocalSlots+base, numLocalSlots+base+count).
+	// `base` addresses by *logical* depth (numLocalSlots + logicalDepth -
+	// count is the usual way to derive it; construct guards must remember the
+	// base from entry rather than recomputing it, since logicalDepth moves on
+	// while their body compiles) - this is what keeps nested construct guards'
+	// and livepoint guards' shadow regions from colliding with each other.
+	def emitShadowSaveStackAt(base: int, count: int) {
+		for (i < count) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(shadowBase);
+			wasm.putb(WasmOp.I32_CONST.opcode); wasm.put_sleb32(numLocalSlots + base + i);
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+			emitCall(WasmFuncIds.SHADOW_SAVE);
+		}
+	}
+	// Reloads shadow slots [numLocalSlots+base, numLocalSlots+base+count) back into stackScratch[0, count).
+	def emitShadowLoadStackAt(base: int, count: int) {
+		for (i < count) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(shadowBase);
+			wasm.putb(WasmOp.I32_CONST.opcode); wasm.put_sleb32(numLocalSlots + base + i);
+			emitCall(WasmFuncIds.SHADOW_LOAD);
+			wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+		}
+	}
+	// Saves every local live-after {atPc} into its (always-reserved) shadow slot.
+	def emitShadowSaveLocals(atPc: int) {
+		for (i < numLocalSlots) {
+			if (!liveness.isLiveAfter(atPc, i)) continue;
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(shadowBase);
+			wasm.putb(WasmOp.I32_CONST.opcode); wasm.put_sleb32(i);
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(u32.!(i + 1)); // locals[0] is <receiver>
+			emitCall(WasmFuncIds.SHADOW_SAVE);
+		}
+	}
+	// Reloads every local live-after {atPc} from its shadow slot.
+	def emitShadowLoadLocals(atPc: int) {
+		for (i < numLocalSlots) {
+			if (!liveness.isLiveAfter(atPc, i)) continue;
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(shadowBase);
+			wasm.putb(WasmOp.I32_CONST.opcode); wasm.put_sleb32(i);
+			emitCall(WasmFuncIds.SHADOW_LOAD);
+			wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(u32.!(i + 1));
+		}
+	}
+
+	// Wraps a livepoint host call. `popCount` is how many genuine cicero-stack
+	// values this op consumes as its own operands (see the invariant above).
+	// Those do NOT need shadow protection themselves - they're handed directly
+	// into the callee (which roots them itself, e.g. via argv) before any
+	// allocation the callee might do. Only what's deeper - pending values from
+	// enclosing expressions this op doesn't consume, plus every still-live
+	// local - needs protecting. `emitBody` must emit any of this op's own
+	// immediates plus the actual `call`, leaving exactly one result value on
+	// the stack.
+	//
+	// protectDepth = frameDepth - popCount, NOT logicalDepth - popCount: what
+	// this can *physically* pop is bounded by frameDepth (how much is
+	// reachable in the current control frame), never by the cumulative
+	// logical total, which may include stuff evacuated by an enclosing
+	// construct guard that's now out of reach by construction. Within a
+	// single bytecode instruction's own codegen, `frameDepth` doesn't yet
+	// reflect a value pushed by that same instruction's earlier steps (e.g.
+	// emitPushConstPtr mid-instruction) - such a value still belongs in
+	// popCount (it's a real, live pointer needing protection across this
+	// call) but isn't part of frameDepth's count yet either, so it works out:
+	// popCount simply exceeds frameDepth's "official" count by that amount,
+	// and protectDepth (frameDepth - popCount) comes out lower accordingly -
+	// there is nothing extra to subtract for it.
+	//
+	// Shadow-slot addresses use `logicalDepth`, not frameDepth: the physically
+	// reachable region is exactly the top `frameDepth` of the `logicalDepth`
+	// logical positions, i.e. base = logicalDepth - frameDepth. This is what
+	// keeps nested construct guards' shadow regions disjoint from whatever a
+	// livepoint guard inside them uses.
+	//
+	// Restriction (much narrower now that construct guards exist): still must
+	// only be called where nothing *within this same bytecode instruction's
+	// own codegen* needs to reach further than frameDepth allows - which now
+	// always holds, since every nested Block/Loop/If/Try evacuates on entry.
+	// Call sites that sit inside an if/else arm and unconditionally
+	// emitJumpToExnHandler() right afterward (emitAssertFieldPtr,
+	// emitAssertTypePtr, RAISE) still use emitRaiseGuard instead: the pending
+	// value doesn't need protecting there, since it's abandoned the moment
+	// the branch unwinds past it (same discard-on-exception reasoning as
+	// TRY/CATCH).
+	def emitLivepointGuard(atPc: int, popCount: int, emitBody: void -> void) {
+		def protectDepth = frameDepth - popCount;
+		def base = logicalDepth - frameDepth;
+		emitLivepointGuardCore(atPc, popCount, base, protectDepth, emitBody);
+	}
+	def emitLivepointGuardCore(atPc: int, popCount: int, base: int, protectDepth: int, emitBody: void -> void) {
+		if (CiceroOptions.sanityChecks && protectDepth < 0)
+			System.error("internal error", "WasmShadowStackCompiler: negative protectDepth");
+
+		// Pop this op's own operands aside so we can reach what's underneath.
+		for (i = popCount - 1; i >= 0; i--) {
+			wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(argScratch[i]);
+		}
+		// Pop the deeper pending items into scratch, then save them + every live local.
+		for (i = protectDepth - 1; i >= 0; i--) {
+			wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+		}
+		emitShadowSaveStackAt(base, protectDepth);
+		emitShadowSaveLocals(atPc);
+
+		// Restore this op's own operands, in original order, then run the guarded body.
+		for (i < popCount) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(argScratch[i]);
+		}
+		emitBody();
+
+		// Stash the body's single result, reload locals + deeper items (a
+		// relocating collection may have moved them), then push the result
+		// back on top.
+		wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+		emitShadowLoadLocals(atPc);
+		emitShadowLoadStackAt(base, protectDepth);
+		for (i < protectDepth) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+		}
+		wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+	}
+
+	// Shared >9 "rest" pattern for CALL/CREATE_FUNC/CREATE_LIST: `popCount`
+	// genuine cicero values are pending (for CALL this includes `fn`; for
+	// CREATE_LIST/CREATE_FUNC it's just the elements/nonlocals). The bottom
+	// `fixedCount` (<=9) of them get handed directly to `restFuncId` - which
+	// converts each immediately, the same already-verified-safe pattern every
+	// other *Ptr host function uses - via `extraImmediate` (e.g. CREATE_FUNC's
+	// compile-time funchole index) plus `fixedCount` reloads, in that order,
+	// matching the Rest functions' own `(immediate?, o0..o8, numRest)` shape.
+	// The remaining (topmost) `popCount - fixedCount` extras go through
+	// PUSH_ARG_PTR/xargsObjs first, rightmost-first (matching the "RestRev"
+	// convention already used by the bytecode-derived tier for this same
+	// shape) - each push can itself allocate (xargsObjs may need to grow),
+	// so unlike a plain popCount operand, every extra needs full shadow
+	// protection until the moment it's actually pushed, not just "handed
+	// directly to the next call". Leaves exactly one result value on top of
+	// the deeper protectDepth items, matching emitLivepointGuardCore's own
+	// contract - callers still applyEffect/emitInterpretResultPtr themselves.
+	def emitRestGuard(atPc: int, popCount: int, fixedCount: int, restFuncId: u32, extraImmediate: void -> void) {
+		def protectDepth = frameDepth - popCount;
+		if (CiceroOptions.sanityChecks && protectDepth < 0)
+			System.error("internal error", "WasmShadowStackCompiler: negative protectDepth");
+		def base = logicalDepth - frameDepth;
+		def total = frameDepth; // protectDepth + popCount
+
+		for (i = total - 1; i >= 0; i--) {
+			wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+		}
+		emitShadowSaveStackAt(base, total);
+		emitShadowSaveLocals(atPc);
+
+		// Extras, rightmost (topmost) first.
+		for (i = popCount - 1; i >= fixedCount; i--) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(shadowBase);
+			wasm.putb(WasmOp.I32_CONST.opcode); wasm.put_sleb32(numLocalSlots + base + protectDepth + i);
+			emitCall(WasmFuncIds.SHADOW_LOAD);
+			emitCall(WasmFuncIds.PUSH_ARG_PTR);
+		}
+		extraImmediate();
+		// The fixedCount items, reloaded fresh right before being handed to
+		// restFuncId (a relocating collection may have moved them during the
+		// PUSH_ARG_PTR loop above).
+		for (i < fixedCount) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(shadowBase);
+			wasm.putb(WasmOp.I32_CONST.opcode); wasm.put_sleb32(numLocalSlots + base + protectDepth + i);
+			emitCall(WasmFuncIds.SHADOW_LOAD);
+		}
+		wasm.putb(WasmOp.I32_CONST.opcode); wasm.put_sleb32(popCount - fixedCount); // numRest
+		emitCall(restFuncId);
+
+		wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+		emitShadowLoadLocals(atPc);
+		emitShadowLoadStackAt(base, protectDepth);
+		for (i < protectDepth) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+		}
+		wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+	}
+
+	/* ====================================================================
+	 * Construct-boundary guards: evacuate-before/restore-after around every
+	 * nested Block/Loop/If/Try. Needed even for `not` (plain `(if x false
+	 * true)`): LOAD_GLOBAL inside either arm is a livepoint, and it sits
+	 * inside a real nested Wasm `if` the moment there's anything pending
+	 * before the conditional.
+	 *
+	 * Three separate counts, not one - same "physically present vs. already
+	 * counted" distinction as emitLivepointGuard's popCount, plus a third
+	 * wrinkle specific to opening a construct: what's left over once the
+	 * construct's own opcode (if/loop/block) has consumed its condition.
+	 *   - physicalPopCount: how many values are physically on the Wasm stack
+	 *     right now that belong to this construct's own opening, before its
+	 *     opcode is emitted.
+	 *   - countedPopCount: how many of those are still reflected in
+	 *     frameDepth (JUMP_IF_FALSE's IS_TRUE_PTR already decremented
+	 *     frameDepth for its bool even though the bool is still physically
+	 *     there - "fresh", like emitPushConstPtr's mid-instruction pushes -
+	 *     so physicalPopCount can exceed countedPopCount).
+	 *   - declaredParamCount: how many values remain once the construct's own
+	 *     opcode has consumed its condition, i.e. frameDepth's value once the
+	 *     arms actually start running.
+	 *
+	 *   - Block, Loop, TRY: (0, 0, 0) - nothing consumed at their own opening.
+	 *   - If, non-peek (plain JUMP_IF_FALSE): (1, 0, 0) - the condition bool
+	 *     is physically present but already logically consumed (frameDepth
+	 *     excludes it already), and the `if` opcode consumes it as its
+	 *     condition, not as a declared param - <void,int>.
+	 *   - If, peeksValue: (2, 1, 1) - the tested value is still logically
+	 *     live (stackEffect 0) plus a fresh derived bool; the `if` opcode
+	 *     consumes the bool as its condition, leaving the tested value as the
+	 *     declared 1 param - <int,int>.
+	 * ==================================================================== */
+
+	def enterConstructGuard(atPc: int, physicalPopCount: int, countedPopCount: int, declaredParamCount: int) {
+		// See applyEffect's doc comment: the entryDepthAt-based cross-check
+		// this used to do here had the same architectural false positive for
+		// BeyondRelooper-duplicated blocks (a construct guard can open right
+		// after one) and was removed for the same reason.
+		def count = frameDepth - countedPopCount;
+		if (CiceroOptions.sanityChecks && count < 0)
+			System.error("internal error", "WasmShadowStackCompiler: negative construct-guard count");
+		def base = logicalDepth - frameDepth;
+
+		// Pop this construct's own physicalPopCount values aside so we can
+		// reach what's underneath (same shape as emitLivepointGuardCore's popCount step).
+		for (i = physicalPopCount - 1; i >= 0; i--) {
+			wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(argScratch[i]);
+		}
+		if (count > 0) {
+			for (i = count - 1; i >= 0; i--) {
+				wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+			}
+			emitShadowSaveStackAt(base, count);
+			emitShadowSaveLocals(atPc);
+		}
+		for (i < physicalPopCount) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(argScratch[i]);
+		}
+
+		guardStack.push((atPc, base, count));
+		frameDepth = declaredParamCount; // what's left once the construct's own opcode consumes its condition
+	}
+
+	// Call immediately after the construct's own closing END has been
+	// emitted (compileWasmStructure's withBlock/withLoop/withIfElse already
+	// did that). Every Block/Loop/If/Try in this compiler produces exactly
+	// one result value (all are compiled with a `<..., int>` signature), so
+	// there's always exactly 1 value to preserve across the restore.
+	def exitConstructGuard() {
+		def entry = guardStack.pop();
+		def atPc = entry.0, base = entry.1, count = entry.2;
+		if (count > 0) {
+			wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(scratch0); // stash the construct's own result
+			emitShadowLoadLocals(atPc);
+			emitShadowLoadStackAt(base, count);
+			for (i < count) {
+				wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+			}
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+		}
+		// frameDepth always becomes count+1 (the restored items, if any, plus
+		// this construct's own result) - this is purely physical bookkeeping
+		// (what's actually sitting on the wasm operand stack right now) and
+		// is safe to derive unconditionally, unlike logicalDepth below.
+		//
+		// logicalDepth is deliberately NOT touched here. Every caller of
+		// exitConstructGuard has already established (or must establish) its
+		// own correct post-construct logicalDepth by the time this returns:
+		// - Block/Loop/plain-If bodies whose own bytecode nets a clean "+1"
+		//   naturally leave logicalDepth correct on their own (nothing to do).
+		// - TRY/CATCH's caller computes an intentionally-different value
+		//   (CATCH's own "afterCatch" fields, see its case) BEFORE calling
+		//   this - that value reflects a convention (inflated by both the
+		//   try-body's net effect *and* CATCH's own +1) that is not the
+		//   "clean one-result" formula, and must not be overwritten here.
+		// - If's caller (see its case) explicitly resets logicalDepth to
+		//   entryLogicalDepth+1 right after this call, specifically to fix
+		//   the case where the last-compiled (else) arm was RAISE-terminated
+		//   and so left logicalDepth at a meaningless value - see that case's
+		//   own comment.
+		frameDepth = count + 1;
+	}
+
+	// Wraps a livepoint call site that sits inside a nested if/else arm and
+	// unconditionally emitJumpToExnHandler()s right afterward (see the
+	// restriction documented on emitLivepointGuard). Only pops/restores this
+	// op's own popCount operands - no protectDepth handling, deliberately:
+	// there's nothing deeper to protect (it's abandoned when the branch
+	// unwinds) and no way to reach it validly from here regardless.
+	def emitRaiseGuard(popCount: int, emitBody: void -> void) {
+		for (i = popCount - 1; i >= 0; i--) {
+			wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(argScratch[i]);
+		}
+		for (i < popCount) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(argScratch[i]);
+		}
+		emitBody();
+	}
+
+	// Pushes a compile-time constant object as a real pointer. Provably safe,
+	// no guard needed: GET_CONST_PTR is objToPtr(constsPtr[idx]) - an array
+	// read and a pointer subtraction, no allocation anywhere in that chain.
+	// The resulting value IS a live pointer (unlike a bare immediate), so any
+	// *subsequent* guarded call that consumes it must count it in its own
+	// popCount.
+	def emitPushConstPtr(val: Object) {
+		wasm.putb(WasmOp.I32_CONST.opcode);
+		wasm.put_sleb32(addConst(val));
+		emitCall(WasmFuncIds.GET_CONST_PTR);
+	}
+
+	/* ====================================================================
+	 * Structure/instruction emission - mirrors WasmBytecodeCompiler exactly
+	 * except where pointer-mode calling convention/livepoint guards apply.
+	 * ==================================================================== */
+
+	def compileWasmStructure(ws: WasmStructure) {
+		match (ws) {
+			Block(body) => {
+				enterConstructGuard(lastAtPc, 0, 0, 0);
+				withBlock<void, int>(fun {
+					compileWasmStructure(body);
+				});
+				exitConstructGuard();
+			}
+			Loop(body) => {
+				enterConstructGuard(lastAtPc, 0, 0, 0);
+				withLoop<void, int>(fun {
+					compileWasmStructure(body);
+				});
+				exitConstructGuard();
+			}
+			If(peeksValue, bodyFallthrough, bodyBranch) => {
+				// See enterConstructGuard's doc for the (physical, counted,
+				// declaredParam) derivation of these two cases.
+				if (peeksValue) enterConstructGuard(lastAtPc, 2, 1, 1);
+				else enterConstructGuard(lastAtPc, 1, 0, 0);
+				// The two arms are *alternatives*, not sequential - each must
+				// start from the (frameDepth, logicalDepth) baseline that
+				// enterConstructGuard just set up, not wherever the other arm's
+				// own net effect left these fields. For peeksValue, the two
+				// baselines actually differ by 1: the fallthrough arm's leading
+				// DROP (below) discards the peeked value that bodyBranch keeps as
+				// its result - computeMaxStackDepth models this same asymmetry
+				// (see its fallthroughDepth handling for JUMP_IF_*_PEEK), so
+				// entryDepthAt already expects the -1 here too.
+				def entryFrameDepth = frameDepth;
+				def entryLogicalDepth = logicalDepth;
+				if (peeksValue) {
+					withIfElse<int, int>(fun {
+						wasm.putb(WasmOp.DROP.opcode);
+						frameDepth = entryFrameDepth - 1;
+						logicalDepth = entryLogicalDepth - 1;
+						compileWasmStructure(bodyFallthrough);
+					}, /* else */ fun {
+						frameDepth = entryFrameDepth;
+						logicalDepth = entryLogicalDepth;
+						compileWasmStructure(bodyBranch);
+					});
+				} else {
+					withIfElse<void, int>(fun {
+						compileWasmStructure(bodyFallthrough);
+					}, /* else */ fun {
+						frameDepth = entryFrameDepth;
+						logicalDepth = entryLogicalDepth;
+						compileWasmStructure(bodyBranch);
+					});
+				}
+				exitConstructGuard();
+				// Fix up logicalDepth explicitly rather than trusting whatever
+				// the last-compiled (else) arm's own bytecode left it at: the
+				// two arms are alternatives, and when one is RAISE-terminated
+				// (never falls through here - see the RAISE case's comment)
+				// its own bookkeeping is irrelevant garbage from this point's
+				// perspective. logicalDepth is monotonic and untouched by
+				// enterConstructGuard, so entryLogicalDepth (captured above,
+				// right after entering the guard) is still the correct
+				// pre-construct baseline regardless of which arm ran. The
+				// increment differs by case: a non-peek If's declaredParamCount
+				// is 0, so both arms must produce one genuinely NEW value
+				// (+1). A peeksValue If's declaredParamCount is 1 - the
+				// construct's "result" is the already-peeked value itself
+				// (kept as-is by the branch arm, or dropped-and-replaced by
+				// the fallthrough arm), already counted in entryLogicalDepth,
+				// so no additional increment applies (+0).
+				logicalDepth = entryLogicalDepth + (if(peeksValue, 0, 1));
+			}
+			Br(depth) => {
+				wasm.putb(WasmOp.BR.opcode);
+				wasm.put_uleb32(u32.!(depth));
+			}
+			Actions(actions) => compileActions(actions);
+			Seq(fst, snd) => {
+				compileWasmStructure(fst);
+				compileWasmStructure(snd);
+			}
+			ReturnWithValue => {
+				if (regionMode) {
+					// inside a try/catch region: value already on the stack, falls through.
+				} else {
+					emitShadowFree();
+					emitCall(WasmFuncIds.SET_RESULT);
+
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.putb(0); // OK
+					wasm.putb(WasmOp.RETURN.opcode);
+					wasm.putb(WasmOp.UNREACHABLE.opcode);
+				}
+			}
+			ReturnWithException => {
+				// Unreachable in practice - CFGraph is built with
+				// ignoreExceptions=true, so the relooper never sees an exception
+				// edge to produce this from. Kept correct defensively.
+				emitShadowFree();
+				emitCall(WasmFuncIds.SET_RESULT);
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.putb(1); // exception
+			}
+			Fallthrough => /* emit nothing: control falls through to the next structure */ ;
+		}
+	}
+
+	def compileRegion(absStart: int, absEnd: int) {
+		def slice = Bytecode.new(
+			Ranges.dup(ciceroBytecode.instrs[absStart ... absEnd]),
+			ciceroBytecode.locals, ciceroBytecode.nonlocals, ciceroBytecode.params,
+			ciceroBytecode.stringPool, ciceroBytecode.constPool, ciceroBytecode.classPool,
+			ciceroBytecode.funcPool, [],
+			Ranges.dup(ciceroBytecode.sourceMap[(absStart >> 2) ... (absEnd >> 2)]));
+		def br = BeyondRelooper.new(CFGraph.new(slice, true));
+		br.structuredControl();
+
+		def savedOffset = regionOffset, savedMode = regionMode;
+		regionOffset = absStart;
+		regionMode = true;
+		compileWasmStructure(br.output);
+		regionOffset = savedOffset;
+		regionMode = savedMode;
+	}
+
+	def compileActions(bb: BasicBlock) {
+		def bc = Ranges.dup(bb.bytes);
+		var pc = 0;
+		while (pc < bc.length) {
+			def ins = Ref<Instruction>.at(bc, pc);
+			def opcode = ins.opcode;
+			def operand = ins.operand;
+			def atPc = regionOffset + bb.startPc + pc; // absolute pc, for liveness queries
+
+			match (opcode) {
+				NOP => { applyEffect(atPc, 0); }
+				LOAD_CONST => {
+					// consts[0] is the reserved null const (addConst(null) in the
+					// constructor), same as index-mode - operand + 1 accounts for it.
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(operand + 1);
+					emitCall(WasmFuncIds.GET_CONST_PTR); // safe, see emitPushConstPtr
+					applyEffect(atPc, 1);
+				}
+				LOAD_GLOBAL => {
+					emitLivepointGuard(atPc, 0, fun {
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);
+						emitCall(WasmFuncIds.GET_GLOBAL_PTR);
+					});
+					applyEffect(atPc, 1);
+					emitRaiseIfNullPtr(Exceptions.unboundGlobal(ciceroBytecode.stringPool[operand]));
+				}
+				LOAD_GLOBAL_BY_INDEX => {
+					emitLivepointGuard(atPc, 0, fun {
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);
+						emitCall(WasmFuncIds.GET_GLOBAL_BY_INDEX_PTR);
+					});
+					applyEffect(atPc, 1);
+				}
+				LOAD_LOCAL => {
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.put_uleb32(u32.!(operand + 1)); // locals[0] is <receiver>
+					applyEffect(atPc, 1);
+					emitRaiseIfNullPtr(Exceptions.unboundLocal(ciceroBytecode.locals[operand]));
+				}
+				LOAD_LOCAL_SAFE => {
+					wasm.putb(WasmOp.GET_LOCAL.opcode);
+					wasm.put_uleb32(u32.!(operand + 1));
+					applyEffect(atPc, 1);
+				}
+				LOAD_FIELD => {
+					wasm.putb(WasmOp.TEE_LOCAL.opcode);
+					wasm.put_uleb32(scratch1); // stash obj for the error path; doesn't consume
+					emitLivepointGuard(atPc, 1, fun {
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);
+						emitCall(WasmFuncIds.GET_FIELD_PTR);
+					});
+					applyEffect(atPc, 0);
+					emitAssertFieldPtr(atPc, ciceroBytecode.stringPool[operand]);
+				}
+				LOAD_NONLOCAL => {
+					emitLivepointGuard(atPc, 0, fun {
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(addString(ciceroBytecode.nonlocals[operand]));
+						emitCall(WasmFuncIds.GET_NONLOCAL_PTR);
+					});
+					applyEffect(atPc, 1);
+				}
+				STORE_GLOBAL => {
+					emitLivepointGuard(atPc, 1, fun {
+						wasm.putb(WasmOp.SET_LOCAL.opcode);
+						wasm.put_uleb32(scratch0); // pop value
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);
+						wasm.putb(WasmOp.GET_LOCAL.opcode);
+						wasm.put_uleb32(scratch0); // push value back
+						emitCall(WasmFuncIds.SET_GLOBAL_PTR);
+					});
+					wasm.putb(WasmOp.DROP.opcode); // passthrough; STORE_GLOBAL doesn't push anything back
+					applyEffect(atPc, -1);
+				}
+				STORE_GLOBAL_BY_INDEX => {
+					emitLivepointGuard(atPc, 1, fun {
+						wasm.putb(WasmOp.SET_LOCAL.opcode);
+						wasm.put_uleb32(scratch0);
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);
+						wasm.putb(WasmOp.GET_LOCAL.opcode);
+						wasm.put_uleb32(scratch0);
+						emitCall(WasmFuncIds.SET_GLOBAL_BY_INDEX_PTR);
+					});
+					wasm.putb(WasmOp.DROP.opcode);
+					applyEffect(atPc, -1);
+				}
+				STORE_LOCAL => {
+					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					wasm.put_uleb32(u32.!(operand + 1)); // locals[0] is <receiver>
+					applyEffect(atPc, -1);
+				}
+				STORE_FIELD => {
+					// stack coming in: [..., val_orig, obj, val_dupe] - 3 genuine cicero
+					// values. This instruction's own operands (handed to the call) are
+					// obj and val_dupe; val_orig is a pending/deeper value (not consumed
+					// here) that emitLivepointGuard will correctly fold into protectDepth
+					// and hand back as the final result below.
+					emitLivepointGuard(atPc, 2, fun {
+						wasm.putb(WasmOp.SET_LOCAL.opcode);
+						wasm.put_uleb32(scratch0); // pop val_dupe; [obj]
+						wasm.putb(WasmOp.TEE_LOCAL.opcode);
+						wasm.put_uleb32(scratch1); // stash obj for the error path; doesn't consume
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);   // [obj, fieldIdx]
+						wasm.putb(WasmOp.GET_LOCAL.opcode);
+						wasm.put_uleb32(scratch0); // [obj, fieldIdx, val]
+						emitCall(WasmFuncIds.SET_FIELD_PTR);
+					});
+					applyEffect(atPc, -2);
+					emitAssertFieldPtr(atPc, ciceroBytecode.stringPool[operand]); // null -> br handler; else [..., val_orig, setFieldResult]
+					wasm.putb(WasmOp.DROP.opcode); // setFieldResult aliases val_orig; net: [..., val_orig]
+				}
+				CALL => {
+					if (operand <= 9) {
+						def funcId = matchCallFuncIdPtr(operand);
+						emitLivepointGuard(atPc, operand + 1, fun {
+							wasm.putb(WasmOp.CALL.opcode);
+							wasm.put_uleb32(funcId);
+						});
+					} else {
+						// fn + 9 fixed args handed directly to CALL_FUNC_REST_REV_PTR;
+						// the rest go through PUSH_ARG_PTR - see emitRestGuard.
+						emitRestGuard(atPc, operand + 1, 10, WasmFuncIds.CALL_FUNC_REST_REV_PTR, fun {});
+					}
+					applyEffect(atPc, -operand);
+					emitInterpretResultPtr();
+				}
+				JUMP => { applyEffect(atPc, 0); }
+				JUMP_IF_FALSE => {
+					// bytecode pops unconditionally; the boolean IS the condition.
+					// IS_TRUE_PTR is a provably safe predicate - no guard needed.
+					emitCall(WasmFuncIds.IS_TRUE_PTR);
+					applyEffect(atPc, -1);
+				}
+				JUMP_IF_TRUE_PEEK => {
+					wasmDup();
+					emitCall(WasmFuncIds.IS_FALSE_PTR);
+					applyEffect(atPc, 0);
+				}
+				JUMP_IF_FALSE_PEEK => {
+					wasmDup();
+					emitCall(WasmFuncIds.IS_TRUE_PTR);
+					applyEffect(atPc, 0);
+				}
+				RAISE => {
+					emitProtectedPredicate(atPc, WasmFuncIds.IS_STRING_PTR);
+					withIfElse<int, int>(fun {
+						// inside a nested arm, immediately followed by emitJumpToExnHandler -
+						// use emitRaiseGuard, not emitLivepointGuard (see its doc comment).
+						emitRaiseGuard(1, fun {
+							emitCall(WasmFuncIds.RAISE_STRING_PTR);
+						});
+					}, /* else */ fun {
+						emitPushConstPtr(ClassObjects.classStr); // safe, unguarded
+						emitRaiseGuard(2, fun {
+							emitCall(WasmFuncIds.RAISE_TYPE_PTR);
+						});
+					});
+					applyEffect(atPc, -1);
+					emitJumpToExnHandler(); // [exnObj] -> br handler
+					// RAISE has no fallthrough successor (matches WasmBytecodeCompiler's
+					// own RAISE comment) - control never returns here. But RAISE isn't
+					// jump-flagged either, so in ignoreExceptions=true mode nothing marks
+					// a block boundary right after it: the shared BytecodeCompiler still
+					// emits ordinary "discard non-last statement" bytes following a
+					// non-last RAISE (e.g. Begin's own POP), and those bytes stay in the
+					// SAME reachable block. Structurally dead (RAISE always branches away
+					// before they'd run), but if compiled anyway they can drive
+					// frameDepth/logicalDepth negative (nothing "real" is there to pop),
+					// tripping the negative-protectDepth/-count sanity checks on code
+					// that never executes. Skip straight to CATCH (or the block's end) -
+					// NOT a plain break: CATCH itself isn't jump-flagged either, so a
+					// matching CATCH can be in this SAME block right after the dead
+					// bytes, and must still be compiled normally (it opens the handler
+					// region the try/catch actually needs).
+					var skipPc = pc + 4;
+					while (skipPc < bc.length) {
+						if (Ref<Instruction>.at(bc, skipPc).opcode == Opcode.CATCH) break;
+						skipPc += 4;
+					}
+					pc = skipPc - 4; // bottom-of-loop's pc += 4 lands exactly on CATCH (or the block's end)
+				}
+				TRY => {
+					// Evacuate whatever is pending from *outside* this try/catch, same
+					// as every other nested construct (nothing from inside either arm
+					// needs to survive a raised exception - that's standard exception
+					// semantics, matching Cicero's own Catch behavior of discarding the
+					// try-block's partial state). Restored once, after the matching
+					// CATCH's region closes, regardless of which arm ran.
+					enterConstructGuard(atPc, 0, 0, 0);
+					applyEffect(atPc, 0);
+					tryEntryLogicalDepth.push(logicalDepth);
+
+					def sig = CiWasmTarget.functionTypeId<void, int>();
+					wasm.putb(WasmOp.BLOCK.opcode); wasm.put_sleb32(sig); blockDepth++; // outer
+					wasm.putb(WasmOp.BLOCK.opcode); wasm.put_sleb32(sig); blockDepth++; // handler
+					handlerStack.push(blockDepth);
+				}
+				CATCH => {
+					def catchAbs = regionOffset + bb.startPc + pc;
+					def bounds = catchRegionBounds(catchAbs);
+					def handlerAbs = bounds.0, endAbs = bounds.1;
+
+					wasm.putb(WasmOp.BR.opcode); wasm.put_uleb32(1);    // normal: br outer
+					wasm.putb(WasmOp.END.opcode); blockDepth--;          // close handler
+					handlerStack.pop();
+					// CATCH's exception path is a different control-flow edge than
+					// wherever the try-body's own normal-path compilation left
+					// frameDepth/logicalDepth (same reasoning as If's two arms) -
+					// capture what continues *after* CATCH on the normal path (e.g.
+					// the JUMP that skips the handler) BEFORE resetting to TRY's own
+					// entry values to compile the handler region - CATCH's own effect
+					// applies to both, so it's folded in here once, up front, rather
+					// than risking re-deriving it wrong on the way back out.
+					def afterCatchFrameDepth = frameDepth + 1;
+					def afterCatchLogicalDepth = logicalDepth + 1;
+					frameDepth = 0; // TRY's declaredParamCount, always 0
+					logicalDepth = tryEntryLogicalDepth.pop();
+					// The caught exn arrives on the stack here - apply its effect (+1)
+					// now, before compileRegion runs: the catch region's own bytecode
+					// starts with a STORE of the exn, which needs logicalDepth/frameDepth
+					// to already reflect it being present.
+					applyEffect(atPc, 1);
+					compileRegion(handlerAbs, endAbs);                   // STORE exn + catch body
+					wasm.putb(WasmOp.END.opcode); blockDepth--;          // close outer
+
+					frameDepth = afterCatchFrameDepth;
+					logicalDepth = afterCatchLogicalDepth;
+					exitConstructGuard();
+				}
+				ASSERT_FUNC => {
+					emitAssertTypePtr(atPc, WasmFuncIds.IS_FUNC_PTR, ClassObjects.classFunc);
+					applyEffect(atPc, 0);
+				}
+				CREATE_OBJECT => {
+					emitAssertTypePtr(atPc, WasmFuncIds.IS_CLASS_PTR, ClassObjects.classClass);
+					emitLivepointGuard(atPc, 1, fun {
+						emitCall(WasmFuncIds.CREATE_OBJECT_PTR);
+					});
+					applyEffect(atPc, 0);
+					emitInterpretResultPtr();
+				}
+				CREATE_CLASS => {
+					// createClass checks its superclass arg internally (via a bool
+					// result), so no pre-assert is needed - classholeIdx is an
+					// immediate, emitted inside the guard body.
+					emitLivepointGuard(atPc, 1, fun {
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(operand);
+						emitCall(WasmFuncIds.CREATE_CLASS_PTR);
+					});
+					applyEffect(atPc, 0);
+					emitInterpretResultPtr();
+				}
+				CREATE_LIST => {
+					if (operand <= 9) {
+						def funcId = matchCreateListFuncIdPtr(operand);
+						emitLivepointGuard(atPc, operand, fun {
+							wasm.putb(WasmOp.CALL.opcode);
+							wasm.put_uleb32(funcId);
+						});
+					} else {
+						emitRestGuard(atPc, operand, 9, WasmFuncIds.CREATE_LIST_REST_REV_PTR, fun {});
+					}
+					applyEffect(atPc, 1 - operand);
+				}
+				CREATE_FUNC => {
+					def nonlocalCount = countCapturedNonlocals(operand);
+					if (nonlocalCount <= 9) {
+						def funcId = matchCreateFuncFuncIdPtr(nonlocalCount);
+						// nonlocal ptrs (nonlocalCount genuine cicero values) are already
+						// on the stack in forward order; the funchole index is an
+						// immediate that must end up underneath them for the call's own
+						// (funcholeIdx, nl0..) parameter order. Restored by the guard in
+						// forward order too, so re-buffer through argScratch inside the
+						// guard body to reinsert the index underneath - safe to reuse:
+						// the guard has already finished reading argScratch by the time
+						// emitBody runs.
+						emitLivepointGuard(atPc, nonlocalCount, fun {
+							for (i = nonlocalCount - 1; i >= 0; i--) {
+								wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(argScratch[i]);
+							}
+							wasm.putb(WasmOp.I32_CONST.opcode);
+							wasm.put_sleb32(operand);
+							for (i < nonlocalCount) {
+								wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(argScratch[i]);
+							}
+							emitCall(funcId);
+						});
+					} else {
+						// createFuncRestRevPtr's own param order is
+						// (funchole, o0..o8, numRest) - funchole first, via
+						// extraImmediate, matching the <=9 case's own reordering.
+						emitRestGuard(atPc, nonlocalCount, 9, WasmFuncIds.CREATE_FUNC_REST_REV_PTR, fun {
+							wasm.putb(WasmOp.I32_CONST.opcode);
+							wasm.put_sleb32(operand);
+						});
+					}
+					applyEffect(atPc, 1 - nonlocalCount);
+				}
+				POP => {
+					for (i < operand) wasm.putb(WasmOp.DROP.opcode);
+					applyEffect(atPc, -operand);
+				}
+				DUPE => {
+					match (operand) {
+						0 => { wasmDup(); }
+						1 => {
+							// [..., a, b] -> [..., a, b, a]
+							wasm.putb(WasmOp.SET_LOCAL.opcode);
+							wasm.put_uleb32(scratch0); // pop b; [..., a]
+							wasm.putb(WasmOp.SET_LOCAL.opcode);
+							wasm.put_uleb32(scratch1); // pop a; [...]
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.put_uleb32(scratch1); // [..., a]
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.put_uleb32(scratch0); // [..., a, b]
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.put_uleb32(scratch1); // [..., a, b, a]
+						}
+						_ => System.error("compile error", "tier1->Wasm(shadowstack): DUPE at unsupported depth");
+					}
+					applyEffect(atPc, 1);
+				}
+				SWAP => {
+					match (operand) {
+						1 => wasmSwap();
+						_ => System.error("compile error", "tier1->Wasm(shadowstack): SWAP at unsupported depth");
+					}
+					applyEffect(atPc, 0);
+				}
+				RETURN => { applyEffect(atPc, -1); }
+				RETURN_INIT => System.error("unimplemented", "Wasm tier: class-init chaining is not compiled through the tier-1-derived path");
+			}
+
+			lastAtPc = atPc;
+			pc += 4;
+		}
+	}
+
+	/* ====================================================================
+	 * Pointer-mode equivalents of WasmCompiler's shared refcounted emitters
+	 * (emitAssertField/emitRaiseIfNull/emitAssertType/emitInterpretResult):
+	 * same shape, but no refcounting, and any allocating host call is
+	 * livepoint-guarded (see the invariant on emitLivepointGuard above).
+	 * ==================================================================== */
+
+	def emitAssertFieldPtr(atPc: int, field: string) {
+		wasmDup();
+		emitCall(WasmFuncIds.IS_NULL_PTR); // safe predicate
+		withIfElse<int, int>(fun {
+			// missing field: [orig] is the block's input (always index 0, i.e.
+			// null, here); drop it and raise, using the object stashed in
+			// scratch1 (by LOAD_FIELD/STORE_FIELD before calling this).
+			wasm.putb(WasmOp.DROP.opcode);
+			wasm.putb(WasmOp.GET_LOCAL.opcode);
+			wasm.put_uleb32(scratch1); // [obj] - the one genuine operand for this call
+			emitRaiseGuard(1, fun {
+				emitPushString(field); // plain string-pool index, not a pointer - safe as an immediate
+				emitCall(WasmFuncIds.RAISE_FIELD_PTR);
+			});
+			emitJumpToExnHandler();
+		}, /* else */ fun {
+			// field present: [orig] forwarded as the result, nothing to do.
+		});
+	}
+
+	def emitRaiseIfNullPtr(exn: string) {
+		wasmDup();
+		emitCall(WasmFuncIds.IS_NULL_PTR); // safe predicate
+		withIfElse<int, int>(fun {
+			// null: [orig] is the block's input; drop it, raise a fresh exn.
+			// Unguarded is fine: unwinds via emitJumpToExnHandler right after,
+			// same discard-on-exception reasoning as TRY/CATCH.
+			wasm.putb(WasmOp.DROP.opcode);
+			emitPushString(exn);
+			emitCall(WasmFuncIds.RAISE_MSG_PTR);
+			emitJumpToExnHandler();
+		}, /* else */ fun {
+			// not-null: [orig] forwarded as the result, nothing to do.
+		});
+	}
+
+	// Calls an instanceOf-based predicate (IS_FUNC_PTR/IS_CLASS_PTR/
+	// IS_STRING_PTR) on the current top-of-frame value, protecting it plus
+	// everything deeper plus every live local across the call: instanceOf()
+	// calls initClass() the first time it's invoked on a given object, and
+	// initClass() allocates (a Vector plus hashmap inserts for the class's
+	// field/method slots) - e.g. exactly what a freshly-produced bound-method
+	// MethodObject hits on its first check - so none of these predicates are
+	// actually allocation-free despite looking like pure checks. Leaves
+	// [orig, bool] with bool as the withIfElse condition; `orig` is reloaded
+	// post-call since a relocating collection may have moved it.
+	def emitProtectedPredicate(atPc: int, isType: u32) {
+		def count = frameDepth;
+		def base = logicalDepth - frameDepth;
+		for (i = count - 1; i >= 0; i--) {
+			wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+		}
+		emitShadowSaveStackAt(base, count);
+		emitShadowSaveLocals(atPc);
+
+		wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(stackScratch[count - 1]); // orig
+		emitCall(isType);
+		wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(scratch0); // stash the bool
+
+		emitShadowLoadLocals(atPc);
+		emitShadowLoadStackAt(base, count);
+		for (i < count) {
+			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
+		}
+		wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(scratch0); // bool, on top (the `if` condition)
+	}
+
+	def emitAssertTypePtr(atPc: int, isType: u32, expectedClass: Object) {
+		emitProtectedPredicate(atPc, isType);
+		withIfElse<int, int>(fun {
+			// right type: [orig] forwarded as the result, nothing to do.
+		}, /* else */ fun {
+			// wrong type: [orig] is the block's input; expectedClass resolves to
+			// a real (live) pointer via the safe helper, then both are handed to
+			// the guarded RAISE_TYPE_PTR call together.
+			emitPushConstPtr(expectedClass);
+			emitRaiseGuard(2, fun {
+				emitCall(WasmFuncIds.RAISE_TYPE_PTR);
+			});
+			emitJumpToExnHandler();
+		});
+	}
+
+	def emitInterpretResultPtr() {
+		withIfElse<void, int>(fun {
+			emitCall(WasmFuncIds.GET_RESULT);
+			emitJumpToExnHandler();
+		}, /* else */ fun {
+			emitCall(WasmFuncIds.GET_RESULT);
+		});
+	}
+
+	def matchCallFuncIdPtr(operand: int) -> u32 {
+		match (operand) {
+			0 => return WasmFuncIds.CALL_FUNC0_PTR;
+			1 => return WasmFuncIds.CALL_FUNC1_PTR;
+			2 => return WasmFuncIds.CALL_FUNC2_PTR;
+			3 => return WasmFuncIds.CALL_FUNC3_PTR;
+			4 => return WasmFuncIds.CALL_FUNC4_PTR;
+			5 => return WasmFuncIds.CALL_FUNC5_PTR;
+			6 => return WasmFuncIds.CALL_FUNC6_PTR;
+			7 => return WasmFuncIds.CALL_FUNC7_PTR;
+			8 => return WasmFuncIds.CALL_FUNC8_PTR;
+			9 => return WasmFuncIds.CALL_FUNC9_PTR;
+			_ => { System.error("compile error", "WasmShadowStackCompiler: bad call arity"); return 0; }
+		}
+	}
+	def matchCreateListFuncIdPtr(operand: int) -> u32 {
+		match (operand) {
+			0 => return WasmFuncIds.CREATE_LIST0_PTR;
+			1 => return WasmFuncIds.CREATE_LIST1_PTR;
+			2 => return WasmFuncIds.CREATE_LIST2_PTR;
+			3 => return WasmFuncIds.CREATE_LIST3_PTR;
+			4 => return WasmFuncIds.CREATE_LIST4_PTR;
+			5 => return WasmFuncIds.CREATE_LIST5_PTR;
+			6 => return WasmFuncIds.CREATE_LIST6_PTR;
+			7 => return WasmFuncIds.CREATE_LIST7_PTR;
+			8 => return WasmFuncIds.CREATE_LIST8_PTR;
+			9 => return WasmFuncIds.CREATE_LIST9_PTR;
+			_ => { System.error("compile error", "WasmShadowStackCompiler: bad list arity"); return 0; }
+		}
+	}
+	def matchCreateFuncFuncIdPtr(nonlocalCount: int) -> u32 {
+		match (nonlocalCount) {
+			0 => return WasmFuncIds.CREATE_FUNC0_PTR;
+			1 => return WasmFuncIds.CREATE_FUNC1_PTR;
+			2 => return WasmFuncIds.CREATE_FUNC2_PTR;
+			3 => return WasmFuncIds.CREATE_FUNC3_PTR;
+			4 => return WasmFuncIds.CREATE_FUNC4_PTR;
+			5 => return WasmFuncIds.CREATE_FUNC5_PTR;
+			6 => return WasmFuncIds.CREATE_FUNC6_PTR;
+			7 => return WasmFuncIds.CREATE_FUNC7_PTR;
+			8 => return WasmFuncIds.CREATE_FUNC8_PTR;
+			9 => return WasmFuncIds.CREATE_FUNC9_PTR;
+			_ => { System.error("compile error", "WasmShadowStackCompiler: bad nonlocal count"); return 0; }
+		}
+	}
+}

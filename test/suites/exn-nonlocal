@@ -1,0 +1,81 @@
+==
+; closure references a name that is never bound anywhere — treated as a
+; (currently-unbound) global. Constructing the closure is fine; invoking it
+; raises a catchable "unbound global variable" exception.
+(func (f) (lambda () x))
+(set g (f))
+(try { (g) "fail" } e "pass")
+--
+=> <func 'f'>
+=> <lambda>
+=> "pass"
+--
+; the exception value carries the variable name
+(func (f) (lambda () x))
+(try ((f)) e e)
+--
+=> <func 'f'>
+=> <exception 'unbound global variable: x'>
+--
+; merely constructing the closure must not raise
+(func (f) (lambda () unbound-name))
+(f)
+"after"
+--
+=> <func 'f'>
+=> <lambda>
+=> "after"
+--
+; conditionally-bound nonlocal: when the outer (set ...) ran, capture works;
+; when it didn't, invoking the closure raises "unbound local variable" since
+; the name was resolved as a nonlocal at compile time.
+(func (f n) {
+  (if n (set x 1) "skip")
+  (lambda () x)
+})
+((f true))
+(try ((f false)) e e)
+--
+=> <func 'f'>
+=> 1
+=> <exception 'unbound local variable: x'>
+--
+; among many captures, only the unbound one is reported
+(func (f n) {
+  (set a 1)
+  (if n (set b 2) "skip")
+  (set c 3)
+  (lambda () [a b c])
+})
+((f true))
+(try ((f false)) e e)
+--
+=> <func 'f'>
+=> [1, 2, 3]
+=> <exception 'unbound local variable: b'>
+--
+; the unbound nonlocal exception is catchable, and a subsequent well-formed
+; closure call still works (no lingering state)
+(func (f n) {
+  (if n (set x n) "skip")
+  (lambda () x)
+})
+(try ((f false)) e "caught")
+((f 42))
+--
+=> <func 'f'>
+=> "caught"
+=> 42
+--
+; many nonlocals, the missing one in the middle is reported by name
+(func (f) {
+  (set v01 1) (set v02 2) (set v03 3) (set v04 4) (set v05 5)
+  ; v06 intentionally not set
+  (set v07 7) (set v08 8) (set v09 9) (set v10 10)
+  (lambda () [v01 v02 v03 v04 v05 v06 v07 v08 v09 v10])
+})
+(try ((f)) e e)
+--
+=> <func 'f'>
+=> <exception 'unbound global variable: v06'>
+--

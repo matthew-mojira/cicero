@@ -1,0 +1,8 @@
+(func (f) (and 1 14))
+(f)
+(func (g) (and false 2))
+(g)
+(func (h) (or 14 true))
+(h)
+(func (i) (or () ()))
+(i)

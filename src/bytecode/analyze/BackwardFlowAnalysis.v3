@@ -1,0 +1,21 @@
+// Backward-Kildall sibling to ForwardFlowAnalysis: propagates a block's
+// live-out state to its predecessors (join over successors), rather than a
+// block's state to its successors (join over predecessors). Used by
+// ShadowStackLiveness, which needs "is this local read again on some path
+// after this point" - a live-out/live-in question, not a reaches-forward one.
+class BackwardFlowAnalysis<S> extends DataflowAnalysis<S> {
+	def bottomState(cfg: CFGraph) -> S;
+	def joinStates(state1: S, state2: S) -> S;
+
+	// Given a block and its live-out state, computes its live-in state.
+	def backwardFlow(bb: BasicBlock, outputState: S) -> S;
+
+	def runAnalysis(cfg: CFGraph) -> HashMap<BasicBlock, S> {
+		return runKildall(cfg, cfg.exitNodes(), bottomState(cfg), initialState(cfg),
+			backwardFlow, predecessorsOf, joinStates, stateEquals);
+	}
+
+	def stateEquals(state1: S, state2: S) -> bool;
+}
+
+def predecessorsOf(bb: BasicBlock) -> Array<BasicBlock> => bb.predecessors.toArray();

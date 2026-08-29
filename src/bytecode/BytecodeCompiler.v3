@@ -52,6 +52,9 @@ class BytecodeCompiler {
 				funcholes.extract(),
 				exceptions.extract(),
 				source.extract());
+		if (CiceroOptions.optimizeBytecode) {
+			b.optimize();
+		}
 		return b;
 	}
 

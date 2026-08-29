@@ -1,0 +1,10 @@
+(class X
+       (field value "wrong"))
+
+(func (f) {
+	(set obj (new X))
+	(set-field value obj 11)
+	obj.value
+})
+
+(f)

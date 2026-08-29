@@ -6,6 +6,7 @@ type Code {
 	case Virgil(fn: Range<Object> -> Result);
 	case AST(ast: AST);
 	case Bytecode(bytecode: Bytecode);
+	case Wasm(wasm: WasmBytecode);
 }
 
 /* Wraps around a pieces of Code. However, it also contains logic to compile
@@ -21,29 +22,37 @@ class CodeObject(range: FileRange) extends Object { // XXX range is null if code
 		match (code) {
 			Virgil   => System.error("compile error", "attempting to compile Virgil code to bytecode");
 			Bytecode => System.error("compile error", "compiling what has already been compiled to bytecode");
-			AST(ast) => {
-				var startTime: int;
+			Wasm     => System.error("compile error", "compiling what has already been compiled to wasm");
+			AST(ast) => match (CLOptions.TIER.get()) {
+				1 => {
+					var startTime: int;
 
-				if (CiceroOptions.profileCompilationTimes) {
-					startTime = System.ticksUs();
-				}
+					if (CiceroOptions.profileCompilationTimes) {
+						startTime = System.ticksUs();
+					}
 
-				def bytecode = BytecodeCompiler.new(ast, params, isTopLevel, isInit).extract();
-				if (CiceroOptions.optimizeBytecode) {
-					bytecode.optimize();
-				}
+					def bytecode = BytecodeCompiler.new(ast, params, isTopLevel, isInit).extract(); // already optimized internally
 
-				if (CiceroOptions.profileCompilationTimes) {
-					def endTime = System.ticksUs();
-					ProfileCompilationTimes.profile(bytecode.id, label, endTime - startTime);
-				}
+					if (CiceroOptions.profileCompilationTimes) {
+						def endTime = System.ticksUs();
+						ProfileCompilationTimes.profile(bytecode.id, label, endTime - startTime);
+					}
 
-				if (CiceroOptions.testBeyondRelooper) {
-					def br = BeyondRelooper.new(CFGraph.new(bytecode));
-					br.structuredControl();
-					br.display();
+					if (CiceroOptions.testBeyondRelooper) {
+						def br = BeyondRelooper.new(CFGraph.new(bytecode, false));
+						br.structuredControl();
+						br.display();
+					}
+					code = Code.Bytecode(bytecode);
 				}
-				code = Code.Bytecode(bytecode);
+				2 => {
+					var wc: WasmCompiler;
+					if (CiceroOptions.useShadowStack) wc = WasmShadowStackCompiler.new(ast, params, label);
+					else if (CiceroOptions.compileFromTier1) wc = WasmBytecodeCompiler.new(ast, params, label);
+					else wc = WasmASTCompiler.new(ast, params, label);
+					code = Code.Wasm(wc.compile());
+				}
+				_ => System.error("compile error", "attempting to compile on interpreter tier");
 			}
 		}
 	}

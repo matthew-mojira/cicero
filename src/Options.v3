@@ -1,17 +1,26 @@
 /* Compile-time specific options */
 component CiceroOptions {
-	def sanityChecks = false;
+	def sanityChecks = true;
+	
+	/* tiering/evaluation options */
+	def enableIC: bool = false; // XXX always disabled
 
 	/* compile-baked optimizations */
 	def useLazyMethods: bool = true;
 	def optimizeBytecode: bool = true;
 	def useOptimizedGlobals: bool = true;
-	def useExceptionTables: bool = true;
+	def useExceptionTables: bool = false; // Wasm compilers need TRY/CATCH opcodes, not exnTable
+
+	/* wasm backend */
+	def compileFromTier1 = false; // true: bytecode-derived compile path; false: AST-direct
+	def useRefcounting = true;    // reference-count WasmRuntime.objects handles
+	def useShadowStack = true;   // true: WasmShadowStackCompiler - raw pointers + a Virgil shadow stack instead of WasmRuntime.objects indices. Requires compileFromTier1-style bytecode derivation (bytecode-only, no AST-direct equivalent).
 
 	/* tracing */
 	def traceFunctionCalls = false;
 	def traceBytecodeCompilation = false;
 	def traceBytecodeEvaluation = false;
+	def traceWasmCompilation = false;
 
 	/* testing */
 	def testBeyondRelooper = false;

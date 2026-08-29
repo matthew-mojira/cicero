@@ -1,0 +1,7 @@
+// Non-Wasm targets link against this instead of src/wasm/WasmRuntime.v3; only
+// needs to cover what $ENGINE actually references by name.
+component WasmRuntime {
+	var currentLabel: string;
+
+	def evalTopLevel(code: CodeObject) -> Result;
+}

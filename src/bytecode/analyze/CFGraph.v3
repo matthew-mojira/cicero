@@ -1,9 +1,12 @@
 // I don't believe it's possible to construct syntactically unreachable code,
 // but removing it would be an optimization this implicitly performs.
 
-def ignoreExceptions = false;
-
-class CFGraph(bytecode: Bytecode) {
+// When ignoreExceptions is true, the CFG omits exception edges entirely: fallible
+// opcodes do not split blocks or branch to the exception sentinel, and TRY/CATCH
+// stop tracking handlers. The Wasm tier uses this so the relooper only ever
+// structures normal, reducible control flow; exceptions are handled inline as
+// guards that br to an enclosing handler block (see WasmCompiler).
+class CFGraph(bytecode: Bytecode, ignoreExceptions: bool) {
 	def var head:    BasicBlock;
 	def var returnSentinel:    BasicBlock; // null bytes; target of implicit (fallthrough) return
 	def var exceptionSentinel: BasicBlock; // null bytes; target of an exception with no active handler
@@ -38,6 +41,13 @@ class CFGraph(bytecode: Bytecode) {
 
 			if (opcode.jump) {
 				boundaries[pc + i24.view(operand)] = true;
+				boundaries[pc] = true;
+			}
+			if (opcode == Opcode.RETURN) {
+				// RETURN is terminal (no successors): end its block here so the
+				// relooper sees TerminalFlow and emits a return. Anything the
+				// bytecode emitted after it (e.g. an if's dead skip-JUMP) becomes a
+				// separate, unreachable block that the relooper never visits.
 				boundaries[pc] = true;
 			}
 			if (!ignoreExceptions && opcode.exception) {

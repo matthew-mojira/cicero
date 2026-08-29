@@ -1,0 +1,476 @@
+// Function-table indices for WasmRuntime host calls; a component (not bare top-level defs) so they resolve from the other wasm/*.v3 files.
+component WasmFuncIds {
+	def INCREF: u32        = u32.view(CiWasmTarget.functionId(WasmRuntime.incref));
+	def DECREF: u32        = u32.view(CiWasmTarget.functionId(WasmRuntime.decref));
+	def IS_NULL: u32       = u32.view(CiWasmTarget.functionId(WasmRuntime.isNull));
+	def IS_NOT_NULL: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.isNotNull));
+	def GET_GLOBAL: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobal));
+	def GET_GLOBAL_BY_INDEX: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobalByIndex));
+	def GET_NONLOCAL: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.getNonlocal));
+	def SET_GLOBAL: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.setGlobal));
+	def SET_GLOBAL_BY_INDEX: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.setGlobalByIndex));
+	def IS_TRUE: u32       = u32.view(CiWasmTarget.functionId(WasmRuntime.isTrue));
+	def IS_FALSE: u32      = u32.view(CiWasmTarget.functionId(WasmRuntime.isFalse));
+	def IS_FUNC: u32       = u32.view(CiWasmTarget.functionId(WasmRuntime.isFunc));
+	def IS_CLASS: u32      = u32.view(CiWasmTarget.functionId(WasmRuntime.isClass));
+	def IS_STRING: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.isString));
+
+	def RAISE_TYPE: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseTypeException));
+	def RAISE_STRING: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseString));
+	def RAISE_FIELD: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseMissingField));
+	def RAISE_MSG: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseMsg));
+
+	def CALL_FUNC0: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc0));
+	def CALL_FUNC1: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc1));
+	def CALL_FUNC2: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc2));
+	def CALL_FUNC3: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc3));
+	def CALL_FUNC4: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc4));
+	def CALL_FUNC5: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc5));
+	def CALL_FUNC6: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc6));
+	def CALL_FUNC7: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc7));
+	def CALL_FUNC8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc8));
+	def CALL_FUNC9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc9));
+	def PUSH_ARG:   u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.pushArg));
+	def POP_ARG:    u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.popArg));
+	def CALL_FUNC_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRest));
+	// Bytecode-tier variants: extras arrive in xargs reversed (operands are all on the
+	// Wasm stack and PUSH_ARG'd rightmost-first), so these pop xargs forward. See WasmRuntime.
+	def CALL_FUNC_REST_REV:   u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRestRev));
+	def CREATE_FUNC_REST_REV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFuncRestRev));
+	def CREATE_LIST_REST_REV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRestRev));
+
+	def GET_RESULT: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getResult));
+	def SET_RESULT: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.setResult));
+
+	def CREATE_FUNC0: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc0));
+	def CREATE_FUNC1: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc1));
+	def CREATE_FUNC2: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc2));
+	def CREATE_FUNC3: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc3));
+	def CREATE_FUNC4: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc4));
+	def CREATE_FUNC5: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc5));
+	def CREATE_FUNC6: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc6));
+	def CREATE_FUNC7: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc7));
+	def CREATE_FUNC8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc8));
+	def CREATE_FUNC9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc9));
+	def CREATE_FUNC_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFuncRest));
+
+	def GET_FIELD: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.getField));
+	def SET_FIELD: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.setField));
+
+	def CREATE_CLASS:  u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createClass));
+	def CREATE_OBJECT: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createObject));
+
+	def CREATE_LIST0: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList0));
+	def CREATE_LIST1: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList1));
+	def CREATE_LIST2: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList2));
+	def CREATE_LIST3: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList3));
+	def CREATE_LIST4: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList4));
+	def CREATE_LIST5: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList5));
+	def CREATE_LIST6: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList6));
+	def CREATE_LIST7: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList7));
+	def CREATE_LIST8: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8));
+	def CREATE_LIST9: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9));
+	def CREATE_LIST_REST: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRest));
+
+	// CiceroOptions.useShadowStack (WasmShadowStackCompiler): raw Virgil object
+	// pointers instead of WasmRuntime.objects indices, no refcounting.
+	def SHADOW_ALLOC: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.shadowStackAlloc));
+	def SHADOW_FREE:  u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.shadowStackFree));
+	def SHADOW_SAVE:  u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.shadowStackSave));
+	def SHADOW_LOAD:  u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.shadowStackLoad));
+
+	def GET_CONST_PTR: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.getConstPtr));
+	def PUSH_ARG_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.pushArgPtr));
+	def POP_ARG_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.popArgPtr));
+	def FORCE_GC_TEST: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.forceGCForTest)); // XXX temporary, spike-only
+	def IS_NULL_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.isNullPtr));
+	def IS_NOT_NULL_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.isNotNullPtr));
+	def IS_TRUE_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.isTruePtr));
+	def IS_FALSE_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.isFalsePtr));
+	def IS_FUNC_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.isFuncPtr));
+	def IS_CLASS_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.isClassPtr));
+	def IS_STRING_PTR: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.isStringPtr));
+
+	def GET_GLOBAL_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobalPtr));
+	def GET_GLOBAL_BY_INDEX_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getGlobalByIndexPtr));
+	def GET_NONLOCAL_PTR: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.getNonlocalPtr));
+	def SET_GLOBAL_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.setGlobalPtr));
+	def SET_GLOBAL_BY_INDEX_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.setGlobalByIndexPtr));
+
+	def RAISE_TYPE_PTR: u32   = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseTypeExceptionPtr));
+	def RAISE_STRING_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseStringPtr));
+	def RAISE_FIELD_PTR: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseMissingFieldPtr));
+	def RAISE_MSG_PTR: u32    = u32.view(CiWasmTarget.functionId(WasmRuntime.raiseMsgPtr));
+
+	def CALL_FUNC0_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc0Ptr));
+	def CALL_FUNC1_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc1Ptr));
+	def CALL_FUNC2_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc2Ptr));
+	def CALL_FUNC3_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc3Ptr));
+	def CALL_FUNC4_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc4Ptr));
+	def CALL_FUNC5_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc5Ptr));
+	def CALL_FUNC6_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc6Ptr));
+	def CALL_FUNC7_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc7Ptr));
+	def CALL_FUNC8_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc8Ptr));
+	def CALL_FUNC9_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc9Ptr));
+	def CALL_FUNC_REST_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRestPtr));
+	def CALL_FUNC_REST_REV_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRestRevPtr));
+
+	def CREATE_FUNC0_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc0Ptr));
+	def CREATE_FUNC1_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc1Ptr));
+	def CREATE_FUNC2_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc2Ptr));
+	def CREATE_FUNC3_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc3Ptr));
+	def CREATE_FUNC4_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc4Ptr));
+	def CREATE_FUNC5_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc5Ptr));
+	def CREATE_FUNC6_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc6Ptr));
+	def CREATE_FUNC7_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc7Ptr));
+	def CREATE_FUNC8_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc8Ptr));
+	def CREATE_FUNC9_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFunc9Ptr));
+	def CREATE_FUNC_REST_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.createFuncRestPtr));
+	def CREATE_FUNC_REST_REV_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createFuncRestRevPtr));
+
+	def GET_FIELD_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.getFieldPtr));
+	def SET_FIELD_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.setFieldPtr));
+
+	def CREATE_CLASS_PTR: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.createClassPtr));
+	def CREATE_OBJECT_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createObjectPtr));
+
+	def CREATE_LIST0_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList0Ptr));
+	def CREATE_LIST1_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList1Ptr));
+	def CREATE_LIST2_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList2Ptr));
+	def CREATE_LIST3_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList3Ptr));
+	def CREATE_LIST4_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList4Ptr));
+	def CREATE_LIST5_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList5Ptr));
+	def CREATE_LIST6_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList6Ptr));
+	def CREATE_LIST7_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList7Ptr));
+	def CREATE_LIST8_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList8Ptr));
+	def CREATE_LIST9_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList9Ptr));
+	def CREATE_LIST_REST_PTR: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRestPtr));
+	def CREATE_LIST_REST_REV_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createListRestRevPtr));
+}
+
+// Shared emitters/pools/assembly for WasmBytecodeCompiler and WasmASTCompiler; not instantiated directly.
+class WasmCompiler {
+	// TODO need extra information about parameters and locals
+	// TODO get better wasm code generator (use Aeneas?)
+	def wasm: DataWriter = DataWriter.new();
+	def params: Array<string>;
+	def label: string;
+	var scratch0: u32;
+	var scratch1: u32;
+	var refScratch: u32; // dedicated to emitIncref/emitDecref*'s own dup; never shared with scratch0/scratch1
+
+	/* private = don't create this class explicitly */
+	private new(params, label) { }
+
+	// from BytecodeCompiler
+	def locals:    Vector<string> = Vector.new();
+	def nonlocals: Vector<string> = Vector.new();
+	def consts: Vector<Object> = Vector.new();
+	def strings: Vector<string> = Vector.new();
+	def classholes: Vector<ClassObject -> ClassObject> = Vector.new();
+	def funcholes:  Vector<ASTData.Func> = Vector.new();
+
+	def handlerStack: Stack<int> = ArrayStack.new();
+	var blockDepth = 0;
+
+	def compile() -> WasmBytecode {
+		/* TODO We will have to figure out all the locals that will be in the function.
+		 * Some of them are locals because they are parameters. Like the BytecodeCompiler
+		 * there should be an argument for these locals, which end up getting handled in
+		 * the same way as Wasm arguments (they become the first locals).
+		 *
+		 * From running the compile process `locals` will have the full set of locals
+		 * and the map from indices to names. However, this also includes the parameters,
+		 * so we will have to take a slice after the parameters, so we only have bona-fide
+		 * locals to work with.
+		 *
+		 * Those bona-fide locals will be emitted as part of the code's locals declaration.
+		 */
+		def wasm = wasm.extract();
+
+		if (CiceroOptions.traceWasmCompilation) {
+			System.puts(Strings.format1("--- raw bytes (%d) ---\n", wasm.length));
+			def sb = StringBuilder.new();
+			for (i < wasm.length) {
+				sb.putx(int.!(wasm[i]));
+				sb.putc(' ');
+				if ((i & 15) == 15) sb.ln();
+			}
+			sb.ln();
+			System.puts(sb.extract());
+			System.puts("---\n");
+		}
+
+		var sig: int;
+		match (params.length) {
+			0 => sig = CiWasmTarget.functionTypeId<int, bool>();
+			1 => sig = CiWasmTarget.functionTypeId<(int, int), bool>();
+			2 => sig = CiWasmTarget.functionTypeId<(int, int, int), bool>();
+			3 => sig = CiWasmTarget.functionTypeId<(int, int, int, int), bool>();
+			4 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int), bool>();
+			5 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int), bool>();
+			6 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int), bool>();
+			7 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int), bool>();
+			8 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int, int), bool>();
+			9 => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int, int, int), bool>();
+			_ => sig = CiWasmTarget.functionTypeId<(int, int, int, int, int, int, int, int, int, int), bool>();
+		}
+		def fid  = wave.new_func(sig, Pointer.atContents(wasm), wasm.length);
+		if (fid < 0) {
+			System.puts("failed validation, terminating\n");
+			System.error("failed validation", "generated function failed validation");
+		}
+		var func: WasmFunction;
+		match (params.length) {
+			0 => func = WasmFunction.Func0(CiRuntime.forgeClosure<void, void, bool>(Pointer.NULL + fid, void));
+			1 => func = WasmFunction.Func1(CiRuntime.forgeClosure<void, int, bool>(Pointer.NULL + fid, void));
+			2 => func = WasmFunction.Func2(CiRuntime.forgeClosure<void, (int, int), bool>(Pointer.NULL + fid, void));
+			3 => func = WasmFunction.Func3(CiRuntime.forgeClosure<void, (int, int, int), bool>(Pointer.NULL + fid, void));
+			4 => func = WasmFunction.Func4(CiRuntime.forgeClosure<void, (int, int, int, int), bool>(Pointer.NULL + fid, void));
+			5 => func = WasmFunction.Func5(CiRuntime.forgeClosure<void, (int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			6 => func = WasmFunction.Func6(CiRuntime.forgeClosure<void, (int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			7 => func = WasmFunction.Func7(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			8 => func = WasmFunction.Func8(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			9 => func = WasmFunction.Func9(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+			_ => func = WasmFunction.FuncN(CiRuntime.forgeClosure<void, (int, int, int, int, int, int, int, int, int), bool>(Pointer.NULL + fid, void));
+		}
+		return WasmBytecode.new(
+				func,
+				locals.extract(),
+				nonlocals.extract(),
+				strings.extract(),
+				consts.extract(),
+				classholes.extract(),
+				funcholes.extract(),
+				label
+				);
+	}
+
+	def emitPushConst(val: Object) {
+		wasm.putb(WasmOp.I32_CONST.opcode);
+		wasm.put_sleb32(addConst(val));
+	}
+
+	def emitPushString(str: string) {
+		wasm.putb(WasmOp.I32_CONST.opcode);
+		wasm.put_sleb32(addString(str));
+	}
+
+	// assert field present in object. Callers stash the object handle in scratch1
+	// before calling this (for the error-message path); this owns that stash's
+	// release on the success path, and its own internal peek/predicate debt.
+	def emitAssertField(field: string) {
+		wasmDup();
+		emitIncref();
+		emitCall(WasmFuncIds.IS_NULL);
+		withIfElse<int, int>(fun {
+			// missing field: orig is always index 0 here (WasmFuncIds.GET_FIELD/WasmFuncIds.SET_FIELD's
+			// null sentinel), so its decref is always a no-op either way - leave
+			// the bare DROP rather than substitute emitDecref for it.
+			emitDecrefPeek();
+			wasm.putb(WasmOp.DROP.opcode);
+			wasm.putb(WasmOp.GET_LOCAL.opcode);
+			wasm.put_uleb32(scratch1);
+			emitIncref(); // new duplication of the stash; raiseMissingField decrefs it internally
+			emitPushString(field);
+			emitCall(WasmFuncIds.RAISE_FIELD);
+			emitJumpToExnHandler();
+		}, /* else */ fun {
+			// field present: orig forwarded as the result; pay the peek-debt, and
+			// release the now-unneeded scratch1 stash (nothing uses it again).
+			emitDecrefPeek();
+			if (CiceroOptions.useRefcounting) {
+				wasm.putb(WasmOp.GET_LOCAL.opcode);
+				wasm.put_uleb32(scratch1);
+				emitDecrefGap();
+			}
+		});
+	}
+
+	def emitRaiseIfNull(exn: string) {
+		wasmDup();
+		emitIncref();
+		emitCall(WasmFuncIds.IS_NULL);
+		withIfElse<int, int>(fun {
+			// null: orig is replaced by a fresh exn; pay the peek-debt, then dispose of orig.
+			emitDecrefPeek();
+			emitDecrefGap();
+			emitPushString(exn);
+			emitCall(WasmFuncIds.RAISE_MSG);
+			emitJumpToExnHandler();
+		}, /* else */ fun {
+			// not-null: orig is forwarded as the result; only the peek-debt is owed.
+			emitDecrefPeek();
+		});
+	}
+
+	def emitAssertType(isFunc: u32, expectedClass: Object) {
+		wasmDup();
+		emitIncref();
+		emitCall(isFunc);
+		withIfElse<int, int>(fun {
+			// right type: orig forwarded as the result; only the peek-debt is owed.
+			emitDecrefPeek();
+		}, /* else */ fun {
+			// wrong type: orig is passed to WasmFuncIds.RAISE_TYPE as the actual-type argument
+			// (raiseTypeException decrefs it internally) - only this predicate's
+			// own peek-debt needs paying here, orig itself must survive to be used.
+			emitDecrefPeek();
+			emitPushConst(expectedClass);
+			emitCall(WasmFuncIds.RAISE_TYPE);
+			emitJumpToExnHandler();
+		});
+	}
+
+	def emitInterpretResult() {
+		withIfElse<void, int>(fun {
+			emitCall(WasmFuncIds.GET_RESULT);
+			emitJumpToExnHandler();
+		}, /* else */ fun {
+			emitCall(WasmFuncIds.GET_RESULT);
+		});
+	}
+
+	def emitJumpToExnHandler() {
+		wasm.putb(WasmOp.BR.opcode);
+		wasm.put_sleb32(blockDepth - handlerStack.peek());
+	}
+
+	def emitCall(funcId: u32) {
+		wasm.putb(WasmOp.CALL.opcode);
+		wasm.put_uleb32(funcId);
+	}
+
+	// [idx] -> [idx]: peek. No-op when refcounting is off.
+	// Dup via refScratch, never scratch0/scratch1 - those are frequently live
+	// with values these helpers must not clobber (e.g. STORE_FIELD holds
+	// val_dupe in scratch0 while incref'ing obj in the same opcode).
+	def refDup() {
+		wasm.putb(WasmOp.TEE_LOCAL.opcode);
+		wasm.put_uleb32(refScratch);
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(refScratch);
+	}
+	def emitIncref() {
+		if (!CiceroOptions.useRefcounting) return;
+		refDup();
+		emitCall(WasmFuncIds.INCREF);
+	}
+	// [idx] -> []: replaces an existing DROP at a site that already dropped this
+	// value. WasmFuncIds.DECREF and DROP have identical stack effect, so this substitution is
+	// stack-neutral whether refcounting is on or off.
+	def emitDecref() {
+		if (CiceroOptions.useRefcounting) emitCall(WasmFuncIds.DECREF);
+		else wasm.putb(WasmOp.DROP.opcode);
+	}
+	// [idx] -> []: new decref at a site with no existing DROP (a "gap" fix). Only
+	// emits when refcounting is on, since nothing dropped this value before either.
+	def emitDecrefGap() {
+		if (CiceroOptions.useRefcounting) emitCall(WasmFuncIds.DECREF);
+	}
+	// [idx] -> [idx]: pay off a predicate's borrowed-copy debt without consuming
+	// the value (predicates like WasmFuncIds.IS_NULL/WasmFuncIds.IS_TRUE read a duped copy but don't
+	// decref it). No-op when refcounting is off.
+	def emitDecrefPeek() {
+		if (!CiceroOptions.useRefcounting) return;
+		refDup();
+		emitCall(WasmFuncIds.DECREF);
+	}
+
+	def wasmDup() {
+		wasm.putb(WasmOp.TEE_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);
+	}
+
+	def wasmSwap() {
+		wasm.putb(WasmOp.SET_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);
+		wasm.putb(WasmOp.SET_LOCAL.opcode);
+		wasm.put_uleb32(scratch1);
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(scratch0);
+		wasm.putb(WasmOp.GET_LOCAL.opcode);
+		wasm.put_uleb32(scratch1);
+	}
+
+	def withControl<I, O>(emit: void -> void, opcode: WasmOp) {
+		def blockSig = CiWasmTarget.functionTypeId<I, O>();
+		wasm.putb(opcode.opcode);
+		wasm.put_sleb32(blockSig);
+		blockDepth++;
+			emit();
+		wasm.putb(WasmOp.END.opcode);
+		blockDepth--;
+	}
+	def withIf<I, O>(emit: void -> void) {
+		withControl<I, O>(emit, WasmOp.IF);
+	}
+	def withIfElse<I, O>(emitTrue: void -> void, emitFalse: void -> void) {
+		withIf<I, O>(fun {
+			emitTrue();
+			wasm.putb(WasmOp.ELSE.opcode);
+			emitFalse();
+		});
+	}
+	def withIfFalse<I, O>(emitFalse: void -> void) {
+		withIfElse<I, O>(fun {}, emitFalse);
+	}
+	def withBlock<I, O>(emit: void -> void) {
+		withControl<I, O>(emit, WasmOp.BLOCK);
+	}
+	def withLoop<I, O>(emit: void -> void) {
+		withControl<I, O>(emit, WasmOp.LOOP);
+	}
+
+	// from BytecodeCompiler
+	def addLocal(id: string) -> u32 {
+		for (i < locals.length) {
+			if (Strings.equal(locals[i], id))
+				return u32.view(i);
+		}
+		def idx = locals.length;
+		locals.put(id);
+		return u32.view(idx);
+	}
+
+	def addConst(const: Object) -> int {
+		def idx = consts.length;
+		consts.put(const);
+		return idx;
+	}
+
+	def addString(str: string) -> int {
+		// check for existing string
+		for (i = 0; i < strings.length; i++) {
+			if (Strings.equal(strings[i], str))
+				return i;
+		}
+		def idx = strings.length;
+		strings.put(str);
+		return idx;
+	}
+
+	def addClasshole(clazz: ClassObject -> ClassObject) -> int {
+		def idx = classholes.length;
+		classholes.put(clazz);
+		return idx;
+	}
+
+	def addFunchole(func: ASTData.Func) -> int {
+		def idx = funcholes.length;
+		funcholes.put(func);
+		return idx;
+	}
+}
+
+def ptrAt(o: Object) -> i32 {
+	return Pointer.atObject(o) - Pointer.NULL;
+}
+def ptrAtBox<T>(b: Box<T>) -> i32 {
+	return Pointer.atObject(b) - Pointer.NULL;
+}
+def ptrAtStr(o: string) -> i32 {
+	return Pointer.atObject(o) - Pointer.NULL;
+}

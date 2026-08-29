@@ -1,0 +1,1142 @@
+/* The runtime is the target of Wasm-level indirections for the GC */
+def traceRuntime = true;
+
+component WasmRuntime {
+	/* these are not stacks; invokeWasm is responsible for restoring this
+	 * state around each call
+	 */
+	var nonlocals: Array<(string, Object)>;
+	var currentLabel: string;
+	var strings: Array<string>;
+	var funcholes: Array<ASTData.Func>;
+	var classholes: Array<ClassObject -> ClassObject>;
+	var objects: Vector<Object>;
+	var refcounts: Vector<int>;                        // parallel to objects
+	var freelist: ArrayStack<int> = ArrayStack.new();   // reusable objects[] indices
+	var constPoolLen: int;                              // objects[0 .. constPoolLen) exempt from refcounting
+	var constsPtr: Array<Object>;                       // shadow-stack mode: this frame's own const pool, for LOAD_CONST
+	var result: int;
+	var xargs: ArrayStack<int> = ArrayStack.new(); // ArrayStack so `.top` gives a depth mark for reentrant calls
+
+	def pushArg(idx: int) => xargs.push(idx);
+	def popArg() -> int => xargs.pop();
+
+	// Shadow-stack mode's equivalent of xargs: a plain ArrayStack<int> can't
+	// hold raw pointers safely (a relocating collection triggered by anything
+	// pushed/popped around it wouldn't know to update entries sitting in an
+	// int array), so this holds real, GC-scanned Objects instead - converted
+	// at the boundary (pushArgPtr/popArgPtr), mirroring every other *Ptr
+	// host function's "convert immediately, before anything can allocate"
+	// pattern.
+	var xargsObjs: ArrayStack<Object> = ArrayStack.new();
+
+	def pushArgPtr(ptr: int) => xargsObjs.push(ptrToObj(ptr));
+	def popArgPtr() -> int => objToPtr(xargsObjs.pop());
+
+	def incref(idx: int) {
+		if (idx == 0 || idx < constPoolLen) return;
+		refcounts[idx] = refcounts[idx] + 1;
+	}
+	def decref(idx: int) {
+		if (!CiceroOptions.useRefcounting) return;
+		if (idx == 0 || idx < constPoolLen) return;
+		if (CiceroOptions.sanityChecks && refcounts[idx] <= 0)
+			System.error("internal error", "WasmRuntime.decref underflow");
+		refcounts[idx] = refcounts[idx] - 1;
+		if (refcounts[idx] == 0) {
+			objects[idx] = null; // let Virgil's own GC reclaim it
+			freelist.push(idx);
+		}
+	}
+
+	/* assume null object = 0 in objects */
+
+	def isNull(idx: int) -> bool {
+		return objects[idx] == null; /* XXX should also be idx == 0 */
+	}
+	def isNotNull(idx: int) -> bool {
+		return objects[idx] != null;
+	}
+	def isTrue(idx: int)  -> bool => objects[idx].isTrue();
+	def isFalse(idx: int) -> bool => !objects[idx].isTrue();
+	def isFunc(idx: int)  -> bool => objects[idx].instanceOf(ClassObjects.classFunc);
+	def isClass(idx: int) -> bool => objects[idx].instanceOf(ClassObjects.classClass);
+	def isString(idx: int)-> bool => objects[idx].instanceOf(ClassObjects.classStr);
+
+	def getGlobal(idx: int) -> int {
+		def id = strings[idx];
+		def obj = Globals.loadGlobal(id).maybe(null, fun(p: (Object, int)) => p.0);
+		return alloc(obj);
+	}
+	def getGlobalByIndex(idx: int) -> int {
+		return alloc(Globals.loadGlobalByIndex(idx));
+	}
+
+	def getNonlocal(idx: int) -> int {
+		def id = strings[idx];
+		def obj = findNonlocal(id);
+		return alloc(obj);
+	}
+
+	def setGlobal(strIdx: int, objIdx: int) -> int {
+		def obj = objects[objIdx];
+		def id = strings[strIdx];
+		Globals.storeGlobal(id, obj);
+		return objIdx;
+	}
+	def setGlobalByIndex(idx: int, objIdx: int) -> int {
+		Globals.storeGlobalByIndex(idx, objects[objIdx]);
+		return objIdx;
+	}
+
+	def raiseTypeException(actIdx: int, expIdx: int) -> int {
+		def act = objects[actIdx];
+		def exp = objects[expIdx];
+		def msg = Exceptions.typeMismatch(ClassObject.!(exp), act);
+		def exn = ExnObjects.fromWasm(msg);
+		decref(actIdx);
+		decref(expIdx);
+		return alloc(exn);
+	}
+	def raiseString(strIdx: int) -> int {
+		def str = objects[strIdx];
+		def exn = ExnObjects.fromWasm(StrObject.!(str).str);
+		decref(strIdx);
+		return alloc(exn);
+	}
+	// For a static message (e.g. "unbound global"), constructed fresh here at
+	// raise time so fromWasm's ambient label reflects whoever actually raised
+	// it -- unlike a compile-time-baked ExnObject constant, which would freeze
+	// in whatever label happened to be ambient during compilation.
+	def raiseMsg(strIdx: int) -> int {
+		def exn = ExnObjects.fromWasm(strings[strIdx]);
+		return alloc(exn);
+	}
+	def raiseMissingField(objIdx: int, strIdx: int) -> int {
+		def obj = objects[objIdx];
+		def str = strings[strIdx];
+		def msg = Exceptions.missingField(obj, str);
+		def exn = ExnObjects.fromWasm(msg);
+		decref(objIdx);
+		return alloc(exn);
+	}
+
+	def pushFrame();
+	def popFrame();
+
+	/* Calls to other functions */
+	/* TODO make compiler inline these functions */
+	def callFunc0(func: int) => callFuncN(func, []);
+	def callFunc1(func: int, o0: int) => callFuncN(func, [o0]);
+	def callFunc2(func: int, o0: int, o1: int) => callFuncN(func, [o0, o1]);
+	def callFunc3(func: int, o0: int, o1: int, o2: int) => callFuncN(func, [o0, o1, o2]);
+	def callFunc4(func: int, o0: int, o1: int, o2: int, o3: int) => callFuncN(func, [o0, o1, o2, o3]);
+	def callFunc5(func: int, o0: int, o1: int, o2: int, o3: int, o4: int) => callFuncN(func, [o0, o1, o2, o3, o4]);
+	def callFunc6(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5]);
+	def callFunc7(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6]);
+	def callFunc8(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7]);
+	def callFunc9(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => callFuncN(func, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+	def callFuncRest(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> bool {
+		def args = Array<int>.new(9 + numRest);
+		args[0] = o0;
+		args[1] = o1;
+		args[2] = o2;
+		args[3] = o3;
+		args[4] = o4;
+		args[5] = o5;
+		args[6] = o6;
+		args[7] = o7;
+		args[8] = o8;
+		popRestReverse(args, numRest);
+		return callFuncN(func, args);
+	}
+
+	// Fill args[9 ..] from xargs for the bytecode (tier-1-derived) tier. Unlike the
+	// AST tier — which PUSH_ARGs each extra as it is produced, so xargs holds them
+	// left-to-right (pop in reverse) — the bytecode tier has every operand already
+	// on the Wasm stack and PUSH_ARGs the tail rightmost-first, so xargs holds the
+	// extras in reverse. Pop them forward to restore left-to-right order. The
+	// callFuncRestRev/createListRestRev/createFuncRestRev entries below mirror their
+	// non-Rev counterparts but drain xargs this way.
+	//
+	// baseDepth, not empty(): xargs is shared across reentrant calls (a >9-arg
+	// call can be nested in another's rest-args), so an outer call's items may
+	// still be under ours.
+	def popRestForward(args: Array<int>, numRest: int) {
+		def baseDepth = xargs.top - numRest;
+		for (i < numRest) {
+			if (CiceroOptions.sanityChecks && xargs.top <= baseDepth) {
+				System.puts("internal error: WasmRuntime.xargs underflowed this call's own arguments\n");
+				System.error("internal error", "WasmRuntime.xargs underflowed this call's own arguments");
+			}
+			args[9 + i] = xargs.pop();
+		}
+		if (CiceroOptions.sanityChecks && xargs.top != baseDepth) {
+			System.puts("internal error: WasmRuntime.xargs did not return to its pre-call depth\n");
+			System.error("internal error", "WasmRuntime.xargs did not return to its pre-call depth");
+		}
+	}
+
+	// Like popRestForward but pops in reverse, for the AST tier's callFuncRest/createFuncRest/createListRest.
+	def popRestReverse(args: Array<int>, numRest: int) {
+		def baseDepth = xargs.top - numRest;
+		for (i = numRest - 1; i >= 0; i--) {
+			if (CiceroOptions.sanityChecks && xargs.top <= baseDepth) {
+				System.puts("internal error: WasmRuntime.xargs underflowed this call's own arguments\n");
+				System.error("internal error", "WasmRuntime.xargs underflowed this call's own arguments");
+			}
+			args[9 + i] = xargs.pop();
+		}
+		if (CiceroOptions.sanityChecks && xargs.top != baseDepth) {
+			System.puts("internal error: WasmRuntime.xargs did not return to its pre-call depth\n");
+			System.error("internal error", "WasmRuntime.xargs did not return to its pre-call depth");
+		}
+	}
+
+	// xargsObjs equivalents of popRestForward/popRestReverse, for shadow-stack
+	// mode's callFuncRestPtr/createFuncRestPtr/createListRestPtr families.
+	def popRestForwardObjs(args: Array<Object>, numRest: int) {
+		def baseDepth = xargsObjs.top - numRest;
+		for (i < numRest) {
+			if (CiceroOptions.sanityChecks && xargsObjs.top <= baseDepth) {
+				System.puts("internal error: WasmRuntime.xargsObjs underflowed this call's own arguments\n");
+				System.error("internal error", "WasmRuntime.xargsObjs underflowed this call's own arguments");
+			}
+			args[9 + i] = xargsObjs.pop();
+		}
+		if (CiceroOptions.sanityChecks && xargsObjs.top != baseDepth) {
+			System.puts("internal error: WasmRuntime.xargsObjs did not return to its pre-call depth\n");
+			System.error("internal error", "WasmRuntime.xargsObjs did not return to its pre-call depth");
+		}
+	}
+	def popRestReverseObjs(args: Array<Object>, numRest: int) {
+		def baseDepth = xargsObjs.top - numRest;
+		for (i = numRest - 1; i >= 0; i--) {
+			if (CiceroOptions.sanityChecks && xargsObjs.top <= baseDepth) {
+				System.puts("internal error: WasmRuntime.xargsObjs underflowed this call's own arguments\n");
+				System.error("internal error", "WasmRuntime.xargsObjs underflowed this call's own arguments");
+			}
+			args[9 + i] = xargsObjs.pop();
+		}
+		if (CiceroOptions.sanityChecks && xargsObjs.top != baseDepth) {
+			System.puts("internal error: WasmRuntime.xargsObjs did not return to its pre-call depth\n");
+			System.error("internal error", "WasmRuntime.xargsObjs did not return to its pre-call depth");
+		}
+	}
+
+	def callFuncRestRev(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> bool {
+		def args = Array<int>.new(9 + numRest);
+		args[0] = o0; args[1] = o1; args[2] = o2; args[3] = o3; args[4] = o4;
+		args[5] = o5; args[6] = o6; args[7] = o7; args[8] = o8;
+		popRestForward(args, numRest);
+		return callFuncN(func, args);
+	}
+
+	def callFuncN(fvIdx: int, args: Array<int>) -> bool { /* returns if exception */
+		def fv = FuncObject.!(objects[fvIdx]);
+		def params = fv.params, code = fv.code;
+
+		// evaluate argument values
+		var argv: Array<(string, Object)>;
+
+		if (fv.instanceOf(ClassObjects.classMethod)) {
+			argv = Array.new(args.length + 1);
+			for (i < args.length) {
+				def arg = args[i];
+				if (i < params.length) // avoid out of bounds but don't raise exception
+					argv[i + 1] = (params[i], objects[arg]);
+			}
+			argv[0] = ("self", MethodObject.!(fv).obj);
+		} else {
+			argv = Array.new(args.length);
+			for (i < args.length) {
+				def arg = args[i];
+				if (i < params.length) // avoid out of bounds but don't raise exception
+					argv[i] = (params[i], objects[arg]);
+			}
+		}
+
+		decref(fvIdx);
+		for (i < args.length) decref(args[i]);
+
+		if (args.length != params.length) {
+			def obj = ExnObjects.fromWasm(Exceptions.arityMismatch(params.length, args.length));
+			result = alloc(obj);
+			return true;
+		}
+
+		match (invokeCode(code, argv, fv.nonlocals)) {
+			OK(v) => {
+				result = alloc(v);
+				return false;
+			}
+			Exn(e) => {
+				result = alloc(e);
+				return true;
+			}
+			_ => {
+				System.error("internal error", "evaluation of frame returned uncomputed");
+				return false;
+			}
+		}
+	}
+
+	// A Wasm-tier call target is always Wasm-compiled or a Virgil builtin.
+	def invokeCode(code: CodeObject, argv: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> Result {
+		var res: Result;
+		match (code.code) {
+			Virgil(fn) => res = fn(Arrays.map(argv, fun(p: (string, Object)) => p.1));
+			Wasm => res = invokeWasm(Code.Wasm.!(code.code).wasm, argv, nonlocals);
+			_ => {
+				System.error("internal error", "WasmRuntime.invokeCode: unsupported code tier");
+				res = Result.Uncomputed;
+			}
+		}
+		// record this frame as the exception unwinds through it, mirroring VM.rethrow
+		if (Result.Exn.?(res)) Result.Exn.!(res).exn.stacktrace.put((currentLabel, ExnObjects.wasmUnknownLoc));
+		return res;
+	}
+
+	def findNonlocal(id: string) -> Object { // FIXME don't use string
+		for (p in nonlocals) {
+			if (Strings.equal(p.0, id)) return p.1;
+		}
+		System.puts(Strings.format1("cannot find nonlocal %s\n", id));
+		System.error("internal error", "cannot find nonlocal");
+		return null;
+	}
+
+	// No frame object needed here: recursion already rides the native Virgil
+	// call stack (compiled Wasm code calls back into invokeCode via callFuncN).
+	def invokeWasm(wasm: WasmBytecode, args: Array<(string, Object)>, nonlocals: Array<(string, Object)>) -> Result {
+		def oldNonlocals    = WasmRuntime.nonlocals;
+		def oldLabel        = WasmRuntime.currentLabel;
+		def oldStrings      = WasmRuntime.strings;
+		def oldFuncholes    = WasmRuntime.funcholes;
+		def oldClassholes   = WasmRuntime.classholes;
+		def oldObjects      = WasmRuntime.objects;
+		def oldRefcounts    = WasmRuntime.refcounts;
+		def oldFreelist     = WasmRuntime.freelist;
+		def oldConstPoolLen = WasmRuntime.constPoolLen;
+		def oldConstsPtr    = WasmRuntime.constsPtr;
+		def oldResult       = WasmRuntime.result;
+
+		WasmRuntime.nonlocals    = nonlocals;
+		WasmRuntime.currentLabel = wasm.label;
+		WasmRuntime.strings      = wasm.stringPool;
+		WasmRuntime.funcholes    = wasm.funcPool;
+		WasmRuntime.classholes   = wasm.classPool;
+		// Shadow-stack mode never touches WasmRuntime.objects/refcounts/freelist
+		// (it passes raw pointers, not objects-vector indices) - skip allocating
+		// them on every single call in that mode; only constsPtr is needed.
+		if (!CiceroOptions.useShadowStack) {
+			WasmRuntime.objects   = Vectors.ofN(wasm.constPool);
+			WasmRuntime.refcounts = Vectors.ofN(Array<int>.new(wasm.constPool.length));
+			WasmRuntime.freelist  = ArrayStack.new();
+		}
+		WasmRuntime.constPoolLen = wasm.constPool.length;
+		WasmRuntime.constsPtr    = wasm.constPool; // shadow-stack mode only; harmless to set otherwise
+		WasmRuntime.result       = 0;
+
+		// Shadow-stack mode passes raw pointers (WasmRuntime.objToPtr), not
+		// WasmRuntime.objects indices - CiceroOptions.useShadowStack is a
+		// compile-time constant, so only one side of each `if` here actually
+		// ships in a given build.
+		var arg0: int = if(args.length > 0, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[0].1), WasmRuntime.alloc(args[0].1)));
+		var arg1: int = if(args.length > 1, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[1].1), WasmRuntime.alloc(args[1].1)));
+		var arg2: int = if(args.length > 2, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[2].1), WasmRuntime.alloc(args[2].1)));
+		var arg3: int = if(args.length > 3, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[3].1), WasmRuntime.alloc(args[3].1)));
+		var arg4: int = if(args.length > 4, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[4].1), WasmRuntime.alloc(args[4].1)));
+		var arg5: int = if(args.length > 5, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[5].1), WasmRuntime.alloc(args[5].1)));
+		var arg6: int = if(args.length > 6, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[6].1), WasmRuntime.alloc(args[6].1)));
+		var arg7: int = if(args.length > 7, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[7].1), WasmRuntime.alloc(args[7].1)));
+		var arg8: int = if(args.length > 8, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[8].1), WasmRuntime.alloc(args[8].1)));
+		var arg9: int = if(args.length > 9, if(CiceroOptions.useShadowStack, WasmRuntime.objToPtr(args[9].1), WasmRuntime.alloc(args[9].1)));
+
+		var exn: bool;
+		match (wasm.f) {
+			Func0(f) => exn = f();
+			Func1(f) => exn = f(arg0);
+			Func2(f) => exn = f(arg0, arg1);
+			Func3(f) => exn = f(arg0, arg1, arg2);
+			Func4(f) => exn = f(arg0, arg1, arg2, arg3);
+			Func5(f) => exn = f(arg0, arg1, arg2, arg3, arg4);
+			Func6(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5);
+			Func7(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+			Func8(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+			Func9(f) => exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+			FuncN(f) => {
+				// >9-param entry point. Shadow-stack mode uses xargsObjs (real,
+				// GC-scanned Objects - args[9+i].1 is already one, no raw-pointer
+				// round-trip needed) instead of xargs (a plain ArrayStack<int>,
+				// unsafe for raw pointers - see xargsObjs's own doc comment).
+				// baseDepth, not empty(): an outer call's pending rest-args may be under ours.
+				if (CiceroOptions.useShadowStack) {
+					def baseDepth = WasmRuntime.xargsObjs.top;
+					def numRest = args.length - 9;
+					for (i < numRest)
+						WasmRuntime.xargsObjs.push(args[9 + i].1);
+					exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+					if (CiceroOptions.sanityChecks && WasmRuntime.xargsObjs.top != baseDepth) {
+						System.puts("internal error: WasmRuntime.xargsObjs did not return to its pre-call depth\n");
+						System.error("internal error", "WasmRuntime.xargsObjs did not return to its pre-call depth");
+					}
+				} else {
+					def baseDepth = WasmRuntime.xargs.top;
+					def numRest = args.length - 9;
+					for (i < numRest)
+						WasmRuntime.xargs.push(WasmRuntime.alloc(args[9 + i].1));
+					exn = f(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+					if (CiceroOptions.sanityChecks && WasmRuntime.xargs.top != baseDepth) {
+						System.puts("internal error: WasmRuntime.xargs did not return to its pre-call depth\n");
+						System.error("internal error", "WasmRuntime.xargs did not return to its pre-call depth");
+					}
+				}
+			}
+		}
+		def resultObj = if(CiceroOptions.useShadowStack, WasmRuntime.ptrToObj(WasmRuntime.result), WasmRuntime.objects[WasmRuntime.result]);
+		var res: Result;
+		if (exn) {
+			res = Result.Exn(ExnObject.!(resultObj));
+		} else {
+			res = Result.OK(resultObj);
+		}
+
+		WasmRuntime.nonlocals    = oldNonlocals;
+		WasmRuntime.currentLabel = oldLabel;
+		WasmRuntime.strings      = oldStrings;
+		WasmRuntime.funcholes    = oldFuncholes;
+		WasmRuntime.classholes   = oldClassholes;
+		WasmRuntime.objects      = oldObjects;
+		WasmRuntime.refcounts    = oldRefcounts;
+		WasmRuntime.freelist     = oldFreelist;
+		WasmRuntime.constPoolLen = oldConstPoolLen;
+		WasmRuntime.constsPtr    = oldConstsPtr;
+		WasmRuntime.result       = oldResult;
+
+		return res;
+	}
+
+	// Tier 2's top-level entry point, VM.eval()'s counterpart; no caller to
+	// restore ambient state to afterward.
+	def evalTopLevel(code: CodeObject) -> Result {
+		WasmRuntime.nonlocals = [];
+		WasmRuntime.result = 0;
+		def wasm = Code.Wasm.!(code.code).wasm;
+		WasmRuntime.currentLabel = wasm.label;
+		WasmRuntime.strings    = wasm.stringPool;
+		WasmRuntime.funcholes  = wasm.funcPool;
+		WasmRuntime.classholes = wasm.classPool;
+		if (!CiceroOptions.useShadowStack) {
+			WasmRuntime.objects    = Vectors.ofN(wasm.constPool);
+			WasmRuntime.refcounts  = Vectors.ofN(Array<int>.new(wasm.constPool.length));
+			WasmRuntime.freelist   = ArrayStack.new();
+		}
+		WasmRuntime.constPoolLen = wasm.constPool.length;
+		WasmRuntime.constsPtr  = wasm.constPool;
+		match (wasm.f) {
+			Func0(f) => {
+				def exn = f();
+				def resultObj = if(CiceroOptions.useShadowStack, WasmRuntime.ptrToObj(WasmRuntime.result), WasmRuntime.objects[WasmRuntime.result]);
+				if (exn) return Result.Exn(ExnObject.!(resultObj));
+				return Result.OK(resultObj);
+			}
+			_ => {
+				System.error("unimplemented", "WasmRuntime.evalTopLevel: FuncN (N != 0)");
+				return Result.Uncomputed;
+			}
+		}
+	}
+
+	def getResult() -> int => result;
+	def setResult(i: int) -> void => void(result = i);
+
+	def createFunc0(funchole: int) => createFuncN(funchole, []);
+	def createFunc1(funchole: int, o0: int) => createFuncN(funchole, [o0]);
+	def createFunc2(funchole: int, o0: int, o1: int) => createFuncN(funchole, [o0, o1]);
+	def createFunc3(funchole: int, o0: int, o1: int, o2: int) => createFuncN(funchole, [o0, o1, o2]);
+	def createFunc4(funchole: int, o0: int, o1: int, o2: int, o3: int) => createFuncN(funchole, [o0, o1, o2, o3]);
+	def createFunc5(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int) => createFuncN(funchole, [o0, o1, o2, o3, o4]);
+	def createFunc6(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5]);
+	def createFunc7(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6]);
+	def createFunc8(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6, o7]);
+	def createFunc9(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => createFuncN(funchole, [o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+	def createFuncRest(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
+		def args = Array<int>.new(9 + numRest);
+		args[0] = o0;
+		args[1] = o1;
+		args[2] = o2;
+		args[3] = o3;
+		args[4] = o4;
+		args[5] = o5;
+		args[6] = o6;
+		args[7] = o7;
+		args[8] = o8;
+		popRestReverse(args, numRest);
+		return createFuncN(funchole, args);
+	}
+
+	def createFuncRestRev(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
+		def args = Array<int>.new(9 + numRest);
+		args[0] = o0; args[1] = o1; args[2] = o2; args[3] = o3; args[4] = o4;
+		args[5] = o5; args[6] = o6; args[7] = o7; args[8] = o8;
+		popRestForward(args, numRest);
+		return createFuncN(funchole, args);
+	}
+
+	def createFuncN(funcholeIdx: int, nonlocalArgs: Array<int>) -> int {
+		def funchole = funcholes[funcholeIdx];
+		def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
+
+		var j = 0;
+		def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body, funchole.metadata);
+		for (i < funchole.nonlocals.length) {
+			// if the nonlocal is the function itself (for recursion)
+			if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
+				nonlocals[i] = (funchole.id, fn);
+			} else {
+				def nlIdx = nonlocalArgs[j++];
+				nonlocals[i] = (funchole.nonlocals[i], objects[nlIdx]);
+				decref(nlIdx);
+			}
+		}
+
+		return alloc(fn);
+	}
+
+	def getField(objIdx: int, strIdx: int) -> int {
+		def obj = objects[objIdx];
+		def str = strings[strIdx];
+		def field = obj.getField(str);
+		decref(objIdx);
+		return alloc(field);
+	}
+	def setField(objIdx: int, strIdx: int, valIdx: int) -> int {
+		def obj = objects[objIdx];
+		def str = strings[strIdx];
+		def val = objects[valIdx];
+		def r = if(obj.setField(str, val), valIdx, alloc(null));
+		decref(objIdx); // valIdx is a passthrough (returned unchanged on success), not decref'd here
+		return r;
+	}
+	def createClass(superIdx: int, classholeIdx: int) -> bool { /* returns if exception */
+		def o = objects[superIdx];
+		def classhole = classholes[classholeIdx];
+
+		if (!o.instanceOf(ClassObjects.classClass)) {
+			def exn = ExnObjects.fromWasm(Exceptions.typeMismatch(ClassObjects.classClass, o));
+			decref(superIdx);
+			result = alloc(exn);
+			return true;
+		}
+
+		def superclass = ClassObject.!(o);
+		decref(superIdx);
+		result = alloc(classhole(superclass));
+		return false;
+	}
+	// Shared class-walk/field-init/init-call core for createObject/
+	// createObjectPtr; returns (isExn, resultObj) - callers convert
+	// resultObj via alloc/objToPtr and assign `result` themselves.
+	def createObjectFromClass(clsObj: ClassObject) -> (bool, Object) {
+		def obj = Objects.newObject(clsObj);
+
+		def classes: Vector<ClassObject> = Vector.new();
+		for (cls = clsObj; cls != null; cls = cls.superclass)
+			classes.put(cls);
+
+		// initialization order is from base class downwards, which
+		// may involve reinitializing some fields
+		for (cls in classes.reverse().extract()) {
+			if (cls.init != null) {
+				def args: Array<(string, Object)> = [("self", obj)];
+				match (invokeCode(cls.init.code, args, [])) {
+					OK => ;
+					Exn(e) => return (true, e);
+					_ => System.error("internal error", "class init returned uncomputed");
+				}
+			}
+		}
+		return (false, obj);
+	}
+	def createObject(clsIdx: int) -> bool { /* returns if exception */
+		def clsObj = ClassObject.!(objects[clsIdx]); // already asserted previously
+		decref(clsIdx);
+		def r = createObjectFromClass(clsObj);
+		result = alloc(r.1);
+		return r.0;
+	}
+
+	/* lists */
+	def createListN(elems: Array<int>) -> int {
+		def r = alloc(ListObjects.fromArray(Arrays.map(elems, objects.[])));
+		for (e in elems) decref(e);
+		return r;
+	}
+	def createList0()  => createListN([]);
+	def createList1(o0: int) => createListN([o0]);
+	def createList2(o0: int, o1: int) => createListN([o0, o1]);
+	def createList3(o0: int, o1: int, o2: int) => createListN([o0, o1, o2]);
+	def createList4(o0: int, o1: int, o2: int, o3: int) => createListN([o0, o1, o2, o3]);
+	def createList5(o0: int, o1: int, o2: int, o3: int, o4: int) => createListN([o0, o1, o2, o3, o4]);
+	def createList6(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) => createListN([o0, o1, o2, o3, o4, o5]);
+	def createList7(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) => createListN([o0, o1, o2, o3, o4, o5, o6]);
+	def createList8(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) => createListN([o0, o1, o2, o3, o4, o5, o6, o7]);
+	def createList9(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) => createListN([o0, o1, o2, o3, o4, o5, o6, o7, o8]);
+	def createListRest(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
+		def args = Array<int>.new(9 + numRest);
+		args[0] = o0;
+		args[1] = o1;
+		args[2] = o2;
+		args[3] = o3;
+		args[4] = o4;
+		args[5] = o5;
+		args[6] = o6;
+		args[7] = o7;
+		args[8] = o8;
+		popRestReverse(args, numRest);
+		return createListN(args);
+	}
+
+	def createListRestRev(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
+		def args = Array<int>.new(9 + numRest);
+		args[0] = o0; args[1] = o1; args[2] = o2; args[3] = o3; args[4] = o4;
+		args[5] = o5; args[6] = o6; args[7] = o7; args[8] = o8;
+		popRestForward(args, numRest);
+		return createListN(args);
+	}
+
+	/* ====================================================================
+	 * Shadow-stack mode (CiceroOptions.useShadowStack): raw Virgil object
+	 * pointers instead of WasmRuntime.objects indices. No refcounting -
+	 * liveness is handled by WasmShadowStackCompiler saving/restoring
+	 * live pointers into the shadow stack around any call in this section.
+	 * ==================================================================== */
+
+	// Scratch memory for the int -> Object reinterpret cast below. A raw int
+	// parameter has no addressable backing (Pointer.atField needs an actual
+	// field/array-element reference), so it must be written into real memory
+	// before it can be reinterpreted as a reference. Safe under reentrancy:
+	// each call writes and immediately reads before returning, never spanning
+	// another call.
+	var ptrScratch: Array<int> = Array<int>.new(1);
+
+	def objToPtr(obj: Object) -> int {
+		if (obj == null) return 0;
+		return int.view(Pointer.atObject(obj) - Pointer.NULL);
+	}
+	def ptrToObj(ptr: int) -> Object {
+		if (ptr == 0) return null;
+		ptrScratch[0] = ptr;
+		return Pointer.atContents(ptrScratch).load<Object>();
+	}
+
+	// LOAD_CONST can't bake a raw pointer directly into the Wasm bytecode as an
+	// i32.const immediate - Wasm code is immutable, so a relocating collection
+	// would leave it stale with no way to fix it up. constsPtr (an ordinary,
+	// already-Virgil-traced Array<Object> owned by this frame's WasmBytecode) is
+	// the same kind of stable indirection as the index-mode objects[] vector;
+	// this just does the equivalent lookup-by-index, freshly, on every access.
+	def getConstPtr(idx: int) -> int {
+		return objToPtr(constsPtr[idx]);
+	}
+
+	// Reserves {numSlots} shadow-stack slots and returns the frame's base
+	// address (as a raw int, like everything else here). Mirrors
+	// ShadowStackSpiller's alloc: read SHADOW_STACK_CUR_PTR, bump it by
+	// numSlots*addressSize, return the old value.
+	def shadowStackAlloc(numSlots: int) -> int {
+		def base = CiRuntime.SHADOW_STACK_CUR_PTR.load<Pointer>();
+		CiRuntime.SHADOW_STACK_CUR_PTR.store<Pointer>(base + numSlots * int.view(Pointer.SIZE));
+		return int.view(base - Pointer.NULL);
+	}
+	// Pops the frame by restoring SHADOW_STACK_CUR_PTR to {base}.
+	def shadowStackFree(base: int) {
+		CiRuntime.SHADOW_STACK_CUR_PTR.store<Pointer>(Pointer.NULL + base);
+	}
+	def shadowStackSave(base: int, slot: int, ptr: int) {
+		(Pointer.NULL + base + slot * int.view(Pointer.SIZE)).store<Pointer>(Pointer.NULL + ptr);
+	}
+	// Reloads a saved slot - must be re-read (not assumed unchanged) after any
+	// call that could have triggered a relocating collection.
+	def shadowStackLoad(base: int, slot: int) -> int {
+		def p = (Pointer.NULL + base + slot * int.view(Pointer.SIZE)).load<Pointer>();
+		return int.view(p - Pointer.NULL);
+	}
+
+	// XXX temporary, spike-only: lets JIT-compiled test code force a
+	// (relocating) collection, to validate the construct-boundary shadow
+	// protocol against a real GC. Remove once that's confirmed.
+	def forceGCForTest() {
+		RiGc.forceGC();
+		RiGc.forceGC();
+	}
+
+	// Predicates. isNullPtr/isNotNullPtr are pure int comparisons - callable
+	// directly as host functions for consistency with the rest of this family,
+	// but WasmShadowStackCompiler may inline them as a bare i32 compare instead.
+	def isNullPtr(ptr: int)    -> bool => ptr == 0;
+	def isNotNullPtr(ptr: int) -> bool => ptr != 0;
+	def isTruePtr(ptr: int)    -> bool => ptrToObj(ptr).isTrue();
+	def isFalsePtr(ptr: int)   -> bool => !ptrToObj(ptr).isTrue();
+	def isFuncPtr(ptr: int)    -> bool => ptrToObj(ptr).instanceOf(ClassObjects.classFunc);
+	def isClassPtr(ptr: int)   -> bool => ptrToObj(ptr).instanceOf(ClassObjects.classClass);
+	def isStringPtr(ptr: int)  -> bool => ptrToObj(ptr).instanceOf(ClassObjects.classStr);
+
+	def getGlobalPtr(idx: int) -> int {
+		def id = strings[idx];
+		def obj = Globals.loadGlobal(id).maybe(null, fun(p: (Object, int)) => p.0);
+		return objToPtr(obj);
+	}
+	def getGlobalByIndexPtr(idx: int) -> int {
+		return objToPtr(Globals.loadGlobalByIndex(idx));
+	}
+	def getNonlocalPtr(idx: int) -> int {
+		def id = strings[idx];
+		def obj = findNonlocal(id);
+		return objToPtr(obj);
+	}
+	def setGlobalPtr(strIdx: int, ptr: int) -> int {
+		def obj = ptrToObj(ptr);
+		def id = strings[strIdx];
+		Globals.storeGlobal(id, obj);
+		return ptr;
+	}
+	def setGlobalByIndexPtr(idx: int, ptr: int) -> int {
+		Globals.storeGlobalByIndex(idx, ptrToObj(ptr));
+		return ptr;
+	}
+
+	def raiseTypeExceptionPtr(actPtr: int, expPtr: int) -> int {
+		def act = ptrToObj(actPtr);
+		def exp = ptrToObj(expPtr);
+		def msg = Exceptions.typeMismatch(ClassObject.!(exp), act);
+		def exn = ExnObjects.fromWasm(msg);
+		return objToPtr(exn);
+	}
+	def raiseStringPtr(strPtr: int) -> int {
+		def str = ptrToObj(strPtr);
+		def exn = ExnObjects.fromWasm(StrObject.!(str).str);
+		return objToPtr(exn);
+	}
+	def raiseMsgPtr(strIdx: int) -> int {
+		def exn = ExnObjects.fromWasm(strings[strIdx]);
+		return objToPtr(exn);
+	}
+	def raiseMissingFieldPtr(objPtr: int, strIdx: int) -> int {
+		def obj = ptrToObj(objPtr);
+		def str = strings[strIdx];
+		def msg = Exceptions.missingField(obj, str);
+		def exn = ExnObjects.fromWasm(msg);
+		return objToPtr(exn);
+	}
+
+	// Each wrapper converts every raw pointer param to a real Object via
+	// ptrToObj *before* building any array literal - array construction
+	// itself allocates, and a raw pointer sitting in a plain `int` param is
+	// invisible to Virgil's own GC (unlike a converted Object reference,
+	// which Virgil's compiler-generated shadow-stack spilling protects
+	// automatically once it's an ordinary typed local). Building the array
+	// straight from the raw ints (as this used to do) left every argument
+	// after the first unprotected across that allocation - if it triggered a
+	// collection, a later ptrToObj(args[i]) call would dereference a stale,
+	// possibly-moved address.
+	def callFunc0Ptr(func: int) => callFuncNObjs(ptrToObj(func), []);
+	def callFunc1Ptr(func: int, o0: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0);
+		return callFuncNObjs(f, [a0]);
+	}
+	def callFunc2Ptr(func: int, o0: int, o1: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1);
+		return callFuncNObjs(f, [a0, a1]);
+	}
+	def callFunc3Ptr(func: int, o0: int, o1: int, o2: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2);
+		return callFuncNObjs(f, [a0, a1, a2]);
+	}
+	def callFunc4Ptr(func: int, o0: int, o1: int, o2: int, o3: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3);
+		return callFuncNObjs(f, [a0, a1, a2, a3]);
+	}
+	def callFunc5Ptr(func: int, o0: int, o1: int, o2: int, o3: int, o4: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4);
+		return callFuncNObjs(f, [a0, a1, a2, a3, a4]);
+	}
+	def callFunc6Ptr(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5);
+		return callFuncNObjs(f, [a0, a1, a2, a3, a4, a5]);
+	}
+	def callFunc7Ptr(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6);
+		return callFuncNObjs(f, [a0, a1, a2, a3, a4, a5, a6]);
+	}
+	def callFunc8Ptr(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7);
+		return callFuncNObjs(f, [a0, a1, a2, a3, a4, a5, a6, a7]);
+	}
+	def callFunc9Ptr(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		return callFuncNObjs(f, [a0, a1, a2, a3, a4, a5, a6, a7, a8]);
+	}
+	// Same reasoning as callFunc0Ptr..9Ptr: convert every raw pointer to a
+	// real Object first, then build the args array from already-safe
+	// references (and drain the rest from xargsObjs, not xargs - see its
+	// own doc comment).
+	def callFuncRestPtr(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		def args = Array<Object>.new(9 + numRest);
+		args[0] = a0; args[1] = a1; args[2] = a2; args[3] = a3; args[4] = a4;
+		args[5] = a5; args[6] = a6; args[7] = a7; args[8] = a8;
+		popRestReverseObjs(args, numRest);
+		return callFuncNObjs(f, args);
+	}
+	def callFuncRestRevPtr(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> bool {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		def args = Array<Object>.new(9 + numRest);
+		args[0] = a0; args[1] = a1; args[2] = a2; args[3] = a3; args[4] = a4;
+		args[5] = a5; args[6] = a6; args[7] = a7; args[8] = a8;
+		popRestForwardObjs(args, numRest);
+		return callFuncNObjs(f, args);
+	}
+	// Takes already-converted Objects - used by the callFunc0Ptr..9Ptr
+	// wrappers above, which convert every raw pointer arg before this ever
+	// runs, so nothing here needs (or gets) a fresh ptrToObj call on a
+	// possibly-stale int.
+	def callFuncNObjs(fnObj: Object, args: Array<Object>) -> bool { /* returns if exception */
+		def fv = FuncObject.!(fnObj);
+		def params = fv.params, code = fv.code;
+
+		var argv: Array<(string, Object)>;
+		if (fv.instanceOf(ClassObjects.classMethod)) {
+			argv = Array.new(args.length + 1);
+			for (i < args.length) {
+				if (i < params.length) argv[i + 1] = (params[i], args[i]);
+			}
+			argv[0] = ("self", MethodObject.!(fv).obj);
+		} else {
+			argv = Array.new(args.length);
+			for (i < args.length) {
+				if (i < params.length) argv[i] = (params[i], args[i]);
+			}
+		}
+
+		if (args.length != params.length) {
+			def obj = ExnObjects.fromWasm(Exceptions.arityMismatch(params.length, args.length));
+			result = objToPtr(obj);
+			return true;
+		}
+
+		match (invokeCode(code, argv, fv.nonlocals)) {
+			OK(v) => { result = objToPtr(v); return false; }
+			Exn(e) => { result = objToPtr(e); return true; }
+			_ => { System.error("internal error", "evaluation of frame returned uncomputed"); return false; }
+		}
+	}
+
+	// Same reasoning as callFunc0Ptr..9Ptr above: convert every raw pointer
+	// nonlocal-capture arg to a real Object before building any array.
+	// {funchole} itself is a compile-time pool index, not a pointer - safe
+	// as a plain int throughout.
+	def createFunc0Ptr(funchole: int) => createFuncNObjs(funchole, []);
+	def createFunc1Ptr(funchole: int, o0: int) -> int {
+		def a0 = ptrToObj(o0);
+		return createFuncNObjs(funchole, [a0]);
+	}
+	def createFunc2Ptr(funchole: int, o0: int, o1: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1);
+		return createFuncNObjs(funchole, [a0, a1]);
+	}
+	def createFunc3Ptr(funchole: int, o0: int, o1: int, o2: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2);
+		return createFuncNObjs(funchole, [a0, a1, a2]);
+	}
+	def createFunc4Ptr(funchole: int, o0: int, o1: int, o2: int, o3: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3);
+		return createFuncNObjs(funchole, [a0, a1, a2, a3]);
+	}
+	def createFunc5Ptr(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4);
+		return createFuncNObjs(funchole, [a0, a1, a2, a3, a4]);
+	}
+	def createFunc6Ptr(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5);
+		return createFuncNObjs(funchole, [a0, a1, a2, a3, a4, a5]);
+	}
+	def createFunc7Ptr(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6);
+		return createFuncNObjs(funchole, [a0, a1, a2, a3, a4, a5, a6]);
+	}
+	def createFunc8Ptr(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7);
+		return createFuncNObjs(funchole, [a0, a1, a2, a3, a4, a5, a6, a7]);
+	}
+	def createFunc9Ptr(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		return createFuncNObjs(funchole, [a0, a1, a2, a3, a4, a5, a6, a7, a8]);
+	}
+	def createFuncRestPtr(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		def args = Array<Object>.new(9 + numRest);
+		args[0] = a0; args[1] = a1; args[2] = a2; args[3] = a3; args[4] = a4;
+		args[5] = a5; args[6] = a6; args[7] = a7; args[8] = a8;
+		popRestReverseObjs(args, numRest);
+		return createFuncNObjs(funchole, args);
+	}
+	def createFuncRestRevPtr(funchole: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		def args = Array<Object>.new(9 + numRest);
+		args[0] = a0; args[1] = a1; args[2] = a2; args[3] = a3; args[4] = a4;
+		args[5] = a5; args[6] = a6; args[7] = a7; args[8] = a8;
+		popRestForwardObjs(args, numRest);
+		return createFuncNObjs(funchole, args);
+	}
+	// Takes already-converted Objects - used by createFunc0Ptr..9Ptr above,
+	// which convert every raw pointer arg first.
+	def createFuncNObjs(funcholeIdx: int, nonlocalArgs: Array<Object>) -> int {
+		def funchole = funcholes[funcholeIdx];
+		def nonlocals: Array<(string, Object)> = Array.new(funchole.nonlocals.length);
+
+		var j = 0;
+		def fn = FuncObjects.newFO(funchole.id, funchole.params, nonlocals, funchole.body, funchole.metadata);
+		for (i < funchole.nonlocals.length) {
+			if (Strings.equal(funchole.nonlocals[i], funchole.id)) {
+				nonlocals[i] = (funchole.id, fn);
+			} else {
+				nonlocals[i] = (funchole.nonlocals[i], nonlocalArgs[j++]);
+			}
+		}
+
+		return objToPtr(fn);
+	}
+
+	def getFieldPtr(objPtr: int, strIdx: int) -> int {
+		def obj = ptrToObj(objPtr);
+		def str = strings[strIdx];
+		def field = obj.getField(str);
+		return objToPtr(field);
+	}
+	def setFieldPtr(objPtr: int, strIdx: int, valPtr: int) -> int {
+		def obj = ptrToObj(objPtr);
+		def str = strings[strIdx];
+		def val = ptrToObj(valPtr);
+		return if(obj.setField(str, val), valPtr, 0);
+	}
+
+	def createClassPtr(superPtr: int, classholeIdx: int) -> bool { /* returns if exception */
+		def o = ptrToObj(superPtr);
+		def classhole = classholes[classholeIdx];
+
+		if (!o.instanceOf(ClassObjects.classClass)) {
+			def exn = ExnObjects.fromWasm(Exceptions.typeMismatch(ClassObjects.classClass, o));
+			result = objToPtr(exn);
+			return true;
+		}
+
+		def superclass = ClassObject.!(o);
+		result = objToPtr(classhole(superclass));
+		return false;
+	}
+	def createObjectPtr(clsPtr: int) -> bool { /* returns if exception */
+		def clsObj = ClassObject.!(ptrToObj(clsPtr)); // already asserted previously
+		def r = createObjectFromClass(clsObj);
+		result = objToPtr(r.1);
+		return r.0;
+	}
+
+	// Same reasoning as callFunc0Ptr..9Ptr above: convert every raw pointer
+	// element to a real Object before building any array.
+	def createListNObjs(elems: Array<Object>) -> int => objToPtr(ListObjects.fromArray(elems));
+	def createList0Ptr()  => createListNObjs([]);
+	def createList1Ptr(o0: int) -> int {
+		def a0 = ptrToObj(o0);
+		return createListNObjs([a0]);
+	}
+	def createList2Ptr(o0: int, o1: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1);
+		return createListNObjs([a0, a1]);
+	}
+	def createList3Ptr(o0: int, o1: int, o2: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2);
+		return createListNObjs([a0, a1, a2]);
+	}
+	def createList4Ptr(o0: int, o1: int, o2: int, o3: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3);
+		return createListNObjs([a0, a1, a2, a3]);
+	}
+	def createList5Ptr(o0: int, o1: int, o2: int, o3: int, o4: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4);
+		return createListNObjs([a0, a1, a2, a3, a4]);
+	}
+	def createList6Ptr(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5);
+		return createListNObjs([a0, a1, a2, a3, a4, a5]);
+	}
+	def createList7Ptr(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6);
+		return createListNObjs([a0, a1, a2, a3, a4, a5, a6]);
+	}
+	def createList8Ptr(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7);
+		return createListNObjs([a0, a1, a2, a3, a4, a5, a6, a7]);
+	}
+	def createList9Ptr(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		return createListNObjs([a0, a1, a2, a3, a4, a5, a6, a7, a8]);
+	}
+	def createListRestPtr(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		def args = Array<Object>.new(9 + numRest);
+		args[0] = a0; args[1] = a1; args[2] = a2; args[3] = a3; args[4] = a4;
+		args[5] = a5; args[6] = a6; args[7] = a7; args[8] = a8;
+		popRestReverseObjs(args, numRest);
+		return createListNObjs(args);
+	}
+	def createListRestRevPtr(o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> int {
+		def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		def args = Array<Object>.new(9 + numRest);
+		args[0] = a0; args[1] = a1; args[2] = a2; args[3] = a3; args[4] = a4;
+		args[5] = a5; args[6] = a6; args[7] = a7; args[8] = a8;
+		popRestForwardObjs(args, numRest);
+		return createListNObjs(args);
+	}
+
+	def alloc(obj: Object) -> int {
+		if (obj == null) return 0;
+
+		if (CiceroOptions.useRefcounting && !freelist.empty()) {
+			def idx = freelist.pop();
+			if (CiceroOptions.sanityChecks && (idx < constPoolLen || objects[idx] != null))
+				System.error("internal error", "WasmRuntime.alloc: corrupt freelist entry");
+			objects[idx] = obj;
+			refcounts[idx] = 1;
+			return idx;
+		}
+		def idx = objects.length;
+		objects.put(obj);
+		refcounts.put(1);
+		return idx;
+	}
+}
+
+export "fast:incref"           = WasmRuntime.incref;
+export "fast:decref"           = WasmRuntime.decref;
+export "fast:is_null"          = WasmRuntime.isNull;
+export "fast:is_not_null"      = WasmRuntime.isNotNull;
+export "fast:is_true"          = WasmRuntime.isTrue;
+export "fast:is_false"         = WasmRuntime.isFalse;
+export "fast:is_func"          = WasmRuntime.isFunc;
+export "fast:is_class"         = WasmRuntime.isClass;
+export "fast:is_string"        = WasmRuntime.isString;
+export "fast:get_global"       = WasmRuntime.getGlobal;
+export "fast:get_global_by_index" = WasmRuntime.getGlobalByIndex;
+export "fast:get_nonlocal"     = WasmRuntime.getNonlocal;
+export "fast:set_global"       = WasmRuntime.setGlobal;
+export "fast:set_global_by_index" = WasmRuntime.setGlobalByIndex;
+export "fast:raise_type"       = WasmRuntime.raiseTypeException;
+export "fast:raise_string"     = WasmRuntime.raiseString;
+export "fast:raise_field"      = WasmRuntime.raiseMissingField;
+export "fast:call_func0"       = WasmRuntime.callFunc0;
+export "fast:call_func1"       = WasmRuntime.callFunc1;
+export "fast:call_func2"       = WasmRuntime.callFunc2;
+export "fast:call_func3"       = WasmRuntime.callFunc3;
+export "fast:call_func4"       = WasmRuntime.callFunc4;
+export "fast:call_func5"       = WasmRuntime.callFunc5;
+export "fast:call_func6"       = WasmRuntime.callFunc6;
+export "fast:push_arg"         = WasmRuntime.pushArg;
+export "fast:pop_arg"          = WasmRuntime.popArg;
+export "fast:get_result"       = WasmRuntime.getResult;
+export "fast:set_result"       = WasmRuntime.setResult;
+export "fast:create_func0"     = WasmRuntime.createFunc0;
+export "fast:create_func1"     = WasmRuntime.createFunc1;
+export "fast:create_func2"     = WasmRuntime.createFunc2;
+export "fast:create_func3"     = WasmRuntime.createFunc3;
+export "fast:create_func4"     = WasmRuntime.createFunc4;
+export "fast:create_func5"     = WasmRuntime.createFunc5;
+export "fast:create_func6"     = WasmRuntime.createFunc6;
+export "fast:get_field"        = WasmRuntime.getField;
+export "fast:set_field"        = WasmRuntime.setField;
+export "fast:create_class"     = WasmRuntime.createClass;
+export "fast:create_object"    = WasmRuntime.createObject;
+export "fast:create_list0"     = WasmRuntime.createList0;
+export "fast:create_list1"     = WasmRuntime.createList1;
+export "fast:create_list2"     = WasmRuntime.createList2;
+export "fast:create_list3"     = WasmRuntime.createList3;
+export "fast:create_list4"     = WasmRuntime.createList4;
+export "fast:create_list5"     = WasmRuntime.createList5;
+/* the rest of these functions are not fast, because there aren't enough opcodes to specify (yet) */
+export "fast:create_list6"     = WasmRuntime.createList6;
+export "fast:create_list7"     = WasmRuntime.createList7;
+export "fast:create_list8"     = WasmRuntime.createList8;
+export "fast:create_list9"     = WasmRuntime.createList9;
+export "fast:create_list_rest" = WasmRuntime.createListRest;
+export "fast:call_func7"       = WasmRuntime.callFunc7;
+export "fast:call_func8"       = WasmRuntime.callFunc8;
+export "fast:call_func9"       = WasmRuntime.callFunc9;
+export "fast:call_func_rest"   = WasmRuntime.callFuncRest;
+export "fast:create_func7"     = WasmRuntime.createFunc7;
+export "fast:create_func8"     = WasmRuntime.createFunc8;
+export "fast:create_func9"     = WasmRuntime.createFunc9;
+
+/* Shadow-stack mode (CiceroOptions.useShadowStack) - see WasmShadowStackCompiler */
+export "shadow:alloc"          = WasmRuntime.shadowStackAlloc;
+export "shadow:free"           = WasmRuntime.shadowStackFree;
+export "shadow:save"           = WasmRuntime.shadowStackSave;
+export "shadow:load"           = WasmRuntime.shadowStackLoad;
+
+export "fastptr:get_const"     = WasmRuntime.getConstPtr;
+export "test:force_gc"         = WasmRuntime.forceGCForTest;
+export "fastptr:is_null"       = WasmRuntime.isNullPtr;
+export "fastptr:is_not_null"   = WasmRuntime.isNotNullPtr;
+export "fastptr:is_true"       = WasmRuntime.isTruePtr;
+export "fastptr:is_false"      = WasmRuntime.isFalsePtr;
+export "fastptr:is_func"       = WasmRuntime.isFuncPtr;
+export "fastptr:is_class"      = WasmRuntime.isClassPtr;
+export "fastptr:is_string"     = WasmRuntime.isStringPtr;
+export "fastptr:get_global"    = WasmRuntime.getGlobalPtr;
+export "fastptr:get_global_by_index" = WasmRuntime.getGlobalByIndexPtr;
+export "fastptr:get_nonlocal"  = WasmRuntime.getNonlocalPtr;
+export "fastptr:set_global"    = WasmRuntime.setGlobalPtr;
+export "fastptr:set_global_by_index" = WasmRuntime.setGlobalByIndexPtr;
+export "fastptr:raise_type"    = WasmRuntime.raiseTypeExceptionPtr;
+export "fastptr:raise_string"  = WasmRuntime.raiseStringPtr;
+export "fastptr:raise_field"   = WasmRuntime.raiseMissingFieldPtr;
+export "fastptr:call_func0"    = WasmRuntime.callFunc0Ptr;
+export "fastptr:call_func1"    = WasmRuntime.callFunc1Ptr;
+export "fastptr:call_func2"    = WasmRuntime.callFunc2Ptr;
+export "fastptr:call_func3"    = WasmRuntime.callFunc3Ptr;
+export "fastptr:call_func4"    = WasmRuntime.callFunc4Ptr;
+export "fastptr:call_func5"    = WasmRuntime.callFunc5Ptr;
+export "fastptr:call_func6"    = WasmRuntime.callFunc6Ptr;
+export "fastptr:call_func7"    = WasmRuntime.callFunc7Ptr;
+export "fastptr:call_func8"    = WasmRuntime.callFunc8Ptr;
+export "fastptr:call_func9"    = WasmRuntime.callFunc9Ptr;
+export "fastptr:call_func_rest"     = WasmRuntime.callFuncRestPtr;
+export "fastptr:call_func_rest_rev" = WasmRuntime.callFuncRestRevPtr;
+export "fastptr:create_func0"  = WasmRuntime.createFunc0Ptr;
+export "fastptr:create_func1"  = WasmRuntime.createFunc1Ptr;
+export "fastptr:create_func2"  = WasmRuntime.createFunc2Ptr;
+export "fastptr:create_func3"  = WasmRuntime.createFunc3Ptr;
+export "fastptr:create_func4"  = WasmRuntime.createFunc4Ptr;
+export "fastptr:create_func5"  = WasmRuntime.createFunc5Ptr;
+export "fastptr:create_func6"  = WasmRuntime.createFunc6Ptr;
+export "fastptr:create_func7"  = WasmRuntime.createFunc7Ptr;
+export "fastptr:create_func8"  = WasmRuntime.createFunc8Ptr;
+export "fastptr:create_func9"  = WasmRuntime.createFunc9Ptr;
+export "fastptr:create_func_rest"     = WasmRuntime.createFuncRestPtr;
+export "fastptr:create_func_rest_rev" = WasmRuntime.createFuncRestRevPtr;
+export "fastptr:get_field"     = WasmRuntime.getFieldPtr;
+export "fastptr:set_field"     = WasmRuntime.setFieldPtr;
+export "fastptr:create_class"  = WasmRuntime.createClassPtr;
+export "fastptr:create_object" = WasmRuntime.createObjectPtr;
+export "fastptr:create_list0"  = WasmRuntime.createList0Ptr;
+export "fastptr:create_list1"  = WasmRuntime.createList1Ptr;
+export "fastptr:create_list2"  = WasmRuntime.createList2Ptr;
+export "fastptr:create_list3"  = WasmRuntime.createList3Ptr;
+export "fastptr:create_list4"  = WasmRuntime.createList4Ptr;
+export "fastptr:create_list5"  = WasmRuntime.createList5Ptr;
+export "fastptr:create_list6"  = WasmRuntime.createList6Ptr;
+export "fastptr:create_list7"  = WasmRuntime.createList7Ptr;
+export "fastptr:create_list8"  = WasmRuntime.createList8Ptr;
+export "fastptr:create_list9"  = WasmRuntime.createList9Ptr;
+export "fastptr:create_list_rest"     = WasmRuntime.createListRestPtr;
+export "fastptr:create_list_rest_rev" = WasmRuntime.createListRestRevPtr;

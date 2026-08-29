@@ -1,3 +1,14 @@
+//export "foo" def foo();
+
+def evalTopLevel(expr: CodeObject) -> Result {
+	if (CLOptions.TIER.get() == 2) {
+		return WasmRuntime.evalTopLevel(expr);
+	} else {
+		VM.eval(expr);
+		return VM.result;
+	}
+}
+
 def main(args: Array<string>) -> int {
 	def files = CLOptions.parse(args);
 
@@ -16,7 +27,7 @@ def main(args: Array<string>) -> int {
 	}
 
 	def tier = CLOptions.TIER.get();
-	if (tier != 1) {
+	if (tier != 1 && tier != 2) {
 		System.error("argument error", Strings.format1("unrecognized tier: %d", tier));
 		return 1;
 	}
@@ -30,20 +41,22 @@ def main(args: Array<string>) -> int {
 	for (filename in files) {
 		// read in file
 		def file = System.fileLoad(filename);
-		if (file == null) System.error("init error", Strings.format1("unable to load file %s", filename));
+		if (file == null) {
+			System.puts(Strings.format1("init error: unable to load file %s", filename));
+			System.error("init error", Strings.format1("unable to load file %s", filename));
+		}
 		// parse
 		var reader = Parser.new(filename, file);
 		if (reader.ok) {
 			if (CLOptions.CHECK_SYNTAX.get()) continue;
 			def exprs = reader.getExprs();
 			for (expr in exprs) {
-				// compile to tier1 bytecode
+				// compile to bytecode/wasm
 				expr.compile([], TopLevel.name, true, false);
 
 				if (!CLOptions.DO_NOT_EVALUATE.get()) {
 					// evaluate
-					VM.eval(expr);
-					match (VM.result) {
+					match (evalTopLevel(expr)) {
 						Exn(exn) => {
 							exn.print();
 							return FAILURE;
@@ -84,13 +97,13 @@ def main(args: Array<string>) -> int {
 				def exprs = reader.getExprs();
 
 				for (expr in exprs) {
-					// compile to tier1 bytecode
+					// compile to bytecode/wasm
 					expr.compile([], TopLevel.name, true, false);
 
 					// evaluate
-					VM.eval(expr);
-					match (VM.result) {
+					match (evalTopLevel(expr)) {
 						Exn(exn) => {
+							System.puts("Exception\n");
 							exn.print();
 						}
 						OK(val)		=> System.puts(Strings.format1("=> %s\n", val.display()));
@@ -174,7 +187,7 @@ def loadCore() {
 	def exprs = reader.getExprs();
 	for (expr in exprs) {
  		expr.compile([], TopLevel.name, true, false);
-		VM.eval(expr);
+		evalTopLevel(expr);
 	}
 }
 

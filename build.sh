@@ -22,7 +22,7 @@ fi
 
 if [ "$VIRGIL_LIB" = "" ]; then
     if [ "$VIRGIL_LOC" = "" ]; then
-	V3C_LOC=$(dirname $(which v3c))
+        V3C_LOC=$(dirname $V3C)
 	VIRGIL_LOC=$(cd $V3C_LOC/../ && pwd)
     fi
     VIRGIL_LIB=${VIRGIL_LOC}/lib/
@@ -63,7 +63,11 @@ function make_build_file() {
 
 # compute sources
 if [ "$PROGRAM" = "cicero" ]; then
-    SOURCES="$ENGINE"
+    if [ "$TARGET" = "wasm-wave" ]; then
+        SOURCES="$ENGINE src/wasm/*.v3"
+    else
+        SOURCES="$ENGINE src/native/*.v3"
+    fi
 else
     exit_usage
 fi
@@ -95,7 +99,7 @@ echo "}" >> "$CICERO_TEXT"
 PREGEN=${PREGEN:=1}
 
 LANG_OPTS="-simple-bodies -fun-exprs"
-V3C_OPTS="$V3C_OPTS -symbols -shadow-stack-size=10M -heap-size=1500M -stack-size=16M"
+V3C_OPTS="$V3C_OPTS -symbols -shadow-stack-size=32M -heap-size=1800M -stack-size=32M"
 
 # build
 exe=${PROGRAM}.${TARGET}
@@ -113,14 +117,32 @@ elif [ "$TARGET" = "jvm" ]; then
     v3c-jar $LANG_OPTS $V3C_OPTS -program-name=${exe} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
 elif [[ "$TARGET" == wasm-* ]]; then
     # Compile to a wasm target
-    V3C_PATH=$(which v3c)
-    V3C_WASM_TARGET=${V3C_PATH/bin\/v3c/bin\/dev\/v3c-$TARGET}
+    V3C_PATH="$(dirname "$V3C")"
+    V3C_WASM_TARGET="$V3C_PATH/dev/v3c-$TARGET"
     if [ ! -x $V3C_WASM_TARGET ]; then
 	echo Unknown Wasm target \"$TARGET\". Found these:
 	ls -a ${V3C_PATH/bin\/v3c/bin\/dev\/v3c-wasm-*} | cat
 	exit 1
     fi
-    exec $V3C_WASM_TARGET $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
+    $V3C_WASM_TARGET $LANG_OPTS $V3C_OPTS -program-name=${PROGRAM} -output=bin/ $SOURCES $BUILD_FILE $CICERO_TEXT $TARGET_V3
+    STATUS=$?
+    if [ $STATUS != 0 ]; then
+	exit $STATUS
+    fi
+
+    # Optionally post-process with binaryen's wasm-opt. Set BINARYEN_OPT to the
+    # -O level to pass (e.g. "3"); leave unset to skip.
+    if [ "$BINARYEN_OPT" != "" ]; then
+	WASM_OPT_BIN=${WASM_OPT_BIN:=$(which wasm-opt)}
+	if [ ! -x "$WASM_OPT_BIN" ]; then
+	    echo "wasm-opt not found in \$PATH, and \$WASM_OPT_BIN not set"
+	    exit 1
+	fi
+	WASM_FILE="bin/${PROGRAM}.wasm"
+	echo "Optimizing $WASM_FILE with wasm-opt: -O$BINARYEN_OPT"
+	"$WASM_OPT_BIN" --skip-pass=duplicate-function-elimination --skip-pass=remove-unused-module-elements --preserve-type-order \
+	    "$WASM_FILE" -all -O$BINARYEN_OPT -o "$WASM_FILE.opt" && mv "$WASM_FILE.opt" "$WASM_FILE"
+    fi
 elif [ "$TARGET" = "v3i" ]; then
     # check that the sources typecheck
     $V3C $LANG_OPTS $V3C_OPTS $SOURCES $TARGET_V3 $CICERO_TEXT

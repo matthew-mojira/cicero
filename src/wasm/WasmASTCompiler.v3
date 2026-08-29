@@ -1,0 +1,457 @@
+// Compiles the AST directly to Wasm, bypassing bytecode and the relooper (CiceroOptions.compileFromTier1 = false).
+class WasmASTCompiler extends WasmCompiler {
+	new(ast: AST, params: Array<string>, label: string) super(params, label) {
+		addConst(null); // XXX what is this?
+
+		scratch0 = addLocal("<receiver>"); /* also used as scratch */
+		// XXX Virgil calling convention always requires a receiver object as the first argument
+
+		wasm.put_uleb32(1); // 1 set of
+		def hole = wasm.skip_leb32();
+		wasm.putb(0x7F);    // i32
+
+		Arrays.map(params, addLocal); // XXX different behavior on duplicated locals? or parser should forbid?
+		scratch1 = addLocal("<scratch>");
+		refScratch = addLocal("<refScratch>");
+
+		// FUNCTION BODY
+		withBlock<void, int>(fun {
+			handlerStack.push(blockDepth);
+
+			// initialize extra parameters (beyond 9) from WasmRuntime.xargs.
+			// xargs were pushed left-to-right, so pop in reverse to fill
+			// the tail of the parameter locals first.
+			if (params.length > 9) {
+				for (i = params.length - 1; i >= 9; i--) {
+					emitCall(WasmFuncIds.POP_ARG);
+					wasm.putb(WasmOp.SET_LOCAL.opcode);
+					wasm.put_uleb32(u32.view(1 + i)); // skip <receiver> at slot 0
+				}
+			}
+
+			compileAST(ast);
+
+			emitCall(WasmFuncIds.SET_RESULT);
+
+			wasm.putb(WasmOp.I32_CONST.opcode);
+			wasm.putb(0); // OK
+			wasm.putb(WasmOp.RETURN.opcode);
+			wasm.putb(WasmOp.UNREACHABLE.opcode);
+
+			handlerStack.pop(); // XXX unnecessary
+		});
+
+		emitCall(WasmFuncIds.SET_RESULT);
+
+		wasm.putb(WasmOp.I32_CONST.opcode);
+		wasm.putb(1); // exception
+
+		wasm.putb(WasmOp.END.opcode);
+
+		wasm.at(hole);
+		wasm.overwrite_uleb32(locals.length);
+	}
+
+	def compileAST(expr: AST) {
+		match (expr.data) {
+			Lit(lit) => {
+				emitPushConst(lit);
+			}
+  			VarGet(id, mode) => match (mode.data) {
+  				Local    => {
+ 					wasm.putb(WasmOp.GET_LOCAL.opcode);
+ 					wasm.put_uleb32(addLocal(id));
+					emitIncref();
+
+					emitRaiseIfNull(Exceptions.unboundLocal(id));
+ 				}
+  				Global => {
+					emitPushString(id);
+ 					emitCall(WasmFuncIds.GET_GLOBAL);
+
+					emitRaiseIfNull(Exceptions.unboundGlobal(id));
+				}
+  				Nonlocal => {
+					emitPushString(id);
+ 					emitCall(WasmFuncIds.GET_NONLOCAL);
+				}
+			}
+ 			VarSet(id, mode, val) => match (mode.data) {
+ 				Local => {
+					compileAST(val);
+					def slot = addLocal(id);
+					if (CiceroOptions.useRefcounting) {
+						wasm.putb(WasmOp.GET_LOCAL.opcode);
+						wasm.put_uleb32(slot); // fetch old occupant to release
+						emitDecrefGap();
+					}
+ 					wasm.putb(WasmOp.TEE_LOCAL.opcode);
+ 					wasm.put_uleb32(slot);
+					emitIncref();
+ 				}
+ 				Global => {
+					emitPushString(id);
+					compileAST(val);
+ 					emitCall(WasmFuncIds.SET_GLOBAL);
+				}
+ 				Nonlocal => System.error("compile error", "illegal case on varset: Nonlocal");
+ 			}
+ 			And(left, right) => {
+ 				compileAST(left);
+				wasmDup();
+				emitIncref();
+
+				emitCall(WasmFuncIds.IS_TRUE);
+
+				withIfElse<int, int>(fun {
+					// left is truthy: right replaces it as the result; pay the
+					// peek-debt then fully dispose of left (emitDecref always
+					// consumes, unlike emitDecrefGap, since this falls through
+					// normally rather than ending in a branch).
+					emitDecrefPeek();
+					emitDecref();
+					compileAST(right);
+				}, /* else */ fun {
+					// left is falsy: forwarded as the result; pay only the peek-debt.
+					emitDecrefPeek();
+				});
+ 			}
+ 			Or(left, right) => {
+				compileAST(left);
+				wasmDup();
+				emitIncref();
+
+				emitCall(WasmFuncIds.IS_FALSE);
+
+				withIfElse<int, int>(fun {
+					emitDecrefPeek();
+					emitDecref();
+					compileAST(right);
+				}, /* else */ fun {
+					emitDecrefPeek();
+				});
+ 			}
+ 			Apply(tgt, args) => {
+				compileAST(tgt);
+				emitAssertType(WasmFuncIds.IS_FUNC, ClassObjects.classFunc);
+
+				if (args.length <= 9) {
+					for (arg in args)
+						compileAST(arg);
+					// dispatch on number of args to variadic function
+					wasm.putb(WasmOp.CALL.opcode);
+					match (args.length) {
+						0 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC0);  /* call to RTS */
+						1 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC1);  /* call to RTS */
+						2 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC2);  /* call to RTS */
+						3 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC3);  /* call to RTS */
+						4 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC4);  /* call to RTS */
+						5 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC5);  /* call to RTS */
+						6 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC6);  /* call to RTS */
+						7 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC7);  /* call to RTS */
+						8 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC8);  /* call to RTS */
+						9 => wasm.put_uleb32(WasmFuncIds.CALL_FUNC9);  /* call to RTS */
+					}
+				} else {
+					// top 9 are on Wasm's stack, rest are in a virtual stack holding the rest
+					for (i < 9)
+						compileAST(args[i]);
+					for (i = 9; i < args.length; i++) {
+						compileAST(args[i]);
+						emitCall(WasmFuncIds.PUSH_ARG);
+					}
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(args.length - 9); // number of extra args
+					emitCall(WasmFuncIds.CALL_FUNC_REST);
+				}
+
+				// if exception, find handler
+				emitInterpretResult();
+			}
+ 			If(cond, left, right) => {
+				compileAST(cond);
+				// no value to preserve past branch selection - unlike And/Or/Cond,
+				// this doesn't feed the taken branch. Dup+swap+decref releases
+				// cond's own reference once WasmFuncIds.IS_TRUE has peeked it.
+				if (CiceroOptions.useRefcounting) {
+					wasmDup();
+					emitCall(WasmFuncIds.IS_TRUE);
+					wasmSwap();
+					emitDecref();
+				} else {
+					emitCall(WasmFuncIds.IS_TRUE);
+				}
+				withIfElse<void, int>(fun {
+					compileAST(left);
+				}, /* else */ fun {
+					compileAST(right);
+				});
+			}
+			Cond(cases) => {
+				withBlock<void, int>(fun {
+					for (c in cases) {
+						def cond = c.0;
+						def body = c.1;
+						withBlock<void, int>(fun {
+							compileAST(cond);
+
+							wasmDup();
+							emitIncref();
+							emitCall(WasmFuncIds.IS_FALSE);
+
+							// case doesn't match (BR_IF taken): cond is forwarded out
+							// of this block as its <void,int> result, so only its
+							// peeked copy is released. Case matches (falls through):
+							// both copies are released - cond is unused in body.
+							if (CiceroOptions.useRefcounting) {
+								wasmSwap();
+								emitDecrefPeek();
+								wasmSwap();
+							}
+
+							wasm.putb(WasmOp.BR_IF.opcode);
+							wasm.put_uleb32(0); // next case
+							emitDecrefGap();
+							compileAST(body);
+							wasm.putb(WasmOp.BR.opcode);
+							wasm.put_uleb32(1); // done
+						});
+					}
+
+					// throw exception
+					emitPushString(Exceptions.noTrueBranch);
+					emitCall(WasmFuncIds.RAISE_MSG);
+					emitJumpToExnHandler();
+				});
+			}
+			Raise(exn) => {
+				compileAST(exn);
+				emitAssertType(WasmFuncIds.IS_STRING, ClassObjects.classStr); // TODO don't realloc const slot
+
+				emitCall(WasmFuncIds.RAISE_STRING);
+				emitJumpToExnHandler();
+			}
+ 			Catch(try, id, mode, catch) => {
+				withBlock<void, int>(fun {
+					withBlock<void, int>(fun {
+
+						handlerStack.push(blockDepth);
+
+						compileAST(try);
+						wasm.putb(WasmOp.BR.opcode);
+						wasm.put_uleb32(1); // ok
+
+						handlerStack.pop();
+					});
+
+					match (mode.data) {
+						Local => {
+							def slot = addLocal(id);
+							if (CiceroOptions.useRefcounting) {
+								wasm.putb(WasmOp.GET_LOCAL.opcode);
+								wasm.put_uleb32(slot); // fetch old occupant to release
+								emitDecrefGap();
+							}
+							wasm.putb(WasmOp.SET_LOCAL.opcode);
+							wasm.put_uleb32(slot);
+						}
+						Global => {
+							wasm.putb(WasmOp.SET_LOCAL.opcode);
+							wasm.put_uleb32(scratch0);
+							emitPushString(id);
+							wasm.putb(WasmOp.GET_LOCAL.opcode);
+							wasm.put_uleb32(scratch0);
+							emitCall(WasmFuncIds.SET_GLOBAL);
+							emitDecref(); // setGlobal is a passthrough; discard its returned handle
+						}
+						Nonlocal => System.error("compile error", "illegal case on catch: Nonlocal");
+					}
+					compileAST(catch);
+				});
+			}
+			Func(id, params, body, nonlocals, metadata) => {
+ 				body.compile(params, metadata.label, false, false);
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(addFunchole(ASTData.Func.!(expr.data)));
+
+				var nonlocalCount = 0;
+ 				for (i < nonlocals.length) {
+ 					def nonlocal = nonlocals[i];
+ 					if (Strings.equal(nonlocal, id))
+ 						// the function itself is captured, but not loaded to a local
+ 						continue;
+ 					// this variable will be captured!
+ 					wasm.putb(WasmOp.GET_LOCAL.opcode);
+ 					wasm.put_uleb32(addLocal(nonlocal));
+					emitIncref();
+					emitRaiseIfNull(Exceptions.unboundLocal(nonlocal));
+					nonlocalCount++;
+					if (nonlocalCount > 9) emitCall(WasmFuncIds.PUSH_ARG);
+ 				}
+
+				match (nonlocalCount) {
+					0 => emitCall(WasmFuncIds.CREATE_FUNC0);  /* call to RTS */
+					1 => emitCall(WasmFuncIds.CREATE_FUNC1);  /* call to RTS */
+					2 => emitCall(WasmFuncIds.CREATE_FUNC2);  /* call to RTS */
+					3 => emitCall(WasmFuncIds.CREATE_FUNC3);  /* call to RTS */
+					4 => emitCall(WasmFuncIds.CREATE_FUNC4);  /* call to RTS */
+					5 => emitCall(WasmFuncIds.CREATE_FUNC5);  /* call to RTS */
+					6 => emitCall(WasmFuncIds.CREATE_FUNC6);  /* call to RTS */
+					7 => emitCall(WasmFuncIds.CREATE_FUNC7);  /* call to RTS */
+					8 => emitCall(WasmFuncIds.CREATE_FUNC8);  /* call to RTS */
+					9 => emitCall(WasmFuncIds.CREATE_FUNC9);  /* call to RTS */
+					_ => {
+						wasm.putb(WasmOp.I32_CONST.opcode);
+						wasm.put_sleb32(nonlocalCount - 9); // number of extra args
+						emitCall(WasmFuncIds.CREATE_FUNC_REST);
+					}
+				}
+ 			}
+ 			While(cond, body) => {
+				withBlock<void, int>(fun {
+					withLoop<void, int>(fun {
+						compileAST(cond);
+						wasmDup();
+						emitIncref();
+						emitCall(WasmFuncIds.IS_FALSE);
+
+						// exit (BR_IF taken): cond is forwarded out as the loop's
+						// <void,int> result, so its peeked copy is released but cond
+						// itself stays alive. Continue (falls through): both copies
+						// are released - cond is unused in the loop body.
+						if (CiceroOptions.useRefcounting) {
+							wasmSwap();
+							emitDecrefPeek();
+							wasmSwap();
+						}
+
+						wasm.putb(WasmOp.BR_IF.opcode);
+						wasm.put_uleb32(1); // exit loop
+						emitDecrefGap();
+
+						compileAST(body);
+						emitDecrefGap(); // body's value is discarded every iteration
+						wasm.putb(WasmOp.BR.opcode);
+						wasm.put_uleb32(0); // back to top of loop
+					});
+				});
+			}
+ 			Begin(exprs) => {
+				for (i < exprs.length - 1) {
+					compileAST(exprs[i]);
+ 					emitDecref();
+				}
+				compileAST(exprs[exprs.length - 1]);
+
+			}
+ 			GetField(field, obj) => {
+				compileAST(obj);
+
+				wasm.putb(WasmOp.TEE_LOCAL.opcode);
+				wasm.put_uleb32(scratch1); // stash object
+				emitIncref();
+				emitPushString(field);
+				emitCall(WasmFuncIds.GET_FIELD);
+
+				emitAssertField(field);
+			}
+ 			SetField(field, obj, val) => {
+				// Compile obj and val fully before stashing anything - val may
+				// itself contain a nested GetField/SetField that reuses scratch1,
+				// which would clobber this stash if it were taken before val is compiled.
+				compileAST(obj);
+				compileAST(val);
+				wasm.putb(WasmOp.SET_LOCAL.opcode);
+				wasm.put_uleb32(scratch0); // stash val
+				wasm.putb(WasmOp.TEE_LOCAL.opcode);
+				wasm.put_uleb32(scratch1); // stash object
+				emitIncref();
+
+				emitPushString(field);
+				wasm.putb(WasmOp.GET_LOCAL.opcode);
+				wasm.put_uleb32(scratch0); // reload val
+				emitCall(WasmFuncIds.SET_FIELD);
+
+				emitAssertField(field);
+			}
+ 			Class(id, superclass, init, fields, methods) => {
+				// there are subcodes which are getting compiled here
+				match (superclass) {
+					Nothing => {
+						emitPushConst(ClassObjects.classBase);
+					}
+					Just(expr) => compileAST(expr);
+				}
+				var init2: FuncObject;
+				match (init) {
+					Nothing => ;
+					Just(fn) => {
+						fn.code.compile(["self"], fn.metadata.label, false, true);
+						init2 = fn;
+					}
+				}
+				def classhole = ClassObjects.classhole(id, init2, fields, Arrays.map(methods, funcToFunc));
+
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.put_sleb32(addClasshole(classhole));
+
+				emitCall(WasmFuncIds.CREATE_CLASS);
+
+				// if exception, find handler
+				emitInterpretResult();
+			}
+ 			New(expr) => {
+ 				compileAST(expr);
+
+				emitAssertType(WasmFuncIds.IS_CLASS, ClassObjects.classClass);
+
+ 				emitCall(WasmFuncIds.CREATE_OBJECT);
+
+				// if exception, find handler
+				emitInterpretResult();
+			}
+ 			List(elems) => {
+				if (elems.length <= 9) {
+					for (elem in elems)
+						compileAST(elem);
+					wasm.putb(WasmOp.CALL.opcode);
+					match (elems.length) {
+						0 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST0);
+						1 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST1);
+						2 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST2);
+						3 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST3);
+						4 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST4);
+						5 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST5);
+						6 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST6);
+						7 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST7);
+						8 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST8);
+						9 => wasm.put_uleb32(WasmFuncIds.CREATE_LIST9);
+					}
+				} else {
+					for (i = 0; i < elems.length; i++) {
+						compileAST(elems[i]);
+						if (i >= 9) emitCall(WasmFuncIds.PUSH_ARG); // extra args in runtime
+					}
+					wasm.putb(WasmOp.I32_CONST.opcode);
+					wasm.put_sleb32(elems.length - 9); // number of extra args
+					emitCall(WasmFuncIds.CREATE_LIST_REST);
+				}
+			}
+			Return(expr) => {
+				compileAST(expr);
+				emitCall(WasmFuncIds.SET_RESULT);
+				wasm.putb(WasmOp.I32_CONST.opcode);
+				wasm.putb(0); // OK
+				wasm.putb(WasmOp.RETURN.opcode);
+			}
+		}
+	}
+}
+
+def funcToFunc(f: ASTData.Func) -> FuncObject {
+	// XXX compilation here
+	f.body.compile(Arrays.prepend("self", f.params), f.metadata.label, false, false);
+	// XXX empty map = no variable capture for a method
+	return FuncObjects.newFO(f.id, f.params, [], f.body, f.metadata);
+}

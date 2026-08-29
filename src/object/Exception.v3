@@ -41,6 +41,18 @@ class ExnObject extends Object {
 }
 
 component ExnObjects {
+	// Distinguishes "Wasm frame, location not tracked yet" from a genuine
+	// Virgil-native frame (fromVirgil, always null) -- both have a real
+	// function name, so formatLine can't otherwise tell them apart.
+	def wasmUnknownLoc: FileRange = FileRange.new("<wasm>", 0, 0, 0, 0);
+
+	/* Create an exception object for something that happened in Wasm.
+	 * Location isn't tracked yet; the function label is WasmRuntime's ambient
+	 * "currently executing" state, null for compile-time-constant exceptions.
+	 */
+	def fromWasm(msg: string) -> ExnObject {
+		return ExnObject.new(msg, WasmRuntime.currentLabel, wasmUnknownLoc);
+	}
 	/* Create an exception object for something that happened in Virgil
 	 * (i.e. null location)
 	 */
@@ -60,6 +72,8 @@ def formatLine(fn: string, range: FileRange) -> string {
 	str.put1("  at %s (", fn);
 	if (range == null) {
 		str.puts("<Virgil code>");
+	} else if (range == ExnObjects.wasmUnknownLoc) {
+		str.puts("<wasm, unknown location>");
 	} else {
 		str.put3("%s:%d:%d", range.fileName, range.beginLine, range.beginColumn);
 	}

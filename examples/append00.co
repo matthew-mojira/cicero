@@ -1,0 +1,15 @@
+(func (append l1 l2) {
+  (set list [])
+  (set i 0)
+  (while (< i (l1.length)) {
+    (list.put (l1.get i))
+    (set i (i.succ))
+  })
+  (set j 0)
+  (while (< j (l2.length)) {
+    (list.put (l2.get j))
+    (set j (j.succ))
+  })
+  list
+})
+(append [] [])
