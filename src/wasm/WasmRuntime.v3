@@ -798,11 +798,77 @@ component WasmRuntime {
 		popRestForwardObjs(args, numRest);
 		return callFuncNObjs(f, args);
 	}
+	// Multi-value twins of callFunc0Ptr..9Ptr/Rest/RestRev. Identical argument
+	// handling; they return (valuePtr, raised) instead of a bool plus a separate
+	// GET_RESULT fetch. Wasm arity is fixed per function, so each arity needs its
+	// own entry - the same reason the _Ptr family is spelled out longhand.
+	def callFunc0PtrMv(func: int) => callFuncNObjsMv(ptrToObj(func), []);
+	def callFunc1PtrMv(func: int, o0: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0);
+		return callFuncNObjsMv(f, [a0]);
+	}
+	def callFunc2PtrMv(func: int, o0: int, o1: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1);
+		return callFuncNObjsMv(f, [a0, a1]);
+	}
+	def callFunc3PtrMv(func: int, o0: int, o1: int, o2: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2);
+		return callFuncNObjsMv(f, [a0, a1, a2]);
+	}
+	def callFunc4PtrMv(func: int, o0: int, o1: int, o2: int, o3: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3);
+		return callFuncNObjsMv(f, [a0, a1, a2, a3]);
+	}
+	def callFunc5PtrMv(func: int, o0: int, o1: int, o2: int, o3: int, o4: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4);
+		return callFuncNObjsMv(f, [a0, a1, a2, a3, a4]);
+	}
+	def callFunc6PtrMv(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5);
+		return callFuncNObjsMv(f, [a0, a1, a2, a3, a4, a5]);
+	}
+	def callFunc7PtrMv(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6);
+		return callFuncNObjsMv(f, [a0, a1, a2, a3, a4, a5, a6]);
+	}
+	def callFunc8PtrMv(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7);
+		return callFuncNObjsMv(f, [a0, a1, a2, a3, a4, a5, a6, a7]);
+	}
+	def callFunc9PtrMv(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		return callFuncNObjsMv(f, [a0, a1, a2, a3, a4, a5, a6, a7, a8]);
+	}
+	def callFuncRestPtrMv(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		def args = Array<Object>.new(9 + numRest);
+		args[0] = a0; args[1] = a1; args[2] = a2; args[3] = a3; args[4] = a4;
+		args[5] = a5; args[6] = a6; args[7] = a7; args[8] = a8;
+		popRestReverseObjs(args, numRest);
+		return callFuncNObjsMv(f, args);
+	}
+	def callFuncRestRevPtrMv(func: int, o0: int, o1: int, o2: int, o3: int, o4: int, o5: int, o6: int, o7: int, o8: int, numRest: int) -> (int, bool) {
+		def f = ptrToObj(func); def a0 = ptrToObj(o0); def a1 = ptrToObj(o1); def a2 = ptrToObj(o2); def a3 = ptrToObj(o3); def a4 = ptrToObj(o4); def a5 = ptrToObj(o5); def a6 = ptrToObj(o6); def a7 = ptrToObj(o7); def a8 = ptrToObj(o8);
+		def args = Array<Object>.new(9 + numRest);
+		args[0] = a0; args[1] = a1; args[2] = a2; args[3] = a3; args[4] = a4;
+		args[5] = a5; args[6] = a6; args[7] = a7; args[8] = a8;
+		popRestForwardObjs(args, numRest);
+		return callFuncNObjsMv(f, args);
+	}
+
 	// Takes already-converted Objects - used by the callFunc0Ptr..9Ptr
 	// wrappers above, which convert every raw pointer arg before this ever
 	// runs, so nothing here needs (or gets) a fresh ptrToObj call on a
 	// possibly-stale int.
 	def callFuncNObjs(fnObj: Object, args: Array<Object>) -> bool { /* returns if exception */
+		def r = callFuncNObjsMv(fnObj, args);
+		result = r.0;
+		return r.1;
+	}
+
+	// Returns (valuePtr, raised). The bool+`result` entry above adapts this for
+	// the classic convention; see CiceroOptions.useMultiValueReturn.
+	def callFuncNObjsMv(fnObj: Object, args: Array<Object>) -> (int, bool) {
 		def fv = FuncObject.!(fnObj);
 		def params = fv.params, code = fv.code;
 
@@ -822,14 +888,13 @@ component WasmRuntime {
 
 		if (args.length != params.length) {
 			def obj = ExnObjects.fromWasm(Exceptions.arityMismatch(params.length, args.length));
-			result = objToPtr(obj);
-			return true;
+			return (objToPtr(obj), true);
 		}
 
 		match (invokeCode(code, argv, fv.nonlocals)) {
-			OK(v) => { result = objToPtr(v); return false; }
-			Exn(e) => { result = objToPtr(e); return true; }
-			_ => { System.error("internal error", "evaluation of frame returned uncomputed"); return false; }
+			OK(v) => { return (objToPtr(v), false); }
+			Exn(e) => { return (objToPtr(e), true); }
+			_ => { System.error("internal error", "evaluation of frame returned uncomputed"); return (0, false); }
 		}
 	}
 
@@ -923,24 +988,31 @@ component WasmRuntime {
 	}
 
 	def createClassPtr(superPtr: int, classholeIdx: int) -> bool { /* returns if exception */
+		def r = createClassPtrMv(superPtr, classholeIdx);
+		result = r.0;
+		return r.1;
+	}
+	def createClassPtrMv(superPtr: int, classholeIdx: int) -> (int, bool) {
 		def o = ptrToObj(superPtr);
 		def classhole = classholes[classholeIdx];
 
 		if (!o.instanceOf(ClassObjects.classClass)) {
 			def exn = ExnObjects.fromWasm(Exceptions.typeMismatch(ClassObjects.classClass, o));
-			result = objToPtr(exn);
-			return true;
+			return (objToPtr(exn), true);
 		}
 
 		def superclass = ClassObject.!(o);
-		result = objToPtr(classhole(superclass));
-		return false;
+		return (objToPtr(classhole(superclass)), false);
 	}
 	def createObjectPtr(clsPtr: int) -> bool { /* returns if exception */
+		def r = createObjectPtrMv(clsPtr);
+		result = r.0;
+		return r.1;
+	}
+	def createObjectPtrMv(clsPtr: int) -> (int, bool) {
 		def clsObj = ClassObject.!(ptrToObj(clsPtr)); // already asserted previously
-		def r = createObjectFromClass(clsObj);
-		result = objToPtr(r.1);
-		return r.0;
+		def r = createObjectFromClass(clsObj); // (raised, value) - reversed from ours
+		return (objToPtr(r.1), r.0);
 	}
 
 	// Same reasoning as callFunc0Ptr..9Ptr above: convert every raw pointer
@@ -1018,125 +1090,9 @@ component WasmRuntime {
 	}
 }
 
-export "fast:incref"           = WasmRuntime.incref;
-export "fast:decref"           = WasmRuntime.decref;
-export "fast:is_null"          = WasmRuntime.isNull;
-export "fast:is_not_null"      = WasmRuntime.isNotNull;
-export "fast:is_true"          = WasmRuntime.isTrue;
-export "fast:is_false"         = WasmRuntime.isFalse;
-export "fast:is_func"          = WasmRuntime.isFunc;
-export "fast:is_class"         = WasmRuntime.isClass;
-export "fast:is_string"        = WasmRuntime.isString;
-export "fast:get_global"       = WasmRuntime.getGlobal;
-export "fast:get_global_by_index" = WasmRuntime.getGlobalByIndex;
-export "fast:get_nonlocal"     = WasmRuntime.getNonlocal;
-export "fast:set_global"       = WasmRuntime.setGlobal;
-export "fast:set_global_by_index" = WasmRuntime.setGlobalByIndex;
-export "fast:raise_type"       = WasmRuntime.raiseTypeException;
-export "fast:raise_string"     = WasmRuntime.raiseString;
-export "fast:raise_field"      = WasmRuntime.raiseMissingField;
-export "fast:call_func0"       = WasmRuntime.callFunc0;
-export "fast:call_func1"       = WasmRuntime.callFunc1;
-export "fast:call_func2"       = WasmRuntime.callFunc2;
-export "fast:call_func3"       = WasmRuntime.callFunc3;
-export "fast:call_func4"       = WasmRuntime.callFunc4;
-export "fast:call_func5"       = WasmRuntime.callFunc5;
-export "fast:call_func6"       = WasmRuntime.callFunc6;
-export "fast:push_arg"         = WasmRuntime.pushArg;
-export "fast:pop_arg"          = WasmRuntime.popArg;
-export "fast:get_result"       = WasmRuntime.getResult;
-export "fast:set_result"       = WasmRuntime.setResult;
-export "fast:create_func0"     = WasmRuntime.createFunc0;
-export "fast:create_func1"     = WasmRuntime.createFunc1;
-export "fast:create_func2"     = WasmRuntime.createFunc2;
-export "fast:create_func3"     = WasmRuntime.createFunc3;
-export "fast:create_func4"     = WasmRuntime.createFunc4;
-export "fast:create_func5"     = WasmRuntime.createFunc5;
-export "fast:create_func6"     = WasmRuntime.createFunc6;
-export "fast:get_field"        = WasmRuntime.getField;
-export "fast:set_field"        = WasmRuntime.setField;
-export "fast:create_class"     = WasmRuntime.createClass;
-export "fast:create_object"    = WasmRuntime.createObject;
-export "fast:create_list0"     = WasmRuntime.createList0;
-export "fast:create_list1"     = WasmRuntime.createList1;
-export "fast:create_list2"     = WasmRuntime.createList2;
-export "fast:create_list3"     = WasmRuntime.createList3;
-export "fast:create_list4"     = WasmRuntime.createList4;
-export "fast:create_list5"     = WasmRuntime.createList5;
 /* the rest of these functions are not fast, because there aren't enough opcodes to specify (yet) */
-export "fast:create_list6"     = WasmRuntime.createList6;
-export "fast:create_list7"     = WasmRuntime.createList7;
-export "fast:create_list8"     = WasmRuntime.createList8;
-export "fast:create_list9"     = WasmRuntime.createList9;
-export "fast:create_list_rest" = WasmRuntime.createListRest;
-export "fast:call_func7"       = WasmRuntime.callFunc7;
-export "fast:call_func8"       = WasmRuntime.callFunc8;
-export "fast:call_func9"       = WasmRuntime.callFunc9;
-export "fast:call_func_rest"   = WasmRuntime.callFuncRest;
-export "fast:create_func7"     = WasmRuntime.createFunc7;
-export "fast:create_func8"     = WasmRuntime.createFunc8;
-export "fast:create_func9"     = WasmRuntime.createFunc9;
 
 /* Shadow-stack mode (CiceroOptions.useShadowStack) - see WasmShadowStackCompiler */
-export "shadow:alloc"          = WasmRuntime.shadowStackAlloc;
-export "shadow:free"           = WasmRuntime.shadowStackFree;
-export "shadow:save"           = WasmRuntime.shadowStackSave;
-export "shadow:load"           = WasmRuntime.shadowStackLoad;
 
-export "fastptr:get_const"     = WasmRuntime.getConstPtr;
-export "test:force_gc"         = WasmRuntime.forceGCForTest;
-export "fastptr:is_null"       = WasmRuntime.isNullPtr;
-export "fastptr:is_not_null"   = WasmRuntime.isNotNullPtr;
-export "fastptr:is_true"       = WasmRuntime.isTruePtr;
-export "fastptr:is_false"      = WasmRuntime.isFalsePtr;
-export "fastptr:is_func"       = WasmRuntime.isFuncPtr;
-export "fastptr:is_class"      = WasmRuntime.isClassPtr;
-export "fastptr:is_string"     = WasmRuntime.isStringPtr;
-export "fastptr:get_global"    = WasmRuntime.getGlobalPtr;
-export "fastptr:get_global_by_index" = WasmRuntime.getGlobalByIndexPtr;
-export "fastptr:get_nonlocal"  = WasmRuntime.getNonlocalPtr;
-export "fastptr:set_global"    = WasmRuntime.setGlobalPtr;
-export "fastptr:set_global_by_index" = WasmRuntime.setGlobalByIndexPtr;
-export "fastptr:raise_type"    = WasmRuntime.raiseTypeExceptionPtr;
-export "fastptr:raise_string"  = WasmRuntime.raiseStringPtr;
-export "fastptr:raise_field"   = WasmRuntime.raiseMissingFieldPtr;
-export "fastptr:call_func0"    = WasmRuntime.callFunc0Ptr;
-export "fastptr:call_func1"    = WasmRuntime.callFunc1Ptr;
-export "fastptr:call_func2"    = WasmRuntime.callFunc2Ptr;
-export "fastptr:call_func3"    = WasmRuntime.callFunc3Ptr;
-export "fastptr:call_func4"    = WasmRuntime.callFunc4Ptr;
-export "fastptr:call_func5"    = WasmRuntime.callFunc5Ptr;
-export "fastptr:call_func6"    = WasmRuntime.callFunc6Ptr;
-export "fastptr:call_func7"    = WasmRuntime.callFunc7Ptr;
-export "fastptr:call_func8"    = WasmRuntime.callFunc8Ptr;
-export "fastptr:call_func9"    = WasmRuntime.callFunc9Ptr;
-export "fastptr:call_func_rest"     = WasmRuntime.callFuncRestPtr;
-export "fastptr:call_func_rest_rev" = WasmRuntime.callFuncRestRevPtr;
-export "fastptr:create_func0"  = WasmRuntime.createFunc0Ptr;
-export "fastptr:create_func1"  = WasmRuntime.createFunc1Ptr;
-export "fastptr:create_func2"  = WasmRuntime.createFunc2Ptr;
-export "fastptr:create_func3"  = WasmRuntime.createFunc3Ptr;
-export "fastptr:create_func4"  = WasmRuntime.createFunc4Ptr;
-export "fastptr:create_func5"  = WasmRuntime.createFunc5Ptr;
-export "fastptr:create_func6"  = WasmRuntime.createFunc6Ptr;
-export "fastptr:create_func7"  = WasmRuntime.createFunc7Ptr;
-export "fastptr:create_func8"  = WasmRuntime.createFunc8Ptr;
-export "fastptr:create_func9"  = WasmRuntime.createFunc9Ptr;
-export "fastptr:create_func_rest"     = WasmRuntime.createFuncRestPtr;
-export "fastptr:create_func_rest_rev" = WasmRuntime.createFuncRestRevPtr;
-export "fastptr:get_field"     = WasmRuntime.getFieldPtr;
-export "fastptr:set_field"     = WasmRuntime.setFieldPtr;
-export "fastptr:create_class"  = WasmRuntime.createClassPtr;
-export "fastptr:create_object" = WasmRuntime.createObjectPtr;
-export "fastptr:create_list0"  = WasmRuntime.createList0Ptr;
-export "fastptr:create_list1"  = WasmRuntime.createList1Ptr;
-export "fastptr:create_list2"  = WasmRuntime.createList2Ptr;
-export "fastptr:create_list3"  = WasmRuntime.createList3Ptr;
-export "fastptr:create_list4"  = WasmRuntime.createList4Ptr;
-export "fastptr:create_list5"  = WasmRuntime.createList5Ptr;
-export "fastptr:create_list6"  = WasmRuntime.createList6Ptr;
-export "fastptr:create_list7"  = WasmRuntime.createList7Ptr;
-export "fastptr:create_list8"  = WasmRuntime.createList8Ptr;
-export "fastptr:create_list9"  = WasmRuntime.createList9Ptr;
-export "fastptr:create_list_rest"     = WasmRuntime.createListRestPtr;
-export "fastptr:create_list_rest_rev" = WasmRuntime.createListRestRevPtr;
+// Exports live in src/wasm/exports/<config>.v3, selected by build.sh:
+// only the functions this configuration's JIT calls are exported, as `fast:`.

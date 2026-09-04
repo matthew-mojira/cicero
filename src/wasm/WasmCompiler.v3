@@ -134,6 +134,23 @@ component WasmFuncIds {
 	def CREATE_CLASS_PTR: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.createClassPtr));
 	def CREATE_OBJECT_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createObjectPtr));
 
+	// CiceroOptions.useMultiValueReturn: these return (value, raised) as a Wasm
+	// multi-value pair, so no GET_RESULT fetch follows the call.
+	def CALL_FUNC0_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc0PtrMv));
+	def CALL_FUNC1_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc1PtrMv));
+	def CALL_FUNC2_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc2PtrMv));
+	def CALL_FUNC3_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc3PtrMv));
+	def CALL_FUNC4_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc4PtrMv));
+	def CALL_FUNC5_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc5PtrMv));
+	def CALL_FUNC6_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc6PtrMv));
+	def CALL_FUNC7_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc7PtrMv));
+	def CALL_FUNC8_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc8PtrMv));
+	def CALL_FUNC9_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFunc9PtrMv));
+	def CALL_FUNC_REST_MV: u32     = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRestPtrMv));
+	def CALL_FUNC_REST_REV_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.callFuncRestRevPtrMv));
+	def CREATE_CLASS_MV: u32  = u32.view(CiWasmTarget.functionId(WasmRuntime.createClassPtrMv));
+	def CREATE_OBJECT_MV: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createObjectPtrMv));
+
 	def CREATE_LIST0_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList0Ptr));
 	def CREATE_LIST1_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList1Ptr));
 	def CREATE_LIST2_PTR: u32 = u32.view(CiWasmTarget.functionId(WasmRuntime.createList2Ptr));
@@ -329,6 +346,17 @@ class WasmCompiler {
 		}, /* else */ fun {
 			emitCall(WasmFuncIds.GET_RESULT);
 		});
+	}
+
+	// Multi-value form: the call already left [value, raised], so the `if`
+	// consumes `raised` and `value` rides through as the block's own
+	// parameter/result - no GET_RESULT in either arm. The <int, int> block type
+	// is required: a `br` inside cannot reach operands below the block's entry
+	// height, so `value` must enter as a parameter.
+	def emitInterpretResultMv() {
+		withIfElse<int, int>(fun {
+			emitJumpToExnHandler();
+		}, /* else */ fun { });
 	}
 
 	def emitJumpToExnHandler() {

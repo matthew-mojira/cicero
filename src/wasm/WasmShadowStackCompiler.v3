@@ -486,12 +486,34 @@ class WasmShadowStackCompiler extends WasmCompiler {
 	// value doesn't need protecting there, since it's abandoned the moment
 	// the branch unwinds past it (same discard-on-exception reasoning as
 	// TRY/CATCH).
+	// A guarded body normally leaves one value. A multi-value host call leaves two,
+	// [value, raised], so both must be stashed across the locals/stack reload and
+	// pushed back in the same order. scratch0/scratch1 are safe here: no emitShadow*
+	// helper touches them.
+	def emitStashResults(twoResults: bool) {
+		if (twoResults) { wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(scratch1); } // raised
+		wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(scratch0);                     // value
+	}
+	def emitUnstashResults(twoResults: bool) {
+		wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+		if (twoResults) { wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(scratch1); }
+	}
+	// True when a fallible host call's result arrives as a multi-value pair.
+	def mvResults() -> bool => CiceroOptions.useMultiValueReturn;
+
 	def emitLivepointGuard(atPc: int, popCount: int, emitBody: void -> void) {
+		emitLivepointGuardOf(atPc, popCount, false, emitBody);
+	}
+	// For bodies whose host call returns (value, raised) under useMultiValueReturn.
+	def emitLivepointGuardMv(atPc: int, popCount: int, emitBody: void -> void) {
+		emitLivepointGuardOf(atPc, popCount, mvResults(), emitBody);
+	}
+	def emitLivepointGuardOf(atPc: int, popCount: int, twoResults: bool, emitBody: void -> void) {
 		def protectDepth = frameDepth - popCount;
 		def base = logicalDepth - frameDepth;
-		emitLivepointGuardCore(atPc, popCount, base, protectDepth, emitBody);
+		emitLivepointGuardCore(atPc, popCount, base, protectDepth, twoResults, emitBody);
 	}
-	def emitLivepointGuardCore(atPc: int, popCount: int, base: int, protectDepth: int, emitBody: void -> void) {
+	def emitLivepointGuardCore(atPc: int, popCount: int, base: int, protectDepth: int, twoResults: bool, emitBody: void -> void) {
 		if (CiceroOptions.sanityChecks && protectDepth < 0)
 			System.error("internal error", "WasmShadowStackCompiler: negative protectDepth");
 
@@ -512,16 +534,15 @@ class WasmShadowStackCompiler extends WasmCompiler {
 		}
 		emitBody();
 
-		// Stash the body's single result, reload locals + deeper items (a
-		// relocating collection may have moved them), then push the result
-		// back on top.
-		wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+		// Stash the body's result(s), reload locals + deeper items (a relocating
+		// collection may have moved them), then push the result(s) back on top.
+		emitStashResults(twoResults);
 		emitShadowLoadLocals(atPc);
 		emitShadowLoadStackAt(base, protectDepth);
 		for (i < protectDepth) {
 			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
 		}
-		wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+		emitUnstashResults(twoResults);
 	}
 
 	// Shared >9 "rest" pattern for CALL/CREATE_FUNC/CREATE_LIST: `popCount`
@@ -542,6 +563,13 @@ class WasmShadowStackCompiler extends WasmCompiler {
 	// the deeper protectDepth items, matching emitLivepointGuardCore's own
 	// contract - callers still applyEffect/emitInterpretResultPtr themselves.
 	def emitRestGuard(atPc: int, popCount: int, fixedCount: int, restFuncId: u32, extraImmediate: void -> void) {
+		emitRestGuardOf(atPc, popCount, fixedCount, restFuncId, false, extraImmediate);
+	}
+	// For rest-arg calls whose host function returns (value, raised) under useMultiValueReturn.
+	def emitRestGuardMv(atPc: int, popCount: int, fixedCount: int, restFuncId: u32, extraImmediate: void -> void) {
+		emitRestGuardOf(atPc, popCount, fixedCount, restFuncId, mvResults(), extraImmediate);
+	}
+	def emitRestGuardOf(atPc: int, popCount: int, fixedCount: int, restFuncId: u32, twoResults: bool, extraImmediate: void -> void) {
 		def protectDepth = frameDepth - popCount;
 		if (CiceroOptions.sanityChecks && protectDepth < 0)
 			System.error("internal error", "WasmShadowStackCompiler: negative protectDepth");
@@ -573,13 +601,13 @@ class WasmShadowStackCompiler extends WasmCompiler {
 		wasm.putb(WasmOp.I32_CONST.opcode); wasm.put_sleb32(popCount - fixedCount); // numRest
 		emitCall(restFuncId);
 
-		wasm.putb(WasmOp.SET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+		emitStashResults(twoResults);
 		emitShadowLoadLocals(atPc);
 		emitShadowLoadStackAt(base, protectDepth);
 		for (i < protectDepth) {
 			wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(stackScratch[i]);
 		}
-		wasm.putb(WasmOp.GET_LOCAL.opcode); wasm.put_uleb32(scratch0);
+		emitUnstashResults(twoResults);
 	}
 
 	/* ====================================================================
@@ -965,14 +993,14 @@ class WasmShadowStackCompiler extends WasmCompiler {
 				CALL => {
 					if (operand <= 9) {
 						def funcId = matchCallFuncIdPtr(operand);
-						emitLivepointGuard(atPc, operand + 1, fun {
+						emitLivepointGuardMv(atPc, operand + 1, fun {
 							wasm.putb(WasmOp.CALL.opcode);
 							wasm.put_uleb32(funcId);
 						});
 					} else {
 						// fn + 9 fixed args handed directly to CALL_FUNC_REST_REV_PTR;
 						// the rest go through PUSH_ARG_PTR - see emitRestGuard.
-						emitRestGuard(atPc, operand + 1, 10, WasmFuncIds.CALL_FUNC_REST_REV_PTR, fun {});
+						emitRestGuardMv(atPc, operand + 1, 10, if(CiceroOptions.useMultiValueReturn, WasmFuncIds.CALL_FUNC_REST_REV_MV, WasmFuncIds.CALL_FUNC_REST_REV_PTR), fun {});
 					}
 					applyEffect(atPc, -operand);
 					emitInterpretResultPtr();
@@ -1086,8 +1114,8 @@ class WasmShadowStackCompiler extends WasmCompiler {
 				}
 				CREATE_OBJECT => {
 					emitAssertTypePtr(atPc, WasmFuncIds.IS_CLASS_PTR, ClassObjects.classClass);
-					emitLivepointGuard(atPc, 1, fun {
-						emitCall(WasmFuncIds.CREATE_OBJECT_PTR);
+					emitLivepointGuardMv(atPc, 1, fun {
+						emitCall(if(CiceroOptions.useMultiValueReturn, WasmFuncIds.CREATE_OBJECT_MV, WasmFuncIds.CREATE_OBJECT_PTR));
 					});
 					applyEffect(atPc, 0);
 					emitInterpretResultPtr();
@@ -1096,10 +1124,10 @@ class WasmShadowStackCompiler extends WasmCompiler {
 					// createClass checks its superclass arg internally (via a bool
 					// result), so no pre-assert is needed - classholeIdx is an
 					// immediate, emitted inside the guard body.
-					emitLivepointGuard(atPc, 1, fun {
+					emitLivepointGuardMv(atPc, 1, fun {
 						wasm.putb(WasmOp.I32_CONST.opcode);
 						wasm.put_sleb32(operand);
-						emitCall(WasmFuncIds.CREATE_CLASS_PTR);
+						emitCall(if(CiceroOptions.useMultiValueReturn, WasmFuncIds.CREATE_CLASS_MV, WasmFuncIds.CREATE_CLASS_PTR));
 					});
 					applyEffect(atPc, 0);
 					emitInterpretResultPtr();
@@ -1281,6 +1309,7 @@ class WasmShadowStackCompiler extends WasmCompiler {
 	}
 
 	def emitInterpretResultPtr() {
+		if (CiceroOptions.useMultiValueReturn) return emitInterpretResultMv();
 		withIfElse<void, int>(fun {
 			emitCall(WasmFuncIds.GET_RESULT);
 			emitJumpToExnHandler();
@@ -1290,6 +1319,21 @@ class WasmShadowStackCompiler extends WasmCompiler {
 	}
 
 	def matchCallFuncIdPtr(operand: int) -> u32 {
+		if (CiceroOptions.useMultiValueReturn) {
+			match (operand) {
+				0 => return WasmFuncIds.CALL_FUNC0_MV;
+				1 => return WasmFuncIds.CALL_FUNC1_MV;
+				2 => return WasmFuncIds.CALL_FUNC2_MV;
+				3 => return WasmFuncIds.CALL_FUNC3_MV;
+				4 => return WasmFuncIds.CALL_FUNC4_MV;
+				5 => return WasmFuncIds.CALL_FUNC5_MV;
+				6 => return WasmFuncIds.CALL_FUNC6_MV;
+				7 => return WasmFuncIds.CALL_FUNC7_MV;
+				8 => return WasmFuncIds.CALL_FUNC8_MV;
+				9 => return WasmFuncIds.CALL_FUNC9_MV;
+				_ => { System.error("compile error", "WasmShadowStackCompiler: bad call arity"); return 0; }
+			}
+		}
 		match (operand) {
 			0 => return WasmFuncIds.CALL_FUNC0_PTR;
 			1 => return WasmFuncIds.CALL_FUNC1_PTR;
